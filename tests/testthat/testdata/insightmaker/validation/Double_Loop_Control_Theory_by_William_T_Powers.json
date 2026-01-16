@@ -1,0 +1,409 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "Double Loop Learning using Control Theory by William T Powers",
+  "simulation": {
+    "version": "37",
+    "time_length": "10",
+    "time_start": "0",
+    "time_step": "0.1",
+    "time_units": "SECONDS",
+    "algorithm": "RK1"
+  },
+  "elements": [
+    {
+      "name": "perceptual_signal1",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[input_quantity1]*[units_converter1]",
+        "description": "mental model or beliefs",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "units_converter1",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1",
+        "description": "to Nervous system units",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "error1",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[reference_signal1]-[perceptual_signal1]",
+        "description": "P*-p",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Intent_quantity",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "1",
+        "description": "qo = Se",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "change_in_intent",
+      "type": "FLOW",
+      "from": null,
+      "to": "Intent_quantity",
+      "behavior": {
+        "value": "[error1]*[intent_function]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "intent_function",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1",
+        "description": "S  (transfer function)",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "input_quantity1",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[feedback_signal1]+[disturbance_signal1]",
+        "description": "aggregated input to higher centres",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "reference_signal1",
+      "type": "CONVERTER",
+      "behavior": {
+        "input": "TIME",
+        "interpolation": "LINEAR",
+        "data": [
+            [0, 0],
+            [5, 50],
+            [10, 100]
+          ],
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "perceptual_signal",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[input_quantity]*[units_converter]",
+        "description": "p",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "units_converter",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1",
+        "description": "to Nervous system units",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "error_1",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[reference_signal]-[perceptual_signal]",
+        "description": "P*-p",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Output_quantity",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "1",
+        "description": "qo = Se",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "change_in_action",
+      "type": "FLOW",
+      "from": null,
+      "to": "Output_quantity",
+      "behavior": {
+        "value": "[error_1]*[output_function]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "output_function",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1",
+        "description": "S  (transfer function)",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "input_quantity",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[feedback_signal]+[disturbance_signal]",
+        "description": "qi",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "reference_signal",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Intent_quantity]",
+        "description": "intent p*",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Scaling_factor_D",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Feedback_factor_F",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "feedback_signal",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Output_quantity]*[Feedback_factor_F]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "disturbance_signal",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[disturbing_quantity]*[Scaling_factor_D]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "disturbing_quantity",
+      "type": "CONVERTER",
+      "behavior": {
+        "input": "TIME",
+        "interpolation": "LINEAR",
+        "data": [
+            [0, 0],
+            [1, 0],
+            [2, 10],
+            [3, 0],
+            [4, 10],
+            [5, 0],
+            [6, 0]
+          ],
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Scaling_factor_D1",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "10",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Feedback_factor_F1",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "feedback_signal1",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Intent_quantity]*[Feedback_factor_F1]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "disturbance_signal1",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[disturbing_quantity1]*[Scaling_factor_D1]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "disturbing_quantity1",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[perceptual_signal]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "units_converter1",
+      "to": "perceptual_signal1"
+    },
+    {
+      "type": "LINK",
+      "from": "input_quantity1",
+      "to": "perceptual_signal1"
+    },
+    {
+      "type": "LINK",
+      "from": "perceptual_signal1",
+      "to": "error1"
+    },
+    {
+      "type": "LINK",
+      "from": "reference_signal1",
+      "to": "error1"
+    },
+    {
+      "type": "LINK",
+      "from": "error1",
+      "to": "change_in_intent"
+    },
+    {
+      "type": "LINK",
+      "from": "intent_function",
+      "to": "change_in_intent"
+    },
+    {
+      "type": "LINK",
+      "from": "Intent_quantity",
+      "to": "change_in_intent"
+    },
+    {
+      "type": "LINK",
+      "from": "feedback_signal1",
+      "to": "input_quantity1"
+    },
+    {
+      "type": "LINK",
+      "from": "disturbance_signal1",
+      "to": "input_quantity1"
+    },
+    {
+      "type": "LINK",
+      "from": "units_converter",
+      "to": "perceptual_signal"
+    },
+    {
+      "type": "LINK",
+      "from": "input_quantity",
+      "to": "perceptual_signal"
+    },
+    {
+      "type": "LINK",
+      "from": "perceptual_signal",
+      "to": "error_1"
+    },
+    {
+      "type": "LINK",
+      "from": "reference_signal",
+      "to": "error_1"
+    },
+    {
+      "type": "LINK",
+      "from": "error_1",
+      "to": "change_in_action"
+    },
+    {
+      "type": "LINK",
+      "from": "output_function",
+      "to": "change_in_action"
+    },
+    {
+      "type": "LINK",
+      "from": "Output_quantity",
+      "to": "change_in_action"
+    },
+    {
+      "type": "LINK",
+      "from": "feedback_signal",
+      "to": "input_quantity"
+    },
+    {
+      "type": "LINK",
+      "from": "disturbance_signal",
+      "to": "input_quantity"
+    },
+    {
+      "type": "LINK",
+      "from": "Intent_quantity",
+      "to": "reference_signal"
+    },
+    {
+      "type": "LINK",
+      "from": "Output_quantity",
+      "to": "feedback_signal"
+    },
+    {
+      "type": "LINK",
+      "from": "Feedback_factor_F",
+      "to": "feedback_signal"
+    },
+    {
+      "type": "LINK",
+      "from": "Scaling_factor_D",
+      "to": "disturbance_signal"
+    },
+    {
+      "type": "LINK",
+      "from": "disturbing_quantity",
+      "to": "disturbance_signal"
+    },
+    {
+      "type": "LINK",
+      "from": "Intent_quantity",
+      "to": "feedback_signal1"
+    },
+    {
+      "type": "LINK",
+      "from": "Feedback_factor_F1",
+      "to": "feedback_signal1"
+    },
+    {
+      "type": "LINK",
+      "from": "Scaling_factor_D1",
+      "to": "disturbance_signal1"
+    },
+    {
+      "type": "LINK",
+      "from": "disturbing_quantity1",
+      "to": "disturbance_signal1"
+    },
+    {
+      "type": "LINK",
+      "from": "perceptual_signal",
+      "to": "disturbing_quantity1"
+    }
+  ],
+  "engine_settings": []
+}

@@ -1,0 +1,152 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "System Zoo Z105: Time-dependent growth",
+  "simulation": {
+    "version": "22",
+    "time_length": "10",
+    "time_start": "0",
+    "time_step": "0.1",
+    "time_units": "YEARS",
+    "algorithm": "RK4"
+  },
+  "elements": [
+    {
+      "name": "state",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "[INITIAL_STATE]",
+        "description": "",
+        "units": "Stuff"
+      }
+    },
+    {
+      "name": "GROWTH_RATE_INITIAL",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.1",
+        "description": "",
+        "units": "Years^-1"
+      }
+    },
+    {
+      "name": "GROWTH_RATE_FINAL",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.01",
+        "description": "",
+        "units": "Years^-1"
+      }
+    },
+    {
+      "name": "FROM_TIME",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "2",
+        "description": "",
+        "units": "Years"
+      }
+    },
+    {
+      "name": "UNTIL_TIME",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "8",
+        "description": "",
+        "units": "Years"
+      }
+    },
+    {
+      "name": "change_of_state",
+      "type": "FLOW",
+      "from": null,
+      "to": "state",
+      "behavior": {
+        "value": "[rate_of_change]*[state]",
+        "description": "",
+        "units": "Stuff per Year",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "rate_of_change",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[GROWTH_RATE_INITIAL]+Ramp([FROM_TIME], [UNTIL_TIME], [GROWTH_RATE_FINAL]-[GROWTH_RATE_INITIAL])",
+        "description": "",
+        "units": "Years^-1"
+      }
+    },
+    {
+      "name": "INITIAL_STATE",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "INITIAL_STATE",
+      "to": "state"
+    },
+    {
+      "type": "LINK",
+      "from": "state",
+      "to": "change_of_state"
+    },
+    {
+      "type": "LINK",
+      "from": "rate_of_change",
+      "to": "change_of_state"
+    },
+    {
+      "type": "LINK",
+      "from": "state",
+      "to": "change_of_state"
+    },
+    {
+      "type": "LINK",
+      "from": "GROWTH_RATE_INITIAL",
+      "to": "rate_of_change"
+    },
+    {
+      "type": "LINK",
+      "from": "GROWTH_RATE_INITIAL",
+      "to": "rate_of_change"
+    },
+    {
+      "type": "LINK",
+      "from": "GROWTH_RATE_FINAL",
+      "to": "rate_of_change"
+    },
+    {
+      "type": "LINK",
+      "from": "FROM_TIME",
+      "to": "rate_of_change"
+    },
+    {
+      "type": "LINK",
+      "from": "UNTIL_TIME",
+      "to": "rate_of_change"
+    }
+  ],
+  "engine_settings": {
+    "units": [
+      [
+        {
+          "name": "stuff per year",
+          "factor": "1",
+          "base": "stuff*years^-1"
+        }
+      ],
+      [
+        {
+          "name": "stuff",
+          "factor": "1",
+          "base": ""
+        }
+      ]
+    ]
+  }
+}

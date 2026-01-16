@@ -1,0 +1,175 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "The Logistic Map",
+  "simulation": {
+    "version": "34",
+    "time_length": "50",
+    "time_start": "0",
+    "time_step": "1",
+    "time_units": "YEARS",
+    "algorithm": "RK1"
+  },
+  "elements": [
+    {
+      "name": "R_Base",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1",
+        "description": "",
+        "units": "unitless"
+      }
+    },
+    {
+      "name": "R_Ramp",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "2",
+        "description": "",
+        "units": "unitless"
+      }
+    },
+    {
+      "name": "Initial_Time",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1",
+        "description": "",
+        "units": "unitless"
+      }
+    },
+    {
+      "name": "Final_Time",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "10000",
+        "description": "",
+        "units": "unitless"
+      }
+    },
+    {
+      "name": "Time",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "Years",
+        "description": "",
+        "units": "unitless"
+      }
+    },
+    {
+      "name": "Initial_X",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.01",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "R",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "2",
+        "description": "r base+r ramp*(Time-INITIAL TIME)/(FINAL TIME-INITIAL TIME)",
+        "units": "unitless"
+      }
+    },
+    {
+      "name": "X",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "5",
+        "description": "",
+        "units": "unitless"
+      }
+    },
+    {
+      "name": "Final_X",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[X]*[Time_Step]",
+        "description": "DELAY FIXED ( X,TIME STEP,X)",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Time_Step",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "dX",
+      "type": "FLOW",
+      "from": null,
+      "to": "X",
+      "behavior": {
+        "value": "[R]*[dX_feedback]*(1-([dX_feedback]/[capacity]))",
+        "description": "r*X*(1-X)",
+        "units": "unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "dX_feedback",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[X]",
+        "description": "",
+        "units": "unitless"
+      }
+    },
+    {
+      "name": "capacity",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "2500",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "X",
+      "to": "Final_X"
+    },
+    {
+      "type": "LINK",
+      "from": "Time_Step",
+      "to": "Final_X"
+    },
+    {
+      "type": "LINK",
+      "from": "R",
+      "to": "dX"
+    },
+    {
+      "type": "LINK",
+      "from": "dX_feedback",
+      "to": "dX"
+    },
+    {
+      "type": "LINK",
+      "from": "dX_feedback",
+      "to": "dX"
+    },
+    {
+      "type": "LINK",
+      "from": "capacity",
+      "to": "dX"
+    },
+    {
+      "type": "LINK",
+      "from": "X",
+      "to": "dX"
+    },
+    {
+      "type": "LINK",
+      "from": "X",
+      "to": "dX_feedback"
+    }
+  ],
+  "engine_settings": []
+}

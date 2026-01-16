@@ -19,8 +19,10 @@ template <- function(name) {
   )
 
   if (missing(name)) {
-    message(sprintf("Choose one of the available templates:\n\n%s",
-                    paste0(model_names, collapse = "\n")))
+    message(sprintf(
+      "Choose one of the available templates:\n\n%s",
+      paste0(model_names, collapse = "\n")
+    ))
     return(invisible())
   }
 
@@ -41,7 +43,6 @@ template <- function(name) {
 
 
   if (name == "logistic_model") {
-
     sfm <- xmile() |>
       header(name = "Logistic model") |>
       sim_specs(stop = 200) |>
@@ -51,9 +52,7 @@ template <- function(name) {
       build("outflow", "flow", eqn = "r * X^2 / K", from = "X", label = "Deaths") |>
       build("r", "constant", eqn = "0.1", label = "Growth rate") |>
       build("K", "constant", eqn = "1", label = "Carrying capacity")
-
   } else if (name == "SIR") {
-
     # Chapter 5 Duggan: SIR Aggregate.R & Chapter 7. Screening.R
     # https://github.com/JimDuggan/SDMR/blob/master/models/05%20Chapter/R/01%20SIR%20Aggregate.R
     # https://github.com/JimDuggan/SDMR/blob/master/models/07%20Chapter/R/02%20Screening.R
@@ -71,9 +70,7 @@ template <- function(name) {
       build("Total_Population", "constant", eqn = "100000") |>
       build("Effective_Contact_Rate", "constant", eqn = "2") |>
       build("Delay", "constant", eqn = "2")
-
   } else if (name == "predator_prey") {
-
     sfm <- xmile() |>
       header(name = "Predator-Prey Dynamics (Lotka-Volterra)") |>
       sim_specs(method = "euler", stop = 500) |>
@@ -103,9 +100,7 @@ template <- function(name) {
           "Birth rate of prey", "Death rate of prey by predators"
         )
       )
-
   } else if (name == "cusp") {
-
     sfm <- xmile() |>
       header(name = "Cusp Catastrophe") |>
       sim_specs(method = "euler", stop = 500) |>
@@ -116,9 +111,7 @@ template <- function(name) {
       ) |>
       build("a", "constant", eqn = 2, label = "Normal variable") |>
       build("b", "constant", eqn = 2, label = "Splitting variable")
-
   } else if (name == "Crielaard2022") {
-
     sfm <- xmile() |>
       header(
         name = "Eating Behaviour (Crielaard et al., 2022)",
@@ -170,9 +163,7 @@ template <- function(name) {
       ) |>
       build(c("a0", "a1", "a2"), "constant", eqn = c(1.31, 1.5, 0.38)) |>
       macro(name = "Sig", eqn = "function(x) 1 / (1 + exp(1)^(-x))")
-
   } else if (name == "coffee_cup") {
-
     sfm <- xmile() |>
       header(name = "Coffee cup", caption = "Coffee cup cooling or heating from Meadows' Thinking in Systems (Chapter 1)") |>
       sim_specs(stop = 100, dt = 1, time_units = "minute", language = "Julia") |>
@@ -180,9 +171,7 @@ template <- function(name) {
       build("cooling", "flow", eqn = "discrepancy * .1 / u('min')", units = "Celsius/min", to = "coffee_temperature", label = "Cooling or heating") |>
       build("discrepancy", "aux", eqn = "room_temperature - coffee_temperature", units = "Celsius", label = "Discrepancy") |>
       build("room_temperature", "constant", eqn = "18", units = "Celsius", label = "Room temperature")
-
   } else if (name == "bank_account") {
-
     sfm <- xmile() |>
       header(
         name = "Bank account with interest",
@@ -202,9 +191,7 @@ template <- function(name) {
         eqn = ".02", label = "Interest rate",
         units = "1"
       )
-
   } else if (name == "Lorenz") {
-
     sfm <- xmile() |>
       header(
         name = "Lorenz Attractor",
@@ -223,9 +210,7 @@ template <- function(name) {
       build("sigma", "constant", eqn = "10") |>
       build("rho", "constant", eqn = "28") |>
       build("beta", "constant", eqn = "8/3")
-
   } else if (name == "Rossler") {
-
     sfm <- xmile() |>
       header(
         name = "Rossler Attractor",
@@ -244,9 +229,7 @@ template <- function(name) {
       build("a", "constant", eqn = "0.2") |>
       build("b", "constant", eqn = "0.2") |>
       build("c", "constant", eqn = "5.7")
-
   } else if (name == "vanderPol") {
-
     sfm <- xmile() |>
       header(
         name = "Van der Pol Oscillator",
@@ -261,9 +244,7 @@ template <- function(name) {
       build("dy_dt", "flow", eqn = "mu * (1 - x^2) * y - x", to = "y", label = "Rate of change of velocity") |>
       # Parameters
       build("mu", "constant", eqn = "1", label = "Damping parameter")
-
   } else if (name == "Duffing") {
-
     sfm <- xmile() |>
       header(
         name = "Duffing Oscillator",
@@ -288,9 +269,7 @@ template <- function(name) {
       build("beta", "constant", eqn = "1", label = "Nonlinear stiffness") |>
       build("gamma", "constant", eqn = "0.5", label = "Forcing amplitude") |>
       build("omega", "constant", eqn = "1.2", label = "Forcing frequency")
-
   } else if (name == "Chua") {
-
     sfm <- xmile() |>
       header(name = "Chua's Circuit", caption = "Chaotic electronic circuit model") |>
       sim_specs(stop = 50, time_units = "hours") |>
@@ -311,13 +290,13 @@ template <- function(name) {
       build("beta", "constant", eqn = "28", label = "Parameter beta") |>
       build("m0", "constant", eqn = "-1.143", label = "Nonlinear slope m0") |>
       build("m1", "constant", eqn = "-0.714", label = "Nonlinear slope m1")
-
   } else if (name == "JDR") {
-
     sfm <- xmile() |>
       sim_specs(method = "euler", start = "0.0", stop = "182.5", dt = "0.01", save_at = "0.1", save_from = "0.0", seed = "123", time_units = "d", language = "R") |>
-      header(name = "Job Resources and Demands Theory",
-             caption = "JD-R Theory as formalized in Evers et al. (submitted)") |>
+      header(
+        name = "Job Resources and Demands Theory",
+        caption = "JD-R Theory as formalized in Evers et al. (submitted)"
+      ) |>
       build(name = "E", type = "stock", eqn = "0.5", label = "Engagement") |>
       build(name = "R", type = "stock", eqn = "0.7", label = "Job Resources") |>
       build(name = "D", type = "stock", eqn = "0.2", label = "Job Demands") |>
@@ -344,7 +323,6 @@ template <- function(name) {
       build(name = "A_from_D", type = "flow", eqn = "r_A * E * D", from = "D", label = "Proactive Behaviour") |>
       build(name = "U", type = "flow", eqn = "r_U * (1 - X/K_X)", to = "D", label = "Self-undermining") |>
       build(name = "D_D", type = "flow", eqn = "r_D * (1 - D/K_D)", to = "D", label = "Demand Regulation")
-
   }
 
 

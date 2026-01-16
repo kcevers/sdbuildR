@@ -1,0 +1,98 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "Limits to Action Archetype",
+  "simulation": {
+    "version": "36",
+    "time_length": "10",
+    "time_start": "0",
+    "time_step": "1",
+    "time_units": "YEARS",
+    "algorithm": "RK1"
+  },
+  "elements": [
+    {
+      "name": "current_state_1",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0",
+        "description": "The state of things at the beginning of the simulation assumed to be less than the desired state.",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "action",
+      "type": "FLOW",
+      "from": null,
+      "to": "current_state_1",
+      "behavior": {
+        "value": "IfThenElse([gap] >= [limits], [limits], [gap])",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "desired_state",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1",
+        "description": "The desired state, assumed to be greater than the current state in this example.",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "gap",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[desired_state]-[current_state_1]",
+        "description": "The difference between the desired state and the current state which provides the basis for action.",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "limits",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.3",
+        "description": "Because it is unlikely action can actually be the whole value of the gap action factor is included as a way specify the portion of the gap that results in action each time period.",
+        "units": "Unitless"
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "gap",
+      "to": "action"
+    },
+    {
+      "type": "LINK",
+      "from": "gap",
+      "to": "action"
+    },
+    {
+      "type": "LINK",
+      "from": "limits",
+      "to": "action"
+    },
+    {
+      "type": "LINK",
+      "from": "limits",
+      "to": "action"
+    },
+    {
+      "type": "LINK",
+      "from": "current_state_1",
+      "to": "action"
+    },
+    {
+      "type": "LINK",
+      "from": "current_state_1",
+      "to": "gap"
+    },
+    {
+      "type": "LINK",
+      "from": "desired_state",
+      "to": "gap"
+    }
+  ],
+  "engine_settings": []
+}

@@ -1,0 +1,202 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "Bio103 Growth Models",
+  "simulation": {
+    "version": "36",
+    "time_length": "100",
+    "time_start": "0",
+    "time_step": "0.01",
+    "time_units": "YEARS",
+    "algorithm": "RK1"
+  },
+  "elements": [
+    {
+      "name": "Bathtub",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Flow_from_faucet",
+      "type": "FLOW",
+      "from": null,
+      "to": "Bathtub",
+      "behavior": {
+        "value": "2",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Human_Population",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "7498000000",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Growth",
+      "type": "FLOW",
+      "from": null,
+      "to": "Human_Population",
+      "behavior": {
+        "value": "[Human_Population]*[Annual_Growth_Rate_Coefficient]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Annual_Growth_Rate_Coefficient",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.0111",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Termites_Living_on_Fallen_Tree",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "10",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Fallen_Tree_Biomass",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "1000",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Births",
+      "type": "FLOW",
+      "from": null,
+      "to": "Termites_Living_on_Fallen_Tree",
+      "behavior": {
+        "value": "0.24*[Termites_Living_on_Fallen_Tree]*([Fallen_Tree_Biomass]/1000)",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Eating",
+      "type": "FLOW",
+      "from": "Fallen_Tree_Biomass",
+      "to": null,
+      "behavior": {
+        "value": "[Termites_Living_on_Fallen_Tree]*0.1",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Deaths",
+      "type": "FLOW",
+      "from": "Termites_Living_on_Fallen_Tree",
+      "to": null,
+      "behavior": {
+        "value": "[Termites_Living_on_Fallen_Tree]*0.15",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Overflow",
+      "type": "FLOW",
+      "from": "Bathtub",
+      "to": null,
+      "behavior": {
+        "value": "IfThenElse([Bathtub]>100, [Bathtub]-100, 0)",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "Bathtub",
+      "to": "Flow_from_faucet"
+    },
+    {
+      "type": "LINK",
+      "from": "Human_Population",
+      "to": "Growth"
+    },
+    {
+      "type": "LINK",
+      "from": "Annual_Growth_Rate_Coefficient",
+      "to": "Growth"
+    },
+    {
+      "type": "LINK",
+      "from": "Human_Population",
+      "to": "Growth"
+    },
+    {
+      "type": "LINK",
+      "from": "Termites_Living_on_Fallen_Tree",
+      "to": "Births"
+    },
+    {
+      "type": "LINK",
+      "from": "Fallen_Tree_Biomass",
+      "to": "Births"
+    },
+    {
+      "type": "LINK",
+      "from": "Termites_Living_on_Fallen_Tree",
+      "to": "Births"
+    },
+    {
+      "type": "LINK",
+      "from": "Termites_Living_on_Fallen_Tree",
+      "to": "Eating"
+    },
+    {
+      "type": "LINK",
+      "from": "Fallen_Tree_Biomass",
+      "to": "Eating"
+    },
+    {
+      "type": "LINK",
+      "from": "Termites_Living_on_Fallen_Tree",
+      "to": "Deaths"
+    },
+    {
+      "type": "LINK",
+      "from": "Termites_Living_on_Fallen_Tree",
+      "to": "Deaths"
+    },
+    {
+      "type": "LINK",
+      "from": "Bathtub",
+      "to": "Overflow"
+    },
+    {
+      "type": "LINK",
+      "from": "Bathtub",
+      "to": "Overflow"
+    },
+    {
+      "type": "LINK",
+      "from": "Bathtub",
+      "to": "Overflow"
+    }
+  ],
+  "engine_settings": []
+}

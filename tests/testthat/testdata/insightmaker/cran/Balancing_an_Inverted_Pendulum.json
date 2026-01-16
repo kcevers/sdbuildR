@@ -1,0 +1,733 @@
+{
+	"engine": "SIMULATION_PACKAGE",
+	"name": "Clone of Balancing an Inverted Pendulum",
+	"description": "<p>Z209 from Hartmut Bossel's System Zoo 1 p112-118. Compare with PCT Example&nbsp;<a href=\"http://insightmaker.com/insight/9010\" target=\"_blank\" style=\"font-family: undefined;\">IM-9010</a></p>",
+	"simulation": {
+		"algorithm": "RK1",
+		"time_start": 0,
+		"time_length": 10,
+		"time_step": 0.01,
+		"time_units": "SECONDS"
+	},
+	"elements": [
+		{
+			"type": "STOCK",
+			"name": "angular velocity",
+			"display": {
+				"coordinates": [
+					180,
+					193
+				],
+				"size": [
+					100,
+					40
+				]
+			},
+			"behavior": {
+				"initial_value": 0
+			}
+		},
+		{
+			"type": "STOCK",
+			"name": "velocity",
+			"display": {
+				"coordinates": [
+					190,
+					340
+				],
+				"size": [
+					100,
+					40
+				]
+			},
+			"behavior": {
+				"initial_value": 0
+			}
+		},
+		{
+			"type": "FLOW",
+			"name": "change of velocity",
+			"from": null,
+			"to": "velocity",
+			"display": {
+				"from_coordinates": [
+					240,
+					260
+				]
+			},
+			"behavior": {
+				"value": "[c]*[angle]+[d]*([control function]+[perturbation])"
+			}
+		},
+		{
+			"type": "STOCK",
+			"name": "angle",
+			"display": {
+				"coordinates": [
+					360,
+					213
+				],
+				"size": [
+					100,
+					40
+				]
+			},
+			"behavior": {
+				"initial_value": 0.2
+			}
+		},
+		{
+			"type": "STOCK",
+			"name": "position",
+			"display": {
+				"coordinates": [
+					450,
+					300
+				],
+				"size": [
+					100,
+					40
+				]
+			},
+			"behavior": {
+				"initial_value": 0
+			}
+		},
+		{
+			"type": "STOCK",
+			"name": "control work",
+			"display": {
+				"coordinates": [
+					680,
+					375
+				],
+				"size": [
+					100,
+					40
+				]
+			},
+			"behavior": {
+				"initial_value": 0
+			}
+		},
+		{
+			"type": "FLOW",
+			"name": "change of angle",
+			"from": null,
+			"to": "angle",
+			"display": {
+				"from_coordinates": [
+					410,
+					312
+				]
+			},
+			"behavior": {
+				"value": "[angular velocity]"
+			}
+		},
+		{
+			"type": "FLOW",
+			"name": "change of position",
+			"from": null,
+			"to": "position",
+			"display": {
+				"from_coordinates": [
+					520,
+					400
+				]
+			},
+			"behavior": {
+				"value": "[velocity]"
+			}
+		},
+		{
+			"type": "FLOW",
+			"name": "control power",
+			"from": null,
+			"to": "control work",
+			"display": {
+				"from_coordinates": [
+					570,
+					460
+				]
+			},
+			"behavior": {
+				"value": "Abs([control function]*[velocity])"
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "angular velocity",
+			"to": "change of angle"
+		},
+		{
+			"type": "LINK",
+			"from": "velocity",
+			"to": "change of position"
+		},
+		{
+			"type": "VARIABLE",
+			"name": "d",
+			"display": {
+				"coordinates": [
+					460,
+					510
+				],
+				"size": [
+					40,
+					35
+				]
+			},
+			"behavior": {
+				"value": "([moment of inertia for sphere]+[pendulum mass]*[pendulum length]^2)/[aa]"
+			}
+		},
+		{
+			"type": "VARIABLE",
+			"name": "a",
+			"display": {
+				"coordinates": [
+					20,
+					503
+				],
+				"size": [
+					40,
+					35
+				]
+			},
+			"behavior": {
+				"value": "[gravitation constant]*([pendulum mass]+[carriage mass])*[pendulum mass]*[pendulum length]/[aa]"
+			}
+		},
+		{
+			"type": "VARIABLE",
+			"name": "aa",
+			"display": {
+				"coordinates": [
+					340,
+					510
+				],
+				"size": [
+					40,
+					35
+				]
+			},
+			"behavior": {
+				"value": "[moment of inertia for sphere]*([pendulum mass]+[carriage mass])+[pendulum mass]*[carriage mass]*[pendulum length]^2"
+			}
+		},
+		{
+			"type": "VARIABLE",
+			"name": "c",
+			"display": {
+				"coordinates": [
+					230,
+					490
+				],
+				"size": [
+					40,
+					40
+				]
+			},
+			"behavior": {
+				"value": "-[gravitation constant]*[pendulum mass]^2*[pendulum length]^2/[aa]"
+			}
+		},
+		{
+			"type": "VARIABLE",
+			"name": "b",
+			"display": {
+				"coordinates": [
+					120,
+					528
+				],
+				"size": [
+					40,
+					35
+				]
+			},
+			"behavior": {
+				"value": "-[pendulum mass]*[pendulum length]/[aa]"
+			}
+		},
+		{
+			"type": "VARIABLE",
+			"name": "perturbation",
+			"display": {
+				"coordinates": [
+					50,
+					218
+				],
+				"size": [
+					100,
+					35
+				]
+			},
+			"behavior": {
+				"value": "[amplitude]*(2*Rand(0,1)-1)"
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "perturbation",
+			"to": "change of angular velocity"
+		},
+		{
+			"type": "LINK",
+			"from": "perturbation",
+			"to": "change of velocity"
+		},
+		{
+			"type": "LINK",
+			"from": "velocity",
+			"to": "control power"
+		},
+		{
+			"type": "VARIABLE",
+			"name": "control function",
+			"display": {
+				"coordinates": [
+					360,
+					95
+				],
+				"size": [
+					120,
+					35
+				]
+			},
+			"behavior": {
+				"value": "[angle feedback]*[angle]+[angular velocity feedback]*[angular velocity]+[position feedback]*[position]+[velocity feedback]*[velocity]"
+			}
+		},
+		{
+			"type": "VARIABLE",
+			"name": "amplitude",
+			"display": {
+				"coordinates": [
+					30,
+					161
+				],
+				"size": [
+					90,
+					32
+				]
+			},
+			"behavior": {
+				"value": 2
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "angular velocity",
+			"to": "control function"
+		},
+		{
+			"type": "FLOW",
+			"name": "change of angular velocity",
+			"from": null,
+			"to": "angular velocity",
+			"display": {
+				"from_coordinates": [
+					220,
+					125
+				]
+			},
+			"behavior": {
+				"value": "[a]*[angle]+[b]*([control function]+[perturbation])"
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "control function",
+			"to": "change of angular velocity"
+		},
+		{
+			"type": "LINK",
+			"from": "amplitude",
+			"to": "perturbation"
+		},
+		{
+			"type": "VARIABLE",
+			"name": "angle feedback",
+			"display": {
+				"coordinates": [
+					20,
+					30
+				],
+				"size": [
+					120,
+					35
+				]
+			},
+			"behavior": {
+				"value": 100
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "angle feedback",
+			"to": "control function"
+		},
+		{
+			"type": "VARIABLE",
+			"name": "angular velocity feedback",
+			"display": {
+				"coordinates": [
+					190,
+					13
+				],
+				"size": [
+					120,
+					35
+				]
+			},
+			"behavior": {
+				"value": 30
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "angular velocity feedback",
+			"to": "control function"
+		},
+		{
+			"type": "VARIABLE",
+			"name": "position feedback",
+			"display": {
+				"coordinates": [
+					360,
+					11
+				],
+				"size": [
+					120,
+					35
+				]
+			},
+			"behavior": {
+				"value": 3
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "position feedback",
+			"to": "control function"
+		},
+		{
+			"type": "VARIABLE",
+			"name": "velocity feedback",
+			"display": {
+				"coordinates": [
+					540,
+					11
+				],
+				"size": [
+					120,
+					35
+				]
+			},
+			"behavior": {
+				"value": 10
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "velocity feedback",
+			"to": "control function"
+		},
+		{
+			"type": "LINK",
+			"from": "angle",
+			"to": "change of angular velocity"
+		},
+		{
+			"type": "LINK",
+			"from": "a",
+			"to": "change of angular velocity"
+		},
+		{
+			"type": "LINK",
+			"from": "b",
+			"to": "change of angular velocity"
+		},
+		{
+			"type": "LINK",
+			"from": "angle",
+			"to": "change of velocity"
+		},
+		{
+			"type": "LINK",
+			"from": "c",
+			"to": "change of velocity"
+		},
+		{
+			"type": "LINK",
+			"from": "d",
+			"to": "change of velocity"
+		},
+		{
+			"type": "LINK",
+			"from": "control function",
+			"to": "control power"
+		},
+		{
+			"type": "LINK",
+			"from": "velocity",
+			"to": "control function"
+		},
+		{
+			"type": "LINK",
+			"from": "position",
+			"to": "control function"
+		},
+		{
+			"type": "LINK",
+			"from": "angle",
+			"to": "control function"
+		},
+		{
+			"type": "VARIABLE",
+			"name": "gravitation constant",
+			"display": {
+				"coordinates": [
+					50,
+					435
+				],
+				"size": [
+					100,
+					45
+				]
+			},
+			"behavior": {
+				"value": 9.81
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "gravitation constant",
+			"to": "a"
+		},
+		{
+			"type": "LINK",
+			"from": "gravitation constant",
+			"to": "c"
+		},
+		{
+			"type": "VARIABLE",
+			"name": "carriage mass",
+			"display": {
+				"coordinates": [
+					20,
+					590
+				],
+				"size": [
+					80,
+					40
+				]
+			},
+			"behavior": {
+				"value": 1
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "carriage mass",
+			"to": "a"
+		},
+		{
+			"type": "LINK",
+			"from": "carriage mass",
+			"to": "aa"
+		},
+		{
+			"type": "VARIABLE",
+			"name": "pendulum mass",
+			"display": {
+				"coordinates": [
+					130,
+					600
+				],
+				"size": [
+					80,
+					40
+				]
+			},
+			"behavior": {
+				"value": 1
+			}
+		},
+		{
+			"type": "VARIABLE",
+			"name": "moment of inertia for sphere",
+			"display": {
+				"coordinates": [
+					270,
+					585
+				],
+				"size": [
+					120,
+					50
+				]
+			},
+			"behavior": {
+				"value": "2*[pendulum mass]*[radius of pendulum mass]^2/5"
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "moment of inertia for sphere",
+			"to": "d"
+		},
+		{
+			"type": "LINK",
+			"from": "moment of inertia for sphere",
+			"to": "aa"
+		},
+		{
+			"type": "LINK",
+			"from": "aa",
+			"to": "d"
+		},
+		{
+			"type": "VARIABLE",
+			"name": "pendulum length",
+			"display": {
+				"coordinates": [
+					260,
+					430
+				],
+				"size": [
+					80,
+					40
+				]
+			},
+			"behavior": {
+				"value": 1
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "pendulum length",
+			"to": "a"
+		},
+		{
+			"type": "LINK",
+			"from": "pendulum length",
+			"to": "b"
+		},
+		{
+			"type": "LINK",
+			"from": "pendulum length",
+			"to": "c"
+		},
+		{
+			"type": "LINK",
+			"from": "pendulum length",
+			"to": "aa"
+		},
+		{
+			"type": "LINK",
+			"from": "pendulum length",
+			"to": "d"
+		},
+		{
+			"type": "LINK",
+			"from": "aa",
+			"to": "c"
+		},
+		{
+			"type": "LINK",
+			"from": "pendulum mass",
+			"to": "c"
+		},
+		{
+			"type": "LINK",
+			"from": "pendulum mass",
+			"to": "moment of inertia for sphere"
+		},
+		{
+			"type": "LINK",
+			"from": "pendulum mass",
+			"to": "a"
+		},
+		{
+			"type": "LINK",
+			"from": "pendulum mass",
+			"to": "b"
+		},
+		{
+			"type": "VARIABLE",
+			"name": "radius of pendulum mass",
+			"display": {
+				"coordinates": [
+					280,
+					650
+				],
+				"size": [
+					100,
+					50
+				]
+			},
+			"behavior": {
+				"value": 0
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "radius of pendulum mass",
+			"to": "moment of inertia for sphere"
+		},
+		{
+			"type": "LINK",
+			"from": "pendulum mass",
+			"to": "d"
+		},
+		{
+			"type": "LINK",
+			"from": "control function",
+			"to": "change of velocity"
+		},
+		{
+			"type": "LINK",
+			"from": "pendulum mass",
+			"to": "aa"
+		},
+		{
+			"type": "LINK",
+			"from": "aa",
+			"to": "b"
+		},
+		{
+			"type": "LINK",
+			"from": "aa",
+			"to": "a"
+		}
+	],
+	"visualizations": [
+		{
+			"name": "Time Series",
+			"type": "TIME_SERIES",
+			"elements": [
+				"angular velocity",
+				"velocity",
+				"angle",
+				"position"
+			]
+		},
+		{
+			"name": "Angle Position",
+			"type": "TIME_SERIES",
+			"elements": [
+				"position",
+				"angle"
+			]
+		},
+		{
+			"name": "Angular Velocity Position",
+			"type": "TIME_SERIES",
+			"elements": [
+				"position",
+				"angular velocity"
+			]
+		}
+	]
+}

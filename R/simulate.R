@@ -11,13 +11,14 @@
 #'
 #' @returns Object of class [`sdbuildR_sim`][simulate], a list containing:
 #' \describe{
+#'   \item{sfm}{Stock-and-flow model object of class [`sdbuildR_xmile`][xmile]}
 #'   \item{df}{Data frame: simulation results (time, variable, value)}
 #'   \item{init}{Named vector: initial stock values}
 #'   \item{constants}{Named vector: constant parameters}
 #'   \item{script}{Character: generated simulation code (R or Julia)}
 #'   \item{duration}{Numeric: simulation time in seconds}
 #'   \item{success}{Logical: TRUE if completed without errors}
-#'   \item{...}{Other parameters passed to simulate}
+#'   \item{error_message}{NULL if completed without errors}
 #' }
 #'
 #' Use [as.data.frame()] to extract results, [plot()] to visualize.
@@ -67,16 +68,16 @@ simulate <- function(sfm,
   }
 
   # Check model for delayN() and smoothN() functions
-  delayN_smoothN <- get_delayN_smoothN(sfm)
+  delayN_smoothN <- get_delay(sfm, type = "delayN_smoothN")
 
   # Check model for delay() and past() functions
-  delay_past <- get_delay_past(sfm)
+  delay_past <- get_delay(sfm, type = "past")
 
   if (length(delayN_smoothN) > 0) {
     txt <- "The model contains either delayN() or smoothN(), which are not supported."
     # stop(paste0(
-      # "The model contains either delayN() or smoothN(), which are not supported for simulations in R.\nSet sfm |> sim_specs(language = 'Julia') or modify the equations of these variables: ",
-      #           paste0(names(delayN_smoothN), collapse = ", ")
+    # "The model contains either delayN() or smoothN(), which are not supported for simulations in R.\nSet sfm |> sim_specs(language = 'Julia') or modify the equations of these variables: ",
+    #           paste0(names(delayN_smoothN), collapse = ", ")
     # ))
     warning(paste(txt, collapse = "\n"))
     return(new_sdbuildR_sim(
@@ -89,8 +90,8 @@ simulate <- function(sfm,
   if (length(delay_past) > 0) {
     txt <- "The model contains either delay() or past(), which are not supported."
     # stop(paste0(
-      # "The model contains either delay() or past(), which are not supported for simulations in R.\nSet sfm |> sim_specs(language = 'Julia') or modify the equations of these variables: ",
-      #           paste0(names(delay_past), collapse = ", ")
+    # "The model contains either delay() or past(), which are not supported for simulations in R.\nSet sfm |> sim_specs(language = 'Julia') or modify the equations of these variables: ",
+    #           paste0(names(delay_past), collapse = ", ")
     # ))
     warning(paste(txt, collapse = "\n"))
     return(new_sdbuildR_sim(
@@ -108,7 +109,6 @@ simulate <- function(sfm,
       verbose = verbose
     ))
   } else if (tolower(sfm[["sim_specs"]][["language"]]) == "r") {
-
     # Check model for unit strings
     eqn_units <- find_unit_strings(sfm)
 
@@ -116,8 +116,10 @@ simulate <- function(sfm,
     if (length(eqn_units) > 0) {
       # stop(paste0("The model contains unit strings u(''), which are not supported for simulations in R.\nSet sim_specs(sfm, language = 'Julia') or modify the equations of these variables:\n\n",
       #             paste0(names(eqn_units), collapse = ", ")))
-      txt <- paste0("The model contains unit strings u(''), which are not supported for simulations in R.\nSet sim_specs(sfm, language = 'Julia') or modify the equations of these variables:\n\n",
-                    paste0(names(eqn_units), collapse = ", "))
+      txt <- paste0(
+        "The model contains unit strings u(''), which are not supported for simulations in R.\nSet sim_specs(sfm, language = 'Julia') or modify the equations of these variables:\n\n",
+        paste0(names(eqn_units), collapse = ", ")
+      )
       warning(paste(txt, collapse = "\n"))
       return(new_sdbuildR_sim(
         success = FALSE,
@@ -142,6 +144,7 @@ simulate <- function(sfm,
     ))
   }
 }
+
 
 #' Create new object of class [`sdbuildR_sim`][simulate]
 #'
@@ -225,12 +228,15 @@ detect_undefined_var <- function(sfm) {
   var_names <- get_model_var(sfm)
 
   # Macros and graphical functions can be functions
-  possible_func_in_model <- c(names(sfm[["macro"]]), names(sfm[["model"]][["variables"]][["gf"]]))
+  possible_func_in_model <- c(
+    names(sfm[[P[["macro_name"]]]]),
+    names(sfm[["model"]][["variables"]][["gf"]])
+  )
 
   possible_func <- c(
     possible_func_in_model,
-    get_syntax_julia()[["syntax_df"]][["R_first_iter"]],
-    unlist(.sdbuildR_env[["P"]]),
+    syntax_julia[["syntax_df"]][["R_first_iter"]],
+    unlist(P),
     # Remove base R names
     "pi", "letters", "LETTERS",
     "month.abb", "month.name"
@@ -334,15 +340,11 @@ topological_sort <- function(dependencies_dict) {
     return(edge)
   }) |>
     do.call(rbind, args = _) |>
-    magrittr::set_rownames(NULL) |>
+    set_rownames(NULL) |>
     # Turn into vector by row
     as.data.frame()
   edges <- edges[!duplicated(edges), ] # Remove duplicates
-  edges <- as.matrix(edges) |>
-    t() |>
-    c()
-
-  edges
+  edges <- c(t(as.matrix(edges)))
 
   # Create a directed graph from the edges
   g <- igraph::make_graph(edges, directed = TRUE)
@@ -385,7 +387,10 @@ circularity <- function(g) {
     # Find the specific edges in the cycles
     sub_g <- igraph::induced_subgraph(g, cycle_nodes)
     cycle_edges <- igraph::as_edgelist(sub_g)
-    edge_message <- paste0(paste0("- ", cycle_edges[, 1], " depends on ", cycle_edges[, 2]), collapse = "\n")
+    edge_message <- paste0(paste0(
+      "- ", cycle_edges[, 1], " depends on ",
+      cycle_edges[, 2]
+    ), collapse = "\n")
 
     msg <- paste0(c(cycle_message, edge_message), collapse = "\n")
     return(list(issue = TRUE, msg = msg))
@@ -403,7 +408,10 @@ circularity <- function(g) {
 #' @noRd
 find_newly_defined_var <- function(eqn) {
   # For each =, find preceding \n and next =
-  newlines <- unique(c(1, stringr::str_locate_all(eqn, "\\n")[[1]][, "start"], nchar(eqn)))
+  newlines <- unique(c(
+    1, stringr::str_locate_all(eqn, "\\n")[[1]][, "start"],
+    nchar(eqn)
+  ))
   assignment <- stringr::str_locate_all(eqn, "=")[[1]]
 
   # Exclude <- & \n in comments and strings
@@ -413,7 +421,7 @@ find_newly_defined_var <- function(eqn) {
   newlines <- newlines[!(newlines %in% seq_quot)]
 
   new_var <- c()
-  if (nrow(assignment) > 0 & length(newlines) > 0) {
+  if (nrow(assignment) > 0 && length(newlines) > 0) {
     # Find preceding newline before assignment
     start_idxs <- vapply(assignment[, "start"], function(idx) {
       idxs_newline <- which(newlines <= idx)
@@ -512,26 +520,42 @@ find_dependencies_ <- function(sfm, eqns = NULL, only_var = TRUE, only_model_var
 
   # Macros and graphical functions can be functions
   possible_func_in_model <- c(
-    names(sfm[["macro"]]),
+    names(sfm[[P[["macro_name"]]]]),
     names(sfm[["model"]][["variables"]][["gf"]]),
     var_names
   ) # Some aux are also functions, such as pulse/step/ramp/seasonal
 
   # If no equations are provided, use all equations in the model
   if (is.null(eqns)) {
+    # eqns <- unlist(
+    #   unname(lapply(
+    #     sfm[["model"]][["variables"]],
+    #     function(x) {
+    #       lapply(x, `[[`, "eqn")
+    #     }
+    #   )),
+    #   recursive = FALSE
+    # )
+
     eqns <- unlist(
       unname(lapply(
-        sfm[["model"]][["variables"]],
+        sfm[["model"]][["variables"]][c("stock", "flow", "aux", "constant")],
         function(x) {
           lapply(x, `[[`, "eqn")
         }
       )),
       recursive = FALSE
     )
+
+    # Add graphical function dependencies on source
+    gf_source <- unlist(lapply(sfm[["model"]][["variables"]][["gf"]], `[[`, "source"))
+    eqns <- c(eqns, gf_source)
   }
 
   # Find dependencies in each equation
   dependencies <- lapply(eqns, function(eqn) {
+    d <- NA
+
     # Parse the line as an expression
     expr <- tryCatch(parse(text = eqn), error = function(e) NULL)
 
@@ -550,8 +574,6 @@ find_dependencies_ <- function(sfm, eqns = NULL, only_var = TRUE, only_model_var
       } else if (!only_var) {
         d <- all_d
       }
-    } else {
-      d <- NA
     }
 
     return(d)
@@ -573,11 +595,14 @@ order_equations <- function(sfm, print_msg = TRUE) {
   # Add .outflow to detect delayed variables
   var_names <- unique(get_model_var(sfm))
   idx_delay <- grepl(paste0(
-    .sdbuildR_env[["P"]][["delayN_suffix"]], "[0-9]+$|",
-    .sdbuildR_env[["P"]][["smoothN_suffix"]], "[0-9]+$"
+    P[["delayN_suffix"]], "[0-9]+$|",
+    P[["smoothN_suffix"]], "[0-9]+$"
   ), var_names)
   delay_var <- var_names[idx_delay]
-  delay_pattern <- paste0(var_names[idx_delay], stringr::str_escape(.sdbuildR_env[["P"]][["outflow_suffix"]]))
+  delay_pattern <- paste0(
+    var_names[idx_delay],
+    stringr::str_escape(P[["outflow_suffix"]])
+  )
 
   # Separate auxiliary variables into static parameters and dynamically updated auxiliaries
   dependencies <- lapply(sfm[["model"]][["variables"]], function(y) {
@@ -611,7 +636,8 @@ order_equations <- function(sfm, print_msg = TRUE) {
     dependencies[["constant"]],
     dependencies[["stock"]]
   ) |>
-    purrr::list_flatten()
+    flatten()
+  # purrr::list_flatten()
 
   if (static_and_dynamic[["issue"]]) {
     if (any(unname(static_dependencies_dict) %in% c(names(dependencies[["aux"]]), names(dependencies[["flow"]])))) {
@@ -620,7 +646,7 @@ order_equations <- function(sfm, print_msg = TRUE) {
   }
 
   static <- topological_sort(static_dependencies_dict)
-  if (print_msg & static[["issue"]]) {
+  if (print_msg && static[["issue"]]) {
     warning(paste0("Ordering static equations failed. ", static[["msg"]], collapse = ""))
   }
 
@@ -630,10 +656,11 @@ order_equations <- function(sfm, print_msg = TRUE) {
     dependencies[["aux"]],
     dependencies[["flow"]]
   ) |>
-    purrr::list_flatten()
+    flatten()
+  # purrr::list_flatten()
   dynamic <- topological_sort(dependencies_dict)
 
-  if (print_msg & dynamic[["issue"]]) {
+  if (print_msg && dynamic[["issue"]]) {
     warning(paste0("Ordering dynamic equations failed. ", dynamic[["msg"]], collapse = ""))
   }
 
@@ -654,14 +681,14 @@ order_equations <- function(sfm, print_msg = TRUE) {
 #' @noRd
 #'
 compare_sim <- function(sim1, sim2, tolerance = .00001) {
-  if (sim1[["success"]] & !sim2[["success"]]) {
+  if (sim1[["success"]] && !sim2[["success"]]) {
     return(c(
       equal = FALSE,
       msg = "Simulation 1 was successful, but simulation 2 failed."
     ))
   }
 
-  if (!sim1[["success"]] & sim2[["success"]]) {
+  if (!sim1[["success"]] && sim2[["success"]]) {
     return(c(
       equal = FALSE,
       msg = "Simulation 2 was successful, but simulation 1 failed."
@@ -670,11 +697,11 @@ compare_sim <- function(sim1, sim2, tolerance = .00001) {
 
   get_prop <- function(sim) {
     list(
-      colnames = colnames(sim[[.sdbuildR_env[["P"]][["sim_df_name"]]]]),
-      var_names = unique(sim[[.sdbuildR_env[["P"]][["sim_df_name"]]]][["variable"]]),
-      nrow = nrow(sim[[.sdbuildR_env[["P"]][["sim_df_name"]]]]),
-      ncol = ncol(sim[[.sdbuildR_env[["P"]][["sim_df_name"]]]]),
-      n_pars = length(sim[[.sdbuildR_env[["P"]][["parameter_name"]]]]),
+      colnames = colnames(sim[[P[["sim_df_name"]]]]),
+      var_names = unique(sim[[P[["sim_df_name"]]]][["variable"]]),
+      nrow = nrow(sim[[P[["sim_df_name"]]]]),
+      ncol = ncol(sim[[P[["sim_df_name"]]]]),
+      n_pars = length(sim[[P[["parameter_name"]]]]),
       language = sim[["sfm"]][["sim_specs"]][["language"]],
       method = sim[["sfm"]][["sim_specs"]][["method"]]
     )
@@ -684,7 +711,13 @@ compare_sim <- function(sim1, sim2, tolerance = .00001) {
   prop2 <- get_prop(sim2)
 
   overlapping_var_names <- intersect(prop1[["var_names"]], prop2[["var_names"]])
-  nonoverlapping_var_names <- setdiff(union(prop1[["var_names"]], prop2[["var_names"]]), overlapping_var_names)
+  nonoverlapping_var_names <- setdiff(
+    union(
+      prop1[["var_names"]],
+      prop2[["var_names"]]
+    ),
+    overlapping_var_names
+  )
 
   check_diff <- function(col1, col2) {
     col1 <- as.numeric(col1)
@@ -693,7 +726,10 @@ compare_sim <- function(sim1, sim2, tolerance = .00001) {
     if (length(col1) != length(col2)) {
       return(c(
         equal = FALSE,
-        msg = paste0("Column lengths are not equal: ", length(col1), " (sim1) vs ", length(col2), " (sim2)")
+        msg = paste0(
+          "Column lengths are not equal: ",
+          length(col1), " (sim1) vs ", length(col2), " (sim2)"
+        )
       ))
     }
 
@@ -707,20 +743,22 @@ compare_sim <- function(sim1, sim2, tolerance = .00001) {
     ))
   }
 
-  df <- lapply(
-    overlapping_var_names,
-    function(name) {
-      c(
-        name = name,
-        check_diff(
-          sim1[["df"]][sim1[["df"]][["variable"]] == name, "value"],
-          sim2[["df"]][sim2[["df"]][["variable"]] == name, "value"]
+  df <- bind_rows_(
+    lapply(
+      overlapping_var_names,
+      function(name) {
+        c(
+          name = name,
+          check_diff(
+            sim1[["df"]][sim1[["df"]][["variable"]] == name, "value"],
+            sim2[["df"]][sim2[["df"]][["variable"]] == name, "value"]
+          )
         )
-      )
-    }
-  ) |>
-    do.call(dplyr::bind_rows, args = _) |>
-    as.data.frame()
+      }
+    )
+  ) #|>
+  # do.call(dplyr::bind_rows, args = _) |>
+  # as.data.frame()
 
   return(list(
     equal = all(as.logical(as.numeric(df[["equal"]]))),
@@ -728,7 +766,11 @@ compare_sim <- function(sim1, sim2, tolerance = .00001) {
     nonoverlapping_var_names = nonoverlapping_var_names,
     msg = paste0(
       "The following columns are not equal:\n",
-      paste0(df[["name"]], ": ", df[["first_diff"]], " (", df[["nr_diff"]], " differences, max diff: ", df[["max_diff"]], ")\n", collapse = ""),
+      paste0(df[["name"]], ": ", df[["first_diff"]], " (",
+        df[["nr_diff"]], " differences, max diff: ", df[["max_diff"]],
+        ")\n",
+        collapse = ""
+      ),
       "\n"
     ),
     prop1 = prop1,
@@ -985,17 +1027,20 @@ ensemble <- function(sfm,
 
   old_threads <- .sdbuildR_env[["prev_JULIA_NUM_THREADS"]]
 
-  if (!is.null(.sdbuildR_env[["JULIA_NUM_THREADS"]]) & !is.null(old_threads)) {
+  if (!is.null(.sdbuildR_env[["JULIA_NUM_THREADS"]]) && !is.null(old_threads)) {
     ensemble_pars[["threaded"]] <- TRUE
     Sys.setenv("JULIA_NUM_THREADS" = .sdbuildR_env[["JULIA_NUM_THREADS"]])
 
-    on.exit({
-      if (is.na(old_threads)) {
-        Sys.unsetenv("JULIA_NUM_THREADS")
-      } else {
-        Sys.setenv("JULIA_NUM_THREADS" = old_threads)
-      }
-    })
+    on.exit(
+      {
+        if (is.na(old_threads)) {
+          Sys.unsetenv("JULIA_NUM_THREADS")
+        } else {
+          Sys.setenv("JULIA_NUM_THREADS" = old_threads)
+        }
+      },
+      add = TRUE
+    )
   } else {
     ensemble_pars[["threaded"]] <- FALSE
   }
@@ -1050,12 +1095,12 @@ ensemble <- function(sfm,
       file.remove(filepath)
 
       # Read the total number of simulations
-      n <- JuliaConnectoR::juliaEval(.sdbuildR_env[["P"]][["ensemble_n"]])
-      n_total <- JuliaConnectoR::juliaEval(.sdbuildR_env[["P"]][["ensemble_total_n"]])
+      n <- JuliaConnectoR::juliaEval(P[["ensemble_n"]])
+      n_total <- JuliaConnectoR::juliaEval(P[["ensemble_total_n"]])
 
       # Read the ensemble conditions
       if (!is.null(ensemble_pars[["range"]])) {
-        conditions <- JuliaConnectoR::juliaEval(paste0("Matrix(hcat(", .sdbuildR_env[["P"]][["ensemble_pars"]], "...)')"))
+        conditions <- JuliaConnectoR::juliaEval(paste0("Matrix(hcat(", P[["ensemble_pars"]], "...)')"))
         colnames(conditions) <- names(ensemble_pars[["range"]])
         conditions <- cbind(j = seq_len(nrow(conditions)), conditions)
       } else {
@@ -1067,9 +1112,15 @@ ensemble <- function(sfm,
 
       # Read the simulation results
       if (return_sims) {
-        df <- as.data.frame(data.table::fread(ensemble_pars[["filepath_df"]][["df"]], na.strings = c("", "NA")))
-        constants[["df"]] <- as.data.frame(data.table::fread(ensemble_pars[["filepath_df"]][["constants"]], na.strings = c("", "NA")))
-        init[["df"]] <- as.data.frame(data.table::fread(ensemble_pars[["filepath_df"]][["init"]], na.strings = c("", "NA")))
+        df <- as.data.frame(data.table::fread(ensemble_pars[["filepath_df"]][["df"]],
+          na.strings = c("", "NA")
+        ))
+        constants[["df"]] <- as.data.frame(data.table::fread(ensemble_pars[["filepath_df"]][["constants"]],
+          na.strings = c("", "NA")
+        ))
+        init[["df"]] <- as.data.frame(data.table::fread(ensemble_pars[["filepath_df"]][["init"]],
+          na.strings = c("", "NA")
+        ))
 
         # Delete files
         file.remove(ensemble_pars[["filepath_df"]][["df"]])
@@ -1232,8 +1283,8 @@ get_build_code <- function(sfm) {
   }
 
   # Macros
-  if (length(sfm[["macro"]]) > 0) {
-    macro_str <- lapply(sfm[["macro"]], function(x) {
+  if (length(sfm[[P[["macro_name"]]]]) > 0) {
+    macro_str <- lapply(sfm[[P[["macro_name"]]]], function(x) {
       # Remove properties containing "_julia"
       x[grepl("_julia", names(x))] <- NULL
 
@@ -1341,13 +1392,16 @@ get_build_code <- function(sfm) {
       }
     )
 
-    on.exit({
-      if (is.null(old_option)) {
-        options(styler.colored_print.vertical = NULL)
-      } else {
-        options(styler.colored_print.vertical = old_option)
-      }
-    })
+    on.exit(
+      {
+        if (is.null(old_option)) {
+          options(styler.colored_print.vertical = NULL)
+        } else {
+          options(styler.colored_print.vertical = old_option)
+        }
+      },
+      add = TRUE
+    )
   } else {
     message("The code will not be formatted as styler is not installed. Install styler or wrap the script in cat().")
   }

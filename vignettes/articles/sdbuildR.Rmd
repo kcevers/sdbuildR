@@ -60,8 +60,8 @@ sfm <- xmile() |>
   header(name = "Population growth") |>
   build("X", "stock", eqn = "100", label = "Population size") |>
   build("change", "flow",
-        eqn = "r * (1 - X/K)", to = "X",
-        label = "Births and Deaths"
+    eqn = "r * (1 - X/K)", to = "X",
+    label = "Births and Deaths"
   ) |>
   build("r", "constant", eqn = "5", label = "Growth rate") |>
   build("K", "constant", eqn = "10000", label = "Carrying capacity") |>

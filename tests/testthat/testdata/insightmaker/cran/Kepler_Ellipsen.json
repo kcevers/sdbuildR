@@ -1,0 +1,424 @@
+{
+	"engine": "SIMULATION_PACKAGE",
+	"name": "Clone of Kepler Ellipsen",
+	"description": "Simulation der Umlaufbahn der Erde um die Sonne<br />",
+	"simulation": {
+		"algorithm": "RK4",
+		"time_start": 0,
+		"time_length": 6,
+		"time_step": 0.0025,
+		"time_units": "YEARS"
+	},
+	"elements": [
+		{
+			"type": "STOCK",
+			"name": "x",
+			"display": {
+				"coordinates": [
+					440,
+					110
+				],
+				"size": [
+					100,
+					40
+				]
+			},
+			"behavior": {
+				"initial_value": "[Abstand Erde - Sonne Mio. km]/150"
+			}
+		},
+		{
+			"type": "STOCK",
+			"name": "y",
+			"display": {
+				"coordinates": [
+					440,
+					180
+				],
+				"size": [
+					100,
+					40
+				]
+			},
+			"behavior": {
+				"initial_value": 0
+			}
+		},
+		{
+			"type": "STOCK",
+			"name": "vx",
+			"display": {
+				"coordinates": [
+					440,
+					250
+				],
+				"size": [
+					100,
+					40
+				]
+			},
+			"behavior": {
+				"initial_value": 0
+			}
+		},
+		{
+			"type": "STOCK",
+			"name": "vy",
+			"display": {
+				"coordinates": [
+					440,
+					320
+				],
+				"size": [
+					100,
+					40
+				]
+			},
+			"behavior": {
+				"initial_value": "[Geschwindigkeit der Erde km/s]*0.211"
+			}
+		},
+		{
+			"type": "FLOW",
+			"name": "vxdt",
+			"from": null,
+			"to": "x",
+			"display": {
+				"from_coordinates": [
+					150,
+					130
+				]
+			},
+			"behavior": {
+				"value": "[vx]"
+			}
+		},
+		{
+			"type": "FLOW",
+			"name": "vydt",
+			"from": null,
+			"to": "y",
+			"display": {
+				"from_coordinates": [
+					150,
+					200
+				]
+			},
+			"behavior": {
+				"value": "[vy]"
+			}
+		},
+		{
+			"type": "FLOW",
+			"name": "axdt",
+			"from": null,
+			"to": "vx",
+			"display": {
+				"from_coordinates": [
+					150,
+					270
+				]
+			},
+			"behavior": {
+				"value": "[Beschleunigung_x]"
+			}
+		},
+		{
+			"type": "FLOW",
+			"name": "aydt",
+			"from": null,
+			"to": "vy",
+			"display": {
+				"from_coordinates": [
+					150,
+					340
+				]
+			},
+			"behavior": {
+				"value": "[Beschleunigung_y]"
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "vx",
+			"to": "vxdt"
+		},
+		{
+			"type": "LINK",
+			"from": "vy",
+			"to": "vydt"
+		},
+		{
+			"type": "VARIABLE",
+			"name": "Beschleunigung_x",
+			"display": {
+				"coordinates": [
+					710,
+					170
+				],
+				"size": [
+					120,
+					50
+				]
+			},
+			"behavior": {
+				"value": "-39.485*[M_Sonne]*[x]/[Abstand]^3"
+			}
+		},
+		{
+			"type": "VARIABLE",
+			"name": "Beschleunigung_y",
+			"display": {
+				"coordinates": [
+					710,
+					270
+				],
+				"size": [
+					120,
+					50
+				]
+			},
+			"behavior": {
+				"value": "-39.485*[M_Sonne]*[y]/[Abstand]^3"
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "x",
+			"to": "Beschleunigung_x"
+		},
+		{
+			"type": "LINK",
+			"from": "y",
+			"to": "Beschleunigung_y"
+		},
+		{
+			"type": "VARIABLE",
+			"name": "M_Sonne",
+			"display": {
+				"coordinates": [
+					810,
+					90
+				],
+				"size": [
+					120,
+					50
+				]
+			},
+			"behavior": {
+				"value": 1
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "M_Sonne",
+			"to": "Beschleunigung_x"
+		},
+		{
+			"type": "LINK",
+			"from": "M_Sonne",
+			"to": "Beschleunigung_y"
+		},
+		{
+			"type": "LINK",
+			"from": "Beschleunigung_x",
+			"to": "axdt"
+		},
+		{
+			"type": "LINK",
+			"from": "Beschleunigung_y",
+			"to": "aydt"
+		},
+		{
+			"type": "VARIABLE",
+			"name": "Abstand",
+			"display": {
+				"coordinates": [
+					650,
+					60
+				],
+				"size": [
+					120,
+					50
+				]
+			},
+			"behavior": {
+				"value": "Sqrt([x]^2+[y]^2)"
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "x",
+			"to": "Abstand"
+		},
+		{
+			"type": "LINK",
+			"from": "y",
+			"to": "Abstand"
+		},
+		{
+			"type": "LINK",
+			"from": "Abstand",
+			"to": "Beschleunigung_x"
+		},
+		{
+			"type": "LINK",
+			"from": "Abstand",
+			"to": "Beschleunigung_y"
+		},
+		{
+			"type": "VARIABLE",
+			"name": "Betrag_v",
+			"display": {
+				"coordinates": [
+					580,
+					395
+				],
+				"size": [
+					120,
+					50
+				]
+			},
+			"behavior": {
+				"value": "([vx]^2+[vy]^2)^0.5"
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "vx",
+			"to": "Betrag_v"
+		},
+		{
+			"type": "LINK",
+			"from": "vy",
+			"to": "Betrag_v"
+		},
+		{
+			"type": "VARIABLE",
+			"name": "Betrag_a",
+			"display": {
+				"coordinates": [
+					770,
+					395
+				],
+				"size": [
+					120,
+					50
+				]
+			},
+			"behavior": {
+				"value": "([Beschleunigung_x]^2+[Beschleunigung_y]^2)^0.5"
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "Beschleunigung_x",
+			"to": "Betrag_a"
+		},
+		{
+			"type": "LINK",
+			"from": "Beschleunigung_y",
+			"to": "Betrag_a"
+		},
+		{
+			"type": "VARIABLE",
+			"name": "Abstand Erde - Sonne Mio. km",
+			"display": {
+				"interactive": true,
+				"interactive_min": 130,
+				"interactive_max": 170,
+				"coordinates": [
+					390,
+					15
+				],
+				"size": [
+					120,
+					50
+				]
+			},
+			"behavior": {
+				"value": 150
+			}
+		},
+		{
+			"type": "VARIABLE",
+			"name": "Geschwindigkeit der Erde km/s",
+			"display": {
+				"interactive": true,
+				"interactive_min": 20,
+				"interactive_max": 50,
+				"coordinates": [
+					290,
+					425
+				],
+				"size": [
+					120,
+					50
+				]
+			},
+			"behavior": {
+				"value": 30
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "Geschwindigkeit der Erde km/s",
+			"to": "vy"
+		},
+		{
+			"type": "LINK",
+			"from": "Abstand Erde - Sonne Mio. km",
+			"to": "x"
+		}
+	],
+	"visualizations": [
+		{
+			"name": "Bahn",
+			"type": "TIME_SERIES",
+			"elements": [
+				"x",
+				"y"
+			]
+		},
+		{
+			"name": "x(t) y(t)",
+			"type": "TIME_SERIES",
+			"elements": [
+				"x",
+				"y"
+			]
+		},
+		{
+			"name": "vx(t) vy(t)",
+			"type": "TIME_SERIES",
+			"elements": [
+				"vx",
+				"vy"
+			]
+		},
+		{
+			"name": "Betrag Geschwindigkeit",
+			"type": "TIME_SERIES",
+			"elements": [
+				"Betrag_v"
+			]
+		},
+		{
+			"name": "Betrag Beschleunigung",
+			"type": "TIME_SERIES",
+			"elements": [
+				"Betrag_a"
+			]
+		},
+		{
+			"name": "Tabelle",
+			"type": "TABLE",
+			"elements": [
+				"Abstand",
+				"Betrag_v",
+				"x",
+				"y"
+			]
+		}
+	]
+}

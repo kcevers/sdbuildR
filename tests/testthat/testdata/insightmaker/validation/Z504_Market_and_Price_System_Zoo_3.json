@@ -1,0 +1,476 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "Z504 Market and Price - System Zoo 3",
+  "simulation": {
+    "version": "37",
+    "time_length": "20",
+    "time_start": "0",
+    "time_step": "0.1",
+    "time_units": "YEARS",
+    "algorithm": "RK1"
+  },
+  "elements": [
+    {
+      "name": "Production_capacity",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "100000",
+        "description": "",
+        "units": "Unit/Year"
+      }
+    },
+    {
+      "name": "Market_price",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "100",
+        "description": "",
+        "units": "Dollar/Unit"
+      }
+    },
+    {
+      "name": "Capacity_change_rate",
+      "type": "FLOW",
+      "from": null,
+      "to": "Production_capacity",
+      "behavior": {
+        "value": "[investment_response]*[Production_capacity]",
+        "description": "",
+        "units": "Unit/(Year*Year)",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "price_change_from_demand",
+      "type": "FLOW",
+      "from": null,
+      "to": "Market_price",
+      "behavior": {
+        "value": "[demand_discrepancy]*[Market_price]*[RESPONSE_RATE]",
+        "description": "",
+        "units": "Dollar/(Year*Unit)",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "price_change_from_costs",
+      "type": "FLOW",
+      "from": null,
+      "to": "Market_price",
+      "behavior": {
+        "value": "[price_discrepancy]*[Market_price]*[RESPONSE_RATE]",
+        "description": "",
+        "units": "Dollar/(Year*Unit)",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "DEMAND",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "500000",
+        "description": "",
+        "units": "Unit/Year"
+      }
+    },
+    {
+      "name": "EMPLOYMENT_EFFECT",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1/1000",
+        "description": "",
+        "units": "Person/(Unit/Year)"
+      }
+    },
+    {
+      "name": "COST_EFFECTIVENESS_FACTOR",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "SUPPLEMENTARY_COSTS",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "30000",
+        "description": "",
+        "units": "Dollar/(Year*Person)"
+      }
+    },
+    {
+      "name": "WAGE_RATE",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "40000",
+        "description": "",
+        "units": "Dollar/(Person*Year)"
+      }
+    },
+    {
+      "name": "SPECIFIC_CAPITAL_REQUIREMENT",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1",
+        "description": "",
+        "units": "Dollar/(Unit/Year)"
+      }
+    },
+    {
+      "name": "DEPRECIATION_RATE",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.1",
+        "description": "",
+        "units": "1/Year"
+      }
+    },
+    {
+      "name": "SPECIFIC_MATERIAL_COSTS",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "100",
+        "description": "",
+        "units": "Dollar/Unit"
+      }
+    },
+    {
+      "name": "PROFIT_MARGIN",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.05",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "TAX_RATE",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.2",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "RESPONSE_RATE",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.5",
+        "description": "",
+        "units": "1/Year"
+      }
+    },
+    {
+      "name": "employees",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "([EMPLOYMENT_EFFECT]*[Production_capacity])/[COST_EFFECTIVENESS_FACTOR]",
+        "description": "",
+        "units": "Person"
+      }
+    },
+    {
+      "name": "labour_costs",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "([WAGE_RATE]+[SUPPLEMENTARY_COSTS])*[employees]",
+        "description": "",
+        "units": "Dollar/Year"
+      }
+    },
+    {
+      "name": "capital_costs",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[DEPRECIATION_RATE]*[Production_capacity]*[SPECIFIC_CAPITAL_REQUIREMENT]",
+        "description": "",
+        "units": "Dollar/Year"
+      }
+    },
+    {
+      "name": "material_costs",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[SPECIFIC_MATERIAL_COSTS]*[production_volume]",
+        "description": "",
+        "units": "Dollar/Year"
+      }
+    },
+    {
+      "name": "production_volume",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Production_capacity]",
+        "description": "",
+        "units": "Unit/Year"
+      }
+    },
+    {
+      "name": "production_costs",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "([labour_costs]+[capital_costs]+[material_costs])*(1+[PROFIT_MARGIN])",
+        "description": "",
+        "units": "Dollar/Year"
+      }
+    },
+    {
+      "name": "profit",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[PROFIT_MARGIN]*[production_costs]/(1+[PROFIT_MARGIN])",
+        "description": "",
+        "units": "Dollar/Year"
+      }
+    },
+    {
+      "name": "unit_costs",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[production_costs]/[production_volume]*(1+[TAX_RATE])\n",
+        "description": "",
+        "units": "Dollar/Unit"
+      }
+    },
+    {
+      "name": "profitability",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Market_price]/[unit_costs]-1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "demand_discrepancy",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[DEMAND]/[production_volume]-1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "price_discrepancy",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[unit_costs]/[Market_price]-1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "investment_response",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "Lookup([profitability], {-1,-0.5,-0.1,0,0.1,0.5,1}, {-2,-1,-0.5,0,0.5,1,2})",
+        "description": "",
+        "units": "1/Year"
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "Production_capacity",
+      "to": "Capacity_change_rate"
+    },
+    {
+      "type": "LINK",
+      "from": "investment_response",
+      "to": "Capacity_change_rate"
+    },
+    {
+      "type": "LINK",
+      "from": "Production_capacity",
+      "to": "Capacity_change_rate"
+    },
+    {
+      "type": "LINK",
+      "from": "Market_price",
+      "to": "price_change_from_demand"
+    },
+    {
+      "type": "LINK",
+      "from": "RESPONSE_RATE",
+      "to": "price_change_from_demand"
+    },
+    {
+      "type": "LINK",
+      "from": "demand_discrepancy",
+      "to": "price_change_from_demand"
+    },
+    {
+      "type": "LINK",
+      "from": "Market_price",
+      "to": "price_change_from_demand"
+    },
+    {
+      "type": "LINK",
+      "from": "Market_price",
+      "to": "price_change_from_costs"
+    },
+    {
+      "type": "LINK",
+      "from": "RESPONSE_RATE",
+      "to": "price_change_from_costs"
+    },
+    {
+      "type": "LINK",
+      "from": "price_discrepancy",
+      "to": "price_change_from_costs"
+    },
+    {
+      "type": "LINK",
+      "from": "Market_price",
+      "to": "price_change_from_costs"
+    },
+    {
+      "type": "LINK",
+      "from": "Production_capacity",
+      "to": "employees"
+    },
+    {
+      "type": "LINK",
+      "from": "EMPLOYMENT_EFFECT",
+      "to": "employees"
+    },
+    {
+      "type": "LINK",
+      "from": "COST_EFFECTIVENESS_FACTOR",
+      "to": "employees"
+    },
+    {
+      "type": "LINK",
+      "from": "SUPPLEMENTARY_COSTS",
+      "to": "labour_costs"
+    },
+    {
+      "type": "LINK",
+      "from": "WAGE_RATE",
+      "to": "labour_costs"
+    },
+    {
+      "type": "LINK",
+      "from": "employees",
+      "to": "labour_costs"
+    },
+    {
+      "type": "LINK",
+      "from": "Production_capacity",
+      "to": "capital_costs"
+    },
+    {
+      "type": "LINK",
+      "from": "SPECIFIC_CAPITAL_REQUIREMENT",
+      "to": "capital_costs"
+    },
+    {
+      "type": "LINK",
+      "from": "DEPRECIATION_RATE",
+      "to": "capital_costs"
+    },
+    {
+      "type": "LINK",
+      "from": "SPECIFIC_MATERIAL_COSTS",
+      "to": "material_costs"
+    },
+    {
+      "type": "LINK",
+      "from": "production_volume",
+      "to": "material_costs"
+    },
+    {
+      "type": "LINK",
+      "from": "Production_capacity",
+      "to": "production_volume"
+    },
+    {
+      "type": "LINK",
+      "from": "PROFIT_MARGIN",
+      "to": "production_costs"
+    },
+    {
+      "type": "LINK",
+      "from": "labour_costs",
+      "to": "production_costs"
+    },
+    {
+      "type": "LINK",
+      "from": "capital_costs",
+      "to": "production_costs"
+    },
+    {
+      "type": "LINK",
+      "from": "material_costs",
+      "to": "production_costs"
+    },
+    {
+      "type": "LINK",
+      "from": "PROFIT_MARGIN",
+      "to": "profit"
+    },
+    {
+      "type": "LINK",
+      "from": "PROFIT_MARGIN",
+      "to": "profit"
+    },
+    {
+      "type": "LINK",
+      "from": "production_costs",
+      "to": "profit"
+    },
+    {
+      "type": "LINK",
+      "from": "TAX_RATE",
+      "to": "unit_costs"
+    },
+    {
+      "type": "LINK",
+      "from": "production_volume",
+      "to": "unit_costs"
+    },
+    {
+      "type": "LINK",
+      "from": "production_costs",
+      "to": "unit_costs"
+    },
+    {
+      "type": "LINK",
+      "from": "Market_price",
+      "to": "profitability"
+    },
+    {
+      "type": "LINK",
+      "from": "unit_costs",
+      "to": "profitability"
+    },
+    {
+      "type": "LINK",
+      "from": "DEMAND",
+      "to": "demand_discrepancy"
+    },
+    {
+      "type": "LINK",
+      "from": "production_volume",
+      "to": "demand_discrepancy"
+    },
+    {
+      "type": "LINK",
+      "from": "Market_price",
+      "to": "price_discrepancy"
+    },
+    {
+      "type": "LINK",
+      "from": "unit_costs",
+      "to": "price_discrepancy"
+    },
+    {
+      "type": "LINK",
+      "from": "profitability",
+      "to": "investment_response"
+    }
+  ],
+  "engine_settings": []
+}

@@ -1,0 +1,317 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "D-model (curve di Richards) con -ln(alpha)",
+  "simulation": {
+    "version": "38",
+    "time_length": "24",
+    "time_start": "0",
+    "time_step": "0.1",
+    "time_units": "HOURS",
+    "algorithm": "RK4"
+  },
+  "elements": [
+    {
+      "name": "N",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "[N0]",
+        "description": "Questa Ã¨ la popolazione batterica la cui dimensione (in unitÃ  di cellule vitali) cambierÃ  nel corso del tempo. Per rendere realistica la simulazione considera che la massa (umida) tipica di una cellula di <i>Escherichia coli<\/i> Ã¨ circa un femtogrammo (cioÃ¨ 10^-12 g,  anche se puÃ² variare ) e che lâ umiditÃ  tipica di una cellula batterica Ã¨ intorno  al 70%. Quindi, 1 kg di cellule umide contiene 10^12*10^3 = 10^15 cellule. Se tutta lâacqua presente sulla terra (1,4x10^9 km^3, equivalenti a 1,4*10^18 kg) fosse trasformata in batteri sarebbe possibile avere al massimo 2x10^18*10^15 =2x10^33 cellule. Il numero iniziale Ã¨ 100 batteri, ma puoi cambiarlo con uno slider.",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Mumax",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "2",
+        "description": "La costante di velocitÃ  di crescita massima: qui si assume che sia costante, perchÃ© le condizioni che la possono influenzare sono costanti. In generale, valori ragionevoli sono fra 0.01 e 4 h^-1. Per i microrganismi di interesse alimentare puoi usare ComBase browser o ComBase Predictor (http://www.combase.cc) per cercare valori ragionevoli",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "V",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Mu]*[N]",
+        "description": "La velocitÃ  assoluta di crescita, qui dipende dalla velocitÃ  specifica di crescita [mu] e dal numero di cellule [N] al tempo t. ",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Log10N",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "Log([N])",
+        "description": "Il logaritmo decimale del numero di batteri",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Crescita",
+      "type": "FLOW",
+      "from": null,
+      "to": "N",
+      "behavior": {
+        "value": "[V]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "FCB",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "9.5*10^-13",
+        "description": "Ã il fattore di conversione da numero di cellule a biomassa umida in g, le unitÃ  sono cellule/g; per semplicitÃ  Il valore Ã¨ 1X10^12. Un valore frequentemente utilizzato per il peso umido di una singola cellula <i>Escherichia coli<\/i> Ã¨ 9,5*10^-13 g ( anche se puÃ² variare ).",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Biomassa",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[N]*[FCB]",
+        "description": "La biomassa cellulare, in peso umido, in g (per coerenza)",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Nmax",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "10^9",
+        "description": "Ã il numero massimo che i batteri possono raggiungere. Qui, pur essendo un valore arbitrario, Ã¨ un valore vicino a quello che potrebbe essere la popolazione massima per g o ml di alimento deteriorato. In questa fase non facciamo ipotesi su che cosa determini questa limitazione e quali possano essere per esempio le relazioni con la disponibilitÃ  di substrato.",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Mu",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Mumax]*[at]*(1-([N]/[Nmax])^[m])",
+        "description": "La velocitÃ  specifica di crescita all'istante t con unitÃ  tempo^-1. Varia in funzione di Mumax (che Ã¨ costante se le condizioni ambientali sono costanti), N e Nmax. (1-N/Nmax) ha un valore molto vicino a 1 quando N&lt;&lt;Nmax mentre si avvicina a 0 se N-&gt;Nmax. Naturalmente, la velocitÃ  specifica reale non Ã¨ mai massima e questo contraddice molte osservazioni sperimentali. Inoltre, anche l'uso di una relazione logistica determina un comportamento che si allontana dalle condizioni reali (molto spesso la transizione fra un valore prossimo a Mumax e 0 puÃ² essere molto piÃ¹ veloce o lento di quanto si puÃ² prevedere sulla base della relazione logistica.",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "m",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1",
+        "description": "Ã un coefficiente positivo (valori ragionevoli sono fra 0.2 e 10) che influenza la transizione di Mu all'approssimarsi di N a Nmax. Se vale 1 la curva Ã¨ identica ad una logistica.",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "lNN0",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "Ln([N]/[N0])",
+        "description": "Il logaritmo (naturale) del rapporto fra il numero iniziale di cellule e il numero al tempo t. E' un modo per esprimere l'incremento del numero di cellule in maniera adimensionale.",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "N0",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1000",
+        "description": "il numero iniziale di cellule, uso una variabile per convenienza",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "at",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[q]/(1+[q])",
+        "description": "la funzione di adattamento che determina la fase lag, nella transizione fra l'ambiente di provenienza E1 delle cellule e il nuovo ambiente E2. Varia fra 0 e 1.",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "q",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "[q0]",
+        "description": "La quantitÃ  q(t) che rappresenta la variazione nel tempo di P(t)/Kp dove P(t) Ã¨ la concentrazione del generico composto essenziale P (potrebbe essere un enzima indicibile, il numero di ribosomi, etc.) e Kp Ã¨ la costante di Michaelis e Menten per l'equazione che regola l'accumulo di P",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "q0",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1/(Exp([h0])-1)",
+        "description": "Una quantitÃ  che rappresenta lo stato fisiologico iniziale delle cellule, P0/Kp. Qui si usa il valore usato da Baranyi e Roberts nel lavoro del 1984. Valori ragionevoli potrebbero essere fra 0.001 e 1000 (lag duration praticamente 0).",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Vq",
+      "type": "FLOW",
+      "from": null,
+      "to": "q",
+      "behavior": {
+        "value": "[ni]*[q]",
+        "description": "la velocitÃ  assoluta di accumulo di q",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "ni",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Mumax]",
+        "description": "la velocitÃ  specifica di accumulo di q nell'ambiente E2, qui si pone uguale a mumax",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "lag_duration",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[h0]/[ni]",
+        "description": "La durata della fase lag, dipende da q0 e in (e quindi mumax), in unitÃ  di tempo",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "h0",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.75",
+        "description": "un'altra quantitÃ  che rappresenta lo stato iniziale della cellula. Graficamente, Ã¨ la differenza fra logn(N0) e l'intercetta sull'asse delle y (N o logN) della tangente al punto di massima pendenza della curva di crescita. Per calcolo si vede facilmente che h0 = [Mumax]*[lag duration]. Generalmente per cellule cresciute nelle stesse condizioni, Ã¨ una costante, quindi la durata della fase lag Ã¨ inversamente proporzionale alla velocitÃ  specifica di crescita. h0 puÃ² essere calcolato da q0 o viceversa. Qui si calcola q0 da h0 per poter determinare lag duration in funzione di [Mumax] (e quindi calcolare piÃ¹ facilmente la durata della fase lag quando [Mumax] Ã¨ variabile perchÃ© influenzata dalla temperatura o dal pH). h0 puÃ² avere valori compresi fra 1.31 (calcolato da Baranyi e Pin, 1999 per Pseudomonas) a 3,2 (Baranyi e Roberts, 1994) a 2.7 (Augustin e Carlier, 2000, per L. monocytogenes).  \n  <br class=\"ng-star-inserted\"><i class=\"ng-star-inserted\">Augustin, J., Carlier, V.<\/i>  (2000).  <b class=\"ng-star-inserted\">Mathematical modelling of the growth rate and lag time for Listeria monocytogenes<\/b> International journal of food microbiology   56(1)  , 29 - 51  .   https://dx.doi.org/10.1016/s0168-1605(00)00223-3   <i class=\"ng-star-inserted\"><i class=\"ng-star-inserted\">Baranyi, J., Pin, C.<\/i>  (1999).  <b class=\"ng-star-inserted\">Estimating Bacterial Growth Parameters by Means of Detection Times<\/b>  Applied and Environmental Microbiology   65(2)  , 732-736  .   https://dx.doi.org/10.1128/aem.65.2.732-736.1999 <\/i>  <i class=\"ng-star-inserted\">Baranyi, J., Roberts, T.<\/i>  (1994).  <b class=\"ng-star-inserted\">A dynamic approach to predicting bacterial growth in food<\/b>  International journal of food microbiology   23()  , 1 - 18  .  \n ",
+        "units": "Unitless"
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "N0",
+      "to": "N"
+    },
+    {
+      "type": "LINK",
+      "from": "N",
+      "to": "V"
+    },
+    {
+      "type": "LINK",
+      "from": "Mu",
+      "to": "V"
+    },
+    {
+      "type": "LINK",
+      "from": "N",
+      "to": "Log10N"
+    },
+    {
+      "type": "LINK",
+      "from": "V",
+      "to": "Crescita"
+    },
+    {
+      "type": "LINK",
+      "from": "N",
+      "to": "Crescita"
+    },
+    {
+      "type": "LINK",
+      "from": "N",
+      "to": "Biomassa"
+    },
+    {
+      "type": "LINK",
+      "from": "FCB",
+      "to": "Biomassa"
+    },
+    {
+      "type": "LINK",
+      "from": "N",
+      "to": "Mu"
+    },
+    {
+      "type": "LINK",
+      "from": "Mumax",
+      "to": "Mu"
+    },
+    {
+      "type": "LINK",
+      "from": "Nmax",
+      "to": "Mu"
+    },
+    {
+      "type": "LINK",
+      "from": "m",
+      "to": "Mu"
+    },
+    {
+      "type": "LINK",
+      "from": "at",
+      "to": "Mu"
+    },
+    {
+      "type": "LINK",
+      "from": "N",
+      "to": "lNN0"
+    },
+    {
+      "type": "LINK",
+      "from": "N0",
+      "to": "lNN0"
+    },
+    {
+      "type": "LINK",
+      "from": "q",
+      "to": "at"
+    },
+    {
+      "type": "LINK",
+      "from": "q",
+      "to": "at"
+    },
+    {
+      "type": "LINK",
+      "from": "q0",
+      "to": "q"
+    },
+    {
+      "type": "LINK",
+      "from": "h0",
+      "to": "q0"
+    },
+    {
+      "type": "LINK",
+      "from": "q",
+      "to": "Vq"
+    },
+    {
+      "type": "LINK",
+      "from": "ni",
+      "to": "Vq"
+    },
+    {
+      "type": "LINK",
+      "from": "q",
+      "to": "Vq"
+    },
+    {
+      "type": "LINK",
+      "from": "Mumax",
+      "to": "ni"
+    },
+    {
+      "type": "LINK",
+      "from": "ni",
+      "to": "lag_duration"
+    },
+    {
+      "type": "LINK",
+      "from": "h0",
+      "to": "lag_duration"
+    }
+  ],
+  "engine_settings": []
+}

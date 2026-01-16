@@ -1,0 +1,195 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "Buffet - Tragedy of the Commons application",
+  "simulation": {
+    "version": "34",
+    "time_length": "10",
+    "time_start": "0",
+    "time_step": "0.5",
+    "time_units": "MINUTES",
+    "algorithm": "RK1"
+  },
+  "elements": [
+    {
+      "name": "Person1_plate_empty",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Person2_plate_empty",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "2",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Buffet",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "50",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Person1_plate_refill",
+      "type": "FLOW",
+      "from": "Buffet",
+      "to": "Person1_plate_empty",
+      "behavior": {
+        "value": "IfThenElse([Mouth_size_person1]*[Person1_plate_empty]<[Buffet], [Mouth_size_person1]*[Person1_plate_empty], [Buffet])",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Person2_plate_refill",
+      "type": "FLOW",
+      "from": "Buffet",
+      "to": "Person2_plate_empty",
+      "behavior": {
+        "value": "IfThenElse([Mouth_size_person2]*[Person2_plate_empty]<[Buffet], [Mouth_size_person2]*[Person2_plate_empty], [Buffet])",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Mouth_size_person1",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.4",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Mouth_size_person2",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.4",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Serving_buffet",
+      "type": "FLOW",
+      "from": null,
+      "to": "Buffet",
+      "behavior": {
+        "value": "[cooking_rate]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "cooking_rate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "5",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "Person1_plate_empty",
+      "to": "Person1_plate_refill"
+    },
+    {
+      "type": "LINK",
+      "from": "Person1_plate_empty",
+      "to": "Person1_plate_refill"
+    },
+    {
+      "type": "LINK",
+      "from": "Buffet",
+      "to": "Person1_plate_refill"
+    },
+    {
+      "type": "LINK",
+      "from": "Buffet",
+      "to": "Person1_plate_refill"
+    },
+    {
+      "type": "LINK",
+      "from": "Mouth_size_person1",
+      "to": "Person1_plate_refill"
+    },
+    {
+      "type": "LINK",
+      "from": "Mouth_size_person1",
+      "to": "Person1_plate_refill"
+    },
+    {
+      "type": "LINK",
+      "from": "Buffet",
+      "to": "Person1_plate_refill"
+    },
+    {
+      "type": "LINK",
+      "from": "Person1_plate_empty",
+      "to": "Person1_plate_refill"
+    },
+    {
+      "type": "LINK",
+      "from": "Person2_plate_empty",
+      "to": "Person2_plate_refill"
+    },
+    {
+      "type": "LINK",
+      "from": "Person2_plate_empty",
+      "to": "Person2_plate_refill"
+    },
+    {
+      "type": "LINK",
+      "from": "Buffet",
+      "to": "Person2_plate_refill"
+    },
+    {
+      "type": "LINK",
+      "from": "Buffet",
+      "to": "Person2_plate_refill"
+    },
+    {
+      "type": "LINK",
+      "from": "Mouth_size_person2",
+      "to": "Person2_plate_refill"
+    },
+    {
+      "type": "LINK",
+      "from": "Mouth_size_person2",
+      "to": "Person2_plate_refill"
+    },
+    {
+      "type": "LINK",
+      "from": "Buffet",
+      "to": "Person2_plate_refill"
+    },
+    {
+      "type": "LINK",
+      "from": "Person2_plate_empty",
+      "to": "Person2_plate_refill"
+    },
+    {
+      "type": "LINK",
+      "from": "cooking_rate",
+      "to": "Serving_buffet"
+    },
+    {
+      "type": "LINK",
+      "from": "Buffet",
+      "to": "Serving_buffet"
+    }
+  ],
+  "engine_settings": []
+}

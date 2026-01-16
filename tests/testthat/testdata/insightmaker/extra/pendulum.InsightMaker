@@ -1,0 +1,80 @@
+<InsightMakerModel>
+  <root>
+    <mxCell id="0" />
+    <mxCell id="1" parent="0" />
+    <Setting Note="" Version="38" TimeLength="10" TimeStart="0" TimeStep="0.1" TimeUnits="Seconds" Units="kg&lt;&gt;1000&lt;&gt;grams&#xa;s&lt;&gt;1&lt;&gt;seconds&#xa;m&lt;&gt;1&lt;&gt;meters&#xa;rad&lt;&gt;1&lt;&gt;radians" SolutionAlgorithm="RK4" BackgroundColor="white" Throttle="1" Macros="# Acceleration due to gravity&#xa;g &lt;- {9.81 m/s^2}" SensitivityPrimitives="" SensitivityRuns="50" SensitivityBounds="50, 80, 95, 100" SensitivityShowRuns="false" StyleSheet="{}" version="39" id="2">
+      <mxCell parent="1" vertex="1" visible="0">
+        <mxGeometry x="20" y="20" width="80" height="40" as="geometry" />
+      </mxCell>
+    </Setting>
+    <Stock name="Angle" Note="" InitialValue="0.2" StockMode="Store" Delay="10" Volume="100" NonNegative="false" Units="rad" MaxConstraintUsed="false" MinConstraintUsed="false" MaxConstraint="100" MinConstraint="0" ShowSlider="false" SliderMax="100" SliderMin="0" SliderStep="" Image="None" FlipHorizontal="false" FlipVertical="false" LabelPosition="Middle" oldId="121" id="121">
+      <mxCell style="stock;image=None;" vertex="1" parent="1">
+        <mxGeometry x="270" y="70" width="120" height="40" as="geometry" />
+      </mxCell>
+    </Stock>
+    <Stock name="Angular Velocity" Note="" InitialValue="0" StockMode="Store" Delay="10" Volume="100" NonNegative="false" Units="rad/s" MaxConstraintUsed="false" MinConstraintUsed="false" MaxConstraint="100" MinConstraint="0" ShowSlider="false" SliderMax="100" SliderMin="0" SliderStep="" Image="None" FlipHorizontal="false" FlipVertical="false" LabelPosition="Middle" oldId="122" id="122">
+      <mxCell style="stock;image=None;" vertex="1" parent="1">
+        <mxGeometry x="270" y="180" width="120" height="40" as="geometry" />
+      </mxCell>
+    </Stock>
+    <Variable name="Mass" Note="" Equation="1" Units="kg" MaxConstraintUsed="false" MinConstraintUsed="false" MaxConstraint="100" MinConstraint="0" ShowSlider="true" SliderMax="10" SliderMin="0.1" SliderStep="" Image="None" FlipHorizontal="false" FlipVertical="false" LabelPosition="Middle" oldId="123" id="123">
+      <mxCell style="variable;image=None;" vertex="1" parent="1">
+        <mxGeometry x="30" y="280" width="80" height="40" as="geometry" />
+      </mxCell>
+    </Variable>
+    <Variable name="Length" Note="" Equation="1" Units="m" MaxConstraintUsed="false" MinConstraintUsed="false" MaxConstraint="100" MinConstraint="0" ShowSlider="true" SliderMax="10" SliderMin="0.1" SliderStep="" Image="None" FlipHorizontal="false" FlipVertical="false" LabelPosition="Middle" oldId="124" id="124">
+      <mxCell style="variable;image=None;" vertex="1" parent="1">
+        <mxGeometry x="330" y="280" width="80" height="40" as="geometry" />
+      </mxCell>
+    </Variable>
+    <Variable name="Damping Coefficient" Note="" Equation="0.2" Units="kg * m^2 / s" MaxConstraintUsed="false" MinConstraintUsed="false" MaxConstraint="100" MinConstraint="0" ShowSlider="true" SliderMax="1" SliderMin="0" SliderStep="" Image="None" FlipHorizontal="false" FlipVertical="false" LabelPosition="Middle" oldId="125" id="125">
+      <mxCell style="variable;image=None;" vertex="1" parent="1">
+        <mxGeometry x="70" y="380" width="150" height="40" as="geometry" />
+      </mxCell>
+    </Variable>
+    <Flow name="Angle Rate" Note="" FlowRate="[Angular Velocity]" OnlyPositive="false" TimeIndependent="false" Units="rad / s" MaxConstraintUsed="false" MinConstraintUsed="false" MaxConstraint="100" MinConstraint="0" ShowSlider="false" SliderMax="100" SliderMin="0" SliderStep="" oldId="127" id="127">
+      <mxCell style="flow;startArrow=block;startFill=0;" edge="1" parent="1" target="121">
+        <mxGeometry relative="1" as="geometry">
+          <mxPoint x="110" y="90" as="sourcePoint" />
+        </mxGeometry>
+      </mxCell>
+    </Flow>
+    <Flow name="Angular Acceleration" Note="" FlowRate="-([Damping Coefficient]/([Mass]*[Length]^2))*[Angular Velocity] - (g /[Length])*sin([Angle]) * {1 radian}" OnlyPositive="false" TimeIndependent="false" Units="rad / s^2" MaxConstraintUsed="false" MinConstraintUsed="false" MaxConstraint="100" MinConstraint="0" ShowSlider="false" SliderMax="100" SliderMin="0" SliderStep="" oldId="129" id="129">
+      <mxCell style="flow;startArrow=block;startFill=0;" edge="1" parent="1" target="122">
+        <mxGeometry relative="1" as="geometry">
+          <mxPoint x="110" y="200" as="sourcePoint" />
+        </mxGeometry>
+      </mxCell>
+    </Flow>
+    <Link name="Link" Note="" BiDirectional="false" oldId="130" id="130">
+      <mxCell style="link" edge="1" parent="1" source="122" target="127">
+        <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+    </Link>
+    <Link name="Link" Note="" BiDirectional="false" oldId="131" id="131">
+      <mxCell style="link" edge="1" parent="1" source="121" target="129">
+        <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+    </Link>
+    <Link name="Link" Note="" BiDirectional="false" oldId="132" id="132">
+      <mxCell style="link" edge="1" parent="1" source="123" target="129">
+        <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+    </Link>
+    <Link name="Link" Note="" BiDirectional="false" oldId="133" id="133">
+      <mxCell style="link" edge="1" parent="1" source="124" target="129">
+        <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+    </Link>
+    <Link name="Link" Note="" BiDirectional="false" oldId="134" id="134">
+      <mxCell style="link" edge="1" parent="1" source="125" target="129">
+        <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+    </Link>
+    <Display name="Pendulum States" Note="" Type="Time Series" xAxis="Time (%u)" yAxis="" yAxis2="" showMarkers="false" showLines="true" showArea="false" Primitives="121,122" Primitives2="" AutoAddPrimitives="false" ScatterplotOrder="X Primitive, Y Primitive" Image="Display" FlipHorizontal="false" FlipVertical="false" LabelPosition="Bottom" oldId="135" id="135">
+      <mxCell style="display" vertex="1" parent="1" visible="0">
+        <mxGeometry x="10" y="10" width="64" height="64" as="geometry" />
+      </mxCell>
+    </Display>
+  </root>
+</InsightMakerModel>

@@ -1,0 +1,584 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "REM 221 - Z301 Regional Water Balance",
+  "simulation": {
+    "version": "36",
+    "time_length": "100",
+    "time_start": "0",
+    "time_step": "0.03125",
+    "time_units": "HOURS",
+    "algorithm": "RK1"
+  },
+  "elements": [
+    {
+      "name": "soil_water_inflow",
+      "type": "FLOW",
+      "from": null,
+      "to": "soil_water",
+      "behavior": {
+        "value": "[rainfall_rate]*(1-[FOREST_FRACTION]*[interception_function])",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "RAINFALL_DURATION_HOURS",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "30",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "soil_water",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "FOREST_FRACTION",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "evapo_transpiration",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[relative_water_saturation]*(37/1000)*(1+(35/37)*SIN(6.28*((Hours()/8760)+(25/52)-0.25)))*12/8760\n",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "DEPTH_OF_WATER_STORING_SOIL_LAYER",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "30",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "water_saturation_capacity",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[DEPTH_OF_WATER_STORING_SOIL_LAYER]/1000*0.3",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "relative_water_saturation",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "IfThenElse(([soil_water]/[water_saturation_capacity_of_soil])>1,1,([soil_water]/[water_saturation_capacity_of_soil]))\n\n\n",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "RAINFALL_AMOUNT_m",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.05",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "rainfall_rate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "IfThenElse(hours()>=0 and hours()<[RAINFALL_DURATION_HOURS], [RAINFALL_AMOUNT_m]/[RAINFALL_DURATION_HOURS], 0)",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "interception_function",
+      "type": "CONVERTER",
+      "behavior": {
+        "input": "ELEMENT",
+        "input_element": "rainfall_rate",
+        "interpolation": "LINEAR",
+        "data": [
+            [0, 1],
+            [0.5, 0.5],
+            [10, 0.05],
+            [20, 0.02]
+          ],
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "soil_water_outflow",
+      "type": "FLOW",
+      "from": "soil_water",
+      "to": null,
+      "behavior": {
+        "value": "[evapo_transpiration]+[runoff_surplus]+[percolation_rate]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "ground_water",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "water_saturation_capacity_of_soil",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "(1/1000)+[water_saturation_capacity]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "percolation_rate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "IfThenElse(([soil_water]-(0.2*([DEPTH_OF_WATER_STORING_SOIL_LAYER]/1000)))>0, (([soil_water]-(0.2*([DEPTH_OF_WATER_STORING_SOIL_LAYER]/1000)))/[soil_water])*0.0001, 0)",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "WATERSHED_AREA",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1e+08",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "ground_water_inflow",
+      "type": "FLOW",
+      "from": null,
+      "to": "ground_water",
+      "behavior": {
+        "value": "[WATERSHED_AREA]*[percolation_rate]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "runoff_surplus",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "IfThenElse(([soil_water]-[water_saturation_capacity_of_soil])>0, (([soil_water]-[water_saturation_capacity_of_soil])/[soil_water])*100*0.0001, 0)",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Flooding",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "run_off",
+      "type": "FLOW",
+      "from": null,
+      "to": "Flooding",
+      "behavior": {
+        "value": "([creek_runoff]*(.5))+[reservoir_outflow]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "soil_water_runoff",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[runoff_surplus]*[WATERSHED_AREA]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "ground_water_outflow",
+      "type": "FLOW",
+      "from": "ground_water",
+      "to": null,
+      "behavior": {
+        "value": "IfThenElse(((((-(-10))*(([average_runoff]*1/(0.01*1e+06))-1))+([ground_water]/(1e+07*0.15)))-(-10))>0, (((((-(-10))*(([average_runoff]*1/(0.01*1e+06))-1))+([ground_water]/(1e+07*0.15)))-(-10))/(-(-10)))*0.01*1e+06, 0)",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "average_runoff",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "((876/8760)/1000)*(0.2)*[WATERSHED_AREA]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "creek_runoff",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[soil_water_runoff]+[ground_water_outflow]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "water_in_reservoirs",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "[DAM_CAPACITY]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "reservoir_outflow",
+      "type": "FLOW",
+      "from": "water_in_reservoirs",
+      "to": null,
+      "behavior": {
+        "value": "IFTHENELSE([DAM_CAPACITY]>0, ([runoff_volume]*[water_in_reservoirs]/[DAM_CAPACITY]), 0)",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "reservoir_inflow",
+      "type": "FLOW",
+      "from": null,
+      "to": "water_in_reservoirs",
+      "behavior": {
+        "value": "(0.5)*[creek_runoff]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "runoff_volume",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "IFTHENELSE(([water_in_reservoirs]-[DAM_CAPACITY])>0, (0.5)*[average_runoff]*20, (0.5)*[average_runoff]*2)",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "DAM_CAPACITY",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "2000000",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "FOREST_FRACTION",
+      "to": "soil_water_inflow"
+    },
+    {
+      "type": "LINK",
+      "from": "rainfall_rate",
+      "to": "soil_water_inflow"
+    },
+    {
+      "type": "LINK",
+      "from": "interception_function",
+      "to": "soil_water_inflow"
+    },
+    {
+      "type": "LINK",
+      "from": "soil_water",
+      "to": "soil_water_inflow"
+    },
+    {
+      "type": "LINK",
+      "from": "relative_water_saturation",
+      "to": "evapo_transpiration"
+    },
+    {
+      "type": "LINK",
+      "from": "DEPTH_OF_WATER_STORING_SOIL_LAYER",
+      "to": "water_saturation_capacity"
+    },
+    {
+      "type": "LINK",
+      "from": "soil_water",
+      "to": "relative_water_saturation"
+    },
+    {
+      "type": "LINK",
+      "from": "soil_water",
+      "to": "relative_water_saturation"
+    },
+    {
+      "type": "LINK",
+      "from": "water_saturation_capacity_of_soil",
+      "to": "relative_water_saturation"
+    },
+    {
+      "type": "LINK",
+      "from": "water_saturation_capacity_of_soil",
+      "to": "relative_water_saturation"
+    },
+    {
+      "type": "LINK",
+      "from": "RAINFALL_DURATION_HOURS",
+      "to": "rainfall_rate"
+    },
+    {
+      "type": "LINK",
+      "from": "RAINFALL_DURATION_HOURS",
+      "to": "rainfall_rate"
+    },
+    {
+      "type": "LINK",
+      "from": "RAINFALL_AMOUNT_m",
+      "to": "rainfall_rate"
+    },
+    {
+      "type": "LINK",
+      "from": "evapo_transpiration",
+      "to": "soil_water_outflow"
+    },
+    {
+      "type": "LINK",
+      "from": "percolation_rate",
+      "to": "soil_water_outflow"
+    },
+    {
+      "type": "LINK",
+      "from": "runoff_surplus",
+      "to": "soil_water_outflow"
+    },
+    {
+      "type": "LINK",
+      "from": "soil_water",
+      "to": "soil_water_outflow"
+    },
+    {
+      "type": "LINK",
+      "from": "water_saturation_capacity",
+      "to": "water_saturation_capacity_of_soil"
+    },
+    {
+      "type": "LINK",
+      "from": "soil_water",
+      "to": "percolation_rate"
+    },
+    {
+      "type": "LINK",
+      "from": "soil_water",
+      "to": "percolation_rate"
+    },
+    {
+      "type": "LINK",
+      "from": "soil_water",
+      "to": "percolation_rate"
+    },
+    {
+      "type": "LINK",
+      "from": "DEPTH_OF_WATER_STORING_SOIL_LAYER",
+      "to": "percolation_rate"
+    },
+    {
+      "type": "LINK",
+      "from": "DEPTH_OF_WATER_STORING_SOIL_LAYER",
+      "to": "percolation_rate"
+    },
+    {
+      "type": "LINK",
+      "from": "percolation_rate",
+      "to": "ground_water_inflow"
+    },
+    {
+      "type": "LINK",
+      "from": "WATERSHED_AREA",
+      "to": "ground_water_inflow"
+    },
+    {
+      "type": "LINK",
+      "from": "ground_water",
+      "to": "ground_water_inflow"
+    },
+    {
+      "type": "LINK",
+      "from": "soil_water",
+      "to": "runoff_surplus"
+    },
+    {
+      "type": "LINK",
+      "from": "soil_water",
+      "to": "runoff_surplus"
+    },
+    {
+      "type": "LINK",
+      "from": "soil_water",
+      "to": "runoff_surplus"
+    },
+    {
+      "type": "LINK",
+      "from": "water_saturation_capacity_of_soil",
+      "to": "runoff_surplus"
+    },
+    {
+      "type": "LINK",
+      "from": "water_saturation_capacity_of_soil",
+      "to": "runoff_surplus"
+    },
+    {
+      "type": "LINK",
+      "from": "creek_runoff",
+      "to": "run_off"
+    },
+    {
+      "type": "LINK",
+      "from": "reservoir_outflow",
+      "to": "run_off"
+    },
+    {
+      "type": "LINK",
+      "from": "Flooding",
+      "to": "run_off"
+    },
+    {
+      "type": "LINK",
+      "from": "WATERSHED_AREA",
+      "to": "soil_water_runoff"
+    },
+    {
+      "type": "LINK",
+      "from": "runoff_surplus",
+      "to": "soil_water_runoff"
+    },
+    {
+      "type": "LINK",
+      "from": "ground_water",
+      "to": "ground_water_outflow"
+    },
+    {
+      "type": "LINK",
+      "from": "ground_water",
+      "to": "ground_water_outflow"
+    },
+    {
+      "type": "LINK",
+      "from": "average_runoff",
+      "to": "ground_water_outflow"
+    },
+    {
+      "type": "LINK",
+      "from": "average_runoff",
+      "to": "ground_water_outflow"
+    },
+    {
+      "type": "LINK",
+      "from": "ground_water",
+      "to": "ground_water_outflow"
+    },
+    {
+      "type": "LINK",
+      "from": "WATERSHED_AREA",
+      "to": "average_runoff"
+    },
+    {
+      "type": "LINK",
+      "from": "soil_water_runoff",
+      "to": "creek_runoff"
+    },
+    {
+      "type": "LINK",
+      "from": "ground_water_outflow",
+      "to": "creek_runoff"
+    },
+    {
+      "type": "LINK",
+      "from": "DAM_CAPACITY",
+      "to": "water_in_reservoirs"
+    },
+    {
+      "type": "LINK",
+      "from": "water_in_reservoirs",
+      "to": "reservoir_outflow"
+    },
+    {
+      "type": "LINK",
+      "from": "runoff_volume",
+      "to": "reservoir_outflow"
+    },
+    {
+      "type": "LINK",
+      "from": "DAM_CAPACITY",
+      "to": "reservoir_outflow"
+    },
+    {
+      "type": "LINK",
+      "from": "DAM_CAPACITY",
+      "to": "reservoir_outflow"
+    },
+    {
+      "type": "LINK",
+      "from": "water_in_reservoirs",
+      "to": "reservoir_outflow"
+    },
+    {
+      "type": "LINK",
+      "from": "creek_runoff",
+      "to": "reservoir_inflow"
+    },
+    {
+      "type": "LINK",
+      "from": "water_in_reservoirs",
+      "to": "reservoir_inflow"
+    },
+    {
+      "type": "LINK",
+      "from": "average_runoff",
+      "to": "runoff_volume"
+    },
+    {
+      "type": "LINK",
+      "from": "average_runoff",
+      "to": "runoff_volume"
+    },
+    {
+      "type": "LINK",
+      "from": "water_in_reservoirs",
+      "to": "runoff_volume"
+    },
+    {
+      "type": "LINK",
+      "from": "DAM_CAPACITY",
+      "to": "runoff_volume"
+    }
+  ],
+  "engine_settings": []
+}

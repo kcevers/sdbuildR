@@ -52,11 +52,11 @@ test_that("compare output Julia and R for templates", {
   expect_equal(nrow(sim2$df) > 0, TRUE)
 
   # Check whether the population converges to the carrying capacity
-  expect_equal(dplyr::last(sim1$df[sim1$df$variable == "X", "value"]),
+  expect_equal(last(sim1$df[sim1$df$variable == "X", "value"]),
     sim1$constants[["K"]],
     tolerance = .01
   )
-  expect_equal(dplyr::last(sim2$df[sim2$df$variable == "X", "value"]),
+  expect_equal(last(sim2$df[sim2$df$variable == "X", "value"]),
     sim2$constants[["K"]],
     tolerance = .01
   )
@@ -142,7 +142,7 @@ test_that("compare output Julia and R for templates", {
   sim1 <- simulate(sfm)
   expect_equal(sim1$success, TRUE)
   expect_equal(nrow(sim1$df) > 0, TRUE)
-  expect_equal(dplyr::last(sim1$df[sim1$df$variable == "coffee_temperature", "value"]), sim1$constants[["room_temperature"]], tolerance = .01)
+  expect_equal(last(sim1$df[sim1$df$variable == "coffee_temperature", "value"]), sim1$constants[["room_temperature"]], tolerance = .01)
 
   # Can't be simulated in R, already tested in compile_r
 })
@@ -163,23 +163,4 @@ test_that("as.data.frame(sim) works", {
   sim <- simulate(sfm |> sim_specs(language = "Julia"), only_stocks = TRUE)
   expect_equal(class(as.data.frame(sim)), "data.frame")
   expect_equal(nrow(as.data.frame(sim)) > 0, TRUE)
-})
-
-
-test_that("translating solvers works", {
-  # Translate solvers
-  expect_equal(solvers("euler", from = "R", to = "Julia", show_info = FALSE), "Euler()")
-  expect_equal(solvers("rk4", from = "R", to = "Julia", show_info = FALSE), "RK4()")
-  expect_equal(solvers("Tsit5()", from = "Julia", to = "R", show_info = FALSE), "rk45dp6")
-
-  # Check whether solver exists
-  expect_equal(solvers("euler", from = "R"), "euler")
-  expect_error(solvers("Tsit5()", from = "R"), "Method Tsit5\\(\\) is not found in deSolve methods")
-  expect_equal(solvers("Tsit5()", from = "Julia"), "Tsit5()")
-  expect_equal(solvers("euler", from = "Julia"), "Euler()")
-
-  # Name all solvers
-  expect_error(solvers(), "Either method or from must be specified")
-  expect_no_error(solvers(from = "R"))
-  expect_no_error(solvers(from = "Julia"))
 })

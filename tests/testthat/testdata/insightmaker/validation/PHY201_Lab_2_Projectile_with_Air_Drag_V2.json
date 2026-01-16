@@ -1,0 +1,190 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "PHY201 - Lab 2 - Projectile with Air Drag (V2)",
+  "simulation": {
+    "version": "36",
+    "time_length": "10",
+    "time_start": "0",
+    "time_step": "0.1",
+    "time_units": "SECONDS",
+    "algorithm": "RK1"
+  },
+  "elements": [
+    {
+      "name": "Flow",
+      "type": "FLOW",
+      "from": null,
+      "to": "Position",
+      "behavior": {
+        "value": "[velocity]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "Position",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "100",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "velocity",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "Min([momentum]/[mass],54)",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "mass",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "# mass object (in kg)\n2",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "gravity",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "-9.8",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "momentum",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Flow_1",
+      "type": "FLOW",
+      "from": null,
+      "to": "momentum",
+      "behavior": {
+        "value": "[gravity]+[air_drag]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "air_drag",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.5*[air_density]*([velocity]*[velocity])*[drag_coefficient]*[x_sect_area]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "air_density",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "# density of air at 70-deg F is ~ 1.2 (kg/m^3)\n1.2",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "drag_coefficient",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "# drag coefficient for a sphere\n0.47",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "x_sect_area",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "# sphere's cross-sectional area\n# pi * ( radius ^ 2 )\npi*(1^2)",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "velocity",
+      "to": "Flow"
+    },
+    {
+      "type": "LINK",
+      "from": "Position",
+      "to": "Flow"
+    },
+    {
+      "type": "LINK",
+      "from": "mass",
+      "to": "velocity"
+    },
+    {
+      "type": "LINK",
+      "from": "momentum",
+      "to": "velocity"
+    },
+    {
+      "type": "LINK",
+      "from": "gravity",
+      "to": "Flow_1"
+    },
+    {
+      "type": "LINK",
+      "from": "air_drag",
+      "to": "Flow_1"
+    },
+    {
+      "type": "LINK",
+      "from": "momentum",
+      "to": "Flow_1"
+    },
+    {
+      "type": "LINK",
+      "from": "velocity",
+      "to": "air_drag"
+    },
+    {
+      "type": "LINK",
+      "from": "velocity",
+      "to": "air_drag"
+    },
+    {
+      "type": "LINK",
+      "from": "air_density",
+      "to": "air_drag"
+    },
+    {
+      "type": "LINK",
+      "from": "drag_coefficient",
+      "to": "air_drag"
+    },
+    {
+      "type": "LINK",
+      "from": "x_sect_area",
+      "to": "air_drag"
+    }
+  ],
+  "engine_settings": {
+    "units": [
+      [
+        {
+          "name": "kilogram meters per second",
+          "factor": "1",
+          "base": "kilogram*meters/seconds"
+        }
+      ]
+    ]
+  }
+}

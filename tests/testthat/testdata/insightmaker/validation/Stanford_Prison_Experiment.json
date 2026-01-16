@@ -1,0 +1,446 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "Stanford Prison Experiment",
+  "simulation": {
+    "version": "36",
+    "time_length": "7",
+    "time_start": "0",
+    "time_step": "0.0625",
+    "time_units": "DAYS",
+    "algorithm": "RK1"
+  },
+  "elements": [
+    {
+      "name": "Prisoner_Fear",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "change_in_fear",
+      "type": "FLOW",
+      "from": null,
+      "to": "Prisoner_Fear",
+      "behavior": {
+        "value": "([Indicated_fear_from_repression]-[Prisoner_Fear])/0.5",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "Repression_by_guards",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "change_in_repression",
+      "type": "FLOW",
+      "from": null,
+      "to": "Repression_by_guards",
+      "behavior": {
+        "value": "IfThenElse([Remove_John_Wayne_switch]=0, ([Indicated_repression_by_guards]-[Repression_by_guards])/0.5,(([Indicated_repression_by_guards]*0.7)-[Repression_by_guards])/0.5)",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "Indicated_fear_from_repression",
+      "type": "CONVERTER",
+      "behavior": {
+        "input": "ELEMENT",
+        "input_element": "Repression_by_guards",
+        "interpolation": "LINEAR",
+        "data": [
+            [0, 0.02],
+            [0.1, 0.03],
+            [0.2, 0.045],
+            [0.3, 0.055],
+            [0.4, 0.08],
+            [0.5, 0.225],
+            [0.6, 0.45],
+            [0.7, 0.645],
+            [0.8, 0.77],
+            [0.9, 0.9],
+            [1, 0.97]
+          ],
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Resistance_Perceived_by_Guards",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "[Prisoner_resistance]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "change_in_perception",
+      "type": "FLOW",
+      "from": null,
+      "to": "Resistance_Perceived_by_Guards",
+      "behavior": {
+        "value": "([Prisoner_resistance]-[Resistance_Perceived_by_Guards])/[Perception_Time]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "Prisoner_resistance",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "increase_resistance",
+      "type": "FLOW",
+      "from": null,
+      "to": "Prisoner_resistance",
+      "behavior": {
+        "value": "[Prisoner_resistance]*[fractional_increase_in_resistance]+Pulse([Start_of_experiment], 0.1, 1)",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Influences_on_perception_time",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Prisoner_resistance]/([Resistance_Perceived_by_Guards]+0.001)",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Perception_Time",
+      "type": "CONVERTER",
+      "behavior": {
+        "input": "ELEMENT",
+        "input_element": "Influences_on_perception_time",
+        "interpolation": "LINEAR",
+        "data": [
+            [0.9, 30],
+            [0.92, 30],
+            [0.94, 30],
+            [0.96, 22.1],
+            [0.98, 10.7],
+            [1.02, 0.25],
+            [1.04, 0.025],
+            [1.06, 0.25],
+            [1.08, 0.25],
+            [1.1, 0.25]
+          ],
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Remove_John_Wayne_switch",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Indicated_repression_by_guards",
+      "type": "CONVERTER",
+      "behavior": {
+        "input": "ELEMENT",
+        "input_element": "Resistance_Perceived_by_Guards",
+        "interpolation": "LINEAR",
+        "data": [
+            [0, 0],
+            [0.1, 0.27],
+            [0.2, 0.485],
+            [0.3, 0.63],
+            [0.4, 0.74],
+            [0.5, 0.85],
+            [0.6, 0.925],
+            [0.7, 0.95],
+            [0.8, 0.975],
+            [0.9, 0.985],
+            [1, 1]
+          ],
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "decrease_resistance",
+      "type": "FLOW",
+      "from": "Prisoner_resistance",
+      "to": null,
+      "behavior": {
+        "value": "[Prisoner_resistance]*[fractional_decrease_in_resistance]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "fractional_decrease_in_resistance",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[fractional_decrease_from_fear]+[fractional_decrease_from_repression]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "fractional_decrease_from_fear",
+      "type": "CONVERTER",
+      "behavior": {
+        "input": "ELEMENT",
+        "input_element": "Prisoner_Fear",
+        "interpolation": "LINEAR",
+        "data": [
+            [0, 0],
+            [0.1, 0.02],
+            [0.2, 0.065],
+            [0.3, 0.23],
+            [0.4, 0.445],
+            [0.5, 1],
+            [0.6, 1.33],
+            [0.7, 1.5],
+            [1, 1.5]
+          ],
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "fractional_decrease_from_repression",
+      "type": "CONVERTER",
+      "behavior": {
+        "input": "ELEMENT",
+        "input_element": "Repression_by_guards",
+        "interpolation": "LINEAR",
+        "data": [
+            [0, 0],
+            [0.1, 0.01],
+            [0.2, 0.01],
+            [0.3, 0.02],
+            [0.4, 0.03],
+            [0.5, 0.08],
+            [0.6, 0.24],
+            [0.7, 2.84],
+            [0.8, 3],
+            [1, 3]
+          ],
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Impact_of_fear_on_resistance",
+      "type": "CONVERTER",
+      "behavior": {
+        "input": "ELEMENT",
+        "input_element": "Prisoner_Fear",
+        "interpolation": "LINEAR",
+        "data": [
+            [0, 1],
+            [0.1, 1],
+            [0.2, 0.99],
+            [0.3, 0.98],
+            [0.4, 0.915],
+            [0.5, 0.765],
+            [0.6, 0.65],
+            [0.7, 0.445],
+            [0.8, 0.275],
+            [0.9, 0.16],
+            [1, 0]
+          ],
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Start_of_experiment",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "fractional_increase_from_repression",
+      "type": "CONVERTER",
+      "behavior": {
+        "input": "ELEMENT",
+        "input_element": "Repression_by_guards",
+        "interpolation": "LINEAR",
+        "data": [
+            [0, 0],
+            [0.1, 0.285],
+            [0.2, 0.605],
+            [0.3, 0.82],
+            [0.4, 0.92],
+            [0.5, 0.97],
+            [0.6, 0.985],
+            [0.7, 1],
+            [1, 1]
+          ],
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "fractional_increase_in_resistance",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[fractional_increase_from_repression]*[Impact_of_fear_on_resistance]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "Prisoner_Fear",
+      "to": "change_in_fear"
+    },
+    {
+      "type": "LINK",
+      "from": "Indicated_fear_from_repression",
+      "to": "change_in_fear"
+    },
+    {
+      "type": "LINK",
+      "from": "Prisoner_Fear",
+      "to": "change_in_fear"
+    },
+    {
+      "type": "LINK",
+      "from": "Repression_by_guards",
+      "to": "change_in_repression"
+    },
+    {
+      "type": "LINK",
+      "from": "Repression_by_guards",
+      "to": "change_in_repression"
+    },
+    {
+      "type": "LINK",
+      "from": "Remove_John_Wayne_switch",
+      "to": "change_in_repression"
+    },
+    {
+      "type": "LINK",
+      "from": "Indicated_repression_by_guards",
+      "to": "change_in_repression"
+    },
+    {
+      "type": "LINK",
+      "from": "Indicated_repression_by_guards",
+      "to": "change_in_repression"
+    },
+    {
+      "type": "LINK",
+      "from": "Repression_by_guards",
+      "to": "change_in_repression"
+    },
+    {
+      "type": "LINK",
+      "from": "Prisoner_resistance",
+      "to": "Resistance_Perceived_by_Guards"
+    },
+    {
+      "type": "LINK",
+      "from": "Resistance_Perceived_by_Guards",
+      "to": "change_in_perception"
+    },
+    {
+      "type": "LINK",
+      "from": "Prisoner_resistance",
+      "to": "change_in_perception"
+    },
+    {
+      "type": "LINK",
+      "from": "Perception_Time",
+      "to": "change_in_perception"
+    },
+    {
+      "type": "LINK",
+      "from": "Resistance_Perceived_by_Guards",
+      "to": "change_in_perception"
+    },
+    {
+      "type": "LINK",
+      "from": "Prisoner_resistance",
+      "to": "increase_resistance"
+    },
+    {
+      "type": "LINK",
+      "from": "Start_of_experiment",
+      "to": "increase_resistance"
+    },
+    {
+      "type": "LINK",
+      "from": "fractional_increase_in_resistance",
+      "to": "increase_resistance"
+    },
+    {
+      "type": "LINK",
+      "from": "Prisoner_resistance",
+      "to": "increase_resistance"
+    },
+    {
+      "type": "LINK",
+      "from": "Resistance_Perceived_by_Guards",
+      "to": "Influences_on_perception_time"
+    },
+    {
+      "type": "LINK",
+      "from": "Prisoner_resistance",
+      "to": "Influences_on_perception_time"
+    },
+    {
+      "type": "LINK",
+      "from": "Prisoner_resistance",
+      "to": "decrease_resistance"
+    },
+    {
+      "type": "LINK",
+      "from": "fractional_decrease_in_resistance",
+      "to": "decrease_resistance"
+    },
+    {
+      "type": "LINK",
+      "from": "Prisoner_resistance",
+      "to": "decrease_resistance"
+    },
+    {
+      "type": "LINK",
+      "from": "fractional_decrease_from_fear",
+      "to": "fractional_decrease_in_resistance"
+    },
+    {
+      "type": "LINK",
+      "from": "fractional_decrease_from_repression",
+      "to": "fractional_decrease_in_resistance"
+    },
+    {
+      "type": "LINK",
+      "from": "Impact_of_fear_on_resistance",
+      "to": "fractional_increase_in_resistance"
+    },
+    {
+      "type": "LINK",
+      "from": "fractional_increase_from_repression",
+      "to": "fractional_increase_in_resistance"
+    }
+  ],
+  "engine_settings": []
+}

@@ -41,9 +41,9 @@ simulate_R <- function(sfm,
       }
 
       # out <- list()
-      # out[[.sdbuildR_env[["P"]][["sim_df_name"]]]] <- envir[[.sdbuildR_env[["P"]][["sim_df_name"]]]]
-      # out[["init"]] <- unlist(envir[[.sdbuildR_env[["P"]][["initial_value_name"]]]])
-      # out[["constants"]] <- unlist(envir[[.sdbuildR_env[["P"]][["parameter_name"]]]])
+      # out[[P[["sim_df_name"]]]] <- envir[[P[["sim_df_name"]]]]
+      # out[["init"]] <- unlist(envir[[P[["initial_value_name"]]]])
+      # out[["constants"]] <- unlist(envir[[P[["parameter_name"]]]])
       # out[["keep_unit"]] <- FALSE
       # out[["script"]] <- script
       # out[["success"]] <- TRUE
@@ -53,9 +53,9 @@ simulate_R <- function(sfm,
       #   utils::modifyList(argg) |>
       #   structure(class = "sdbuildR_sim")
 
-      df <- envir[[.sdbuildR_env[["P"]][["sim_df_name"]]]]
-      init <- unlist(envir[[.sdbuildR_env[["P"]][["initial_value_name"]]]])
-      constants <- unlist(envir[[.sdbuildR_env[["P"]][["parameter_name"]]]])
+      df <- envir[[P[["sim_df_name"]]]]
+      init <- unlist(envir[[P[["initial_value_name"]]]])
+      constants <- unlist(envir[[P[["parameter_name"]]]])
 
       new_sdbuildR_sim(
         success = TRUE,
@@ -198,13 +198,16 @@ set.seed(%s)", as.character(sfm[["sim_specs"]][["seed"]]))
       }
     )
 
-    on.exit({
-      if (is.null(old_option)) {
-        options(styler.colored_print.vertical = NULL)
-      } else {
-        options(styler.colored_print.vertical = old_option)
-      }
-    })
+    on.exit(
+      {
+        if (is.null(old_option)) {
+          options(styler.colored_print.vertical = NULL)
+        } else {
+          options(styler.colored_print.vertical = old_option)
+        }
+      },
+      add = TRUE
+    )
   }
 
   return(script)
@@ -250,10 +253,10 @@ compile_macros <- function(sfm) {
   script <- ""
 
   # If there are macros
-  if (any(nzchar(unlist(lapply(sfm[["macro"]], `[[`, "eqn"))))) {
+  if (any(nzchar(unlist(lapply(sfm[[P[["macro_name"]]]], `[[`, "eqn"))))) {
     script <- paste0(
       script, "\n",
-      lapply(sfm[["macro"]], function(x) {
+      lapply(sfm[[P[["macro_name"]]]], function(x) {
         # If a name is defined, assign macro to that name
         if (nzchar(x[["name"]])) {
           return(paste0(x[["name"]], " = ", x[["eqn"]]))
@@ -290,15 +293,15 @@ compile_times <- function(sfm) {
 # Simulation time unit (smallest time scale in your model)
 %s = '%s'
 ",
-    .sdbuildR_env[["P"]][["timestep_name"]],
+    P[["timestep_name"]],
     as.character(sfm[["sim_specs"]][["dt"]]),
-    .sdbuildR_env[["P"]][["times_name"]],
+    P[["times_name"]],
     as.character(sfm[["sim_specs"]][["start"]]),
     as.character(sfm[["sim_specs"]][["stop"]]),
-    .sdbuildR_env[["P"]][["timestep_name"]],
-    .sdbuildR_env[["P"]][["time_name"]],
-    .sdbuildR_env[["P"]][["times_name"]],
-    .sdbuildR_env[["P"]][["time_units_name"]],
+    P[["timestep_name"]],
+    P[["time_name"]],
+    P[["times_name"]],
+    P[["time_units_name"]],
     sfm[["sim_specs"]][["time_units"]]
   )
 
@@ -324,10 +327,10 @@ compile_times <- function(sfm) {
 #'
 compile_static_eqn <- function(sfm, ordering) {
   # Macros
-  macros_script <- ifelse(is_defined(sfm[["macro"]][["eqn"]]),
+  macros_script <- ifelse(is_defined(sfm[[P[["macro_name"]]]][["eqn"]]),
     sprintf(
       "\n\n# User-defined macros and globals\n%s\n",
-      paste0(sfm[["macro"]][["eqn"]], collapse = "\n")
+      paste0(sfm[[P[["macro_name"]]]][["eqn"]], collapse = "\n")
     ), ""
   )
 
@@ -365,15 +368,15 @@ compile_static_eqn <- function(sfm, ordering) {
 
   # Put parameters together
   if (length(sfm[["model"]][["variables"]][["constant"]]) > 0) {
-    constants_def <- paste0("\n\n# Define parameters in named list\n", .sdbuildR_env[["P"]][["parameter_name"]], " = list(", paste0(paste0(names(constant_eqn), " = ", names(constant_eqn)), collapse = ", "), ")\n")
+    constants_def <- paste0("\n\n# Define parameters in named list\n", P[["parameter_name"]], " = list(", paste0(paste0(names(constant_eqn), " = ", names(constant_eqn)), collapse = ", "), ")\n")
   } else {
-    constants_def <- paste0("\n\n# Define empty parameters\n", .sdbuildR_env[["P"]][["parameter_name"]], " = list()\n")
+    constants_def <- paste0("\n\n# Define empty parameters\n", P[["parameter_name"]], " = list()\n")
   }
 
 
   # Define init
   init_def <- paste0(
-    "\n\n# Define initial condition\n", .sdbuildR_env[["P"]][["initial_value_name"]], " = c(",
+    "\n\n# Define initial condition\n", P[["initial_value_name"]], " = c(",
     paste0(paste0(names(stock_eqn), " = ", names(stock_eqn)), collapse = ", "), ")"
   )
 
@@ -499,9 +502,9 @@ prep_stock_change <- function(sfm) {
       x[["sum_units"]] <- ""
     } else {
       inflow <- outflow <- ""
-      x[["sum_name"]] <- paste0(.sdbuildR_env[["P"]][["change_prefix"]], x[["name"]])
+      x[["sum_name"]] <- paste0(P[["change_prefix"]], x[["name"]])
 
-      y_str <- paste0(.sdbuildR_env[["P"]][["change_prefix"]], x[["name"]])
+      # y_str <- paste0(P[["change_prefix"]], x[["name"]])
 
       # In case no inflow and no outflow is defined, update with 0
       if (!is_defined(x[["inflow"]]) & !is_defined(x[["outflow"]])) {
@@ -536,10 +539,12 @@ prep_stock_change <- function(sfm) {
 #'
 compile_nonneg_stocks <- function(sfm, keep_nonnegative_stock) {
   # Non-negative Stocks
-  nonneg_stock <- which(unlist(lapply(sfm[["model"]][["variables"]][["stock"]],
-                                      `[[`, "non_negative")))
+  nonneg_stock <- which(unlist(lapply(
+    sfm[["model"]][["variables"]][["stock"]],
+    `[[`, "non_negative"
+  )))
 
-  if (keep_nonnegative_stock & length(nonneg_stock) > 0) {
+  if (keep_nonnegative_stock && length(nonneg_stock) > 0) {
     func_def <- sprintf(
       "
 # Ensure non-negativity of (selected) Stocks
@@ -556,17 +561,17 @@ compile_nonneg_stocks <- function(sfm, keep_nonnegative_stock) {
   return(%s)
 }
 ",
-      .sdbuildR_env[["P"]][["nonneg_stock_name"]], .sdbuildR_env[["P"]][["initial_value_name"]],
+      P[["nonneg_stock_name"]], P[["initial_value_name"]],
       paste0("'", names(nonneg_stock), "'", collapse = ", "),
-      .sdbuildR_env[["P"]][["rootfun_name"]], .sdbuildR_env[["P"]][["time_name"]], .sdbuildR_env[["P"]][["state_name"]], .sdbuildR_env[["P"]][["parameter_name"]],
-      .sdbuildR_env[["P"]][["state_name"]], .sdbuildR_env[["P"]][["nonneg_stock_name"]],
-      .sdbuildR_env[["P"]][["eventfun_name"]], .sdbuildR_env[["P"]][["time_name"]], .sdbuildR_env[["P"]][["state_name"]], .sdbuildR_env[["P"]][["parameter_name"]],
-      .sdbuildR_env[["P"]][["state_name"]], .sdbuildR_env[["P"]][["nonneg_stock_name"]], .sdbuildR_env[["P"]][["state_name"]]
+      P[["rootfun_name"]], P[["time_name"]], P[["state_name"]], P[["parameter_name"]],
+      P[["state_name"]], P[["nonneg_stock_name"]],
+      P[["eventfun_name"]], P[["time_name"]], P[["state_name"]], P[["parameter_name"]],
+      P[["state_name"]], P[["nonneg_stock_name"]], P[["state_name"]]
     )
 
     root_arg <- sprintf(
       ",\n\t\t\t\tevents = list(func = %s, root = TRUE), rootfun = %s",
-      .sdbuildR_env[["P"]][["eventfun_name"]], .sdbuildR_env[["P"]][["rootfun_name"]]
+      P[["eventfun_name"]], P[["rootfun_name"]]
     )
 
     check_root <- sprintf("
@@ -575,7 +580,7 @@ attributes(%s)$troot
 
 # Values of non-negative Stocks when root function was triggered
 attributes(%s)$valroot
-", .sdbuildR_env[["P"]][["out_name"]], .sdbuildR_env[["P"]][["out_name"]])
+", P[["out_name"]], P[["out_name"]])
 
     return(list(
       func_def = func_def,
@@ -638,7 +643,7 @@ compile_ode <- function(sfm, ordering, prep_script, static_eqn,
   stock_changes_names <- unlist(lapply(sfm[["model"]][["variables"]][["stock"]], `[[`, "sum_name"))
 
   state_change_str <- paste0(
-    .sdbuildR_env[["P"]][["change_state_name"]], " = c(",
+    P[["change_state_name"]], " = c(",
     paste0(unname(stock_changes_names), collapse = ", "), ")"
   )
 
@@ -671,7 +676,7 @@ compile_ode <- function(sfm, ordering, prep_script, static_eqn,
     save_var_str <- ""
   }
 
-  S_str <- sprintf("%s = as.list(%s)", .sdbuildR_env[["P"]][["state_name"]], .sdbuildR_env[["P"]][["state_name"]])
+  S_str <- sprintf("%s = as.list(%s)", P[["state_name"]], P[["state_name"]])
 
   # Compile
   script <- sprintf(
@@ -694,13 +699,13 @@ compile_ode <- function(sfm, ordering, prep_script, static_eqn,
 
     return(list(%s%s))
   })
-}", .sdbuildR_env[["P"]][["ode_func_name"]], .sdbuildR_env[["P"]][["time_name"]], .sdbuildR_env[["P"]][["state_name"]], .sdbuildR_env[["P"]][["parameter_name"]],
+}", P[["ode_func_name"]], P[["time_name"]], P[["state_name"]], P[["parameter_name"]],
     S_str,
-    .sdbuildR_env[["P"]][["time_name"]], .sdbuildR_env[["P"]][["state_name"]], .sdbuildR_env[["P"]][["parameter_name"]],
+    P[["time_name"]], P[["state_name"]], P[["parameter_name"]],
     dynamic_eqn_str,
     stock_change_str,
     state_change_str,
-    .sdbuildR_env[["P"]][["change_state_name"]], save_var_str
+    P[["change_state_name"]], save_var_str
   )
 
   return(list(script = script))
@@ -726,17 +731,17 @@ compile_run_ode <- function(sfm, nonneg_stocks) {
   parms=%s,
   method = '%s'%s
 )) %s
-", .sdbuildR_env[["P"]][["sim_df_name"]], "ode",
-    .sdbuildR_env[["P"]][["ode_func_name"]],
-    .sdbuildR_env[["P"]][["initial_value_name"]],
-    .sdbuildR_env[["P"]][["times_name"]], .sdbuildR_env[["P"]][["parameter_name"]],
+", P[["sim_df_name"]], "ode",
+    P[["ode_func_name"]],
+    P[["initial_value_name"]],
+    P[["times_name"]], P[["parameter_name"]],
     sfm[["sim_specs"]][["method"]],
     nonneg_stocks[["root_arg"]],
     nonneg_stocks[["check_root"]]
   )
 
   # If different times need to be saved, linearly interpolate
-  if (sfm[["sim_specs"]][["dt"]] != sfm[["sim_specs"]][["save_at"]] |
+  if (sfm[["sim_specs"]][["dt"]] != sfm[["sim_specs"]][["save_at"]] ||
     sfm[["sim_specs"]][["start"]] != sfm[["sim_specs"]][["save_from"]]) {
     script <- paste0(
       script, "\n# Linearly interpolate to reduce stored values to save_at\n",
@@ -745,9 +750,9 @@ compile_run_ode <- function(sfm, nonneg_stocks) {
       sfm[["sim_specs"]][["save_at"]], ")\n",
       # Create new time vector\n",
 
-      .sdbuildR_env[["P"]][["sim_df_name"]], " = ",
-      .sdbuildR_env[["P"]][["saveat_func"]], "(",
-      .sdbuildR_env[["P"]][["sim_df_name"]], ", 'time', new_times)\n"
+      P[["sim_df_name"]], " = ",
+      P[["saveat_func"]], "(",
+      P[["sim_df_name"]], ", 'time', new_times)\n"
     )
   }
 
@@ -765,10 +770,11 @@ compile_run_ode <- function(sfm, nonneg_stocks) {
        timevar = \"variable\",
        # Ensure variable names are used
        times = colnames(%s)[colnames(%s) != \"time\"]
-     ) |> magrittr::set_rownames(NULL)", .sdbuildR_env[["P"]][["sim_df_name"]],
-      .sdbuildR_env[["P"]][["sim_df_name"]], .sdbuildR_env[["P"]][["sim_df_name"]],
-      .sdbuildR_env[["P"]][["sim_df_name"]], .sdbuildR_env[["P"]][["sim_df_name"]],
-      .sdbuildR_env[["P"]][["sim_df_name"]]
+     )\nrownames(%s) <- NULL",
+      P[["sim_df_name"]],
+      P[["sim_df_name"]], P[["sim_df_name"]],
+      P[["sim_df_name"]], P[["sim_df_name"]],
+      P[["sim_df_name"]], P[["sim_df_name"]]
     )
   )
 

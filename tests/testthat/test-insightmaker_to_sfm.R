@@ -21,7 +21,7 @@ test_that("downloading and simulating Insight Maker models works", {
 
   expect_error(
     insightmaker_to_sfm(file = "test.InsightMaker2"),
-    "Your file does not have the file extension \\.InsightMaker"
+    "Your file does not have the file extension \\.InsightMaker or \\.json"
   )
 
   expect_error(
@@ -36,13 +36,13 @@ test_that("downloading and simulating Insight Maker models works", {
   URL <- "https://insightmaker.com/insight/3xgsvC7QKgPktHWZuXyGAl/Clone-of-Global-Climate-Change"
   sfm_list[[1]] <- sfm <- expect_no_error(insightmaker_to_sfm(URL = URL))
   df <- expect_no_error(as.data.frame(sfm))
-  expect_equal(nrow(df) > 0, TRUE)
-  expect_equal("macro" %in% df$type, TRUE)
-  expect_equal("model_units" %in% df$type, TRUE)
+  expect_true(nrow(df) > 0)
+  expect_true("macro" %in% df$type)
+  expect_true("model_units" %in% df$type)
 
   # Contains graphical functions; check whether xpts and ypts were concatenated
-  expect_equal("xpts" %in% names(df), TRUE)
-  expect_equal("ypts" %in% names(df), TRUE)
+  expect_true("xpts" %in% names(df))
+  expect_true("ypts" %in% names(df))
 
   expect_warning(
     sim <- simulate(sfm |> sim_specs(language = "R")),
@@ -54,22 +54,25 @@ test_that("downloading and simulating Insight Maker models works", {
   sfm_list[[2]] <- sfm <- expect_no_error(insightmaker_to_sfm(URL = URL))
   df <- expect_no_error(as.data.frame(sfm))
   expect_equal(sfm[["model_units"]], list())
-  expect_equal(nrow(df) > 0, TRUE)
-  expect_equal("macro" %in% df$type, TRUE)
+  expect_true(nrow(df) > 0)
+  expect_true("macro" %in% df$type)
 
   sim <- expect_no_error(simulate(sfm |> sim_specs(
     language = "R", start = 0,
     dt = 0.1, stop = 10
   )))
-  expect_equal(sim$success, TRUE)
-  expect_equal(nrow(sim$df) > 0, TRUE)
+  expect_true(sim$success)
+  expect_true(nrow(sim$df) > 0)
   expect_no_error(expect_no_warning(expect_no_message(plot(sim))))
 
   URL <- "https://insightmaker.com/insight/75PvtT7zp43wI7ofBOM9Sm/Clone-of-HYSTERESIS"
-  sfm_list[[3]] <- sfm <- expect_no_error(insightmaker_to_sfm(URL = URL))
+  sfm_list[[3]] <- sfm <- expect_no_error(
+    # Suppress warning of old Insight Maker version
+    suppressWarnings(insightmaker_to_sfm(URL = URL))
+  )
   df <- expect_no_error(as.data.frame(sfm))
-  expect_equal(nrow(df) > 0, TRUE)
-  expect_equal("macro" %in% df$type, TRUE)
+  expect_true(nrow(df) > 0)
+  expect_true("macro" %in% df$type)
 
   # This model uses unit strings u(''), which are not supported in R
   expect_warning(
@@ -86,34 +89,144 @@ test_that("downloading and simulating Insight Maker models works", {
       # dt = 0.1, start = 0,
       # stop = 10
     )))
-    expect_equal(sim$success, TRUE)
-    expect_equal(nrow(sim$df) > 0, TRUE)
+    expect_true(sim$success)
+    expect_true(nrow(sim$df) > 0)
   })
 })
 
 
-test_that("translating Insight Maker models works (cran)", {
+test_that("empty model issues error", {
+  URL <- "https://insightmaker.com/insight/1S1MxCz4fvs2JvCmo6tEQo/empty"
+
+  sfm <- expect_error(
+    {
+      insightmaker_to_sfm(
+        URL = URL
+      )
+    },
+    "does not contain any variables, stocks, or flows"
+  )
+})
+
+
+test_that("ABM model issues error", {
   # Get path to the cran folder
-  folder <- test_path("testdata", "insightmaker", "cran")
+  folder <- test_path("testdata", "insightmaker", "abm")
 
   # Get all .InsightMaker files in the folder
-  model_files <- list.files(
+  model_files_IM <- list.files(
     path = folder,
     pattern = "\\.InsightMaker$",
     full.names = TRUE
   )
 
-  for (file in model_files) {
-    # print(basename(file))
-    sfm <- expect_no_error({
+  model_files_json <- list.files(
+    path = folder,
+    pattern = "\\.json$",
+    full.names = TRUE
+  )
+
+  for (i in seq_along(model_files_IM)) {
+    expect_error(
+      {
+        insightmaker_to_sfm(
+          file = model_files_IM[i]
+        )
+      },
+      "Agent-Based Modelling elements detected"
+    )
+  }
+
+  for (i in seq_along(model_files_json)) {
+    expect_error(
+      {
+        insightmaker_to_sfm(
+          file = model_files_json[i]
+        )
+      },
+      "Agent-Based Modelling elements detected"
+    )
+  }
+})
+
+
+test_that("translating .InsightMaker models works (cran)", {
+  keep_nonnegative_flow <- TRUE
+  keep_nonnegative_stock <- TRUE
+  keep_solver <- TRUE
+  only_stocks <- TRUE
+  dt <- .1
+  save_at <- 1
+  seed <- 123
+
+  # Get path to the cran folder
+  folder <- test_path("testdata", "insightmaker", "cran")
+
+  # Get all .InsightMaker files in the folder
+  model_files_IM <- list.files(
+    path = folder,
+    pattern = "\\.InsightMaker$",
+    full.names = TRUE
+  )
+
+  model_files_json <- list.files(
+    path = folder,
+    pattern = "\\.json$",
+    full.names = TRUE
+  )
+
+  for (i in seq_along(model_files_IM)) {
+    print(i)
+    print(model_files_IM[i])
+
+    sfm_IM <- sfm <- expect_no_error({
       # Suppress potential warnings about old Insight Maker version
       # or large dt
       suppressWarnings({
         insightmaker_to_sfm(
-          file = file,
-          keep_nonnegative_flow = TRUE,
-          keep_nonnegative_stock = TRUE,
-          keep_solver = TRUE
+          file = model_files_IM[i],
+          keep_nonnegative_flow = keep_nonnegative_flow,
+          keep_nonnegative_stock = keep_nonnegative_stock,
+          keep_solver = keep_solver
+        )
+      })
+    })
+
+    df <- expect_no_error(as.data.frame(sfm))
+    expect_true(nrow(df) > 0)
+    expect_true(all(
+      c(
+        "eqn",
+        "eqn_insightmaker",
+        "eqn_julia",
+        "name_insightmaker",
+        "units_insightmaker",
+        "id_insightmaker"
+      ) %in% names(df)
+    ))
+    expect_no_error(expect_no_warning(expect_no_message(plot(sfm))))
+
+    contains_stocks <- any(df[["type"]] == "stock")
+
+    if (contains_stocks) {
+      sfm <- sim_specs(sfm, seed = seed)
+      sim_IM <- sim <- expect_no_error(simulate(sfm |> sim_specs(dt = dt, save_at = save_at),
+        only_stocks = only_stocks
+      ))
+      expect_true(sim$success)
+      expect_true(nrow(sim$df) > 0)
+      expect_silent(plot(sim))
+    }
+
+    sfm_json <- sfm <- expect_no_error({
+      # Suppress potential warnings about old Insight Maker version
+      # or large dt
+      suppressWarnings({
+        insightmaker_to_sfm(
+          file = model_files_json[i],
+          keep_nonnegative_flow = keep_nonnegative_flow,
+          keep_nonnegative_stock = keep_nonnegative_stock,
+          keep_solver = keep_solver
         )
       })
     })
@@ -131,20 +244,35 @@ test_that("translating Insight Maker models works (cran)", {
       ) %in% names(df)
     ))
     expect_no_error(expect_no_warning(expect_no_message(plot(sfm))))
-    sim <- expect_no_error(simulate(sfm |> sim_specs(dt = 0.01, save_at = 1),
-      only_stocks = FALSE
-    ))
-    expect_equal(sim$success, TRUE)
-    expect_equal(nrow(sim$df) > 0, TRUE)
-    expect_no_error(expect_no_warning(expect_no_message(plot(sim))))
-  }
 
+    if (contains_stocks) {
+      sfm <- sim_specs(sfm, seed = seed)
+      sim_json <- sim <- expect_no_error(simulate(sfm |> sim_specs(dt = dt, save_at = save_at),
+        only_stocks = only_stocks
+      ))
+      expect_true(sim$success)
+      expect_true(nrow(sim$df) > 0)
+      expect_silent(plot(sim))
+
+      # Compare simulations
+      comp <- compare_sim(sim_IM, sim_json)
+      expect_true(comp[["equal"]])
+    }
+  }
 })
 
 
 test_that("translating Insight Maker models works (validation)", {
   skip_on_cran()
   testthat::skip_if_not(julia_status()$status == "ready")
+
+  keep_nonnegative_flow <- TRUE
+  keep_nonnegative_stock <- TRUE
+  keep_solver <- TRUE
+  only_stocks <- TRUE
+  dt <- .1
+  save_at <- 1
+  seed <- 123
 
   # Get path to the cran folder
   folder <- test_path("testdata", "insightmaker", "validation")
@@ -156,24 +284,32 @@ test_that("translating Insight Maker models works (validation)", {
   skip_if_not(dir.exists(folder), "Validation test files not available")
 
   # Get all .InsightMaker files in the folder
-  model_files <- list.files(
+  model_files_IM <- list.files(
     path = folder,
     pattern = "\\.InsightMaker$",
     full.names = TRUE
   )
 
+  model_files_json <- list.files(
+    path = folder,
+    pattern = "\\.json$",
+    full.names = TRUE
+  )
+
   use_julia()
-  for (file in model_files) {
-    # print(basename(file))
-    sfm <- expect_no_error({
+
+  for (i in seq_along(model_files_IM)) {
+    print(i)
+
+    sfm <- sfm_IM <- expect_no_error({
       # Suppress potential warnings about old Insight Maker version
       # or large dt
       suppressWarnings({
         insightmaker_to_sfm(
-          file = file,
-          keep_nonnegative_flow = TRUE,
-          keep_nonnegative_stock = TRUE,
-          keep_solver = TRUE
+          file = model_files_IM[i],
+          keep_nonnegative_flow = keep_nonnegative_flow,
+          keep_nonnegative_stock = keep_nonnegative_stock,
+          keep_solver = keep_solver
         )
       })
     })
@@ -191,14 +327,108 @@ test_that("translating Insight Maker models works (validation)", {
       ) %in% names(df)
     ))
     expect_no_error(expect_no_warning(expect_no_message(plot(sfm))))
-    sim <- expect_no_error(simulate(sfm |> sim_specs(dt = 0.01, save_at = 1),
-      only_stocks = FALSE
+
+    sfm <- sim_specs(sfm, seed = seed)
+    sim <- sim_IM <- expect_no_error(simulate(sfm |> sim_specs(dt = dt, save_at = save_at),
+      only_stocks = only_stocks
     ))
-    expect_equal(sim$success, TRUE)
-    expect_equal(nrow(sim$df) > 0, TRUE)
-    expect_no_error(expect_no_warning(expect_no_message(plot(sim))))
+    expect_true(sim$success)
+    expect_true(nrow(sim$df) > 0)
+    expect_silent(plot(sim))
+
+
+    sfm <- sfm_json <- expect_no_error({
+      # Suppress potential warnings about old Insight Maker version
+      # or large dt
+      suppressWarnings({
+        insightmaker_to_sfm(
+          file = model_files_json[i],
+          keep_nonnegative_flow = keep_nonnegative_flow,
+          keep_nonnegative_stock = keep_nonnegative_stock,
+          keep_solver = keep_solver
+        )
+      })
+    })
+
+    df <- expect_no_error(as.data.frame(sfm))
+    expect_equal(nrow(df) > 0, TRUE)
+    expect_true(all(
+      c(
+        "eqn",
+        "eqn_insightmaker",
+        "eqn_julia",
+        "name_insightmaker",
+        "units_insightmaker",
+        "id_insightmaker"
+      ) %in% names(df)
+    ))
+    expect_no_error(expect_no_warning(expect_no_message(plot(sfm))))
+
+    sfm <- sim_specs(sfm, seed = seed)
+    sim <- sim_json <- expect_no_error(simulate(sfm |> sim_specs(dt = dt, save_at = save_at),
+      only_stocks = only_stocks
+    ))
+    expect_true(sim$success)
+    expect_true(nrow(sim$df) > 0)
+    expect_silent(plot(sim))
+
+    # Compare simulations
+    comp <- compare_sim(sim_IM, sim_json)
+    expect_true(comp[["equal"]])
   }
 })
+
+
+# test_that("get properties of Insight Maker models (validation)", {
+#   skip()
+#
+#   # Get path to the cran folder
+#   folder <- test_path("testdata", "insightmaker", "validation")
+#
+#   # print("folder")
+#   # print(folder)
+#   # print(list.files(path = test_path("testdata", "insightmaker"), include.dirs = TRUE))
+#
+#   skip_if_not(dir.exists(folder), "Validation test files not available")
+#
+#   # Get all .InsightMaker files in the folder
+#   model_files <- list.files(
+#     path = folder,
+#     pattern = "\\.InsightMaker$",
+#     full.names = TRUE
+#   )
+#
+#   for (file in model_files) {
+#     print(basename(file))
+#     sfm <- expect_no_error({
+#       # Suppress potential warnings about old Insight Maker version
+#       # or large dt
+#       suppressWarnings({
+#         insightmaker_to_sfm(
+#           file = file,
+#           keep_nonnegative_flow = TRUE,
+#           keep_nonnegative_stock = TRUE,
+#           keep_solver = TRUE
+#         )
+#       })
+#     })
+#
+#     df <- expect_no_error(as.data.frame(sfm))
+#
+#     data.frame(
+#
+#       macros = ,
+#       custom_units = ,
+#       converters = ,
+#       conveyors = ,
+#       gf = ,
+#       delays = ,
+#       ghosts
+#     )
+#
+#   }
+#
+# })
 
 
 #   # model_list = c(

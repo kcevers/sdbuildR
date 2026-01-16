@@ -19,13 +19,19 @@ Create XML string from Insight Maker URL. For internal use; use \code{insightmak
 }
 \examples{
 \dontshow{if (has_internet()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
-xml <- url_to_IM(
-  URL =
-    "https://insightmaker.com/insight/43tz1nvUgbIiIOGSGtzIzj/Romeo-Juliet"
-)
+URL <- "https://insightmaker.com/insight/43tz1nvUgbIiIOGSGtzIzj/Romeo-Juliet"
+xml <- url_to_IM(URL)
+
+# Save model to file
+file <- tempfile(fileext = ".InsightMaker")
+xml <- url_to_IM(URL, file = file)
+file.remove(file)
 \dontshow{\}) # examplesIf}
 }
 \seealso{
 \code{\link[=insightmaker_to_sfm]{insightmaker_to_sfm()}}
+
+Other insightmaker: 
+\code{\link{insightmaker_to_json}()}
 }
 \concept{insightmaker}

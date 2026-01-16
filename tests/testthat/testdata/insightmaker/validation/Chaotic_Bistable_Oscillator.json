@@ -1,0 +1,157 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "Chaotic Bistable Oscillator",
+  "simulation": {
+    "version": "36",
+    "time_length": "50",
+    "time_start": "0",
+    "time_step": "0.01",
+    "time_units": "SECONDS",
+    "algorithm": "RK4"
+  },
+  "elements": [
+    {
+      "name": "state_Y",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "2",
+        "description": "Default initial state is 2",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "rate_of_change_Y",
+      "type": "FLOW",
+      "from": null,
+      "to": "state_Y",
+      "behavior": {
+        "value": "[state_X]-[damping_parameter]*[state_Y]-[state_X]^3+[excitation]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "damping_parameter",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.25",
+        "description": "Default is 0.25",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "state_X",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0",
+        "description": "Default initial state is 0",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "rate_of_change_X",
+      "type": "FLOW",
+      "from": null,
+      "to": "state_X",
+      "behavior": {
+        "value": "[state_Y]*[coupling_parameter]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "coupling_parameter",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "excitation",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[amplitude]*Cos([frequency])",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "amplitude",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.3",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "frequency",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.3",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "state_Y",
+      "to": "rate_of_change_Y"
+    },
+    {
+      "type": "LINK",
+      "from": "damping_parameter",
+      "to": "rate_of_change_Y"
+    },
+    {
+      "type": "LINK",
+      "from": "state_X",
+      "to": "rate_of_change_Y"
+    },
+    {
+      "type": "LINK",
+      "from": "state_X",
+      "to": "rate_of_change_Y"
+    },
+    {
+      "type": "LINK",
+      "from": "excitation",
+      "to": "rate_of_change_Y"
+    },
+    {
+      "type": "LINK",
+      "from": "state_Y",
+      "to": "rate_of_change_Y"
+    },
+    {
+      "type": "LINK",
+      "from": "state_Y",
+      "to": "rate_of_change_X"
+    },
+    {
+      "type": "LINK",
+      "from": "coupling_parameter",
+      "to": "rate_of_change_X"
+    },
+    {
+      "type": "LINK",
+      "from": "state_X",
+      "to": "rate_of_change_X"
+    },
+    {
+      "type": "LINK",
+      "from": "amplitude",
+      "to": "excitation"
+    },
+    {
+      "type": "LINK",
+      "from": "frequency",
+      "to": "excitation"
+    }
+  ],
+  "engine_settings": []
+}

@@ -32,10 +32,10 @@ Note that this may take 10-25 minutes the first time as Julia downloads and comp
 \examples{
 \dontshow{if (julia_status()$julia_found && Sys.getenv("NOT_CRAN") == "true") (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
 \dontrun{
-  install_julia_env()
+install_julia_env()
 
-  # Remove Julia environment
-  install_julia_env(remove = TRUE)
+# Remove Julia environment
+install_julia_env(remove = TRUE)
 }
 \dontshow{\}) # examplesIf}
 }

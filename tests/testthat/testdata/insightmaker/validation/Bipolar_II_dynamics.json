@@ -1,0 +1,185 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "Bipolar II dynamics",
+  "simulation": {
+    "version": "27",
+    "time_length": "100",
+    "time_start": "0",
+    "time_step": "0.1",
+    "time_units": "MONTHS",
+    "algorithm": "RK4"
+  },
+  "elements": [
+    {
+      "name": "medA",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "392",
+        "description": "The effect of therapy.",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "medB",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "-176.6",
+        "description": "The effect of therapy",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "y",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "1",
+        "description": "Default initial value is 1",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "rate_of_change_Y",
+      "type": "FLOW",
+      "from": null,
+      "to": "y",
+      "behavior": {
+        "value": "([coupling_parameter_A]*[x]+([Beta]-Step({20 Months}, [medB]))*([alpha_parameter]-[x]^2)*[y]-([x]^4)*[y]*Step({20 Months}, [medA]))*0.4",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "x",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0",
+        "description": "Initial default value is 0 , describes symptoms",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "rate_of_change_X",
+      "type": "FLOW",
+      "from": null,
+      "to": "x",
+      "behavior": {
+        "value": "[y]",
+        "description": "higher = positive symptoms lower= depresive symptoms",
+        "units": "Unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "Beta",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "10",
+        "description": "Default value is 1",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "coupling_parameter_A",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "-16",
+        "description": "Describes the square of the frequency",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "alpha_parameter",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.001",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Hypomania_Limit",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": ".1",
+        "description": "the top boundary of a \"normal\" person",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Depression_Limit",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "-.1",
+        "description": "Lower boundary on a normal person",
+        "units": "Unitless"
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "medA",
+      "to": "rate_of_change_Y"
+    },
+    {
+      "type": "LINK",
+      "from": "medB",
+      "to": "rate_of_change_Y"
+    },
+    {
+      "type": "LINK",
+      "from": "y",
+      "to": "rate_of_change_Y"
+    },
+    {
+      "type": "LINK",
+      "from": "y",
+      "to": "rate_of_change_Y"
+    },
+    {
+      "type": "LINK",
+      "from": "x",
+      "to": "rate_of_change_Y"
+    },
+    {
+      "type": "LINK",
+      "from": "x",
+      "to": "rate_of_change_Y"
+    },
+    {
+      "type": "LINK",
+      "from": "x",
+      "to": "rate_of_change_Y"
+    },
+    {
+      "type": "LINK",
+      "from": "Beta",
+      "to": "rate_of_change_Y"
+    },
+    {
+      "type": "LINK",
+      "from": "coupling_parameter_A",
+      "to": "rate_of_change_Y"
+    },
+    {
+      "type": "LINK",
+      "from": "alpha_parameter",
+      "to": "rate_of_change_Y"
+    },
+    {
+      "type": "LINK",
+      "from": "y",
+      "to": "rate_of_change_Y"
+    },
+    {
+      "type": "LINK",
+      "from": "y",
+      "to": "rate_of_change_X"
+    },
+    {
+      "type": "LINK",
+      "from": "x",
+      "to": "rate_of_change_X"
+    }
+  ],
+  "engine_settings": []
+}

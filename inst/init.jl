@@ -9,6 +9,7 @@ using Random
 using Statistics
 using StatsBase
 using Unitful
+using Logging
 using SystemDynamicsBuildR
 using SystemDynamicsBuildR.sdbuildR_units
 Base.:<(x::Unitful.Quantity, y::Float64) = <(x, y * Unitful.unit(x))

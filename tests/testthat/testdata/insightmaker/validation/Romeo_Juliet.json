@@ -1,0 +1,143 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "Romeo & Juliet",
+  "simulation": {
+    "version": "37",
+    "time_length": "40",
+    "time_start": "0",
+    "time_step": "0.1",
+    "time_units": "MONTHS",
+    "algorithm": "RK4"
+  },
+  "elements": [
+    {
+      "name": "R",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": ".1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "J",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": ".1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "inflow",
+      "type": "FLOW",
+      "from": null,
+      "to": "R",
+      "behavior": {
+        "value": "[a]*[R] +[b]*[J]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "inflow_1",
+      "type": "FLOW",
+      "from": null,
+      "to": "J",
+      "behavior": {
+        "value": "[c]*[R]+ [d]*[J]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "a",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "-.2",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "c",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "b",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "-1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "d",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0\n",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "R",
+      "to": "inflow"
+    },
+    {
+      "type": "LINK",
+      "from": "J",
+      "to": "inflow"
+    },
+    {
+      "type": "LINK",
+      "from": "a",
+      "to": "inflow"
+    },
+    {
+      "type": "LINK",
+      "from": "b",
+      "to": "inflow"
+    },
+    {
+      "type": "LINK",
+      "from": "R",
+      "to": "inflow"
+    },
+    {
+      "type": "LINK",
+      "from": "R",
+      "to": "inflow_1"
+    },
+    {
+      "type": "LINK",
+      "from": "J",
+      "to": "inflow_1"
+    },
+    {
+      "type": "LINK",
+      "from": "c",
+      "to": "inflow_1"
+    },
+    {
+      "type": "LINK",
+      "from": "d",
+      "to": "inflow_1"
+    },
+    {
+      "type": "LINK",
+      "from": "J",
+      "to": "inflow_1"
+    }
+  ],
+  "engine_settings": []
+}

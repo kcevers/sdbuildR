@@ -1,0 +1,345 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "Goodwin Model",
+  "simulation": {
+    "version": "34",
+    "time_length": "30",
+    "time_start": "0",
+    "time_step": "0.5",
+    "time_units": "YEARS",
+    "algorithm": "RK4"
+  },
+  "elements": [
+    {
+      "name": "Capital",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "300",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Investment",
+      "type": "FLOW",
+      "from": null,
+      "to": "Capital",
+      "behavior": {
+        "value": "[Profit]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Workers_Share",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Wages]/[Output]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Output",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Capital]/[Capital_Output_Ratio]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Profit",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Output]-[Wages]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Capital_Output_Ratio",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "3",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Employment",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Output]/[Labor_Productivity]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Wages",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Wage_Rate]*[Employment]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Labor_Employment_Ratio",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Labor_Supply]/[Employment]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Deprechiation",
+      "type": "FLOW",
+      "from": "Capital",
+      "to": null,
+      "behavior": {
+        "value": "[Capital]*[Deprechiation_Rate]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Deprechiation_Rate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Labor_Productivity",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Labor_Supply",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "110",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Unemployment_Rate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "([Labor_Supply]-[Employment])/[Labor_Supply]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Desired_Wage_Rate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Wage_Rate]/[Labor_Employment_Ratio]^[Elasticity_of_Desired_Wage_Rate]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Elasticity_of_Desired_Wage_Rate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Wage_Rate",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "(1-[Deprechiation_Rate]*[Capital_Output_Ratio])*[Labor_Productivity]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Change_in_Wage_Rate",
+      "type": "FLOW",
+      "from": null,
+      "to": "Wage_Rate",
+      "behavior": {
+        "value": "([Desired_Wage_Rate]-[Wage_Rate])/[Adjustment_Time_of_Wage_Rate]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "Adjustment_Time_of_Wage_Rate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "Profit",
+      "to": "Investment"
+    },
+    {
+      "type": "LINK",
+      "from": "Capital",
+      "to": "Investment"
+    },
+    {
+      "type": "LINK",
+      "from": "Output",
+      "to": "Workers_Share"
+    },
+    {
+      "type": "LINK",
+      "from": "Wages",
+      "to": "Workers_Share"
+    },
+    {
+      "type": "LINK",
+      "from": "Capital",
+      "to": "Output"
+    },
+    {
+      "type": "LINK",
+      "from": "Capital_Output_Ratio",
+      "to": "Output"
+    },
+    {
+      "type": "LINK",
+      "from": "Output",
+      "to": "Profit"
+    },
+    {
+      "type": "LINK",
+      "from": "Wages",
+      "to": "Profit"
+    },
+    {
+      "type": "LINK",
+      "from": "Output",
+      "to": "Employment"
+    },
+    {
+      "type": "LINK",
+      "from": "Labor_Productivity",
+      "to": "Employment"
+    },
+    {
+      "type": "LINK",
+      "from": "Employment",
+      "to": "Wages"
+    },
+    {
+      "type": "LINK",
+      "from": "Wage_Rate",
+      "to": "Wages"
+    },
+    {
+      "type": "LINK",
+      "from": "Employment",
+      "to": "Labor_Employment_Ratio"
+    },
+    {
+      "type": "LINK",
+      "from": "Labor_Supply",
+      "to": "Labor_Employment_Ratio"
+    },
+    {
+      "type": "LINK",
+      "from": "Capital",
+      "to": "Deprechiation"
+    },
+    {
+      "type": "LINK",
+      "from": "Deprechiation_Rate",
+      "to": "Deprechiation"
+    },
+    {
+      "type": "LINK",
+      "from": "Capital",
+      "to": "Deprechiation"
+    },
+    {
+      "type": "LINK",
+      "from": "Employment",
+      "to": "Unemployment_Rate"
+    },
+    {
+      "type": "LINK",
+      "from": "Labor_Supply",
+      "to": "Unemployment_Rate"
+    },
+    {
+      "type": "LINK",
+      "from": "Labor_Supply",
+      "to": "Unemployment_Rate"
+    },
+    {
+      "type": "LINK",
+      "from": "Labor_Employment_Ratio",
+      "to": "Desired_Wage_Rate"
+    },
+    {
+      "type": "LINK",
+      "from": "Elasticity_of_Desired_Wage_Rate",
+      "to": "Desired_Wage_Rate"
+    },
+    {
+      "type": "LINK",
+      "from": "Wage_Rate",
+      "to": "Desired_Wage_Rate"
+    },
+    {
+      "type": "LINK",
+      "from": "Capital_Output_Ratio",
+      "to": "Wage_Rate"
+    },
+    {
+      "type": "LINK",
+      "from": "Deprechiation_Rate",
+      "to": "Wage_Rate"
+    },
+    {
+      "type": "LINK",
+      "from": "Labor_Productivity",
+      "to": "Wage_Rate"
+    },
+    {
+      "type": "LINK",
+      "from": "Desired_Wage_Rate",
+      "to": "Change_in_Wage_Rate"
+    },
+    {
+      "type": "LINK",
+      "from": "Wage_Rate",
+      "to": "Change_in_Wage_Rate"
+    },
+    {
+      "type": "LINK",
+      "from": "Adjustment_Time_of_Wage_Rate",
+      "to": "Change_in_Wage_Rate"
+    },
+    {
+      "type": "LINK",
+      "from": "Wage_Rate",
+      "to": "Change_in_Wage_Rate"
+    }
+  ],
+  "engine_settings": []
+}

@@ -71,8 +71,10 @@ test_that("ensemble works", {
   expect_equal(sort(unique(sims[["summary"]][["j"]])), 1)
 
   # Check returned constants and init
-  expect_equal(sort(unique(sims[["constants"]][["summary"]][["variable"]])),
-               c("a0", "a1", "a2"))
+  expect_equal(
+    sort(unique(sims[["constants"]][["summary"]][["variable"]])),
+    c("a0", "a1", "a2")
+  )
   expect_equal(sort(unique(sims[["init"]][["summary"]][["variable"]])), c(
     "Compensatory_behaviour",
     "Food_intake",
@@ -135,6 +137,28 @@ test_that("ensemble works", {
   expect_equal(as.data.frame(sims$conditions)$a1, c(1.3, 1.4, 1.5))
   expect_equal(unique(sims$constants$df$i), 1:10)
   expect_equal(unique(sims$constants$df$j), 1:3)
+})
+
+
+test_that("ensemble reproducibility with seed", {
+  testthat::skip_on_cran()
+  testthat::skip_if_not(julia_status()$status == "ready")
+  seed <- 123
+
+  # If you already have random elements in the model, no need to specify what to vary
+  sfm <- xmile("predator_prey") |>
+    sim_specs(
+      language = "Julia",
+      start = 0, stop = 5,
+      dt = .1,
+      save_from = 5, seed = seed
+    ) |>
+    build(c("predator", "prey"), eqn = "runif(1)")
+  sims1 <- ensemble(sfm, return_sims = TRUE)
+  sims2 <- ensemble(sfm, return_sims = TRUE)
+
+  expect_equal(sims1$df, sims2$df)
+  expect_equal(sims1$summary, sims2$summary)
 })
 
 

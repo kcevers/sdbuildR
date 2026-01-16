@@ -1,0 +1,293 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "Basic Model",
+  "simulation": {
+    "version": "36",
+    "time_length": "14",
+    "time_start": "0",
+    "time_step": "0.01",
+    "time_units": "YEARS",
+    "algorithm": "RK4"
+  },
+  "elements": [
+    {
+      "name": "Hare",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": ".55",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Death_by_Crowding",
+      "type": "FLOW",
+      "from": "Hare",
+      "to": null,
+      "behavior": {
+        "value": "[r]*[Hare]^2/[K]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Birth",
+      "type": "FLOW",
+      "from": null,
+      "to": "Hare",
+      "behavior": {
+        "value": "[r]*[Hare]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "K",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "2",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "r",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "8.0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "w_q_Lynx",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": ".55",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Lynx_Death_by_Crowding_and_Lack_of_Prey",
+      "type": "FLOW",
+      "from": "w_q_Lynx",
+      "to": null,
+      "behavior": {
+        "value": "[s]*[w_q_Lynx]^2/[Hare]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "s",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1.8",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "mu",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": ".26",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Generalist_Predation",
+      "type": "FLOW",
+      "from": "Hare",
+      "to": null,
+      "behavior": {
+        "value": "[gamma]*[Hare]^2/([Hare]^2+[eta]^2)",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "gamma",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": ".33",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "eta",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1.2",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "alphaQratio",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "2193.0/212.0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Specialist_Predation",
+      "type": "FLOW",
+      "from": "Hare",
+      "to": null,
+      "behavior": {
+        "value": "[alphaQratio]*[w_q_Lynx]*[Hare]/([Hare]+[mu])",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Lynx_birth",
+      "type": "FLOW",
+      "from": null,
+      "to": "w_q_Lynx",
+      "behavior": {
+        "value": "[s]*[w_q_Lynx]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "Hare",
+      "to": "Death_by_Crowding"
+    },
+    {
+      "type": "LINK",
+      "from": "K",
+      "to": "Death_by_Crowding"
+    },
+    {
+      "type": "LINK",
+      "from": "r",
+      "to": "Death_by_Crowding"
+    },
+    {
+      "type": "LINK",
+      "from": "Hare",
+      "to": "Death_by_Crowding"
+    },
+    {
+      "type": "LINK",
+      "from": "Hare",
+      "to": "Birth"
+    },
+    {
+      "type": "LINK",
+      "from": "r",
+      "to": "Birth"
+    },
+    {
+      "type": "LINK",
+      "from": "Hare",
+      "to": "Birth"
+    },
+    {
+      "type": "LINK",
+      "from": "Hare",
+      "to": "Lynx_Death_by_Crowding_and_Lack_of_Prey"
+    },
+    {
+      "type": "LINK",
+      "from": "w_q_Lynx",
+      "to": "Lynx_Death_by_Crowding_and_Lack_of_Prey"
+    },
+    {
+      "type": "LINK",
+      "from": "s",
+      "to": "Lynx_Death_by_Crowding_and_Lack_of_Prey"
+    },
+    {
+      "type": "LINK",
+      "from": "w_q_Lynx",
+      "to": "Lynx_Death_by_Crowding_and_Lack_of_Prey"
+    },
+    {
+      "type": "LINK",
+      "from": "Hare",
+      "to": "Generalist_Predation"
+    },
+    {
+      "type": "LINK",
+      "from": "Hare",
+      "to": "Generalist_Predation"
+    },
+    {
+      "type": "LINK",
+      "from": "gamma",
+      "to": "Generalist_Predation"
+    },
+    {
+      "type": "LINK",
+      "from": "eta",
+      "to": "Generalist_Predation"
+    },
+    {
+      "type": "LINK",
+      "from": "Hare",
+      "to": "Generalist_Predation"
+    },
+    {
+      "type": "LINK",
+      "from": "Hare",
+      "to": "Specialist_Predation"
+    },
+    {
+      "type": "LINK",
+      "from": "Hare",
+      "to": "Specialist_Predation"
+    },
+    {
+      "type": "LINK",
+      "from": "w_q_Lynx",
+      "to": "Specialist_Predation"
+    },
+    {
+      "type": "LINK",
+      "from": "mu",
+      "to": "Specialist_Predation"
+    },
+    {
+      "type": "LINK",
+      "from": "alphaQratio",
+      "to": "Specialist_Predation"
+    },
+    {
+      "type": "LINK",
+      "from": "Hare",
+      "to": "Specialist_Predation"
+    },
+    {
+      "type": "LINK",
+      "from": "w_q_Lynx",
+      "to": "Lynx_birth"
+    },
+    {
+      "type": "LINK",
+      "from": "s",
+      "to": "Lynx_birth"
+    },
+    {
+      "type": "LINK",
+      "from": "w_q_Lynx",
+      "to": "Lynx_birth"
+    }
+  ],
+  "engine_settings": []
+}

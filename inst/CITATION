@@ -1,0 +1,11 @@
+bibentry(
+  bibtype = "Manual",
+  title = "sdbuildR: Easily Build, Simulate, and Visualise Stock-and-Flow Models",
+  author = person(given = "Kyra Caitlin", family = "Evers",
+    email = "kyra.c.evers@gmail.com",
+    role = c("aut", "cre", "cph"),
+    comment = c(ORCID = "0000-0001-6890-3482")),
+  year = 2025,
+  note = "R package version 1.0.8",
+  doi = "10.32614/CRAN.package.sdbuildR"
+)

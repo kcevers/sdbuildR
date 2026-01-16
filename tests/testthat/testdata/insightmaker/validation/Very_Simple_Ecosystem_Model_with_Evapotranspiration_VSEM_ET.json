@@ -1,0 +1,495 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "Very Simple Ecosystem Model with Evapotranspiration (VSEM-ET)",
+  "simulation": {
+    "version": "37",
+    "time_length": "50",
+    "time_start": "0",
+    "time_step": "0.05",
+    "time_units": "YEARS",
+    "algorithm": "RK4"
+  },
+  "elements": [
+    {
+      "name": "aboveground_C",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "3",
+        "description": "Units: g C m-2",
+        "units": "grams/meter^2"
+      }
+    },
+    {
+      "name": "aboveground_input",
+      "type": "FLOW",
+      "from": null,
+      "to": "aboveground_C",
+      "behavior": {
+        "value": "(1-[root_fraction])*[NPP]",
+        "description": "Units: kg C m-2 d-1",
+        "units": "grams/meters^2/days",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "fAPAR",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1-EXP(-[light_extinction_coeff]*[leaf_area_index])",
+        "description": "Unitless (range: 0.0 to 0.9) ",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "LUE_max",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "2.2",
+        "description": "Units: g C / MJ PAR Default value: 1.6 g C / MJ ",
+        "units": "grams/megajoules"
+      }
+    },
+    {
+      "name": "specific_respiration_rate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.6",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "leaf_area_index",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.0865*([aboveground_C]/0.45/{1 GRAMS/METERS^2})^0.4505",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "root_fraction",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.5",
+        "description": "Unitless Default value: 0.5 ",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "light_extinction_coeff",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.5",
+        "description": "units: m2 leaf / kg aboveground biomass",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "litterfall",
+      "type": "FLOW",
+      "from": "aboveground_C",
+      "to": "soil_organic_C",
+      "behavior": {
+        "value": "[aboveground_mortality]",
+        "description": "Units: g C m-2 d-1",
+        "units": "grams/meters^2/days",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "GPP",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[LUE_max]*[AET_PET_ratio]*[fAPAR]*[daily_PAR]",
+        "description": "Units: g C m-2 d-1 Function is based on Gan et al. (2021). ",
+        "units": "grams/meters^2/days"
+      }
+    },
+    {
+      "name": "NPP",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[GPP]-[Rauto]",
+        "description": "Units: g C m-2 d-1",
+        "units": "grams/meters^2/days"
+      }
+    },
+    {
+      "name": "leaf_lifespan",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "12",
+        "description": "Units: y Default value: 1440 d = 3.95 y ",
+        "units": "Years"
+      }
+    },
+    {
+      "name": "aboveground_mortality",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[aboveground_C]/[leaf_lifespan]",
+        "description": "Units: g C m-2 d-",
+        "units": "grams/meters^2/days"
+      }
+    },
+    {
+      "name": "belowground_C",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "3",
+        "description": "Units: g C m-2",
+        "units": "grams/meter^2"
+      }
+    },
+    {
+      "name": "belowground_input",
+      "type": "FLOW",
+      "from": null,
+      "to": "belowground_C",
+      "behavior": {
+        "value": "[root_fraction]*[NPP]",
+        "description": "",
+        "units": "grams/meters^2/days",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "root_death",
+      "type": "FLOW",
+      "from": "belowground_C",
+      "to": "soil_organic_C",
+      "behavior": {
+        "value": "[belowground_mortality]",
+        "description": "Units: g C m-2 d-1",
+        "units": "grams/meters^2/days",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "belowground_mortality",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[belowground_C]/[root_lifespan]",
+        "description": "Units: kg C m-2 d-1",
+        "units": "grams/meters^2/days"
+      }
+    },
+    {
+      "name": "root_lifespan",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "3.95",
+        "description": " Units: y  Default value: 1440 d = 3.95 y ",
+        "units": "Years"
+      }
+    },
+    {
+      "name": "soil_organic_C",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "15",
+        "description": "Units: g C m-2",
+        "units": "grams/meter^2"
+      }
+    },
+    {
+      "name": "decomposition",
+      "type": "FLOW",
+      "from": "soil_organic_C",
+      "to": null,
+      "behavior": {
+        "value": "[Rhetero]",
+        "description": "Units: g C m-2 d-1",
+        "units": "grams/meters^2/days",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "SOM_lifespan",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "{1 YEARS}/(0.000057*(([AET]*10)^1.371))",
+        "description": "Units: y Function based on Aerts (2014), with SOM lifespan = 1/k and AET units converted from cm y-1 to mm y-1.\n \n  ",
+        "units": "Years"
+      }
+    },
+    {
+      "name": "NEE",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "([Rhetero] + [Rauto]) - [GPP]",
+        "description": "Units: g C m-2 d-1",
+        "units": "grams/meters^2/days"
+      }
+    },
+    {
+      "name": "Rauto",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[specific_respiration_rate]*[GPP]",
+        "description": "Units: g C m-2 d-1",
+        "units": "grams/meters^2/days"
+      }
+    },
+    {
+      "name": "daily_PAR",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "Max(Seasonal(182)*0.5*[range_PAR] + [mean_PAR], {0 Megajoules/Meters^2/Days})",
+        "description": "Units: MJ m-2 d-1 PAR varies seasonally, reaching its peak at day 182. ",
+        "units": "megajoules/meters^2/days"
+      }
+    },
+    {
+      "name": "mean_PAR",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "6.68",
+        "description": "Units: MJ m-2 d-1 Default 6.68 MJ m-2 d-1 ",
+        "units": "megajoules/meters^2/days"
+      }
+    },
+    {
+      "name": "range_PAR",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "15.88",
+        "description": "Units: MJ m-2 d-1 Default 15.88 MJ m-2 d-1 ",
+        "units": "megajoules/meters^2/days"
+      }
+    },
+    {
+      "name": "Rhetero",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[soil_organic_C]/[SOM_lifespan]",
+        "description": "Units: g m-2 d-1",
+        "units": "grams/meters^2/days"
+      }
+    },
+    {
+      "name": "AET",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[AET_PET_ratio]*[PET]",
+        "description": " Units: cm y-1 ",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "PET",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "40",
+        "description": "Units: cm y-1",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "AET_PET_ratio",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.75",
+        "description": " Unitless  Default value: 0.75 ",
+        "units": "Unitless"
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "root_fraction",
+      "to": "aboveground_input"
+    },
+    {
+      "type": "LINK",
+      "from": "NPP",
+      "to": "aboveground_input"
+    },
+    {
+      "type": "LINK",
+      "from": "aboveground_C",
+      "to": "aboveground_input"
+    },
+    {
+      "type": "LINK",
+      "from": "leaf_area_index",
+      "to": "fAPAR"
+    },
+    {
+      "type": "LINK",
+      "from": "light_extinction_coeff",
+      "to": "fAPAR"
+    },
+    {
+      "type": "LINK",
+      "from": "aboveground_C",
+      "to": "leaf_area_index"
+    },
+    {
+      "type": "LINK",
+      "from": "aboveground_mortality",
+      "to": "litterfall"
+    },
+    {
+      "type": "LINK",
+      "from": "aboveground_C",
+      "to": "litterfall"
+    },
+    {
+      "type": "LINK",
+      "from": "soil_organic_C",
+      "to": "litterfall"
+    },
+    {
+      "type": "LINK",
+      "from": "fAPAR",
+      "to": "GPP"
+    },
+    {
+      "type": "LINK",
+      "from": "LUE_max",
+      "to": "GPP"
+    },
+    {
+      "type": "LINK",
+      "from": "daily_PAR",
+      "to": "GPP"
+    },
+    {
+      "type": "LINK",
+      "from": "AET_PET_ratio",
+      "to": "GPP"
+    },
+    {
+      "type": "LINK",
+      "from": "GPP",
+      "to": "NPP"
+    },
+    {
+      "type": "LINK",
+      "from": "Rauto",
+      "to": "NPP"
+    },
+    {
+      "type": "LINK",
+      "from": "aboveground_C",
+      "to": "aboveground_mortality"
+    },
+    {
+      "type": "LINK",
+      "from": "leaf_lifespan",
+      "to": "aboveground_mortality"
+    },
+    {
+      "type": "LINK",
+      "from": "root_fraction",
+      "to": "belowground_input"
+    },
+    {
+      "type": "LINK",
+      "from": "NPP",
+      "to": "belowground_input"
+    },
+    {
+      "type": "LINK",
+      "from": "belowground_C",
+      "to": "belowground_input"
+    },
+    {
+      "type": "LINK",
+      "from": "belowground_mortality",
+      "to": "root_death"
+    },
+    {
+      "type": "LINK",
+      "from": "belowground_C",
+      "to": "root_death"
+    },
+    {
+      "type": "LINK",
+      "from": "soil_organic_C",
+      "to": "root_death"
+    },
+    {
+      "type": "LINK",
+      "from": "belowground_C",
+      "to": "belowground_mortality"
+    },
+    {
+      "type": "LINK",
+      "from": "root_lifespan",
+      "to": "belowground_mortality"
+    },
+    {
+      "type": "LINK",
+      "from": "Rhetero",
+      "to": "decomposition"
+    },
+    {
+      "type": "LINK",
+      "from": "soil_organic_C",
+      "to": "decomposition"
+    },
+    {
+      "type": "LINK",
+      "from": "AET",
+      "to": "SOM_lifespan"
+    },
+    {
+      "type": "LINK",
+      "from": "GPP",
+      "to": "NEE"
+    },
+    {
+      "type": "LINK",
+      "from": "Rauto",
+      "to": "NEE"
+    },
+    {
+      "type": "LINK",
+      "from": "Rhetero",
+      "to": "NEE"
+    },
+    {
+      "type": "LINK",
+      "from": "specific_respiration_rate",
+      "to": "Rauto"
+    },
+    {
+      "type": "LINK",
+      "from": "GPP",
+      "to": "Rauto"
+    },
+    {
+      "type": "LINK",
+      "from": "mean_PAR",
+      "to": "daily_PAR"
+    },
+    {
+      "type": "LINK",
+      "from": "range_PAR",
+      "to": "daily_PAR"
+    },
+    {
+      "type": "LINK",
+      "from": "soil_organic_C",
+      "to": "Rhetero"
+    },
+    {
+      "type": "LINK",
+      "from": "SOM_lifespan",
+      "to": "Rhetero"
+    },
+    {
+      "type": "LINK",
+      "from": "PET",
+      "to": "AET"
+    },
+    {
+      "type": "LINK",
+      "from": "AET_PET_ratio",
+      "to": "AET"
+    }
+  ],
+  "engine_settings": []
+}

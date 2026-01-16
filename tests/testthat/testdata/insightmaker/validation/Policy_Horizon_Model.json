@@ -1,0 +1,269 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "Policy Horizon Model",
+  "simulation": {
+    "version": "27",
+    "time_length": "30",
+    "time_start": "2010",
+    "time_step": "0.5",
+    "time_units": "YEARS",
+    "algorithm": "RK4"
+  },
+  "elements": [
+    {
+      "name": "Representative_Accountability",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Citizen_Involvement]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Time_Horizon_of_Political_Actions",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Time_to_Election]/[Representative_Accountability]",
+        "description": "",
+        "units": "Years"
+      }
+    },
+    {
+      "name": "Challenges",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "50",
+        "description": "The amount of challenges currently facing society.",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Creation",
+      "type": "FLOW",
+      "from": null,
+      "to": "Challenges",
+      "behavior": {
+        "value": "[Challenges]*(1-[Problem_Prevention_Rate])",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Resolution",
+      "type": "FLOW",
+      "from": "Challenges",
+      "to": null,
+      "behavior": {
+        "value": "[Challenges]*[Problem_Resolution_Rate]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Citizen_Involvement",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "30",
+        "description": "The amount of citizen involvement to tackle challenges.",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Change_in_Citizen_Involvement",
+      "type": "FLOW",
+      "from": null,
+      "to": "Citizen_Involvement",
+      "behavior": {
+        "value": "([Citizenship_Desired_Involvement]-[Citizen_Involvement])/[Delay_to_Mobilize_Citizens]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "Problem_Prevention_Rate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "expit([Resource_Capacity]*[Time_Horizon_of_Political_Actions]*{1 1/Years}/10)",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Problem_Resolution_Rate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "expit([Resource_Capacity]/(1+[Time_Horizon_of_Political_Actions]*{1 1/Years})/100-.5)",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Resource_Capacity",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Citizen_Involvement]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Apathy",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1.5",
+        "description": "An abstract measure of apathy, higher values indicate increased apathy.",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Time_to_Election",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "x <- Time/[Time_Between_Elections]\n\n(ceiling(x)-x)*[Time_Between_Elections]",
+        "description": "",
+        "units": "Years"
+      }
+    },
+    {
+      "name": "Time_Between_Elections",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "6",
+        "description": "The time in years between elections",
+        "units": "Years"
+      }
+    },
+    {
+      "name": "Citizenship_Desired_Involvement",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Challenges]/[Apathy]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Delay_to_Mobilize_Citizens",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "2",
+        "description": "The average delay in years for citizens to be mobilized.",
+        "units": "Years"
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "Citizen_Involvement",
+      "to": "Representative_Accountability"
+    },
+    {
+      "type": "LINK",
+      "from": "Representative_Accountability",
+      "to": "Time_Horizon_of_Political_Actions"
+    },
+    {
+      "type": "LINK",
+      "from": "Time_to_Election",
+      "to": "Time_Horizon_of_Political_Actions"
+    },
+    {
+      "type": "LINK",
+      "from": "Challenges",
+      "to": "Creation"
+    },
+    {
+      "type": "LINK",
+      "from": "Problem_Prevention_Rate",
+      "to": "Creation"
+    },
+    {
+      "type": "LINK",
+      "from": "Challenges",
+      "to": "Creation"
+    },
+    {
+      "type": "LINK",
+      "from": "Challenges",
+      "to": "Resolution"
+    },
+    {
+      "type": "LINK",
+      "from": "Problem_Resolution_Rate",
+      "to": "Resolution"
+    },
+    {
+      "type": "LINK",
+      "from": "Challenges",
+      "to": "Resolution"
+    },
+    {
+      "type": "LINK",
+      "from": "Citizen_Involvement",
+      "to": "Change_in_Citizen_Involvement"
+    },
+    {
+      "type": "LINK",
+      "from": "Citizenship_Desired_Involvement",
+      "to": "Change_in_Citizen_Involvement"
+    },
+    {
+      "type": "LINK",
+      "from": "Delay_to_Mobilize_Citizens",
+      "to": "Change_in_Citizen_Involvement"
+    },
+    {
+      "type": "LINK",
+      "from": "Citizen_Involvement",
+      "to": "Change_in_Citizen_Involvement"
+    },
+    {
+      "type": "LINK",
+      "from": "Time_Horizon_of_Political_Actions",
+      "to": "Problem_Prevention_Rate"
+    },
+    {
+      "type": "LINK",
+      "from": "Resource_Capacity",
+      "to": "Problem_Prevention_Rate"
+    },
+    {
+      "type": "LINK",
+      "from": "Time_Horizon_of_Political_Actions",
+      "to": "Problem_Resolution_Rate"
+    },
+    {
+      "type": "LINK",
+      "from": "Resource_Capacity",
+      "to": "Problem_Resolution_Rate"
+    },
+    {
+      "type": "LINK",
+      "from": "Citizen_Involvement",
+      "to": "Resource_Capacity"
+    },
+    {
+      "type": "LINK",
+      "from": "Time_Between_Elections",
+      "to": "Time_to_Election"
+    },
+    {
+      "type": "LINK",
+      "from": "Time_Between_Elections",
+      "to": "Time_to_Election"
+    },
+    {
+      "type": "LINK",
+      "from": "Challenges",
+      "to": "Citizenship_Desired_Involvement"
+    },
+    {
+      "type": "LINK",
+      "from": "Apathy",
+      "to": "Citizenship_Desired_Involvement"
+    }
+  ],
+  "engine_settings": []
+}

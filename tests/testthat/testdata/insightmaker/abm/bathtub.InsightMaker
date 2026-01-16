@@ -1,0 +1,75 @@
+<InsightMakerModel>
+  <root>
+    <mxCell id="0" />
+    <mxCell id="1" parent="0" />
+    <Setting Note="" Version="38" TimeLength="20" TimeStart="0" TimeStep="1" TimeUnits="Minutes" Units="kg&lt;&gt;1000&lt;&gt;grams&#xa;s&lt;&gt;1&lt;&gt;seconds&#xa;m&lt;&gt;1&lt;&gt;meters&#xa;rad&lt;&gt;1&lt;&gt;radians" SolutionAlgorithm="Euler" BackgroundColor="white" Throttle="1" Macros="# Acceleration due to gravity&#xa;g &lt;- {9.81 m/s^2}" SensitivityPrimitives="" SensitivityRuns="50" SensitivityBounds="50, 80, 95, 100" SensitivityShowRuns="false" StyleSheet="{}" version="39" id="2">
+      <mxCell parent="1" vertex="1" visible="0">
+        <mxGeometry x="20" y="20" width="80" height="40" as="geometry" />
+      </mxCell>
+    </Setting>
+    <State name="Is Filling" Note="" Active="true" Residency="0" Image="None" FlipHorizontal="false" FlipVertical="false" LabelPosition="Middle" oldId="146" id="146">
+      <mxCell style="state;image=None;" vertex="1" parent="1">
+        <mxGeometry x="630" y="110" width="100" height="40" as="geometry" />
+      </mxCell>
+    </State>
+    <State name="Is Bathing" Note="" Active="false" Residency="0" Image="None" FlipHorizontal="false" FlipVertical="false" LabelPosition="Middle" oldId="147" id="147">
+      <mxCell style="state;image=None;" vertex="1" parent="1">
+        <mxGeometry x="630" y="230" width="100" height="40" as="geometry" />
+      </mxCell>
+    </State>
+    <State name="Is Draining" Note="" Active="false" Residency="0" Image="None" FlipHorizontal="false" FlipVertical="false" LabelPosition="Middle" oldId="148" id="148">
+      <mxCell style="state;image=None;" vertex="1" parent="1">
+        <mxGeometry x="630" y="350" width="100" height="40" as="geometry" />
+      </mxCell>
+    </State>
+    <Stock name="Bathtub" Note="The bathtub starts empty." InitialValue="0" StockMode="Store" Delay="10" Volume="100" NonNegative="true" Units="Liters" MaxConstraintUsed="false" MinConstraintUsed="false" MaxConstraint="100" MinConstraint="0" ShowSlider="false" SliderMax="100" SliderMin="0" SliderStep="" Image="None" FlipHorizontal="false" FlipVertical="false" LabelPosition="Middle" oldId="149" id="149">
+      <mxCell style="stock;image=None;" vertex="1" parent="1">
+        <mxGeometry x="390" y="220" width="100" height="40" as="geometry" />
+      </mxCell>
+    </Stock>
+    <Flow name="Filling" Note="Water fills at a rate of 10 liters per minute." FlowRate="if [Is Filling] then&#xa;  10&#xa;end if" OnlyPositive="true" TimeIndependent="false" Units="Liters/Minute" MaxConstraintUsed="false" MinConstraintUsed="false" MaxConstraint="100" MinConstraint="0" ShowSlider="false" SliderMax="100" SliderMin="0" SliderStep="" oldId="151" id="151">
+      <mxCell style="flow" edge="1" parent="1" target="149">
+        <mxGeometry relative="1" as="geometry">
+          <mxPoint x="440" y="90" as="sourcePoint" />
+        </mxGeometry>
+      </mxCell>
+    </Flow>
+    <Flow name="Draining" Note="Water drains at a rate of 20% per minute." FlowRate="if [Is Draining] then&#xa;  {0.2 1/Minute} * [Bathtub]&#xa;end if" OnlyPositive="true" TimeIndependent="false" Units="Liters/Minute" MaxConstraintUsed="false" MinConstraintUsed="false" MaxConstraint="100" MinConstraint="0" ShowSlider="false" SliderMax="100" SliderMin="0" SliderStep="" oldId="153" id="153">
+      <mxCell style="flow" edge="1" parent="1" source="149">
+        <mxGeometry relative="1" as="geometry">
+          <mxPoint x="440" y="400" as="targetPoint" />
+        </mxGeometry>
+      </mxCell>
+    </Flow>
+    <Transition name="Done Filling" Note="" Trigger="Timeout" Value="5" Repeat="false" Recalculate="false" Units="Unitless" MaxConstraintUsed="false" MinConstraintUsed="false" MaxConstraint="100" MinConstraint="0" ShowSlider="false" SliderMax="100" SliderMin="0" SliderStep="" oldId="154" id="154">
+      <mxCell style="transition" edge="1" parent="1" source="146" target="147">
+        <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+    </Transition>
+    <Transition name="Bath Over" Note="" Trigger="Timeout" Value="5" Repeat="false" Recalculate="false" Units="Unitless" MaxConstraintUsed="false" MinConstraintUsed="false" MaxConstraint="100" MinConstraint="0" ShowSlider="false" SliderMax="100" SliderMin="0" SliderStep="" oldId="155" id="155">
+      <mxCell style="transition" edge="1" parent="1" source="147" target="148">
+        <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+    </Transition>
+    <Link name="Link" Note="" BiDirectional="false" oldId="156" id="156">
+      <mxCell style="link" edge="1" parent="1" source="146" target="151">
+        <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+    </Link>
+    <Link name="Link" Note="" BiDirectional="false" oldId="157" id="157">
+      <mxCell style="link" edge="1" parent="1" source="148" target="153">
+        <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+    </Link>
+    <Display name="Bathtub Volume" Note="" Type="Time Series" xAxis="Time (%u)" yAxis="" yAxis2="" showMarkers="false" showLines="true" showArea="false" Primitives="149" Primitives2="" AutoAddPrimitives="false" ScatterplotOrder="X Primitive, Y Primitive" Image="Display" FlipHorizontal="false" FlipVertical="false" LabelPosition="Bottom" oldId="158" id="158">
+      <mxCell style="display" vertex="1" parent="1" visible="0">
+        <mxGeometry x="10" y="10" width="64" height="64" as="geometry" />
+      </mxCell>
+    </Display>
+    <Display name="States" Note="" Type="Time Series" xAxis="Time (%u)" yAxis="" yAxis2="" showMarkers="false" showLines="true" showArea="false" Primitives="146,147,148" Primitives2="" AutoAddPrimitives="false" ScatterplotOrder="X Primitive, Y Primitive" Image="Display" FlipHorizontal="false" FlipVertical="false" LabelPosition="Bottom" oldId="159" id="159">
+      <mxCell style="display" vertex="1" parent="1" visible="0">
+        <mxGeometry x="10" y="10" width="64" height="64" as="geometry" />
+      </mxCell>
+    </Display>
+  </root>
+</InsightMakerModel>

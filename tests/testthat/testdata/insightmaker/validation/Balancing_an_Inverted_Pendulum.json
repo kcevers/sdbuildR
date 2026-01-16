@@ -1,0 +1,547 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "Balancing an Inverted Pendulum",
+  "simulation": {
+    "version": "36",
+    "time_length": "10",
+    "time_start": "0",
+    "time_step": "0.01",
+    "time_units": "SECONDS",
+    "algorithm": "RK1"
+  },
+  "elements": [
+    {
+      "name": "angular_velocity",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "velocity",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "change_of_velocity",
+      "type": "FLOW",
+      "from": null,
+      "to": "velocity",
+      "behavior": {
+        "value": "[c]*[angle]+[d]*([control_function]+[perturbation])",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "angle",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0.2",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "position",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "control_work",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "change_of_angle",
+      "type": "FLOW",
+      "from": null,
+      "to": "angle",
+      "behavior": {
+        "value": "[angular_velocity]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "change_of_position",
+      "type": "FLOW",
+      "from": null,
+      "to": "position",
+      "behavior": {
+        "value": "[velocity]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "control_power",
+      "type": "FLOW",
+      "from": null,
+      "to": "control_work",
+      "behavior": {
+        "value": "Abs([control_function]*[velocity])",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "d",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "([moment_of_inertia_for_sphere]+[pendulum_mass]*[pendulum_length]^2)/[aa]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "a",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[gravitation_constant]*([pendulum_mass]+[carriage_mass])*[pendulum_mass]*[pendulum_length]/[aa]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "aa",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[moment_of_inertia_for_sphere]*([pendulum_mass]+[carriage_mass])+[pendulum_mass]*[carriage_mass]*[pendulum_length]^2",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "c",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "-[gravitation_constant]*[pendulum_mass]^2*[pendulum_length]^2/[aa]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "b",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "-[pendulum_mass]*[pendulum_length]/[aa]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "perturbation",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[amplitude]*(2*Rand(0,1)-1)",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "control_function",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[angle_feedback]*[angle]+[angular_velocity_feedback]*[angular_velocity]+[position_feedback]*[position]+[velocity_feedback]*[velocity]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "amplitude",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "2",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "change_of_angular_velocity",
+      "type": "FLOW",
+      "from": null,
+      "to": "angular_velocity",
+      "behavior": {
+        "value": "[a]*[angle]+[b]*([control_function]+[perturbation])",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "angle_feedback",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "100",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "angular_velocity_feedback",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "30",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "position_feedback",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "3",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "velocity_feedback",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "10",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "gravitation_constant",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "9.81",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "carriage_mass",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "pendulum_mass",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "moment_of_inertia_for_sphere",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "2*[pendulum_mass]*[radius_of_pendulum_mass]^2/5",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "pendulum_length",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "radius_of_pendulum_mass",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "angle",
+      "to": "change_of_velocity"
+    },
+    {
+      "type": "LINK",
+      "from": "d",
+      "to": "change_of_velocity"
+    },
+    {
+      "type": "LINK",
+      "from": "c",
+      "to": "change_of_velocity"
+    },
+    {
+      "type": "LINK",
+      "from": "perturbation",
+      "to": "change_of_velocity"
+    },
+    {
+      "type": "LINK",
+      "from": "control_function",
+      "to": "change_of_velocity"
+    },
+    {
+      "type": "LINK",
+      "from": "velocity",
+      "to": "change_of_velocity"
+    },
+    {
+      "type": "LINK",
+      "from": "angular_velocity",
+      "to": "change_of_angle"
+    },
+    {
+      "type": "LINK",
+      "from": "angle",
+      "to": "change_of_angle"
+    },
+    {
+      "type": "LINK",
+      "from": "velocity",
+      "to": "change_of_position"
+    },
+    {
+      "type": "LINK",
+      "from": "position",
+      "to": "change_of_position"
+    },
+    {
+      "type": "LINK",
+      "from": "velocity",
+      "to": "control_power"
+    },
+    {
+      "type": "LINK",
+      "from": "control_function",
+      "to": "control_power"
+    },
+    {
+      "type": "LINK",
+      "from": "control_work",
+      "to": "control_power"
+    },
+    {
+      "type": "LINK",
+      "from": "aa",
+      "to": "d"
+    },
+    {
+      "type": "LINK",
+      "from": "pendulum_mass",
+      "to": "d"
+    },
+    {
+      "type": "LINK",
+      "from": "moment_of_inertia_for_sphere",
+      "to": "d"
+    },
+    {
+      "type": "LINK",
+      "from": "pendulum_length",
+      "to": "d"
+    },
+    {
+      "type": "LINK",
+      "from": "aa",
+      "to": "a"
+    },
+    {
+      "type": "LINK",
+      "from": "gravitation_constant",
+      "to": "a"
+    },
+    {
+      "type": "LINK",
+      "from": "carriage_mass",
+      "to": "a"
+    },
+    {
+      "type": "LINK",
+      "from": "pendulum_mass",
+      "to": "a"
+    },
+    {
+      "type": "LINK",
+      "from": "pendulum_mass",
+      "to": "a"
+    },
+    {
+      "type": "LINK",
+      "from": "pendulum_length",
+      "to": "a"
+    },
+    {
+      "type": "LINK",
+      "from": "carriage_mass",
+      "to": "aa"
+    },
+    {
+      "type": "LINK",
+      "from": "carriage_mass",
+      "to": "aa"
+    },
+    {
+      "type": "LINK",
+      "from": "pendulum_mass",
+      "to": "aa"
+    },
+    {
+      "type": "LINK",
+      "from": "pendulum_mass",
+      "to": "aa"
+    },
+    {
+      "type": "LINK",
+      "from": "moment_of_inertia_for_sphere",
+      "to": "aa"
+    },
+    {
+      "type": "LINK",
+      "from": "pendulum_length",
+      "to": "aa"
+    },
+    {
+      "type": "LINK",
+      "from": "aa",
+      "to": "c"
+    },
+    {
+      "type": "LINK",
+      "from": "gravitation_constant",
+      "to": "c"
+    },
+    {
+      "type": "LINK",
+      "from": "pendulum_mass",
+      "to": "c"
+    },
+    {
+      "type": "LINK",
+      "from": "pendulum_length",
+      "to": "c"
+    },
+    {
+      "type": "LINK",
+      "from": "aa",
+      "to": "b"
+    },
+    {
+      "type": "LINK",
+      "from": "pendulum_mass",
+      "to": "b"
+    },
+    {
+      "type": "LINK",
+      "from": "pendulum_length",
+      "to": "b"
+    },
+    {
+      "type": "LINK",
+      "from": "amplitude",
+      "to": "perturbation"
+    },
+    {
+      "type": "LINK",
+      "from": "angular_velocity",
+      "to": "control_function"
+    },
+    {
+      "type": "LINK",
+      "from": "velocity",
+      "to": "control_function"
+    },
+    {
+      "type": "LINK",
+      "from": "angle",
+      "to": "control_function"
+    },
+    {
+      "type": "LINK",
+      "from": "position",
+      "to": "control_function"
+    },
+    {
+      "type": "LINK",
+      "from": "angle_feedback",
+      "to": "control_function"
+    },
+    {
+      "type": "LINK",
+      "from": "angular_velocity_feedback",
+      "to": "control_function"
+    },
+    {
+      "type": "LINK",
+      "from": "position_feedback",
+      "to": "control_function"
+    },
+    {
+      "type": "LINK",
+      "from": "velocity_feedback",
+      "to": "control_function"
+    },
+    {
+      "type": "LINK",
+      "from": "angle",
+      "to": "change_of_angular_velocity"
+    },
+    {
+      "type": "LINK",
+      "from": "a",
+      "to": "change_of_angular_velocity"
+    },
+    {
+      "type": "LINK",
+      "from": "b",
+      "to": "change_of_angular_velocity"
+    },
+    {
+      "type": "LINK",
+      "from": "perturbation",
+      "to": "change_of_angular_velocity"
+    },
+    {
+      "type": "LINK",
+      "from": "control_function",
+      "to": "change_of_angular_velocity"
+    },
+    {
+      "type": "LINK",
+      "from": "angular_velocity",
+      "to": "change_of_angular_velocity"
+    },
+    {
+      "type": "LINK",
+      "from": "pendulum_mass",
+      "to": "moment_of_inertia_for_sphere"
+    },
+    {
+      "type": "LINK",
+      "from": "radius_of_pendulum_mass",
+      "to": "moment_of_inertia_for_sphere"
+    }
+  ],
+  "engine_settings": []
+}

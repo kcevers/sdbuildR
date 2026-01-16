@@ -1,0 +1,240 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "Addiction Cycle System",
+  "simulation": {
+    "version": "28",
+    "time_length": "10",
+    "time_start": "0",
+    "time_step": "0.1",
+    "time_units": "MONTHS",
+    "algorithm": "RK1"
+  },
+  "elements": [
+    {
+      "name": "Addiction_Threshold",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "20",
+        "description": "measured in mL pure alcohol",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Gap",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Addiction_Threshold]-[Drug_Intake]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Time_Needed_to_Close_Gap",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Gap]/[Time_Delay_to_Accept_Addiction]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Time_Delay_to_Accept_Addiction",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": ".5",
+        "description": "personal time delay, dose per day",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Time_Needed_for_Recovery",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Time_Needed_to_Close_Gap]/[Recovery_Rate]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Recovery_Rate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "-40",
+        "description": "Maximum drugs resisted per day",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Drug_Intake",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "190",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Drugs_Removed_from_Recovery",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "([Recovery_Intensity]*[Recovery_Rate])+10\n\n\n\n\n\n",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Net_Change_in_Recovery_Intensity",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Time_Needed_for_Recovery]*[Intervention_Factor]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Intervention_Factor",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "10",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Recovery_Intensity",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Drugs_Into_Body",
+      "type": "FLOW",
+      "from": null,
+      "to": "Drug_Intake",
+      "behavior": {
+        "value": "[Drugs_Removed_from_Recovery]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "Aid_Out",
+      "type": "FLOW",
+      "from": "Recovery_Intensity",
+      "to": null,
+      "behavior": {
+        "value": "IfThenElse([Net_Change_in_Recovery_Intensity]<0, -[Net_Change_in_Recovery_Intensity], 0)",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Aid_In",
+      "type": "FLOW",
+      "from": null,
+      "to": "Recovery_Intensity",
+      "behavior": {
+        "value": "IfThenElse([Net_Change_in_Recovery_Intensity]>0,[Net_Change_in_Recovery_Intensity],0)",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "Addiction_Threshold",
+      "to": "Gap"
+    },
+    {
+      "type": "LINK",
+      "from": "Drug_Intake",
+      "to": "Gap"
+    },
+    {
+      "type": "LINK",
+      "from": "Gap",
+      "to": "Time_Needed_to_Close_Gap"
+    },
+    {
+      "type": "LINK",
+      "from": "Time_Delay_to_Accept_Addiction",
+      "to": "Time_Needed_to_Close_Gap"
+    },
+    {
+      "type": "LINK",
+      "from": "Time_Needed_to_Close_Gap",
+      "to": "Time_Needed_for_Recovery"
+    },
+    {
+      "type": "LINK",
+      "from": "Recovery_Rate",
+      "to": "Time_Needed_for_Recovery"
+    },
+    {
+      "type": "LINK",
+      "from": "Recovery_Rate",
+      "to": "Drugs_Removed_from_Recovery"
+    },
+    {
+      "type": "LINK",
+      "from": "Recovery_Intensity",
+      "to": "Drugs_Removed_from_Recovery"
+    },
+    {
+      "type": "LINK",
+      "from": "Time_Needed_for_Recovery",
+      "to": "Net_Change_in_Recovery_Intensity"
+    },
+    {
+      "type": "LINK",
+      "from": "Intervention_Factor",
+      "to": "Net_Change_in_Recovery_Intensity"
+    },
+    {
+      "type": "LINK",
+      "from": "Drugs_Removed_from_Recovery",
+      "to": "Drugs_Into_Body"
+    },
+    {
+      "type": "LINK",
+      "from": "Drug_Intake",
+      "to": "Drugs_Into_Body"
+    },
+    {
+      "type": "LINK",
+      "from": "Net_Change_in_Recovery_Intensity",
+      "to": "Aid_Out"
+    },
+    {
+      "type": "LINK",
+      "from": "Net_Change_in_Recovery_Intensity",
+      "to": "Aid_Out"
+    },
+    {
+      "type": "LINK",
+      "from": "Recovery_Intensity",
+      "to": "Aid_Out"
+    },
+    {
+      "type": "LINK",
+      "from": "Net_Change_in_Recovery_Intensity",
+      "to": "Aid_In"
+    },
+    {
+      "type": "LINK",
+      "from": "Net_Change_in_Recovery_Intensity",
+      "to": "Aid_In"
+    },
+    {
+      "type": "LINK",
+      "from": "Recovery_Intensity",
+      "to": "Aid_In"
+    }
+  ],
+  "engine_settings": []
+}

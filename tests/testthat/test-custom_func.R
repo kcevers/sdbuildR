@@ -162,7 +162,7 @@ test_that("step works", {
   df <- as.data.frame(sim)
   a <- df[df$variable == "a", "value"]
   expect_equal(a[which(df$time < 5)[1]], 0)
-  expect_equal(a[which(dplyr::near(df$time, 5))[1]], 0)
+  expect_equal(a[which(near(df$time, 5))[1]], 0)
   expect_equal(a[which(df$time > 5)[1]], 0.1 * 1) # dt * height step
 
   # Also works with keyword arguments
@@ -208,7 +208,7 @@ test_that("step works (Julia)", {
   df <- as.data.frame(sim)
   a <- df[df$variable == "a", "value"]
   expect_equal(a[which(df$time < 5)[1]], 0)
-  expect_equal(a[which(dplyr::near(df$time, 5))[1]], 0)
+  expect_equal(a[which(near(df$time, 5))[1]], 0)
   expect_equal(a[which(df$time > 5)[1]], 0.1 * 1) # dt * height step
 
   # Also works with keyword arguments
@@ -245,7 +245,7 @@ test_that("step works (Julia)", {
   df <- as.data.frame(sim)
   a <- df[df$variable == "a", "value"]
   expect_equal(a[which(df$time < 5)[1]], 0)
-  expect_equal(a[which(dplyr::near(df$time, 5))[1]], 0)
+  expect_equal(a[which(near(df$time, 5))[1]], 0)
   expect_equal(a[which(df$time > 5)[1]], 0.1 * 1) # dt * height step
 })
 
@@ -275,7 +275,7 @@ test_that("pulse works", {
   df <- as.data.frame(sim)
   a <- df[df$variable == "a", "value"]
   expect_equal(a[which(df$time < 5)[1]], 0)
-  expect_equal(a[which(dplyr::near(df$time, 5))[1]], 0)
+  expect_equal(a[which(near(df$time, 5))[1]], 0)
   expect_equal(a[which(df$time > 5)[1]], 0.1 * 2) # dt * height pulse
 
   # Forgetting times
@@ -291,7 +291,7 @@ test_that("pulse works", {
   df <- as.data.frame(sim)
   a <- df[df$variable == "a", "value"]
   expect_equal(a[which(df$time < 10)[1]], 0)
-  expect_equal(a[which(dplyr::near(df$time, 5))[1]], 0)
+  expect_equal(a[which(near(df$time, 5))[1]], 0)
   expect_equal(a[which(df$time > 10)[1]], 0.1 * 1) # dt * height pulse
 
   # Test repeating pulses
@@ -302,7 +302,7 @@ test_that("pulse works", {
   df <- as.data.frame(sim)
   a <- df[df$variable == "a", "value"]
   expect_equal(a[which(df$time < 10)[1]], 0)
-  expect_equal(a[which(dplyr::near(df$time, 5))[1]], 0)
+  expect_equal(a[which(near(df$time, 5))[1]], 0)
   expect_equal(a[which(df$time > 10)[1]], 0.1 * 1) # dt * height pulse
   expect_equal(a[which(df$time > 15)[1]], 1 + 0.1 * 1) # dt * height pulse
 
@@ -327,7 +327,7 @@ test_that("pulse works (Julia)", {
   df <- as.data.frame(sim)
   a <- df[df$variable == "a", "value"]
   expect_equal(a[which(df$time < 5)[1]], 0)
-  expect_equal(a[which(dplyr::near(df$time, 5))[1]], 0)
+  expect_equal(a[which(near(df$time, 5))[1]], 0)
   expect_equal(a[which(df$time > 5)[1]], 0.1 * 2) # dt * height pulse
 
   # Passing a NULL argument
@@ -338,7 +338,7 @@ test_that("pulse works (Julia)", {
   df <- as.data.frame(sim)
   a <- df[df$variable == "a", "value"]
   expect_equal(a[which(df$time < 10)[1]], 0)
-  expect_equal(a[which(dplyr::near(df$time, 5))[1]], 0)
+  expect_equal(a[which(near(df$time, 5))[1]], 0)
   expect_equal(a[which(df$time > 10)[1]], 0.1 * 1) # dt * height pulse
 
   # Test repeating pulses
@@ -349,7 +349,7 @@ test_that("pulse works (Julia)", {
   df <- as.data.frame(sim)
   a <- df[df$variable == "a", "value"]
   expect_equal(a[which(df$time < 10)[1]], 0)
-  expect_equal(a[which(dplyr::near(df$time, 5))[1]], 0)
+  expect_equal(a[which(near(df$time, 5))[1]], 0)
   expect_equal(a[which(df$time > 10)[1]], 0.1 * 1) # dt * height pulse
   expect_equal(a[which(df$time > 15)[1]], 1 + 0.1 * 1) # dt * height pulse
 
@@ -379,7 +379,7 @@ test_that("ramp works", {
   df <- as.data.frame(sim)
   a <- df[df$variable == "a", "value"]
   expect_equal(a[which(df$time < 2)[1]], 0)
-  expect_equal(a[which(dplyr::near(df$time, 2))[1]], 0)
+  expect_equal(a[which(near(df$time, 2))[1]], 0)
   expect_equal(a[which(df$time > 2)[1]], 0) # first value is still zero
   expect_equal(a[which(df$time > 2)[2]] > 0, TRUE)
 
@@ -404,7 +404,7 @@ test_that("ramp works (Julia)", {
   df <- as.data.frame(sim)
   a <- df[df$variable == "a", "value"]
   expect_equal(a[which(df$time < 2)[1]], 0)
-  expect_equal(a[which(dplyr::near(df$time, 2))[1]], 0)
+  expect_equal(a[which(near(df$time, 2))[1]], 0)
   expect_equal(a[which(df$time > 2)[1]], 0) # first value is still zero
   expect_equal(a[which(df$time > 2)[2]] > 0, TRUE)
 

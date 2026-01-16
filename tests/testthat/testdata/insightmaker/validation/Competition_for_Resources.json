@@ -1,0 +1,234 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "Competition for Resources",
+  "simulation": {
+    "version": "36",
+    "time_length": "25",
+    "time_start": "0",
+    "time_step": "0.25",
+    "time_units": "MONTHS",
+    "algorithm": "RK1"
+  },
+  "elements": [
+    {
+      "name": "Population_A",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0.02",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Population_B",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0.02",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Competition",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Population_A]*[Population_B]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Carrying_capacity_for_A",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "2",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Carrying_capacity_for_B",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "2",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Growth_rate_A",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Growth_rate_B",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.99",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "growth_of_B",
+      "type": "FLOW",
+      "from": null,
+      "to": "Population_B",
+      "behavior": {
+        "value": "[Growth_rate_B]*[Population_B]*(1-[Population_B]/[Carrying_capacity_for_B])",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "growth_of_A",
+      "type": "FLOW",
+      "from": null,
+      "to": "Population_A",
+      "behavior": {
+        "value": "[Growth_rate_A]*[Population_A]*(1-[Population_A]/[Carrying_capacity_for_A])",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "losses_of_A_by_competition",
+      "type": "FLOW",
+      "from": "Population_A",
+      "to": null,
+      "behavior": {
+        "value": "[Competition_effect_on_A]*[Competition]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "losses_of_B_by_competition",
+      "type": "FLOW",
+      "from": "Population_B",
+      "to": null,
+      "behavior": {
+        "value": "[Competition_effect_on_B]*[Competition]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Competition_effect_on_A",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Competition_effect_on_B",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "Population_A",
+      "to": "Competition"
+    },
+    {
+      "type": "LINK",
+      "from": "Population_B",
+      "to": "Competition"
+    },
+    {
+      "type": "LINK",
+      "from": "Population_B",
+      "to": "growth_of_B"
+    },
+    {
+      "type": "LINK",
+      "from": "Population_B",
+      "to": "growth_of_B"
+    },
+    {
+      "type": "LINK",
+      "from": "Carrying_capacity_for_B",
+      "to": "growth_of_B"
+    },
+    {
+      "type": "LINK",
+      "from": "Growth_rate_B",
+      "to": "growth_of_B"
+    },
+    {
+      "type": "LINK",
+      "from": "Population_B",
+      "to": "growth_of_B"
+    },
+    {
+      "type": "LINK",
+      "from": "Population_A",
+      "to": "growth_of_A"
+    },
+    {
+      "type": "LINK",
+      "from": "Population_A",
+      "to": "growth_of_A"
+    },
+    {
+      "type": "LINK",
+      "from": "Carrying_capacity_for_A",
+      "to": "growth_of_A"
+    },
+    {
+      "type": "LINK",
+      "from": "Growth_rate_A",
+      "to": "growth_of_A"
+    },
+    {
+      "type": "LINK",
+      "from": "Population_A",
+      "to": "growth_of_A"
+    },
+    {
+      "type": "LINK",
+      "from": "Competition",
+      "to": "losses_of_A_by_competition"
+    },
+    {
+      "type": "LINK",
+      "from": "Competition_effect_on_A",
+      "to": "losses_of_A_by_competition"
+    },
+    {
+      "type": "LINK",
+      "from": "Population_A",
+      "to": "losses_of_A_by_competition"
+    },
+    {
+      "type": "LINK",
+      "from": "Competition",
+      "to": "losses_of_B_by_competition"
+    },
+    {
+      "type": "LINK",
+      "from": "Competition_effect_on_B",
+      "to": "losses_of_B_by_competition"
+    },
+    {
+      "type": "LINK",
+      "from": "Population_B",
+      "to": "losses_of_B_by_competition"
+    }
+  ],
+  "engine_settings": []
+}

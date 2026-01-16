@@ -15,7 +15,7 @@ insightmaker_to_sfm(
 \arguments{
 \item{URL}{URL to Insight Maker model. Character.}
 
-\item{file}{File path to Insight Maker model. Only used if URL is not specified. Needs to be a character with suffix .InsightMaker.}
+\item{file}{File path to Insight Maker model. Only used if URL is not specified. Needs to be a character with suffix .InsightMaker or .json.}
 
 \item{keep_nonnegative_flow}{If TRUE, keeps original non-negativity setting of flows. Defaults to TRUE.}
 
@@ -30,7 +30,7 @@ A stock-and-flow model object of class \code{\link[=xmile]{sdbuildR_xmile}}
 Import a stock-and-flow model from \href{https://insightmaker.com/}{Insight Maker}. Models may be your own or another user's. Importing causal loop diagrams or agent-based models is not supported.
 }
 \details{
-Insight Maker models can be imported using either a URL or an Insight Maker file. Ensure the URL refers to a public (not private) model. To download a model file from Insight Maker, first clone the model if it is not your own. Then, go to "Share" (top right), "Export", and "Download Insight Maker file".
+Insight Maker models can be imported using a URL, Insight Maker file, or ModelJSON file. Ensure the URL refers to a public (not private) model. To download a model file from Insight Maker, first clone the model if it is not your own. Then, go to "Share" (top right), "Export", and "Download Insight Maker file" or "ModelJSON File".
 }
 \examples{
 \dontshow{if (has_internet() && Sys.getenv("NOT_CRAN") == "true") (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}

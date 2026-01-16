@@ -1,0 +1,342 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "Z605 Miniworld",
+  "simulation": {
+    "version": "34",
+    "time_length": "600",
+    "time_start": "0",
+    "time_step": "0.5",
+    "time_units": "YEARS",
+    "algorithm": "RK4"
+  },
+  "elements": [
+    {
+      "name": "Population",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Deaths",
+      "type": "FLOW",
+      "from": "Population",
+      "to": null,
+      "behavior": {
+        "value": "[Death_Rate]*[Population]*[Environmental_Pollution]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Births",
+      "type": "FLOW",
+      "from": null,
+      "to": "Population",
+      "behavior": {
+        "value": "[Birth_Rate]*[Population]*[Quality_of_Environment]*[Consumption_Level]*[Birth_Control]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Production_Capacity",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Environmental_Pollution",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "degradation",
+      "type": "FLOW",
+      "from": null,
+      "to": "Environmental_Pollution",
+      "behavior": {
+        "value": "[Degradation_Rate]*[Population]*[Consumption_Level]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "regeneration",
+      "type": "FLOW",
+      "from": "Environmental_Pollution",
+      "to": null,
+      "behavior": {
+        "value": "If ([Quality_of_Environment] > 1) Then\n  ([Regeneration_Rate]*[Environmental_Pollution])\nElse\n  ([Regeneration_Rate]*[Damage_Threshold])\nEnd If",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Capacity_increase",
+      "type": "FLOW",
+      "from": null,
+      "to": "Production_Capacity",
+      "behavior": {
+        "value": "[Growth_rate]*[Consumption_Level]*[Environmental_Pollution]*(1-([Consumption_Level]*[Environmental_Pollution]/[Consumption_Goal]))",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "Growth_rate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.05",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Death_Rate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.01",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Birth_Rate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.03",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Birth_Control",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Consumption_Goal",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Degradation_Rate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.02",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Regeneration_Rate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Damage_Threshold",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Quality_of_Environment",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Damage_Threshold]/[Environmental_Pollution]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Consumption_Level",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Production_Capacity]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "Population",
+      "to": "Deaths"
+    },
+    {
+      "type": "LINK",
+      "from": "Environmental_Pollution",
+      "to": "Deaths"
+    },
+    {
+      "type": "LINK",
+      "from": "Death_Rate",
+      "to": "Deaths"
+    },
+    {
+      "type": "LINK",
+      "from": "Population",
+      "to": "Deaths"
+    },
+    {
+      "type": "LINK",
+      "from": "Population",
+      "to": "Births"
+    },
+    {
+      "type": "LINK",
+      "from": "Birth_Rate",
+      "to": "Births"
+    },
+    {
+      "type": "LINK",
+      "from": "Birth_Control",
+      "to": "Births"
+    },
+    {
+      "type": "LINK",
+      "from": "Quality_of_Environment",
+      "to": "Births"
+    },
+    {
+      "type": "LINK",
+      "from": "Consumption_Level",
+      "to": "Births"
+    },
+    {
+      "type": "LINK",
+      "from": "Population",
+      "to": "Births"
+    },
+    {
+      "type": "LINK",
+      "from": "Population",
+      "to": "degradation"
+    },
+    {
+      "type": "LINK",
+      "from": "Degradation_Rate",
+      "to": "degradation"
+    },
+    {
+      "type": "LINK",
+      "from": "Consumption_Level",
+      "to": "degradation"
+    },
+    {
+      "type": "LINK",
+      "from": "Environmental_Pollution",
+      "to": "degradation"
+    },
+    {
+      "type": "LINK",
+      "from": "Environmental_Pollution",
+      "to": "regeneration"
+    },
+    {
+      "type": "LINK",
+      "from": "Regeneration_Rate",
+      "to": "regeneration"
+    },
+    {
+      "type": "LINK",
+      "from": "Regeneration_Rate",
+      "to": "regeneration"
+    },
+    {
+      "type": "LINK",
+      "from": "Damage_Threshold",
+      "to": "regeneration"
+    },
+    {
+      "type": "LINK",
+      "from": "Quality_of_Environment",
+      "to": "regeneration"
+    },
+    {
+      "type": "LINK",
+      "from": "Environmental_Pollution",
+      "to": "regeneration"
+    },
+    {
+      "type": "LINK",
+      "from": "Environmental_Pollution",
+      "to": "Capacity_increase"
+    },
+    {
+      "type": "LINK",
+      "from": "Environmental_Pollution",
+      "to": "Capacity_increase"
+    },
+    {
+      "type": "LINK",
+      "from": "Growth_rate",
+      "to": "Capacity_increase"
+    },
+    {
+      "type": "LINK",
+      "from": "Consumption_Goal",
+      "to": "Capacity_increase"
+    },
+    {
+      "type": "LINK",
+      "from": "Consumption_Level",
+      "to": "Capacity_increase"
+    },
+    {
+      "type": "LINK",
+      "from": "Consumption_Level",
+      "to": "Capacity_increase"
+    },
+    {
+      "type": "LINK",
+      "from": "Production_Capacity",
+      "to": "Capacity_increase"
+    },
+    {
+      "type": "LINK",
+      "from": "Environmental_Pollution",
+      "to": "Quality_of_Environment"
+    },
+    {
+      "type": "LINK",
+      "from": "Damage_Threshold",
+      "to": "Quality_of_Environment"
+    },
+    {
+      "type": "LINK",
+      "from": "Production_Capacity",
+      "to": "Consumption_Level"
+    }
+  ],
+  "engine_settings": []
+}

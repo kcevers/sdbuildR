@@ -1,0 +1,744 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "Clone of Z602 Population with four age groups",
+  "simulation": {
+    "version": "36",
+    "time_length": "100",
+    "time_start": "0",
+    "time_step": "0.5",
+    "time_units": "YEARS",
+    "algorithm": "RK1"
+  },
+  "elements": [
+    {
+      "name": "Children",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "79200000",
+        "description": "Number of people in the 0 to 18 year old group.",
+        "units": "People"
+      }
+    },
+    {
+      "name": "Adults1",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "29700000",
+        "description": "Number of people in the 19 to 25 year old group.",
+        "units": "People"
+      }
+    },
+    {
+      "name": "Adults2",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "39600000",
+        "description": "Number of people in the 26 to 34 year old group.",
+        "units": "People"
+      }
+    },
+    {
+      "name": "Adults3",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "85800000",
+        "description": "Number of people in the 35 to 54 year old group.",
+        "units": "People"
+      }
+    },
+    {
+      "name": "Births",
+      "type": "FLOW",
+      "from": null,
+      "to": "Children",
+      "behavior": {
+        "value": "([Fertility]*[Adults1]/2)",
+        "description": "Reflects number of new births per year. Based on fertility rate for women in the parents population.",
+        "units": "People per Year",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Children_Maturing",
+      "type": "FLOW",
+      "from": "Children",
+      "to": "Adults1",
+      "behavior": {
+        "value": "[Children]/[Children_Age_Classes]",
+        "description": "\"Matures\" 1/15 of the child population to the parent group each year.",
+        "units": "People per Year",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Adults1_Maturing",
+      "type": "FLOW",
+      "from": "Adults1",
+      "to": "Adults2",
+      "behavior": {
+        "value": "[Adults1]/[Adults1_Age_Classes]",
+        "description": "\"Matures\" 1/30 of the parent population to the Older People group each year.",
+        "units": "People per Year",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Adults2_Maturing",
+      "type": "FLOW",
+      "from": "Adults2",
+      "to": "Adults3",
+      "behavior": {
+        "value": "[Adults2]/[Adults2_Age_Classes]",
+        "description": "\"matures\" 1/15 of the Older People to the Old People group each year.",
+        "units": "People per Year",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Deaths_Adults3",
+      "type": "FLOW",
+      "from": "Adults3",
+      "to": null,
+      "behavior": {
+        "value": "[Adults3_Mortality]*[Adults3]",
+        "description": "Number of Old People dying in the current time period.",
+        "units": "People per Year",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Deaths_Adults2",
+      "type": "FLOW",
+      "from": "Adults2",
+      "to": null,
+      "behavior": {
+        "value": "[Adults2_Mortality]*[Adults2]",
+        "description": "Number of Older People dying in the current time period",
+        "units": "People per Year",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Deaths_Adults1",
+      "type": "FLOW",
+      "from": "Adults1",
+      "to": null,
+      "behavior": {
+        "value": "[Adults1_Mortality]*[Adults1]",
+        "description": "Number of parent aged people dying in the current time period.",
+        "units": "People per Year",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Deaths_Children",
+      "type": "FLOW",
+      "from": "Children",
+      "to": null,
+      "behavior": {
+        "value": "[Child_Mortality]*[Children]",
+        "description": "Number of children dying in the current time period",
+        "units": "People per Year",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Deaths",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "([Deaths_Children]+[Deaths_Adults1]+[Deaths_Adults2]+[Deaths_Adults3]+[Deaths_Adults4]+[Deaths_Elderly])",
+        "description": "Total deaths across the entire population, per year.",
+        "units": "People per Year"
+      }
+    },
+    {
+      "name": "Child_Mortality",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.004",
+        "description": "Fraction of this population expected to die each year.",
+        "units": "1/year"
+      }
+    },
+    {
+      "name": "Adults1_Mortality",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.005",
+        "description": "Fraction of this population expected to die each year.",
+        "units": "1/year"
+      }
+    },
+    {
+      "name": "Adults2_Mortality",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.006",
+        "description": "Fraction of this population expected to die each year.",
+        "units": "1/year"
+      }
+    },
+    {
+      "name": "Adults3_Mortality",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.006",
+        "description": "Mortality rate based on an life expectancy of 70 years. Fraction of this population expected to die each year.",
+        "units": "1/year"
+      }
+    },
+    {
+      "name": "Population",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Children]+[Adults1]+[Adults2]+[Adults3]+[Adults4]+[Elderly]",
+        "description": "Total population at any point in time.",
+        "units": "People"
+      }
+    },
+    {
+      "name": "Work_Force",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Adults1]+[Adults2]+[Adults3]+[Adults4]",
+        "description": "Defines hypothetical size of the work force assuming 100% employment of all people in the Parents and Older People age groups.",
+        "units": "People"
+      }
+    },
+    {
+      "name": "Support_Ratio",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Population]/[Work_Force]",
+        "description": "Defines the ratio of the total population to the work force. Defines how many people each person in the work force is supporting.",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Children_Age_Classes",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "18",
+        "description": "Defines the number of years people are in the \"Children\" population before they advance to the \"Parents\" population.",
+        "units": "Years"
+      }
+    },
+    {
+      "name": "Parents_Age_Classes",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "30",
+        "description": "Defines the number of years people are in the \"Parents\" population before they advance to the \"Older People\" age group.",
+        "units": "Years"
+      }
+    },
+    {
+      "name": "Adults4_Age_Classes",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "9",
+        "description": "Defines the number of years people are in the Elderly People population before they are retired to the \"Old People\" group.",
+        "units": "Years"
+      }
+    },
+    {
+      "name": "Fertility",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Children_per_Woman]*{1 year}/[Parents_Age_Classes]",
+        "description": "This variable applies the \"Children per Woman\" factor across the number of years people are in the \"parent\" age group before using the parent population as a multiplier to determine the number of births per year.",
+        "units": "1/year"
+      }
+    },
+    {
+      "name": "Children_per_Woman",
+      "type": "CONVERTER",
+      "behavior": {
+        "input": "ELEMENT",
+        "input_element": "Point_in_Time",
+        "interpolation": "LINEAR",
+        "data": [
+            [2000, 1.82],
+            [2010, 1.8],
+            [2040, 1.76],
+            [2100, 1.72]
+          ],
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Point_in_Time",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "2000",
+        "description": "This level accumulates 'time' in the model. It is initializes to a base date. Then, as time flows, it increments. It is used as an lookup value for looking up information in a table that is indexed by year. The table was initialized with data from the years 2000 to 2100.",
+        "units": "Years"
+      }
+    },
+    {
+      "name": "Passage_of_Time",
+      "type": "FLOW",
+      "from": null,
+      "to": "Point_in_Time",
+      "behavior": {
+        "value": "1",
+        "description": "This flow reflects the passage of time in the model. It is used to drive the 'Point in Time' level which computes a date.",
+        "units": "Years per year",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Adults4",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "42900000",
+        "description": "Number of people in the 55 to 64 year old group.",
+        "units": "People"
+      }
+    },
+    {
+      "name": "Elderly",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "52800000",
+        "description": "Number of people in the 65+ age group.",
+        "units": "People"
+      }
+    },
+    {
+      "name": "Deaths_Adults4",
+      "type": "FLOW",
+      "from": "Adults4",
+      "to": null,
+      "behavior": {
+        "value": "[Adults4_Mortality]*[Adults4]",
+        "description": "",
+        "units": "People per Year",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Deaths_Elderly",
+      "type": "FLOW",
+      "from": "Elderly",
+      "to": null,
+      "behavior": {
+        "value": "[Elderly]*[Elderly_Mortality]",
+        "description": "",
+        "units": "People per Year",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Adults4_Mortality",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.006",
+        "description": "",
+        "units": "1/year"
+      }
+    },
+    {
+      "name": "Elderly_Mortality",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.04",
+        "description": "",
+        "units": "1/year"
+      }
+    },
+    {
+      "name": "Adults3_Maturing",
+      "type": "FLOW",
+      "from": "Adults3",
+      "to": "Adults4",
+      "behavior": {
+        "value": "[Adults3]/[Adults3_Age_Classes]",
+        "description": "",
+        "units": "People per Year",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Adults4_Maturing",
+      "type": "FLOW",
+      "from": "Adults4",
+      "to": "Elderly",
+      "behavior": {
+        "value": "[Adults4]/[Adults4_Age_Classes]",
+        "description": "",
+        "units": "People per Year",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Adults1_Age_Classes",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "6",
+        "description": "",
+        "units": "Years"
+      }
+    },
+    {
+      "name": "Adults2_Age_Classes",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "8",
+        "description": "",
+        "units": "Years"
+      }
+    },
+    {
+      "name": "Adults3_Age_Classes",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "19",
+        "description": "",
+        "units": "Years"
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "Adults1",
+      "to": "Births"
+    },
+    {
+      "type": "LINK",
+      "from": "Fertility",
+      "to": "Births"
+    },
+    {
+      "type": "LINK",
+      "from": "Children",
+      "to": "Births"
+    },
+    {
+      "type": "LINK",
+      "from": "Children",
+      "to": "Children_Maturing"
+    },
+    {
+      "type": "LINK",
+      "from": "Children_Age_Classes",
+      "to": "Children_Maturing"
+    },
+    {
+      "type": "LINK",
+      "from": "Children",
+      "to": "Children_Maturing"
+    },
+    {
+      "type": "LINK",
+      "from": "Adults1",
+      "to": "Children_Maturing"
+    },
+    {
+      "type": "LINK",
+      "from": "Adults1",
+      "to": "Adults1_Maturing"
+    },
+    {
+      "type": "LINK",
+      "from": "Adults1_Age_Classes",
+      "to": "Adults1_Maturing"
+    },
+    {
+      "type": "LINK",
+      "from": "Adults1",
+      "to": "Adults1_Maturing"
+    },
+    {
+      "type": "LINK",
+      "from": "Adults2",
+      "to": "Adults1_Maturing"
+    },
+    {
+      "type": "LINK",
+      "from": "Adults2",
+      "to": "Adults2_Maturing"
+    },
+    {
+      "type": "LINK",
+      "from": "Adults2_Age_Classes",
+      "to": "Adults2_Maturing"
+    },
+    {
+      "type": "LINK",
+      "from": "Adults2",
+      "to": "Adults2_Maturing"
+    },
+    {
+      "type": "LINK",
+      "from": "Adults3",
+      "to": "Adults2_Maturing"
+    },
+    {
+      "type": "LINK",
+      "from": "Adults3",
+      "to": "Deaths_Adults3"
+    },
+    {
+      "type": "LINK",
+      "from": "Adults3_Mortality",
+      "to": "Deaths_Adults3"
+    },
+    {
+      "type": "LINK",
+      "from": "Adults3",
+      "to": "Deaths_Adults3"
+    },
+    {
+      "type": "LINK",
+      "from": "Adults2",
+      "to": "Deaths_Adults2"
+    },
+    {
+      "type": "LINK",
+      "from": "Adults2_Mortality",
+      "to": "Deaths_Adults2"
+    },
+    {
+      "type": "LINK",
+      "from": "Adults2",
+      "to": "Deaths_Adults2"
+    },
+    {
+      "type": "LINK",
+      "from": "Adults1",
+      "to": "Deaths_Adults1"
+    },
+    {
+      "type": "LINK",
+      "from": "Adults1_Mortality",
+      "to": "Deaths_Adults1"
+    },
+    {
+      "type": "LINK",
+      "from": "Adults1",
+      "to": "Deaths_Adults1"
+    },
+    {
+      "type": "LINK",
+      "from": "Children",
+      "to": "Deaths_Children"
+    },
+    {
+      "type": "LINK",
+      "from": "Child_Mortality",
+      "to": "Deaths_Children"
+    },
+    {
+      "type": "LINK",
+      "from": "Children",
+      "to": "Deaths_Children"
+    },
+    {
+      "type": "LINK",
+      "from": "Deaths_Adults3",
+      "to": "Deaths"
+    },
+    {
+      "type": "LINK",
+      "from": "Deaths_Adults2",
+      "to": "Deaths"
+    },
+    {
+      "type": "LINK",
+      "from": "Deaths_Adults1",
+      "to": "Deaths"
+    },
+    {
+      "type": "LINK",
+      "from": "Deaths_Children",
+      "to": "Deaths"
+    },
+    {
+      "type": "LINK",
+      "from": "Deaths_Adults4",
+      "to": "Deaths"
+    },
+    {
+      "type": "LINK",
+      "from": "Deaths_Elderly",
+      "to": "Deaths"
+    },
+    {
+      "type": "LINK",
+      "from": "Children",
+      "to": "Population"
+    },
+    {
+      "type": "LINK",
+      "from": "Adults1",
+      "to": "Population"
+    },
+    {
+      "type": "LINK",
+      "from": "Adults2",
+      "to": "Population"
+    },
+    {
+      "type": "LINK",
+      "from": "Adults3",
+      "to": "Population"
+    },
+    {
+      "type": "LINK",
+      "from": "Adults4",
+      "to": "Population"
+    },
+    {
+      "type": "LINK",
+      "from": "Elderly",
+      "to": "Population"
+    },
+    {
+      "type": "LINK",
+      "from": "Adults1",
+      "to": "Work_Force"
+    },
+    {
+      "type": "LINK",
+      "from": "Adults2",
+      "to": "Work_Force"
+    },
+    {
+      "type": "LINK",
+      "from": "Adults3",
+      "to": "Work_Force"
+    },
+    {
+      "type": "LINK",
+      "from": "Adults4",
+      "to": "Work_Force"
+    },
+    {
+      "type": "LINK",
+      "from": "Population",
+      "to": "Support_Ratio"
+    },
+    {
+      "type": "LINK",
+      "from": "Work_Force",
+      "to": "Support_Ratio"
+    },
+    {
+      "type": "LINK",
+      "from": "Parents_Age_Classes",
+      "to": "Fertility"
+    },
+    {
+      "type": "LINK",
+      "from": "Children_per_Woman",
+      "to": "Fertility"
+    },
+    {
+      "type": "LINK",
+      "from": "Point_in_Time",
+      "to": "Passage_of_Time"
+    },
+    {
+      "type": "LINK",
+      "from": "Adults4",
+      "to": "Deaths_Adults4"
+    },
+    {
+      "type": "LINK",
+      "from": "Adults4_Mortality",
+      "to": "Deaths_Adults4"
+    },
+    {
+      "type": "LINK",
+      "from": "Adults4",
+      "to": "Deaths_Adults4"
+    },
+    {
+      "type": "LINK",
+      "from": "Elderly",
+      "to": "Deaths_Elderly"
+    },
+    {
+      "type": "LINK",
+      "from": "Elderly_Mortality",
+      "to": "Deaths_Elderly"
+    },
+    {
+      "type": "LINK",
+      "from": "Elderly",
+      "to": "Deaths_Elderly"
+    },
+    {
+      "type": "LINK",
+      "from": "Adults3",
+      "to": "Adults3_Maturing"
+    },
+    {
+      "type": "LINK",
+      "from": "Adults3_Age_Classes",
+      "to": "Adults3_Maturing"
+    },
+    {
+      "type": "LINK",
+      "from": "Adults3",
+      "to": "Adults3_Maturing"
+    },
+    {
+      "type": "LINK",
+      "from": "Adults4",
+      "to": "Adults3_Maturing"
+    },
+    {
+      "type": "LINK",
+      "from": "Adults4_Age_Classes",
+      "to": "Adults4_Maturing"
+    },
+    {
+      "type": "LINK",
+      "from": "Adults4",
+      "to": "Adults4_Maturing"
+    },
+    {
+      "type": "LINK",
+      "from": "Adults4",
+      "to": "Adults4_Maturing"
+    },
+    {
+      "type": "LINK",
+      "from": "Elderly",
+      "to": "Adults4_Maturing"
+    }
+  ],
+  "engine_settings": {
+    "units": [
+      [
+        {
+          "name": "new unit",
+          "factor": "1",
+          "base": ""
+        }
+      ],
+      [
+        {
+          "name": "people per person",
+          "factor": "1",
+          "base": "people per people"
+        }
+      ],
+      [
+        {
+          "name": "unitless per year",
+          "factor": "1",
+          "base": ""
+        }
+      ],
+      [
+        {
+          "name": "years per year",
+          "factor": "1",
+          "base": ""
+        }
+      ]
+    ]
+  }
+}

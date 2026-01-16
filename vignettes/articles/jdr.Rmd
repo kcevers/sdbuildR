@@ -16,8 +16,8 @@ knitr::opts_chunk$set(
   include = TRUE,
   eval = TRUE,
   comment = "#>",
-  fig.width = 12, #1
-  fig.height = 4, #3
+  fig.width = 12, # 1
+  fig.height = 4, # 3
   fig.align = "center", # Center all figures
   out.width = "80%" # Display figures at 80% of container width
 )
@@ -37,35 +37,35 @@ recreate_figs <- FALSE # TRUE
 ```
 
 ```{r include=FALSE}
-if (recreate_figs){
+if (recreate_figs) {
   # Plotting parameters
   filepath_base <- dirname(rstudioapi::getActiveDocumentContext()$path)
   filepath_figs <- file.path(filepath_base, "figs")
-  
+
   dir.create(filepath_figs)
-  
+
   VARS <- c("E", "P", "X", "D", "R", "r_X_D")
   PALETTE <- c("Geyser", "Temps", "Spectral", "Zissou 1", "Roma")[5]
   COLORS <- grDevices::hcl.colors(n = 50, palette = PALETTE)
-  
+
   COLORS <- COLORS[c(36, 9, 30, 1, 47, 17)]
   stock_col <- adjustcolor(COLORS[1], alpha.f = .75)
   flow_col <- COLORS[6]
-  
+
   health_path <- adjustcolor(COLORS[4], alpha.f = .75)
   motivation_path <- adjustcolor(COLORS[1], alpha.f = .85)
   health_path_fill <- adjustcolor(COLORS[4], alpha.f = 1)
   motivation_path_fill <- adjustcolor(COLORS[1], alpha.f = 1)
   performance_path <- adjustcolor(COLORS[2], alpha.f = .75)
   performance_path_fill <- adjustcolor(COLORS[2], alpha.f = 1)
-  
+
   font_size <- 16
   font_size_xlab <- round(font_size * 1.4)
   font_size_legend <- round(font_size * 1.1)
   font_size_subplot <- round(font_size * 1.5)
   font_family <- "Times New Roman"
   xlab <- "Time (days)"
-  
+
   # Finer-grained simulation
   dt <- .1
 }
@@ -1371,11 +1371,14 @@ if (recreate_figs) {
 # Early intervention
 sfm <- sfm0 |>
   build("start", "constant", eqn = 14) |>
-  build("input", "constant", 
-        eqn = "pulse(times, start, height = .1, width = 14)") |>
+  build("input", "constant",
+    eqn = "pulse(times, start, height = .1, width = 14)"
+  ) |>
   build("r_X_D", change_type = "stock") |>
-  build("intervention", "flow", from = "r_X_D", 
-        eqn = "r_X_D * input(t)", label = "Intervention")
+  build("intervention", "flow",
+    from = "r_X_D",
+    eqn = "r_X_D * input(t)", label = "Intervention"
+  )
 
 # Add different seed to show improvement from intervention
 sim <- simulate(sfm |> sim_specs(seed = 1234))

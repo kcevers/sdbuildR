@@ -1,0 +1,208 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "The Science of Inequality",
+  "simulation": {
+    "version": "36",
+    "time_length": "100",
+    "time_start": "0",
+    "time_step": "1",
+    "time_units": "YEARS",
+    "algorithm": "RK1"
+  },
+  "elements": [
+    {
+      "name": "Wealth",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "1",
+        "description": "negative if debt",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "savings_per_year",
+      "type": "FLOW",
+      "from": null,
+      "to": "Wealth",
+      "behavior": {
+        "value": "[net_income]*[savings_fraction]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "growth_rate_g",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.03",
+        "description": "default is 0.03",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "rate_of_return_r",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.05",
+        "description": "default is 0.05",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "net_labor_income",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[labor_income]*(1-[tax_and_consumption_fraction])",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "tax_and_consumption_fraction",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.6",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "capital_income",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Wealth]*[rate_of_return_r]",
+        "description": "rent, interest and dividends",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "labor_income",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Output]*[fraction_to_labor]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Output",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "chg_in_output",
+      "type": "FLOW",
+      "from": null,
+      "to": "Output",
+      "behavior": {
+        "value": "[Output]*[growth_rate_g]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "fraction_to_labor",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.5",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "savings_fraction",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.1",
+        "description": "really investment? and would excess saving increase unemployment and therefore reduce output?",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "net_income",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[capital_income]+[net_labor_income]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "savings_fraction",
+      "to": "savings_per_year"
+    },
+    {
+      "type": "LINK",
+      "from": "net_income",
+      "to": "savings_per_year"
+    },
+    {
+      "type": "LINK",
+      "from": "Wealth",
+      "to": "savings_per_year"
+    },
+    {
+      "type": "LINK",
+      "from": "tax_and_consumption_fraction",
+      "to": "net_labor_income"
+    },
+    {
+      "type": "LINK",
+      "from": "labor_income",
+      "to": "net_labor_income"
+    },
+    {
+      "type": "LINK",
+      "from": "Wealth",
+      "to": "capital_income"
+    },
+    {
+      "type": "LINK",
+      "from": "rate_of_return_r",
+      "to": "capital_income"
+    },
+    {
+      "type": "LINK",
+      "from": "Output",
+      "to": "labor_income"
+    },
+    {
+      "type": "LINK",
+      "from": "fraction_to_labor",
+      "to": "labor_income"
+    },
+    {
+      "type": "LINK",
+      "from": "growth_rate_g",
+      "to": "chg_in_output"
+    },
+    {
+      "type": "LINK",
+      "from": "Output",
+      "to": "chg_in_output"
+    },
+    {
+      "type": "LINK",
+      "from": "Output",
+      "to": "chg_in_output"
+    },
+    {
+      "type": "LINK",
+      "from": "net_labor_income",
+      "to": "net_income"
+    },
+    {
+      "type": "LINK",
+      "from": "capital_income",
+      "to": "net_income"
+    }
+  ],
+  "engine_settings": []
+}

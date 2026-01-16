@@ -9,16 +9,16 @@ test_that("simulate R for templates", {
     }
 
     sim1 <- simulate(sfm |> sim_specs(language = "R"), only_stocks = TRUE)
-    expect_equal(sim1$success, TRUE)
+    expect_true(sim1$success)
     expect_equal(nrow(sim1$df) > 0, TRUE)
 
     sim1 <- simulate(sfm |> sim_specs(language = "R"), only_stocks = FALSE)
-    expect_equal(sim1$success, TRUE)
+    expect_true(sim1$success)
     expect_equal(nrow(sim1$df) > 0, TRUE)
 
     if (s == "logistic_model") {
       # Check whether the population converges to the carrying capacity
-      expect_equal(dplyr::last(sim1$df[sim1$df$variable == "X", "value"]),
+      expect_equal(last(sim1$df[sim1$df$variable == "X", "value"]),
         sim1$constants[["K"]],
         tolerance = .01
       )
@@ -113,7 +113,6 @@ test_that("equations that refer to the variable itself throw error", {
     "Please define these missing variables or correct any spelling mistakes"
   )
   expect_false(sim$success)
-
 })
 
 
@@ -183,13 +182,13 @@ test_that("seed works", {
   sim1 <- simulate(sfm)
   sim2 <- simulate(sfm)
   expect_equal(sim1$df$value[1] == sim2$df$value[1], FALSE)
-  expect_equal(dplyr::last(sim1$df$value) == dplyr::last(sim2$df$value), FALSE)
+  expect_equal(last(sim1$df$value) == last(sim2$df$value), FALSE)
 
   # With a seed, simulations should be the same
   sfm <- sfm |> sim_specs(seed = 1)
   sim1 <- simulate(sfm)
   sim2 <- simulate(sfm)
-  expect_equal(dplyr::last(sim1$df$value), dplyr::last(sim2$df$value))
+  expect_equal(last(sim1$df$value), last(sim2$df$value))
 })
 
 

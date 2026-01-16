@@ -1,0 +1,653 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "Source_Sink_2",
+  "simulation": {
+    "version": "37",
+    "time_length": "200",
+    "time_start": "0",
+    "time_step": "1",
+    "time_units": "YEARS",
+    "algorithm": "RK1"
+  },
+  "elements": [
+    {
+      "name": "lambda_good",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "2.1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "SOURCE",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "100",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "nearby_sink",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "10",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "mid_range_sink",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "10",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "distant_sink",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "10",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "lambda_bad",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.8",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "K_source",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "100",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "K_sink1",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "50",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "K_sink2",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "25",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "K_sink3",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "15",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Max_disp_rate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.4",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "B_and_D",
+      "type": "FLOW",
+      "from": null,
+      "to": "SOURCE",
+      "behavior": {
+        "value": "growth <- [SOURCE]*Ln([lambda_good])*(1-([SOURCE]/[K_source]))  # expected growth\ntotalexp <- [SOURCE]+growth   # expected population size\nnewexp <- 0\nIf totalexp>0.01 Then\n  newexp <- RandPoisson(totalexp)\nEnd If\nnewexp-[SOURCE]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "B_D",
+      "type": "FLOW",
+      "from": null,
+      "to": "nearby_sink",
+      "behavior": {
+        "value": "growth <- [nearby_sink]*Ln([lambda_bad])\n\nIf [lambda_bad]>=1 Then\n  growth <- [nearby_sink]*Ln([lambda_bad])*(1-([nearby_sink]/[K_sink1]))\nEnd If\n\ntotalexp <- [nearby_sink]+growth   # expected population size\nnewexp <- 0\nIf totalexp>0.5 Then\n  newexp <- RandPoisson(totalexp)\nEnd If\nnewexp-[nearby_sink]\n\n/*\ngrowth <- [nearby_sink]*Ln(0.25)\n\ntotalexp <- [nearby_sink]+growth   # expected population size\nnewexp <- 0\nIf totalexp>0.5 Then\n  newexp <- RandPoisson(totalexp)\nEnd If\nnewexp-[nearby_sink] \n*/\n\n\n",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "B_D_1",
+      "type": "FLOW",
+      "from": null,
+      "to": "mid_range_sink",
+      "behavior": {
+        "value": "growth <- [mid_range_sink]*Ln([lambda_bad])\n\nIf [lambda_bad]>=1 Then\n  growth <- [mid_range_sink]*Ln([lambda_bad])*(1-([mid_range_sink]/[K_sink2]))\nEnd If\n\ntotalexp <- [mid_range_sink]+growth   # expected population size\nnewexp <- 0\nIf totalexp>0.5 Then\n  newexp <- RandPoisson(totalexp)\nEnd If\nnewexp-[mid_range_sink]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "B_D_2",
+      "type": "FLOW",
+      "from": null,
+      "to": "distant_sink",
+      "behavior": {
+        "value": "growth <- [distant_sink]*Ln([lambda_bad])\n\nIf [lambda_bad]>=1 Then\n  growth <- [distant_sink]*Ln([lambda_bad])*(1-([distant_sink]/[K_sink3]))\nEnd If\n\ntotalexp <- [distant_sink]+growth   # expected population size\nnewexp <- 0\nIf totalexp>0.5 Then\n  newexp <- RandPoisson(totalexp)\nEnd If\nnewexp-[distant_sink]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "d12",
+      "type": "FLOW",
+      "from": "nearby_sink",
+      "to": "SOURCE",
+      "behavior": {
+        "value": "disp <- [Max_disp_rate]*[nearby_sink]-[Max_disp_rate]*[SOURCE]\nIf disp>=0 Then\n  RandPoisson(disp+0.00001)\nElse\n  -1*RandPoisson(-1*disp)\nEnd If\n\n#0.01*[nearby_sink] - 0.5*[SOURCE]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "d23",
+      "type": "FLOW",
+      "from": "mid_range_sink",
+      "to": "nearby_sink",
+      "behavior": {
+        "value": "disp <- [Max_disp_rate]*[mid_range_sink]-[Max_disp_rate]*[nearby_sink]\nIf disp>=0 Then\n  RandPoisson(disp+0.00001)\nElse\n  -1*RandPoisson(-1*disp)\nEnd If",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "d34",
+      "type": "FLOW",
+      "from": "distant_sink",
+      "to": "mid_range_sink",
+      "behavior": {
+        "value": "disp <- [Max_disp_rate]*[distant_sink]*0.25-[Max_disp_rate]*[mid_range_sink]*0.25\nIf disp>=0 Then\n  RandPoisson(disp+0.00001)\nElse\n  -1*RandPoisson(-1*disp)\nEnd If",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "d14",
+      "type": "FLOW",
+      "from": "distant_sink",
+      "to": "SOURCE",
+      "behavior": {
+        "value": "disp <- [Max_disp_rate]*[distant_sink]*0.01-[Max_disp_rate]*[SOURCE]*0.01\nIf disp>=0 Then\n  RandPoisson(disp+0.00001)\nElse\n  -1*RandPoisson(-1*disp)\nEnd If",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "d13",
+      "type": "FLOW",
+      "from": "mid_range_sink",
+      "to": "SOURCE",
+      "behavior": {
+        "value": "disp<-[Max_disp_rate]*[mid_range_sink]*0.25-[Max_disp_rate]*[SOURCE]*0.25\nIf disp>=0 Then\n  RandPoisson(disp+0.00001)\nElse\n  -1*RandPoisson(-1*disp)\nEnd If",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "d24",
+      "type": "FLOW",
+      "from": "distant_sink",
+      "to": "nearby_sink",
+      "behavior": {
+        "value": "disp <- [Max_disp_rate]*[distant_sink]*0.05-[Max_disp_rate]*[nearby_sink]*0.05\nIf disp>=0 Then\n  RandPoisson(disp+0.00001)\nElse\n  -1*RandPoisson(-1*disp)\nEnd If",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "Total_MP_abundance",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[SOURCE]+[nearby_sink]+[mid_range_sink]+[distant_sink]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "lambda_good",
+      "to": "B_and_D"
+    },
+    {
+      "type": "LINK",
+      "from": "SOURCE",
+      "to": "B_and_D"
+    },
+    {
+      "type": "LINK",
+      "from": "SOURCE",
+      "to": "B_and_D"
+    },
+    {
+      "type": "LINK",
+      "from": "SOURCE",
+      "to": "B_and_D"
+    },
+    {
+      "type": "LINK",
+      "from": "SOURCE",
+      "to": "B_and_D"
+    },
+    {
+      "type": "LINK",
+      "from": "K_source",
+      "to": "B_and_D"
+    },
+    {
+      "type": "LINK",
+      "from": "SOURCE",
+      "to": "B_and_D"
+    },
+    {
+      "type": "LINK",
+      "from": "nearby_sink",
+      "to": "B_D"
+    },
+    {
+      "type": "LINK",
+      "from": "nearby_sink",
+      "to": "B_D"
+    },
+    {
+      "type": "LINK",
+      "from": "nearby_sink",
+      "to": "B_D"
+    },
+    {
+      "type": "LINK",
+      "from": "nearby_sink",
+      "to": "B_D"
+    },
+    {
+      "type": "LINK",
+      "from": "nearby_sink",
+      "to": "B_D"
+    },
+    {
+      "type": "LINK",
+      "from": "nearby_sink",
+      "to": "B_D"
+    },
+    {
+      "type": "LINK",
+      "from": "nearby_sink",
+      "to": "B_D"
+    },
+    {
+      "type": "LINK",
+      "from": "nearby_sink",
+      "to": "B_D"
+    },
+    {
+      "type": "LINK",
+      "from": "lambda_bad",
+      "to": "B_D"
+    },
+    {
+      "type": "LINK",
+      "from": "lambda_bad",
+      "to": "B_D"
+    },
+    {
+      "type": "LINK",
+      "from": "lambda_bad",
+      "to": "B_D"
+    },
+    {
+      "type": "LINK",
+      "from": "K_sink1",
+      "to": "B_D"
+    },
+    {
+      "type": "LINK",
+      "from": "nearby_sink",
+      "to": "B_D"
+    },
+    {
+      "type": "LINK",
+      "from": "mid_range_sink",
+      "to": "B_D_1"
+    },
+    {
+      "type": "LINK",
+      "from": "mid_range_sink",
+      "to": "B_D_1"
+    },
+    {
+      "type": "LINK",
+      "from": "mid_range_sink",
+      "to": "B_D_1"
+    },
+    {
+      "type": "LINK",
+      "from": "mid_range_sink",
+      "to": "B_D_1"
+    },
+    {
+      "type": "LINK",
+      "from": "mid_range_sink",
+      "to": "B_D_1"
+    },
+    {
+      "type": "LINK",
+      "from": "lambda_bad",
+      "to": "B_D_1"
+    },
+    {
+      "type": "LINK",
+      "from": "lambda_bad",
+      "to": "B_D_1"
+    },
+    {
+      "type": "LINK",
+      "from": "lambda_bad",
+      "to": "B_D_1"
+    },
+    {
+      "type": "LINK",
+      "from": "K_sink2",
+      "to": "B_D_1"
+    },
+    {
+      "type": "LINK",
+      "from": "mid_range_sink",
+      "to": "B_D_1"
+    },
+    {
+      "type": "LINK",
+      "from": "distant_sink",
+      "to": "B_D_2"
+    },
+    {
+      "type": "LINK",
+      "from": "distant_sink",
+      "to": "B_D_2"
+    },
+    {
+      "type": "LINK",
+      "from": "distant_sink",
+      "to": "B_D_2"
+    },
+    {
+      "type": "LINK",
+      "from": "distant_sink",
+      "to": "B_D_2"
+    },
+    {
+      "type": "LINK",
+      "from": "distant_sink",
+      "to": "B_D_2"
+    },
+    {
+      "type": "LINK",
+      "from": "lambda_bad",
+      "to": "B_D_2"
+    },
+    {
+      "type": "LINK",
+      "from": "lambda_bad",
+      "to": "B_D_2"
+    },
+    {
+      "type": "LINK",
+      "from": "lambda_bad",
+      "to": "B_D_2"
+    },
+    {
+      "type": "LINK",
+      "from": "K_sink3",
+      "to": "B_D_2"
+    },
+    {
+      "type": "LINK",
+      "from": "distant_sink",
+      "to": "B_D_2"
+    },
+    {
+      "type": "LINK",
+      "from": "SOURCE",
+      "to": "d12"
+    },
+    {
+      "type": "LINK",
+      "from": "SOURCE",
+      "to": "d12"
+    },
+    {
+      "type": "LINK",
+      "from": "nearby_sink",
+      "to": "d12"
+    },
+    {
+      "type": "LINK",
+      "from": "nearby_sink",
+      "to": "d12"
+    },
+    {
+      "type": "LINK",
+      "from": "Max_disp_rate",
+      "to": "d12"
+    },
+    {
+      "type": "LINK",
+      "from": "Max_disp_rate",
+      "to": "d12"
+    },
+    {
+      "type": "LINK",
+      "from": "nearby_sink",
+      "to": "d12"
+    },
+    {
+      "type": "LINK",
+      "from": "SOURCE",
+      "to": "d12"
+    },
+    {
+      "type": "LINK",
+      "from": "nearby_sink",
+      "to": "d23"
+    },
+    {
+      "type": "LINK",
+      "from": "mid_range_sink",
+      "to": "d23"
+    },
+    {
+      "type": "LINK",
+      "from": "Max_disp_rate",
+      "to": "d23"
+    },
+    {
+      "type": "LINK",
+      "from": "Max_disp_rate",
+      "to": "d23"
+    },
+    {
+      "type": "LINK",
+      "from": "mid_range_sink",
+      "to": "d23"
+    },
+    {
+      "type": "LINK",
+      "from": "nearby_sink",
+      "to": "d23"
+    },
+    {
+      "type": "LINK",
+      "from": "mid_range_sink",
+      "to": "d34"
+    },
+    {
+      "type": "LINK",
+      "from": "distant_sink",
+      "to": "d34"
+    },
+    {
+      "type": "LINK",
+      "from": "Max_disp_rate",
+      "to": "d34"
+    },
+    {
+      "type": "LINK",
+      "from": "Max_disp_rate",
+      "to": "d34"
+    },
+    {
+      "type": "LINK",
+      "from": "distant_sink",
+      "to": "d34"
+    },
+    {
+      "type": "LINK",
+      "from": "mid_range_sink",
+      "to": "d34"
+    },
+    {
+      "type": "LINK",
+      "from": "SOURCE",
+      "to": "d14"
+    },
+    {
+      "type": "LINK",
+      "from": "distant_sink",
+      "to": "d14"
+    },
+    {
+      "type": "LINK",
+      "from": "Max_disp_rate",
+      "to": "d14"
+    },
+    {
+      "type": "LINK",
+      "from": "Max_disp_rate",
+      "to": "d14"
+    },
+    {
+      "type": "LINK",
+      "from": "distant_sink",
+      "to": "d14"
+    },
+    {
+      "type": "LINK",
+      "from": "SOURCE",
+      "to": "d14"
+    },
+    {
+      "type": "LINK",
+      "from": "SOURCE",
+      "to": "d13"
+    },
+    {
+      "type": "LINK",
+      "from": "mid_range_sink",
+      "to": "d13"
+    },
+    {
+      "type": "LINK",
+      "from": "Max_disp_rate",
+      "to": "d13"
+    },
+    {
+      "type": "LINK",
+      "from": "Max_disp_rate",
+      "to": "d13"
+    },
+    {
+      "type": "LINK",
+      "from": "mid_range_sink",
+      "to": "d13"
+    },
+    {
+      "type": "LINK",
+      "from": "SOURCE",
+      "to": "d13"
+    },
+    {
+      "type": "LINK",
+      "from": "nearby_sink",
+      "to": "d24"
+    },
+    {
+      "type": "LINK",
+      "from": "distant_sink",
+      "to": "d24"
+    },
+    {
+      "type": "LINK",
+      "from": "Max_disp_rate",
+      "to": "d24"
+    },
+    {
+      "type": "LINK",
+      "from": "Max_disp_rate",
+      "to": "d24"
+    },
+    {
+      "type": "LINK",
+      "from": "distant_sink",
+      "to": "d24"
+    },
+    {
+      "type": "LINK",
+      "from": "nearby_sink",
+      "to": "d24"
+    },
+    {
+      "type": "LINK",
+      "from": "SOURCE",
+      "to": "Total_MP_abundance"
+    },
+    {
+      "type": "LINK",
+      "from": "nearby_sink",
+      "to": "Total_MP_abundance"
+    },
+    {
+      "type": "LINK",
+      "from": "mid_range_sink",
+      "to": "Total_MP_abundance"
+    },
+    {
+      "type": "LINK",
+      "from": "distant_sink",
+      "to": "Total_MP_abundance"
+    }
+  ],
+  "engine_settings": []
+}

@@ -1,0 +1,245 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "Fall of a balloon in air",
+  "simulation": {
+    "version": "38",
+    "time_length": "1.1",
+    "time_start": "0",
+    "time_step": "0.001",
+    "time_units": "SECONDS",
+    "algorithm": "RK1",
+    "version.1": "39"
+  },
+  "elements": [
+    {
+      "name": "Height_h",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "2",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Speed_v",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Change_v",
+      "type": "FLOW",
+      "from": null,
+      "to": "Speed_v",
+      "behavior": {
+        "value": "[Acceleration_a]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "Change_h",
+      "type": "FLOW",
+      "from": null,
+      "to": "Height_h",
+      "behavior": {
+        "value": "[Speed_v]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "Acceleration_a",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Total_force_F]/[Mass_m]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Total_force_F",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Weight_force_Fg]+[Friction_force_Ff]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Mass_m",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.018",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Friction_force_Ff",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "-0.5*[Friction_factor_cw]*[Density]*[Area]*[Speed_v]*Abs([Speed_v])",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Weight_force_Fg",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Grav__constant_g]*[Mass_m]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Friction_factor_cw",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.5",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Grav__constant_g",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "-9.81",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Area",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "pi*([Diameter]/2)^2",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Density",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1.2",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Diameter",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.36",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "Acceleration_a",
+      "to": "Change_v"
+    },
+    {
+      "type": "LINK",
+      "from": "Speed_v",
+      "to": "Change_v"
+    },
+    {
+      "type": "LINK",
+      "from": "Speed_v",
+      "to": "Change_h"
+    },
+    {
+      "type": "LINK",
+      "from": "Height_h",
+      "to": "Change_h"
+    },
+    {
+      "type": "LINK",
+      "from": "Total_force_F",
+      "to": "Acceleration_a"
+    },
+    {
+      "type": "LINK",
+      "from": "Mass_m",
+      "to": "Acceleration_a"
+    },
+    {
+      "type": "LINK",
+      "from": "Friction_force_Ff",
+      "to": "Total_force_F"
+    },
+    {
+      "type": "LINK",
+      "from": "Weight_force_Fg",
+      "to": "Total_force_F"
+    },
+    {
+      "type": "LINK",
+      "from": "Speed_v",
+      "to": "Friction_force_Ff"
+    },
+    {
+      "type": "LINK",
+      "from": "Speed_v",
+      "to": "Friction_force_Ff"
+    },
+    {
+      "type": "LINK",
+      "from": "Friction_factor_cw",
+      "to": "Friction_force_Ff"
+    },
+    {
+      "type": "LINK",
+      "from": "Area",
+      "to": "Friction_force_Ff"
+    },
+    {
+      "type": "LINK",
+      "from": "Density",
+      "to": "Friction_force_Ff"
+    },
+    {
+      "type": "LINK",
+      "from": "Mass_m",
+      "to": "Weight_force_Fg"
+    },
+    {
+      "type": "LINK",
+      "from": "Grav__constant_g",
+      "to": "Weight_force_Fg"
+    },
+    {
+      "type": "LINK",
+      "from": "Diameter",
+      "to": "Area"
+    }
+  ],
+  "engine_settings": {
+    "units": [
+      [
+        {
+          "name": "beschleunigung",
+          "factor": "1",
+          "base": "m/s^2"
+        }
+      ],
+      [
+        {
+          "name": "geschwindigkeit",
+          "factor": "1",
+          "base": "m/s"
+        }
+      ]
+    ]
+  }
+}

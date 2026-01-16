@@ -1,0 +1,236 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "Fixes That Fail",
+  "simulation": {
+    "version": "36",
+    "time_length": "25",
+    "time_start": "0",
+    "time_step": "0.5",
+    "time_units": "MONTHS",
+    "algorithm": "RK1"
+  },
+  "elements": [
+    {
+      "name": "Unintended_Consequences",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0",
+        "description": "Unintended consequences ",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Problem",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "100",
+        "description": "Problems are treated as a stock.",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Increase_in_Problem",
+      "type": "FLOW",
+      "from": null,
+      "to": "Problem",
+      "behavior": {
+        "value": "[Effect_of_UC]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Fix",
+      "type": "FLOW",
+      "from": "Problem",
+      "to": null,
+      "behavior": {
+        "value": "[Problem]*[Problem_elimination_normal]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Average_Fix",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Change_in_Average_Fix",
+      "type": "FLOW",
+      "from": null,
+      "to": "Average_Fix",
+      "behavior": {
+        "value": "([Fix]-[Average_Fix])/[Time_to_Change]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Growth_in_Unintended_Consequences",
+      "type": "FLOW",
+      "from": null,
+      "to": "Unintended_Consequences",
+      "behavior": {
+        "value": "[Average_Fix]*[Fraction_of_average_fix_creating_UC]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Reduction_in_Unintended_Consequences",
+      "type": "FLOW",
+      "from": "Unintended_Consequences",
+      "to": null,
+      "behavior": {
+        "value": "[Unintended_Consequences]*[Dissipation_normal]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Time_to_Change",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "6",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Fraction_of_average_fix_creating_UC",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.88",
+        "description": "This value is the part of the fix that creates the unintended consequence.",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Problem_elimination_normal",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.25",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Dissipation_normal",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Effect_of_UC",
+      "type": "CONVERTER",
+      "behavior": {
+        "input": "ELEMENT",
+        "input_element": "Unintended_Consequences",
+        "interpolation": "LINEAR",
+        "data": [
+            [0, 0],
+            [10, 0],
+            [20, 0],
+            [30, 1],
+            [40, 6.5],
+            [50, 12.5],
+            [60, 16],
+            [70, 21],
+            [80, 26],
+            [90, 37],
+            [100, 49]
+          ],
+        "units": "Unitless"
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "Effect_of_UC",
+      "to": "Increase_in_Problem"
+    },
+    {
+      "type": "LINK",
+      "from": "Problem",
+      "to": "Increase_in_Problem"
+    },
+    {
+      "type": "LINK",
+      "from": "Problem",
+      "to": "Fix"
+    },
+    {
+      "type": "LINK",
+      "from": "Problem_elimination_normal",
+      "to": "Fix"
+    },
+    {
+      "type": "LINK",
+      "from": "Problem",
+      "to": "Fix"
+    },
+    {
+      "type": "LINK",
+      "from": "Fix",
+      "to": "Change_in_Average_Fix"
+    },
+    {
+      "type": "LINK",
+      "from": "Average_Fix",
+      "to": "Change_in_Average_Fix"
+    },
+    {
+      "type": "LINK",
+      "from": "Time_to_Change",
+      "to": "Change_in_Average_Fix"
+    },
+    {
+      "type": "LINK",
+      "from": "Average_Fix",
+      "to": "Change_in_Average_Fix"
+    },
+    {
+      "type": "LINK",
+      "from": "Average_Fix",
+      "to": "Growth_in_Unintended_Consequences"
+    },
+    {
+      "type": "LINK",
+      "from": "Fraction_of_average_fix_creating_UC",
+      "to": "Growth_in_Unintended_Consequences"
+    },
+    {
+      "type": "LINK",
+      "from": "Unintended_Consequences",
+      "to": "Growth_in_Unintended_Consequences"
+    },
+    {
+      "type": "LINK",
+      "from": "Unintended_Consequences",
+      "to": "Reduction_in_Unintended_Consequences"
+    },
+    {
+      "type": "LINK",
+      "from": "Dissipation_normal",
+      "to": "Reduction_in_Unintended_Consequences"
+    },
+    {
+      "type": "LINK",
+      "from": "Unintended_Consequences",
+      "to": "Reduction_in_Unintended_Consequences"
+    }
+  ],
+  "engine_settings": []
+}

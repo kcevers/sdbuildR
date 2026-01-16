@@ -1,0 +1,272 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "Accidental Adversaries",
+  "simulation": {
+    "version": "37",
+    "time_length": "10",
+    "time_start": "0",
+    "time_step": "0.5",
+    "time_units": "WEEKS",
+    "algorithm": "RK1"
+  },
+  "elements": [
+    {
+      "name": "A_Success",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "A_Activity",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "B_Success",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "B_Activity",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "B_Obstruction",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "A_Obstruction",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "A_Fixes",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "B_Fixes",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "B_Success_1",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0.6",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "A_Success_1",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0.5",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "B_inflow",
+      "type": "FLOW",
+      "from": null,
+      "to": "B_Success_1",
+      "behavior": {
+        "value": "[A_Activity_1]-.4*[A_Obstruction_1]+0.1*[B_Fixes_1]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "A_inflow",
+      "type": "FLOW",
+      "from": null,
+      "to": "A_Success_1",
+      "behavior": {
+        "value": "[B_Activity_1]-.2*[B_Obstruction_1]+0.1*[A_Fixes_1]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "A_Activity_1",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": ".2*[A_Success_1]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "B_Activity_1",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": ".3*[B_Success_1]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "A_Obstruction_1",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[A_Fixes_1]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "B_Obstruction_1",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[B_Fixes_1]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "B_Fixes_1",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "(2-[B_Success_1])*[On_Off]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "A_Fixes_1",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "(3-[A_Success_1])*[On_Off]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "On_Off",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "A_Activity_1",
+      "to": "B_inflow"
+    },
+    {
+      "type": "LINK",
+      "from": "A_Obstruction_1",
+      "to": "B_inflow"
+    },
+    {
+      "type": "LINK",
+      "from": "B_Fixes_1",
+      "to": "B_inflow"
+    },
+    {
+      "type": "LINK",
+      "from": "B_Success_1",
+      "to": "B_inflow"
+    },
+    {
+      "type": "LINK",
+      "from": "B_Activity_1",
+      "to": "A_inflow"
+    },
+    {
+      "type": "LINK",
+      "from": "B_Obstruction_1",
+      "to": "A_inflow"
+    },
+    {
+      "type": "LINK",
+      "from": "A_Fixes_1",
+      "to": "A_inflow"
+    },
+    {
+      "type": "LINK",
+      "from": "A_Success_1",
+      "to": "A_inflow"
+    },
+    {
+      "type": "LINK",
+      "from": "A_Success_1",
+      "to": "A_Activity_1"
+    },
+    {
+      "type": "LINK",
+      "from": "B_Success_1",
+      "to": "B_Activity_1"
+    },
+    {
+      "type": "LINK",
+      "from": "A_Fixes_1",
+      "to": "A_Obstruction_1"
+    },
+    {
+      "type": "LINK",
+      "from": "B_Fixes_1",
+      "to": "B_Obstruction_1"
+    },
+    {
+      "type": "LINK",
+      "from": "B_Success_1",
+      "to": "B_Fixes_1"
+    },
+    {
+      "type": "LINK",
+      "from": "On_Off",
+      "to": "B_Fixes_1"
+    },
+    {
+      "type": "LINK",
+      "from": "A_Success_1",
+      "to": "A_Fixes_1"
+    },
+    {
+      "type": "LINK",
+      "from": "On_Off",
+      "to": "A_Fixes_1"
+    }
+  ],
+  "engine_settings": []
+}

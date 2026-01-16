@@ -1,0 +1,130 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "Bossel: Z203 Brusselator",
+  "simulation": {
+    "version": "37",
+    "time_length": "50",
+    "time_start": "0",
+    "time_step": "0.1",
+    "time_units": "SECONDS",
+    "algorithm": "RK1"
+  },
+  "elements": [
+    {
+      "name": "X",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "1",
+        "description": "Xo Default initial value is 1",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "X_dot",
+      "type": "FLOW",
+      "from": null,
+      "to": "X",
+      "behavior": {
+        "value": "[A]-([B]+1)*[X]+[X]^2*[Y]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "A",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1",
+        "description": "Default value is 1",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Y",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "4",
+        "description": "Yo Default initial value is 4",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Y_dot",
+      "type": "FLOW",
+      "from": null,
+      "to": "Y",
+      "behavior": {
+        "value": "[B]*[X]-[X]^2*[Y]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "B",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "3",
+        "description": "Default value is 3",
+        "units": "Unitless"
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "X",
+      "to": "X_dot"
+    },
+    {
+      "type": "LINK",
+      "from": "X",
+      "to": "X_dot"
+    },
+    {
+      "type": "LINK",
+      "from": "A",
+      "to": "X_dot"
+    },
+    {
+      "type": "LINK",
+      "from": "Y",
+      "to": "X_dot"
+    },
+    {
+      "type": "LINK",
+      "from": "B",
+      "to": "X_dot"
+    },
+    {
+      "type": "LINK",
+      "from": "X",
+      "to": "X_dot"
+    },
+    {
+      "type": "LINK",
+      "from": "X",
+      "to": "Y_dot"
+    },
+    {
+      "type": "LINK",
+      "from": "X",
+      "to": "Y_dot"
+    },
+    {
+      "type": "LINK",
+      "from": "Y",
+      "to": "Y_dot"
+    },
+    {
+      "type": "LINK",
+      "from": "B",
+      "to": "Y_dot"
+    },
+    {
+      "type": "LINK",
+      "from": "Y",
+      "to": "Y_dot"
+    }
+  ],
+  "engine_settings": []
+}

@@ -1,0 +1,395 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "REM 221 - Z404 Prey and two Predator Populations",
+  "simulation": {
+    "version": "36",
+    "time_length": "200",
+    "time_start": "0",
+    "time_step": "0.05",
+    "time_units": "MONTHS",
+    "algorithm": "RK1"
+  },
+  "elements": [
+    {
+      "name": "predator_A",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "[INITIAL_PREDATOR_A]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "predator_B",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "[INITIAL_PREDATOR_B]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "prey",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "[INITIAL_PREY]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "predator_A_loss",
+      "type": "FLOW",
+      "from": "predator_A",
+      "to": null,
+      "behavior": {
+        "value": "([ENERGY_CONSUMPTION_RATE_A] *[predator_A])+([HUNT_LIMIT_A]*[predator_A])",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "predator_B_loss",
+      "type": "FLOW",
+      "from": "predator_B",
+      "to": null,
+      "behavior": {
+        "value": "([ENERGY_CONSUMPTION_RATE_B]*[predator_B])+([HUNT_LIMIT_B]*[predator_B])",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "prey_loss",
+      "type": "FLOW",
+      "from": "prey",
+      "to": null,
+      "behavior": {
+        "value": "[LOSS_CAUSED_BY_PREDATOR_A] *[prey_encounters_predator_A] +[LOSS_CAUSED_BY_PREDATOR_B] *[prey_encounters_predator_B]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "predator_B_gain",
+      "type": "FLOW",
+      "from": null,
+      "to": "predator_B",
+      "behavior": {
+        "value": "[PREY_GAIN_PREDATOR_B] *[prey_encounters_predator_B]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "predator_A_gain",
+      "type": "FLOW",
+      "from": null,
+      "to": "predator_A",
+      "behavior": {
+        "value": "[PREY_GAIN_PREDATOR_A] *[prey_encounters_predator_A]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "prey_gain",
+      "type": "FLOW",
+      "from": null,
+      "to": "prey",
+      "behavior": {
+        "value": "[GROWTH_RATE_PREY]*[prey]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "ENERGY_CONSUMPTION_RATE_A",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": ".12",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "ENERGY_CONSUMPTION_RATE_B",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": ".1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "PREY_GAIN_PREDATOR_B",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": ".1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "prey_encounters_predator_B",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[predator_B]*[prey]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "prey_encounters_predator_A",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[prey]*[predator_A]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "PREY_GAIN_PREDATOR_A",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": ".1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "GROWTH_RATE_PREY",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "LOSS_CAUSED_BY_PREDATOR_A",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": ".1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "LOSS_CAUSED_BY_PREDATOR_B",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": ".1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "INITIAL_PREDATOR_A",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "INITIAL_PREDATOR_B",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "INITIAL_PREY",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "HUNT_LIMIT_B",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0",
+        "description": "Hunt limit per year (10-100 % of stock)/12 months",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "HUNT_LIMIT_A",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0",
+        "description": "Hunt limit per year (10-100 % of stock)/12 months",
+        "units": "Unitless"
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "INITIAL_PREDATOR_A",
+      "to": "predator_A"
+    },
+    {
+      "type": "LINK",
+      "from": "INITIAL_PREDATOR_B",
+      "to": "predator_B"
+    },
+    {
+      "type": "LINK",
+      "from": "INITIAL_PREY",
+      "to": "prey"
+    },
+    {
+      "type": "LINK",
+      "from": "predator_A",
+      "to": "predator_A_loss"
+    },
+    {
+      "type": "LINK",
+      "from": "predator_A",
+      "to": "predator_A_loss"
+    },
+    {
+      "type": "LINK",
+      "from": "ENERGY_CONSUMPTION_RATE_A",
+      "to": "predator_A_loss"
+    },
+    {
+      "type": "LINK",
+      "from": "HUNT_LIMIT_A",
+      "to": "predator_A_loss"
+    },
+    {
+      "type": "LINK",
+      "from": "predator_A",
+      "to": "predator_A_loss"
+    },
+    {
+      "type": "LINK",
+      "from": "predator_B",
+      "to": "predator_B_loss"
+    },
+    {
+      "type": "LINK",
+      "from": "predator_B",
+      "to": "predator_B_loss"
+    },
+    {
+      "type": "LINK",
+      "from": "ENERGY_CONSUMPTION_RATE_B",
+      "to": "predator_B_loss"
+    },
+    {
+      "type": "LINK",
+      "from": "HUNT_LIMIT_B",
+      "to": "predator_B_loss"
+    },
+    {
+      "type": "LINK",
+      "from": "predator_B",
+      "to": "predator_B_loss"
+    },
+    {
+      "type": "LINK",
+      "from": "prey_encounters_predator_B",
+      "to": "prey_loss"
+    },
+    {
+      "type": "LINK",
+      "from": "prey_encounters_predator_A",
+      "to": "prey_loss"
+    },
+    {
+      "type": "LINK",
+      "from": "LOSS_CAUSED_BY_PREDATOR_A",
+      "to": "prey_loss"
+    },
+    {
+      "type": "LINK",
+      "from": "LOSS_CAUSED_BY_PREDATOR_B",
+      "to": "prey_loss"
+    },
+    {
+      "type": "LINK",
+      "from": "prey",
+      "to": "prey_loss"
+    },
+    {
+      "type": "LINK",
+      "from": "PREY_GAIN_PREDATOR_B",
+      "to": "predator_B_gain"
+    },
+    {
+      "type": "LINK",
+      "from": "prey_encounters_predator_B",
+      "to": "predator_B_gain"
+    },
+    {
+      "type": "LINK",
+      "from": "predator_B",
+      "to": "predator_B_gain"
+    },
+    {
+      "type": "LINK",
+      "from": "prey_encounters_predator_A",
+      "to": "predator_A_gain"
+    },
+    {
+      "type": "LINK",
+      "from": "PREY_GAIN_PREDATOR_A",
+      "to": "predator_A_gain"
+    },
+    {
+      "type": "LINK",
+      "from": "predator_A",
+      "to": "predator_A_gain"
+    },
+    {
+      "type": "LINK",
+      "from": "prey",
+      "to": "prey_gain"
+    },
+    {
+      "type": "LINK",
+      "from": "GROWTH_RATE_PREY",
+      "to": "prey_gain"
+    },
+    {
+      "type": "LINK",
+      "from": "prey",
+      "to": "prey_gain"
+    },
+    {
+      "type": "LINK",
+      "from": "predator_B",
+      "to": "prey_encounters_predator_B"
+    },
+    {
+      "type": "LINK",
+      "from": "prey",
+      "to": "prey_encounters_predator_B"
+    },
+    {
+      "type": "LINK",
+      "from": "predator_A",
+      "to": "prey_encounters_predator_A"
+    },
+    {
+      "type": "LINK",
+      "from": "prey",
+      "to": "prey_encounters_predator_A"
+    }
+  ],
+  "engine_settings": []
+}

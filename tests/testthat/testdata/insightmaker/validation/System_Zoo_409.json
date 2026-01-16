@@ -1,0 +1,455 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "System Zoo 409 - RScott",
+  "simulation": {
+    "version": "37",
+    "time_length": "200",
+    "time_start": "0",
+    "time_step": "0.2",
+    "time_units": "YEARS",
+    "algorithm": "RK1"
+  },
+  "elements": [
+    {
+      "name": "fish",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "5000",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "boats",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "10",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "growth",
+      "type": "FLOW",
+      "from": null,
+      "to": "fish",
+      "behavior": {
+        "value": "[Specific_Growth_Rate]*[fish]*(1-[fish_density])",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "catch_1",
+      "type": "FLOW",
+      "from": "fish",
+      "to": null,
+      "behavior": {
+        "value": "IfThenElse([Fish_finder_Tech]=0, [catch_potential]*[fish_density], IfThenElse([fish_density]>0, [catch_potential]*[Catch_chance], 0))",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "new_boat_purchases",
+      "type": "FLOW",
+      "from": null,
+      "to": "boats",
+      "behavior": {
+        "value": "Round(IfThenElse([boats]>[Max_Boat_Number], 0, [Investment_in_Boats]/[New_Boat_Price]))",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "decommissioned_boats",
+      "type": "FLOW",
+      "from": "boats",
+      "to": null,
+      "behavior": {
+        "value": "[boats]/[Boat_Life_Cycle]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Catch_Area",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "460",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Specific_fish_Capacity",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "490",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Max_Specific_Catch_Volume",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "520",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Boat_Life_Cycle",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "15",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "max_fish_capacity",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Catch_Area]*[Specific_fish_Capacity]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "fish_density",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[fish]/[max_fish_capacity]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "catch_potential",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Max_Specific_Catch_Volume]*[boats]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Specific_Growth_Rate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "5.2",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Specific_Maintenance_costs",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "50000",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Fish_Price",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "4700",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Catch_Income",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Fish_Price]*[catch_1]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Boat_Maintenance",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Specific_Maintenance_costs]*[boats]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "net_income",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Catch_Income]-[Boat_Maintenance]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Investment_in_Boats",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Investment_Fraction_for_Boats]*[net_income]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Investment_Fraction_for_Boats",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.51",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "New_Boat_Price",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "285000",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "relative_catch_vloume",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[catch_1]/[max_fish_capacity]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Fish_finder_Tech",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Catch_chance",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.5",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Max_Boat_Number",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "54",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Profit_Rate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[net_income]-[Investment_in_Boats]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "fish",
+      "to": "growth"
+    },
+    {
+      "type": "LINK",
+      "from": "fish_density",
+      "to": "growth"
+    },
+    {
+      "type": "LINK",
+      "from": "Specific_Growth_Rate",
+      "to": "growth"
+    },
+    {
+      "type": "LINK",
+      "from": "fish",
+      "to": "growth"
+    },
+    {
+      "type": "LINK",
+      "from": "fish_density",
+      "to": "catch_1"
+    },
+    {
+      "type": "LINK",
+      "from": "fish_density",
+      "to": "catch_1"
+    },
+    {
+      "type": "LINK",
+      "from": "catch_potential",
+      "to": "catch_1"
+    },
+    {
+      "type": "LINK",
+      "from": "catch_potential",
+      "to": "catch_1"
+    },
+    {
+      "type": "LINK",
+      "from": "Fish_finder_Tech",
+      "to": "catch_1"
+    },
+    {
+      "type": "LINK",
+      "from": "Catch_chance",
+      "to": "catch_1"
+    },
+    {
+      "type": "LINK",
+      "from": "fish",
+      "to": "catch_1"
+    },
+    {
+      "type": "LINK",
+      "from": "boats",
+      "to": "new_boat_purchases"
+    },
+    {
+      "type": "LINK",
+      "from": "Investment_in_Boats",
+      "to": "new_boat_purchases"
+    },
+    {
+      "type": "LINK",
+      "from": "New_Boat_Price",
+      "to": "new_boat_purchases"
+    },
+    {
+      "type": "LINK",
+      "from": "Max_Boat_Number",
+      "to": "new_boat_purchases"
+    },
+    {
+      "type": "LINK",
+      "from": "boats",
+      "to": "new_boat_purchases"
+    },
+    {
+      "type": "LINK",
+      "from": "boats",
+      "to": "decommissioned_boats"
+    },
+    {
+      "type": "LINK",
+      "from": "Boat_Life_Cycle",
+      "to": "decommissioned_boats"
+    },
+    {
+      "type": "LINK",
+      "from": "boats",
+      "to": "decommissioned_boats"
+    },
+    {
+      "type": "LINK",
+      "from": "Catch_Area",
+      "to": "max_fish_capacity"
+    },
+    {
+      "type": "LINK",
+      "from": "Specific_fish_Capacity",
+      "to": "max_fish_capacity"
+    },
+    {
+      "type": "LINK",
+      "from": "fish",
+      "to": "fish_density"
+    },
+    {
+      "type": "LINK",
+      "from": "max_fish_capacity",
+      "to": "fish_density"
+    },
+    {
+      "type": "LINK",
+      "from": "boats",
+      "to": "catch_potential"
+    },
+    {
+      "type": "LINK",
+      "from": "Max_Specific_Catch_Volume",
+      "to": "catch_potential"
+    },
+    {
+      "type": "LINK",
+      "from": "catch_1",
+      "to": "Catch_Income"
+    },
+    {
+      "type": "LINK",
+      "from": "Fish_Price",
+      "to": "Catch_Income"
+    },
+    {
+      "type": "LINK",
+      "from": "boats",
+      "to": "Boat_Maintenance"
+    },
+    {
+      "type": "LINK",
+      "from": "Specific_Maintenance_costs",
+      "to": "Boat_Maintenance"
+    },
+    {
+      "type": "LINK",
+      "from": "Catch_Income",
+      "to": "net_income"
+    },
+    {
+      "type": "LINK",
+      "from": "Boat_Maintenance",
+      "to": "net_income"
+    },
+    {
+      "type": "LINK",
+      "from": "net_income",
+      "to": "Investment_in_Boats"
+    },
+    {
+      "type": "LINK",
+      "from": "Investment_Fraction_for_Boats",
+      "to": "Investment_in_Boats"
+    },
+    {
+      "type": "LINK",
+      "from": "catch_1",
+      "to": "relative_catch_vloume"
+    },
+    {
+      "type": "LINK",
+      "from": "max_fish_capacity",
+      "to": "relative_catch_vloume"
+    },
+    {
+      "type": "LINK",
+      "from": "net_income",
+      "to": "Profit_Rate"
+    },
+    {
+      "type": "LINK",
+      "from": "Investment_in_Boats",
+      "to": "Profit_Rate"
+    }
+  ],
+  "engine_settings": []
+}

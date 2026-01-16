@@ -240,7 +240,8 @@ clean_unit_in_u <- function(x, regex_units) {
   # Throw error if a match includes u(''): units cannot be nested
   if (any(stringr::str_detect(matches_no_u, "u\\([\"|']"))) {
     stop("Nested units u(' u('') ') are not allowed. Please remove the u() from the unit string.",
-         call. = FALSE)
+      call. = FALSE
+    )
   }
 
 
@@ -356,7 +357,7 @@ clean_unit <- function(x, regex_units, ignore_case = FALSE,
 #' @inheritParams clean_unit
 #' @param new_eqns String or vector with new equations potentially containing unit strings
 #' @param new_units String or vector with units of variables
-#' @param R_or_Julia String with either "R" or "Julia" to indicate which regular expression to use.
+#' @param R_or_Julia String with either "R" or "Julia" to indicate which regular expression to use. In R, units are enclosed in u(""); in Julia, in u"".
 #'
 #' @noRd
 #' @returns List with models units to add to sfm
@@ -368,7 +369,10 @@ detect_undefined_units <- function(sfm, new_eqns, new_units, regex_units, R_or_J
     new_units,
     # Extract units from equations
     new_eqns |>
-      stringr::str_extract_all(ifelse(R_or_Julia == "Julia", "\\bu[\"|'](.*?)[\"|']", "\\bu\\([\"|'](.*?)[\"|']\\)"))
+      stringr::str_extract_all(ifelse(R_or_Julia == "Julia",
+        "\\bu[\"|'](.*?)[\"|']",
+        "\\bu\\([\"|'](.*?)[\"|']\\)"
+      ))
   ) |>
     unlist() |>
     lapply(split_units) |>
@@ -421,7 +425,7 @@ find_unit_strings <- function(sfm) {
     unlist()
 
   # Extract all unit strings from macros
-  macro_units <- lapply(sfm[["macro"]], function(x) {
+  macro_units <- lapply(sfm[[P[["macro_name"]]]], function(x) {
     if (is_defined(x[["eqn"]])) {
       return(stringr::str_extract_all(x[["eqn"]], "(?:^|(?<=\\W))u\\([\"|'](.*?)[\"|']\\)"))
     }

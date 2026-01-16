@@ -1,0 +1,261 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "Spring and fall bloom",
+  "simulation": {
+    "version": "36",
+    "time_length": "120",
+    "time_start": "0",
+    "time_step": "0.25",
+    "time_units": "DAYS",
+    "algorithm": "RK4"
+  },
+  "elements": [
+    {
+      "name": "DIN",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "250",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Phytoplancton",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "N_uptake",
+      "type": "FLOW",
+      "from": "DIN",
+      "to": "Phytoplancton",
+      "behavior": {
+        "value": "([Phytoplancton]*1)*([DIN]/([DIN]+[Km1]))",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Zooplancton",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Grazing",
+      "type": "FLOW",
+      "from": "Phytoplancton",
+      "to": "Zooplancton",
+      "behavior": {
+        "value": "([Zooplancton]*1)*([Phytoplancton]/([Phytoplancton]+[Km2]))",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Km1",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "5",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Km2",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "50",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "PON",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "sloppy_eating",
+      "type": "FLOW",
+      "from": "Zooplancton",
+      "to": "PON",
+      "behavior": {
+        "value": "[Grazing]*0.6",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "mineralization",
+      "type": "FLOW",
+      "from": "PON",
+      "to": "DIN",
+      "behavior": {
+        "value": "[PON]*0.01",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Death",
+      "type": "FLOW",
+      "from": "Zooplancton",
+      "to": "PON",
+      "behavior": {
+        "value": "[Zooplancton]*0.05",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Flow",
+      "type": "FLOW",
+      "from": "Phytoplancton",
+      "to": "PON",
+      "behavior": {
+        "value": "[Phytoplancton]*0.05",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "DIN",
+      "to": "N_uptake"
+    },
+    {
+      "type": "LINK",
+      "from": "DIN",
+      "to": "N_uptake"
+    },
+    {
+      "type": "LINK",
+      "from": "Phytoplancton",
+      "to": "N_uptake"
+    },
+    {
+      "type": "LINK",
+      "from": "Km1",
+      "to": "N_uptake"
+    },
+    {
+      "type": "LINK",
+      "from": "DIN",
+      "to": "N_uptake"
+    },
+    {
+      "type": "LINK",
+      "from": "Phytoplancton",
+      "to": "N_uptake"
+    },
+    {
+      "type": "LINK",
+      "from": "Phytoplancton",
+      "to": "Grazing"
+    },
+    {
+      "type": "LINK",
+      "from": "Phytoplancton",
+      "to": "Grazing"
+    },
+    {
+      "type": "LINK",
+      "from": "Zooplancton",
+      "to": "Grazing"
+    },
+    {
+      "type": "LINK",
+      "from": "Km2",
+      "to": "Grazing"
+    },
+    {
+      "type": "LINK",
+      "from": "Phytoplancton",
+      "to": "Grazing"
+    },
+    {
+      "type": "LINK",
+      "from": "Zooplancton",
+      "to": "Grazing"
+    },
+    {
+      "type": "LINK",
+      "from": "Grazing",
+      "to": "sloppy_eating"
+    },
+    {
+      "type": "LINK",
+      "from": "Zooplancton",
+      "to": "sloppy_eating"
+    },
+    {
+      "type": "LINK",
+      "from": "PON",
+      "to": "sloppy_eating"
+    },
+    {
+      "type": "LINK",
+      "from": "PON",
+      "to": "mineralization"
+    },
+    {
+      "type": "LINK",
+      "from": "PON",
+      "to": "mineralization"
+    },
+    {
+      "type": "LINK",
+      "from": "DIN",
+      "to": "mineralization"
+    },
+    {
+      "type": "LINK",
+      "from": "Zooplancton",
+      "to": "Death"
+    },
+    {
+      "type": "LINK",
+      "from": "Zooplancton",
+      "to": "Death"
+    },
+    {
+      "type": "LINK",
+      "from": "PON",
+      "to": "Death"
+    },
+    {
+      "type": "LINK",
+      "from": "Phytoplancton",
+      "to": "Flow"
+    },
+    {
+      "type": "LINK",
+      "from": "Phytoplancton",
+      "to": "Flow"
+    },
+    {
+      "type": "LINK",
+      "from": "PON",
+      "to": "Flow"
+    }
+  ],
+  "engine_settings": []
+}

@@ -32,13 +32,14 @@ simulate(
 \value{
 Object of class \code{\link[=simulate]{sdbuildR_sim}}, a list containing:
 \describe{
+\item{sfm}{Stock-and-flow model object of class \code{\link[=xmile]{sdbuildR_xmile}}}
 \item{df}{Data frame: simulation results (time, variable, value)}
 \item{init}{Named vector: initial stock values}
 \item{constants}{Named vector: constant parameters}
 \item{script}{Character: generated simulation code (R or Julia)}
 \item{duration}{Numeric: simulation time in seconds}
 \item{success}{Logical: TRUE if completed without errors}
-\item{...}{Other parameters passed to simulate}
+\item{error_message}{NULL if completed without errors}
 }
 
 Use \code{\link[=as.data.frame]{as.data.frame()}} to extract results, \code{\link[=plot]{plot()}} to visualize.

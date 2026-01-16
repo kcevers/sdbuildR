@@ -1,0 +1,1172 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "The Ecology of Medical Care",
+  "simulation": {
+    "version": "36",
+    "time_length": "20",
+    "time_start": "0",
+    "time_step": "0.5",
+    "time_units": "MONTHS",
+    "algorithm": "RK1"
+  },
+  "elements": [
+    {
+      "name": "Well_Population_A",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "200",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "sick_a",
+      "type": "FLOW",
+      "from": "Well_Population_A",
+      "to": "Ill_no_formal_care_A",
+      "behavior": {
+        "value": "[sickness_rate_a]*[Well_Population_A]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "sickness_rate_a",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.8",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Ill_no_formal_care_A",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "473",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "resolve_self_care_a",
+      "type": "FLOW",
+      "from": "Ill_no_formal_care_A",
+      "to": "Well_Population_A",
+      "behavior": {
+        "value": "[Ill_no_formal_care_A]*(1-[seeking_rate_a])",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "resolve_formal_care_a",
+      "type": "FLOW",
+      "from": "Health_and_Medical_Care",
+      "to": "Well_Population_A",
+      "behavior": {
+        "value": "[Health_and_Medical_Care]*[resolve_with_formal_care_rate_a]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "seek_care_a",
+      "type": "FLOW",
+      "from": "Ill_no_formal_care_A",
+      "to": "Health_and_Medical_Care",
+      "behavior": {
+        "value": "[Ill_no_formal_care_A]*[seeking_rate_a]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "seeking_rate_a",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "327/473",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "not_resolve_with_care_a",
+      "type": "FLOW",
+      "from": "Health_and_Medical_Care",
+      "to": "Ill_no_formal_care_A",
+      "behavior": {
+        "value": "[Health_and_Medical_Care]*(1-[resolve_with_formal_care_rate_a])",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "resolve_with_formal_care_rate_a",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.05",
+        "description": "a rate of 0.05 will maintain steady state",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Health_and_Medical_Care",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "327",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "add",
+      "type": "FLOW",
+      "from": null,
+      "to": "Well_Population_A",
+      "behavior": {
+        "value": "1",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "die",
+      "type": "FLOW",
+      "from": "Ill_no_formal_care_A",
+      "to": null,
+      "behavior": {
+        "value": "1",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Symptoms_a",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Ill_no_formal_care_A]+[Health_and_Medical_Care]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Total_Pop_A",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Symptoms_a]+[Well_Population_A]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Well_Population",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "200",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Ill_no_formal_care",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "473",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "sick",
+      "type": "FLOW",
+      "from": "Well_Population",
+      "to": "Ill_no_formal_care",
+      "behavior": {
+        "value": "[sickness_rate]*[Well_Population]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "sickness_rate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.8",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "considered_medical",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "327",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "seek_care",
+      "type": "FLOW",
+      "from": "Ill_no_formal_care",
+      "to": "considered_medical",
+      "behavior": {
+        "value": "[Ill_no_formal_care]*[seeking_rate]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "seeking_rate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "327/800",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Visited_PHC_physician",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "visit_to_PHC",
+      "type": "FLOW",
+      "from": "considered_medical",
+      "to": "Visited_PHC_physician",
+      "behavior": {
+        "value": "[considered_medical]*[PHC_office_rate]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Visited_specialist",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "refer",
+      "type": "FLOW",
+      "from": "Visited_PHC_physician",
+      "to": "Visited_specialist",
+      "behavior": {
+        "value": "[Visited_PHC_physician]*[refer_rate]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "direct_to_spec",
+      "type": "FLOW",
+      "from": "considered_medical",
+      "to": "Visited_specialist",
+      "behavior": {
+        "value": "[considered_medical]*[direct_spec_rate]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Hospital_OP_Clinic",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "attended_ED",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Hospitalized",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Symptoms_Reported",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Ill_no_formal_care]+[visited_Alternative]+[Hospital_OP_Clinic]+[Physicians_Office]+[received_Home_Care]+[Hospital_OP_Clinic]+[attended_ED]+[Hospitalized]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "admit",
+      "type": "FLOW",
+      "from": "attended_ED",
+      "to": "Hospitalized",
+      "behavior": {
+        "value": "[attended_ED]*[hosp_rate]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Physicians_Office",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Visited_specialist]+[Visited_PHC_physician]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "to_OPD",
+      "type": "FLOW",
+      "from": "considered_medical",
+      "to": "Hospital_OP_Clinic",
+      "behavior": {
+        "value": "[considered_medical]*[OPD_Rate]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "to_ED",
+      "type": "FLOW",
+      "from": "considered_medical",
+      "to": "attended_ED",
+      "behavior": {
+        "value": "[considered_medical]*[ED_rate]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "visited_Alternative",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "to_Alt_Care",
+      "type": "FLOW",
+      "from": "considered_medical",
+      "to": "visited_Alternative",
+      "behavior": {
+        "value": "65/327",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "received_Home_Care",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "home_care",
+      "type": "FLOW",
+      "from": "considered_medical",
+      "to": "received_Home_Care",
+      "behavior": {
+        "value": "[considered_medical]*[home_care_rate]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "alt_rate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "65/327",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "ED_rate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "13/327",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "PHC_office_rate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "113/327",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "home_care_rate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "14/327",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "OPD_Rate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "21/327",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "hosp_rate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "8/13",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "resolve_self_care",
+      "type": "FLOW",
+      "from": "Ill_no_formal_care",
+      "to": "Well_Population",
+      "behavior": {
+        "value": "[Ill_no_formal_care]*(1-[seeking_rate])",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "outcome_split",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "to",
+      "type": "FLOW",
+      "from": "Visited_specialist",
+      "to": "outcome_split",
+      "behavior": {
+        "value": "[Visited_specialist]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "to_1",
+      "type": "FLOW",
+      "from": "Visited_PHC_physician",
+      "to": "outcome_split",
+      "behavior": {
+        "value": "[Visited_PHC_physician]*(1-[refer_rate])",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Flow",
+      "type": "FLOW",
+      "from": "received_Home_Care",
+      "to": "outcome_split",
+      "behavior": {
+        "value": "[received_Home_Care]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Flow_1",
+      "type": "FLOW",
+      "from": "Hospital_OP_Clinic",
+      "to": "outcome_split",
+      "behavior": {
+        "value": "[Hospital_OP_Clinic]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Flow_2",
+      "type": "FLOW",
+      "from": "Hospitalized",
+      "to": "outcome_split",
+      "behavior": {
+        "value": "[Hospitalized]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "not_resolve_with_care",
+      "type": "FLOW",
+      "from": "outcome_split",
+      "to": "Ill_no_formal_care",
+      "behavior": {
+        "value": "[outcome_split]*(1-[resolve_with_formal_care_rate])",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "resolve_formal_care",
+      "type": "FLOW",
+      "from": "outcome_split",
+      "to": "Well_Population",
+      "behavior": {
+        "value": "[outcome_split]*[resolve_with_formal_care_rate]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "resolve_with_formal_care_rate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.03",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Flow_3",
+      "type": "FLOW",
+      "from": "visited_Alternative",
+      "to": "outcome_split",
+      "behavior": {
+        "value": "[visited_Alternative]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Flow_4",
+      "type": "FLOW",
+      "from": "attended_ED",
+      "to": "outcome_split",
+      "behavior": {
+        "value": "[attended_ED]*(1-[hosp_rate])",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "refer_rate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "direct_spec_rate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "104/327",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "Well_Population_A",
+      "to": "sick_a"
+    },
+    {
+      "type": "LINK",
+      "from": "sickness_rate_a",
+      "to": "sick_a"
+    },
+    {
+      "type": "LINK",
+      "from": "Well_Population_A",
+      "to": "sick_a"
+    },
+    {
+      "type": "LINK",
+      "from": "Ill_no_formal_care_A",
+      "to": "sick_a"
+    },
+    {
+      "type": "LINK",
+      "from": "Ill_no_formal_care_A",
+      "to": "resolve_self_care_a"
+    },
+    {
+      "type": "LINK",
+      "from": "seeking_rate_a",
+      "to": "resolve_self_care_a"
+    },
+    {
+      "type": "LINK",
+      "from": "Ill_no_formal_care_A",
+      "to": "resolve_self_care_a"
+    },
+    {
+      "type": "LINK",
+      "from": "Well_Population_A",
+      "to": "resolve_self_care_a"
+    },
+    {
+      "type": "LINK",
+      "from": "resolve_with_formal_care_rate_a",
+      "to": "resolve_formal_care_a"
+    },
+    {
+      "type": "LINK",
+      "from": "Health_and_Medical_Care",
+      "to": "resolve_formal_care_a"
+    },
+    {
+      "type": "LINK",
+      "from": "Health_and_Medical_Care",
+      "to": "resolve_formal_care_a"
+    },
+    {
+      "type": "LINK",
+      "from": "Well_Population_A",
+      "to": "resolve_formal_care_a"
+    },
+    {
+      "type": "LINK",
+      "from": "Ill_no_formal_care_A",
+      "to": "seek_care_a"
+    },
+    {
+      "type": "LINK",
+      "from": "seeking_rate_a",
+      "to": "seek_care_a"
+    },
+    {
+      "type": "LINK",
+      "from": "Ill_no_formal_care_A",
+      "to": "seek_care_a"
+    },
+    {
+      "type": "LINK",
+      "from": "Health_and_Medical_Care",
+      "to": "seek_care_a"
+    },
+    {
+      "type": "LINK",
+      "from": "resolve_with_formal_care_rate_a",
+      "to": "not_resolve_with_care_a"
+    },
+    {
+      "type": "LINK",
+      "from": "Health_and_Medical_Care",
+      "to": "not_resolve_with_care_a"
+    },
+    {
+      "type": "LINK",
+      "from": "Health_and_Medical_Care",
+      "to": "not_resolve_with_care_a"
+    },
+    {
+      "type": "LINK",
+      "from": "Ill_no_formal_care_A",
+      "to": "not_resolve_with_care_a"
+    },
+    {
+      "type": "LINK",
+      "from": "Well_Population_A",
+      "to": "add"
+    },
+    {
+      "type": "LINK",
+      "from": "Ill_no_formal_care_A",
+      "to": "die"
+    },
+    {
+      "type": "LINK",
+      "from": "Ill_no_formal_care_A",
+      "to": "Symptoms_a"
+    },
+    {
+      "type": "LINK",
+      "from": "Health_and_Medical_Care",
+      "to": "Symptoms_a"
+    },
+    {
+      "type": "LINK",
+      "from": "Well_Population_A",
+      "to": "Total_Pop_A"
+    },
+    {
+      "type": "LINK",
+      "from": "Symptoms_a",
+      "to": "Total_Pop_A"
+    },
+    {
+      "type": "LINK",
+      "from": "Well_Population",
+      "to": "sick"
+    },
+    {
+      "type": "LINK",
+      "from": "sickness_rate",
+      "to": "sick"
+    },
+    {
+      "type": "LINK",
+      "from": "Well_Population",
+      "to": "sick"
+    },
+    {
+      "type": "LINK",
+      "from": "Ill_no_formal_care",
+      "to": "sick"
+    },
+    {
+      "type": "LINK",
+      "from": "Ill_no_formal_care",
+      "to": "seek_care"
+    },
+    {
+      "type": "LINK",
+      "from": "seeking_rate",
+      "to": "seek_care"
+    },
+    {
+      "type": "LINK",
+      "from": "Ill_no_formal_care",
+      "to": "seek_care"
+    },
+    {
+      "type": "LINK",
+      "from": "considered_medical",
+      "to": "seek_care"
+    },
+    {
+      "type": "LINK",
+      "from": "considered_medical",
+      "to": "visit_to_PHC"
+    },
+    {
+      "type": "LINK",
+      "from": "PHC_office_rate",
+      "to": "visit_to_PHC"
+    },
+    {
+      "type": "LINK",
+      "from": "considered_medical",
+      "to": "visit_to_PHC"
+    },
+    {
+      "type": "LINK",
+      "from": "Visited_PHC_physician",
+      "to": "visit_to_PHC"
+    },
+    {
+      "type": "LINK",
+      "from": "Visited_PHC_physician",
+      "to": "refer"
+    },
+    {
+      "type": "LINK",
+      "from": "refer_rate",
+      "to": "refer"
+    },
+    {
+      "type": "LINK",
+      "from": "Visited_PHC_physician",
+      "to": "refer"
+    },
+    {
+      "type": "LINK",
+      "from": "Visited_specialist",
+      "to": "refer"
+    },
+    {
+      "type": "LINK",
+      "from": "considered_medical",
+      "to": "direct_to_spec"
+    },
+    {
+      "type": "LINK",
+      "from": "direct_spec_rate",
+      "to": "direct_to_spec"
+    },
+    {
+      "type": "LINK",
+      "from": "considered_medical",
+      "to": "direct_to_spec"
+    },
+    {
+      "type": "LINK",
+      "from": "Visited_specialist",
+      "to": "direct_to_spec"
+    },
+    {
+      "type": "LINK",
+      "from": "Ill_no_formal_care",
+      "to": "Symptoms_Reported"
+    },
+    {
+      "type": "LINK",
+      "from": "Hospital_OP_Clinic",
+      "to": "Symptoms_Reported"
+    },
+    {
+      "type": "LINK",
+      "from": "Hospital_OP_Clinic",
+      "to": "Symptoms_Reported"
+    },
+    {
+      "type": "LINK",
+      "from": "attended_ED",
+      "to": "Symptoms_Reported"
+    },
+    {
+      "type": "LINK",
+      "from": "Hospitalized",
+      "to": "Symptoms_Reported"
+    },
+    {
+      "type": "LINK",
+      "from": "Physicians_Office",
+      "to": "Symptoms_Reported"
+    },
+    {
+      "type": "LINK",
+      "from": "visited_Alternative",
+      "to": "Symptoms_Reported"
+    },
+    {
+      "type": "LINK",
+      "from": "received_Home_Care",
+      "to": "Symptoms_Reported"
+    },
+    {
+      "type": "LINK",
+      "from": "attended_ED",
+      "to": "admit"
+    },
+    {
+      "type": "LINK",
+      "from": "hosp_rate",
+      "to": "admit"
+    },
+    {
+      "type": "LINK",
+      "from": "attended_ED",
+      "to": "admit"
+    },
+    {
+      "type": "LINK",
+      "from": "Hospitalized",
+      "to": "admit"
+    },
+    {
+      "type": "LINK",
+      "from": "Visited_PHC_physician",
+      "to": "Physicians_Office"
+    },
+    {
+      "type": "LINK",
+      "from": "Visited_specialist",
+      "to": "Physicians_Office"
+    },
+    {
+      "type": "LINK",
+      "from": "considered_medical",
+      "to": "to_OPD"
+    },
+    {
+      "type": "LINK",
+      "from": "OPD_Rate",
+      "to": "to_OPD"
+    },
+    {
+      "type": "LINK",
+      "from": "considered_medical",
+      "to": "to_OPD"
+    },
+    {
+      "type": "LINK",
+      "from": "Hospital_OP_Clinic",
+      "to": "to_OPD"
+    },
+    {
+      "type": "LINK",
+      "from": "considered_medical",
+      "to": "to_ED"
+    },
+    {
+      "type": "LINK",
+      "from": "ED_rate",
+      "to": "to_ED"
+    },
+    {
+      "type": "LINK",
+      "from": "considered_medical",
+      "to": "to_ED"
+    },
+    {
+      "type": "LINK",
+      "from": "attended_ED",
+      "to": "to_ED"
+    },
+    {
+      "type": "LINK",
+      "from": "considered_medical",
+      "to": "to_Alt_Care"
+    },
+    {
+      "type": "LINK",
+      "from": "visited_Alternative",
+      "to": "to_Alt_Care"
+    },
+    {
+      "type": "LINK",
+      "from": "considered_medical",
+      "to": "home_care"
+    },
+    {
+      "type": "LINK",
+      "from": "home_care_rate",
+      "to": "home_care"
+    },
+    {
+      "type": "LINK",
+      "from": "considered_medical",
+      "to": "home_care"
+    },
+    {
+      "type": "LINK",
+      "from": "received_Home_Care",
+      "to": "home_care"
+    },
+    {
+      "type": "LINK",
+      "from": "Ill_no_formal_care",
+      "to": "resolve_self_care"
+    },
+    {
+      "type": "LINK",
+      "from": "seeking_rate",
+      "to": "resolve_self_care"
+    },
+    {
+      "type": "LINK",
+      "from": "Ill_no_formal_care",
+      "to": "resolve_self_care"
+    },
+    {
+      "type": "LINK",
+      "from": "Well_Population",
+      "to": "resolve_self_care"
+    },
+    {
+      "type": "LINK",
+      "from": "Visited_specialist",
+      "to": "to"
+    },
+    {
+      "type": "LINK",
+      "from": "Visited_specialist",
+      "to": "to"
+    },
+    {
+      "type": "LINK",
+      "from": "outcome_split",
+      "to": "to"
+    },
+    {
+      "type": "LINK",
+      "from": "Visited_PHC_physician",
+      "to": "to_1"
+    },
+    {
+      "type": "LINK",
+      "from": "refer_rate",
+      "to": "to_1"
+    },
+    {
+      "type": "LINK",
+      "from": "Visited_PHC_physician",
+      "to": "to_1"
+    },
+    {
+      "type": "LINK",
+      "from": "outcome_split",
+      "to": "to_1"
+    },
+    {
+      "type": "LINK",
+      "from": "received_Home_Care",
+      "to": "Flow"
+    },
+    {
+      "type": "LINK",
+      "from": "received_Home_Care",
+      "to": "Flow"
+    },
+    {
+      "type": "LINK",
+      "from": "outcome_split",
+      "to": "Flow"
+    },
+    {
+      "type": "LINK",
+      "from": "Hospital_OP_Clinic",
+      "to": "Flow_1"
+    },
+    {
+      "type": "LINK",
+      "from": "Hospital_OP_Clinic",
+      "to": "Flow_1"
+    },
+    {
+      "type": "LINK",
+      "from": "outcome_split",
+      "to": "Flow_1"
+    },
+    {
+      "type": "LINK",
+      "from": "Hospitalized",
+      "to": "Flow_2"
+    },
+    {
+      "type": "LINK",
+      "from": "Hospitalized",
+      "to": "Flow_2"
+    },
+    {
+      "type": "LINK",
+      "from": "outcome_split",
+      "to": "Flow_2"
+    },
+    {
+      "type": "LINK",
+      "from": "outcome_split",
+      "to": "not_resolve_with_care"
+    },
+    {
+      "type": "LINK",
+      "from": "resolve_with_formal_care_rate",
+      "to": "not_resolve_with_care"
+    },
+    {
+      "type": "LINK",
+      "from": "outcome_split",
+      "to": "not_resolve_with_care"
+    },
+    {
+      "type": "LINK",
+      "from": "Ill_no_formal_care",
+      "to": "not_resolve_with_care"
+    },
+    {
+      "type": "LINK",
+      "from": "outcome_split",
+      "to": "resolve_formal_care"
+    },
+    {
+      "type": "LINK",
+      "from": "resolve_with_formal_care_rate",
+      "to": "resolve_formal_care"
+    },
+    {
+      "type": "LINK",
+      "from": "outcome_split",
+      "to": "resolve_formal_care"
+    },
+    {
+      "type": "LINK",
+      "from": "Well_Population",
+      "to": "resolve_formal_care"
+    },
+    {
+      "type": "LINK",
+      "from": "visited_Alternative",
+      "to": "Flow_3"
+    },
+    {
+      "type": "LINK",
+      "from": "visited_Alternative",
+      "to": "Flow_3"
+    },
+    {
+      "type": "LINK",
+      "from": "outcome_split",
+      "to": "Flow_3"
+    },
+    {
+      "type": "LINK",
+      "from": "attended_ED",
+      "to": "Flow_4"
+    },
+    {
+      "type": "LINK",
+      "from": "hosp_rate",
+      "to": "Flow_4"
+    },
+    {
+      "type": "LINK",
+      "from": "attended_ED",
+      "to": "Flow_4"
+    },
+    {
+      "type": "LINK",
+      "from": "outcome_split",
+      "to": "Flow_4"
+    }
+  ],
+  "engine_settings": []
+}

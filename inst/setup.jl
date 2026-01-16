@@ -13,7 +13,7 @@ Pkg.activate(env_path)
 
 # Install SystemDynamicsBuildR from GitHub
 println("\nInstalling SystemDynamicsBuildR.jl from GitHub...")
-Pkg.add(url="https://github.com/KCEvers/SystemDynamicsBuildR.jl")
+Pkg.add(url="https://github.com/KCEvers/SystemDynamicsBuildR.jl", rev=jl_pkg_version)
 
 # Install all other dependencies from Project.toml
 println("\nInstalling dependencies from Project.toml...")

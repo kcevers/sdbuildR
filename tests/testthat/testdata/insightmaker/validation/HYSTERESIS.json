@@ -1,0 +1,137 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "HYSTERESIS",
+  "simulation": {
+    "version": "27",
+    "time_length": "50",
+    "time_start": "0",
+    "time_step": "1",
+    "time_units": "WEEKS",
+    "algorithm": "RK1"
+  },
+  "elements": [
+    {
+      "name": "A",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "15",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "R",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "100*(1-(1-F(Weeks(),[B],[A]))^2)+[X]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "B",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "20",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "F_1",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "100*(1-(1-F(Weeks(),[C],[A]))^2)+[X]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "C",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[B]+[D]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "D",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "20",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "X",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Flow",
+      "type": "FLOW",
+      "from": null,
+      "to": "X",
+      "behavior": {
+        "value": "1",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "A",
+      "to": "R"
+    },
+    {
+      "type": "LINK",
+      "from": "B",
+      "to": "R"
+    },
+    {
+      "type": "LINK",
+      "from": "X",
+      "to": "R"
+    },
+    {
+      "type": "LINK",
+      "from": "A",
+      "to": "F_1"
+    },
+    {
+      "type": "LINK",
+      "from": "C",
+      "to": "F_1"
+    },
+    {
+      "type": "LINK",
+      "from": "X",
+      "to": "F_1"
+    },
+    {
+      "type": "LINK",
+      "from": "B",
+      "to": "C"
+    },
+    {
+      "type": "LINK",
+      "from": "D",
+      "to": "C"
+    },
+    {
+      "type": "LINK",
+      "from": "X",
+      "to": "Flow"
+    }
+  ],
+  "engine_settings": {
+    "globals": "Function F(x,a,d) \n\nif x > a+d then \n  1\n  else if x > a then\n   1-2*(((a-x+d)/(2*d))^2) \n   else\n       ifthenelse(x>a-d,2*(((x-a+d)/(2*d))^2),0)\n          \nend if\n      \nEnd Function"
+  }
+}

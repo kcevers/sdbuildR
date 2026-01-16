@@ -1,0 +1,275 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "Dependence",
+  "simulation": {
+    "version": "36",
+    "time_length": "50",
+    "time_start": "0",
+    "time_step": "0.5",
+    "time_units": "MONTHS",
+    "algorithm": "RK1"
+  },
+  "elements": [
+    {
+      "name": "Self_help_capacity",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "erodes",
+      "type": "FLOW",
+      "from": "Self_help_capacity",
+      "to": null,
+      "behavior": {
+        "value": "[erosion_rate]*[Self_help_capacity]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "builds_up",
+      "type": "FLOW",
+      "from": null,
+      "to": "Self_help_capacity",
+      "behavior": {
+        "value": "[build_up_rate]*[Self_help_capacity]*(1-[outside_help_share])*[Gap]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "erosion_rate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.2",
+        "description": "per month",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "build_up_rate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Wellbeing",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "increase_from_self_help",
+      "type": "FLOW",
+      "from": null,
+      "to": "Wellbeing",
+      "behavior": {
+        "value": "[Self_help_effectiveness]*[Self_help_capacity]*(1-[outside_help_share])*[Gap]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "decrease",
+      "type": "FLOW",
+      "from": "Wellbeing",
+      "to": null,
+      "behavior": {
+        "value": "[Wellbeing]*[wellbeing_decrease_rate]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "increase_from_outside_help",
+      "type": "FLOW",
+      "from": null,
+      "to": "Wellbeing",
+      "behavior": {
+        "value": "[Outside_help_effectiveness]*[outside_help_share]*[Gap]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "wellbeing_decrease_rate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.2",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "outside_help_share",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.2",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Outside_help_effectiveness",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Wellbeing_Goal",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "2",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Self_help_effectiveness",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Gap",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Wellbeing_Goal]-[Wellbeing]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "Self_help_capacity",
+      "to": "erodes"
+    },
+    {
+      "type": "LINK",
+      "from": "erosion_rate",
+      "to": "erodes"
+    },
+    {
+      "type": "LINK",
+      "from": "Self_help_capacity",
+      "to": "erodes"
+    },
+    {
+      "type": "LINK",
+      "from": "Self_help_capacity",
+      "to": "builds_up"
+    },
+    {
+      "type": "LINK",
+      "from": "build_up_rate",
+      "to": "builds_up"
+    },
+    {
+      "type": "LINK",
+      "from": "outside_help_share",
+      "to": "builds_up"
+    },
+    {
+      "type": "LINK",
+      "from": "Gap",
+      "to": "builds_up"
+    },
+    {
+      "type": "LINK",
+      "from": "Self_help_capacity",
+      "to": "builds_up"
+    },
+    {
+      "type": "LINK",
+      "from": "Self_help_capacity",
+      "to": "increase_from_self_help"
+    },
+    {
+      "type": "LINK",
+      "from": "outside_help_share",
+      "to": "increase_from_self_help"
+    },
+    {
+      "type": "LINK",
+      "from": "Self_help_effectiveness",
+      "to": "increase_from_self_help"
+    },
+    {
+      "type": "LINK",
+      "from": "Gap",
+      "to": "increase_from_self_help"
+    },
+    {
+      "type": "LINK",
+      "from": "Wellbeing",
+      "to": "increase_from_self_help"
+    },
+    {
+      "type": "LINK",
+      "from": "Wellbeing",
+      "to": "decrease"
+    },
+    {
+      "type": "LINK",
+      "from": "wellbeing_decrease_rate",
+      "to": "decrease"
+    },
+    {
+      "type": "LINK",
+      "from": "Wellbeing",
+      "to": "decrease"
+    },
+    {
+      "type": "LINK",
+      "from": "outside_help_share",
+      "to": "increase_from_outside_help"
+    },
+    {
+      "type": "LINK",
+      "from": "Outside_help_effectiveness",
+      "to": "increase_from_outside_help"
+    },
+    {
+      "type": "LINK",
+      "from": "Gap",
+      "to": "increase_from_outside_help"
+    },
+    {
+      "type": "LINK",
+      "from": "Wellbeing",
+      "to": "increase_from_outside_help"
+    },
+    {
+      "type": "LINK",
+      "from": "Wellbeing",
+      "to": "Gap"
+    },
+    {
+      "type": "LINK",
+      "from": "Wellbeing_Goal",
+      "to": "Gap"
+    }
+  ],
+  "engine_settings": []
+}

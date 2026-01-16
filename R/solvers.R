@@ -29,15 +29,33 @@ solvers <- function(method,
                     from = c("R", "Julia"),
                     to = NULL,
                     show_info = FALSE) {
-  if (missing(method) & missing(from)) {
+  method_spec <- !missing(method) && !is.null(method) && !any(is.na(method))
+  from_spec <- !missing(from) && !is.null(from) && !any(is.na(from))
+  to_spec <- !missing(to) && !is.null(to) && !any(is.na(to))
+  if (!method_spec && !from_spec) {
     stop("Either method or from must be specified!")
   }
-  from <- clean_language(from)
+
+  if (method_spec && (!inherits(method, "character") || length(method) > 1)) {
+    stop("method must be a single string!")
+  }
+
+  if (from_spec && (!inherits(from, "character") || length(from) > 1)) {
+    stop("from must be a single string!")
+  }
+
+  if (from_spec) {
+    from <- clean_language(from)
+  }
 
   # If 'to' is missing, check whether method is valid for this language
-  if (is.null(to)) {
+  if (!to_spec) {
     translate <- FALSE
   } else {
+    if (to_spec && (!inherits(to, "character") || length(to) > 1)) {
+      stop("to must be a single string!")
+    }
+
     translate <- TRUE
     to <- clean_language(to)
     if (to == from) {

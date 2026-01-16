@@ -6,20 +6,43 @@ test_that("parse_args() works", {
 })
 
 
+test_that("compact_() works", {
+  expect_equal(
+    compact_(list()),
+    list()
+  )
+
+  expect_equal(
+    compact_(list(NULL)),
+    list()
+  )
+
+  expect_equal(
+    compact_(list(a = NULL)),
+    list()
+  )
+
+  expect_equal(
+    compact_(list(a = NULL, b = 9)),
+    list(b = 9)
+  )
+})
+
+
 test_that("clean_name() works", {
   sfm <- xmile()
   names_df <- get_names(sfm)
 
   # Check for syntactically correct names
-  expect_equal(clean_name(c("TRUE", "T"), names_df[["name"]]), c("TRUE__1", "T_1"))
-  expect_equal(clean_name(c("a", "b", "T"), names_df[["name"]]), c("a", "b", "T_1"))
-  expect_equal(clean_name(c("a-1", "b!2", "c.1"), names_df[["name"]]), c("a_1", "b_2", "c_1"))
-  expect_equal(clean_name(c("a-1", "a!1"), names_df[["name"]]), c("a_1", "a_1_1"))
-  expect_equal(clean_name(c(" Hell0 ", "Hell0"), names_df[["name"]]), c("Hell0", "Hell0_1"))
+  expect_equal(clean_name(c("TRUE", "T")), c("TRUE__1", "T_1"))
+  expect_equal(clean_name(c("a", "b", "T")), c("a", "b", "T_1"))
+  expect_equal(clean_name(c("a-1", "b!2", "c.1")), c("a_1", "b_2", "c_1"))
+  expect_equal(clean_name(c("a-1", "a!1")), c("a_1", "a_1_1"))
+  expect_equal(clean_name(c(" Hell0 ", "Hell0")), c("Hell0", "Hell0_1"))
 
   # Difficult, but ensure unique names
   expect_equal(clean_name(c("F"), "F_1"), c("F_1_1"))
-  expect_equal(clean_name(c("-1", "_1"), names_df[["name"]]), c("X_1", "X_1_1"))
+  expect_equal(clean_name(c("-1", "_1")), c("X_1", "X_1_1"))
 })
 
 
@@ -154,4 +177,19 @@ test_that("get_range_names() works", {
     get_range_names("[a1] + no + [a2]", c("a1", "a2"), names_with_brackets = TRUE),
     data.frame(start = c(1, 13), end = c(4, 16), name = c("a1", "a2"))
   )
+})
+
+
+test_that("str_wrap_() works", {
+  width <- 20
+  x <- c(
+    "This is a long string that needs to be wrapped properly.",
+    "Short string.",
+    "Another long string that should be wrapped at the specified width."
+  )
+  wrapped <- str_wrap_(x, width = width)
+  expect_equal(length(x), length(wrapped))
+  expect_type(wrapped, "character")
+
+  expect_true(all(nchar(wrapped) <= width | grepl("\n", wrapped)))
 })

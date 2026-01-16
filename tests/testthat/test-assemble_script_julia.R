@@ -18,7 +18,7 @@ test_that("templates work", {
   sim <- expect_no_error(simulate(sfm))
   expect_true(sim$success)
   expect_true(nrow(sim$df) > 0)
-  expect_equal(dplyr::last(sim$df[sim$df$variable == "coffee_temperature", "value"]),
+  expect_equal(last(sim$df[sim$df$variable == "coffee_temperature", "value"]),
     sim$constants[["room_temperature"]],
     tolerance = .01
   )
@@ -173,8 +173,10 @@ test_that("simulate with different components works", {
   sim <- simulate(sfm |> sim_specs(stop = 10, dt = 0.1, language = "Julia"),
     only_stocks = TRUE
   )
-  expect_equal(length(unique(as.data.frame(sim)$variable)),
-               length(names(sfm$model$variables$stock)))
+  expect_equal(
+    length(unique(as.data.frame(sim)$variable)),
+    length(names(sfm$model$variables$stock))
+  )
 
   # All variables should be kept if only_stocks = FALSE
   sfm <- xmile("SIR")
@@ -202,13 +204,13 @@ test_that("seed works", {
   sim1 <- simulate(sfm)
   sim2 <- simulate(sfm)
   expect_equal(sim1$df$value[1] == sim2$df$value[1], FALSE)
-  expect_equal(dplyr::last(sim1$df$value) == dplyr::last(sim2$df$value), FALSE)
+  expect_equal(last(sim1$df$value) == last(sim2$df$value), FALSE)
 
   # With a seed, simulations should be the same
   sfm <- sfm |> sim_specs(seed = 1)
   sim1 <- simulate(sfm)
   sim2 <- simulate(sfm)
-  expect_equal(dplyr::last(sim1$df$value), dplyr::last(sim2$df$value))
+  expect_equal(last(sim1$df$value), last(sim2$df$value))
 })
 
 
@@ -305,4 +307,3 @@ test_that("functions in Julia work", {
     build("a", "stock", eqn = "cos(u('10radians'))")
   expect_no_error(simulate(sfm))
 })
-

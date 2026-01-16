@@ -21,6 +21,195 @@ has_internet <- function() {
 }
 
 
+#' Bind rows
+#'
+#' @param ... (List of) data frames
+#' @param .id ID column
+#'
+#' @returns Data frame
+#' @noRd
+bind_rows_ <- function(..., .id = NULL) {
+  dfs <- list(...)
+  if (length(dfs) == 1 && is.list(dfs[[1]]) && !is.data.frame(dfs[[1]])) {
+    dfs <- dfs[[1]]
+  }
+  # Convert matrices and named vectors to data.frames
+  dfs <- lapply(dfs, function(x) {
+    if (is.matrix(x)) {
+      as.data.frame(x)
+    } else if (is.atomic(x) && !is.null(names(x))) {
+      # Convert named vector to one-row data frame
+      as.data.frame(as.list(x), stringsAsFactors = FALSE)
+    } else {
+      x
+    }
+  })
+  # Silence warning about empty columns
+  result <- withCallingHandlers(
+    data.table::rbindlist(dfs,
+      fill = TRUE, use.names = TRUE,
+      ignore.attr = TRUE, idcol = .id
+    ),
+    warning = function(w) {
+      if (grepl("filled with NA", w$message, fixed = TRUE)) {
+        invokeRestart("muffleWarning")
+      }
+    }
+  )
+  as.data.frame(result)
+}
+
+
+#' Return last value
+#'
+#' Replacement for dplyr::last; convenience function
+#'
+#' @param x Vector
+#' @param n Return last n values
+#' @param default Default value to return
+#'
+#' @returns Last n values
+#' @noRd
+last <- function(x, n = 1L, default = NULL) {
+  len <- length(x)
+
+  if (len == 0L) {
+    return(default)
+  }
+
+  if (n == 1L) {
+    return(x[len])
+  }
+
+  if (n > len) {
+    return(x)
+  }
+
+  x[(len - n + 1L):len]
+}
+
+
+#' Evaluate if x and y are the same within tolerance
+#'
+#' Replacement of dplyr::near; convenience function
+#'
+#' @param x First value
+#' @param y Second value
+#' @param tol Tolerance
+#'
+#' @returns Logical value
+#' @noRd
+near <- function(x, y, tol = .Machine$double.eps^0.5) {
+  abs(x - y) < tol
+}
+
+
+set_colnames <- `colnames<-`
+
+
+set_rownames <- `rownames<-`
+
+
+#' Switch names and values of list, handling different lengths in entries
+#'
+#' @param x List
+#' @returns List
+#' @noRd
+switch_list <- function(x) {
+  # Switch names and values
+  new_list <- unlist(lapply(names(x), function(name) {
+    stats::setNames(rep(name, length(x[[name]])), x[[name]])
+  }), recursive = FALSE)
+
+  return(as.list(new_list))
+}
+
+
+#' Near equivalent of purrr::flatten()
+#'
+#' @param x List
+#'
+#' @returns List with one level removed
+#' @noRd
+flatten <- function(x) {
+  result <- list()
+  for (i in seq_along(x)) {
+    elem <- x[[i]]
+    outer_name <- names(x)[i]
+
+    # Convert to list
+    if (is.list(elem)) {
+      elem_list <- elem
+    } else {
+      elem_list <- list(elem)
+      # If element wasn't already a list and has an outer name, use it
+      if (!is.null(outer_name) && outer_name != "") {
+        names(elem_list) <- outer_name
+      }
+    }
+
+    result <- c(result, elem_list)
+  }
+  result
+}
+
+#' Near equivalent of purrr::transpose()
+#'
+#' @param x List
+#'
+#' @returns Transposed list
+#' @noRd
+transpose_ <- function(x) {
+  # Check if all elements are atomic vectors of the same length
+  all_atomic <- all(sapply(x, is.atomic))
+  lengths_vec <- lengths(x)
+  all_same_length <- length(unique(lengths_vec)) == 1 && lengths_vec[1] > 0
+
+  # Check if elements have names (like test4)
+  elements_have_names <- any(sapply(x, function(e) !is.null(names(e))))
+
+  if (all_atomic && all_same_length && !elements_have_names) {
+    # Case: list of equal-length unnamed vectors - transpose like a matrix
+    n <- lengths_vec[1]
+    outer_names <- names(x)
+
+    result <- lapply(seq_len(n), function(i) {
+      values <- lapply(x, function(vec) unname(vec[i]))
+      if (!is.null(outer_names)) {
+        names(values) <- outer_names
+      }
+      values
+    })
+
+    return(result)
+  }
+
+  # Otherwise: standard transpose (swap inner/outer structure)
+  inner_names <- unique(unlist(lapply(x, names)))
+  outer_names <- names(x)
+
+  result <- lapply(inner_names, function(nm) {
+    values <- lapply(seq_along(x), function(i) {
+      elem <- x[[i]]
+      if (is.list(elem)) {
+        elem[[nm]]
+      } else {
+        if (nm %in% names(elem)) unname(elem[[nm]]) else NULL
+      }
+    })
+
+    if (!is.null(outer_names)) {
+      names(values) <- outer_names
+    }
+
+    values
+  })
+
+  names(result) <- inner_names
+  result
+}
+
+
 #' Near equivalent of purrr::compact()
 #'
 #' @param x List
@@ -28,7 +217,12 @@ has_internet <- function() {
 #' @returns List with NULL values removed
 #' @noRd
 compact_ <- function(x) {
-  Filter(Negate(rlang::is_empty), Filter(Negate(is.null), x))
+  result <- Filter(Negate(function(x) length(x) == 0), Filter(Negate(is.null), x))
+  if (length(result) == 0 & inherits(x, "list")) {
+    list()
+  } else {
+    result
+  }
 }
 
 
@@ -43,7 +237,8 @@ is_defined <- function(x) {
   if (length(x) == 0) {
     return(FALSE)
   } else {
-    if (any(is.na(x))) {
+    # if (any(is.na(x))) {
+    if (all(is.na(x))) {
       return(FALSE)
     } else {
       return(any(nzchar(x)))
@@ -107,6 +302,16 @@ get_map <- function(x, element_name, change_null_to = "") {
   return(unlist(x_list))
 }
 
+
+str_wrap_ <- function(str, width) {
+  str_w <- stringi::stri_wrap(str,
+    width = width, indent = 0,
+    exdent = 0, whitespace_only = TRUE, simplify = FALSE
+  )
+
+  out <- vapply(str_w, stringi::stri_c, collapse = "\n", character(1))
+  return(out)
+}
 
 #' Ensure length of arg is same as target
 #'
@@ -202,8 +407,7 @@ clean_type <- function(type) {
 #' Clean variable name(s) to create syntactically valid, unique names for use in R and Julia.
 #'
 #' @param new Vector of names to transform to valid names
-#' @param existing Vector of existing names in model
-#' @param protected Optional vector of protected names
+#' @param protected Optional vector of protected names, e.g., existing names in model
 #'
 #' @returns Vector of cleaned names
 #' @export
@@ -214,7 +418,7 @@ clean_type <- function(type) {
 #' # an unique name
 #' clean_name("predator", as.data.frame(sfm)[["name"]]) # "predator_1"
 #'
-clean_name <- function(new, existing, protected = c()) {
+clean_name <- function(new, protected = NULL) {
   # Define protected names: these cannot be used as variable names
   protected_names <- c(
     # Reserved words in R
@@ -228,7 +432,7 @@ clean_name <- function(new, existing, protected = c()) {
     "baremodule", "begin", "break", "catch", "const", "continue", "do",
     "else", "elseif", "end", "export", "false", "finally",
     "global", "error", "throw",
-    "import", "let", "local", "macro", "module", "quote", "return", "struct", "true", "try", "catch", "using",
+    "import", "let", "local", P[["macro_name"]], "module", "quote", "return", "struct", "true", "try", "catch", "using",
     "Missing", "missing", "Nothing", "nothing",
 
     # Add R custom functions
@@ -238,7 +442,7 @@ clean_name <- function(new, existing, protected = c()) {
     names(julia_func()),
 
     # These are variables in the ode and cannot be model element names
-    unname(unlist(.sdbuildR_env[["P"]][names(.sdbuildR_env[["P"]]) %in% c(
+    unname(unlist(P[names(P) %in% c(
       "jl_pkg_name", "model_setup_name", "macro_name", "initial_value_name",
       "initial_value_names", "parameter_name", "parameter_names",
       "state_name", "time_name", "change_state_name", "times_name",
@@ -247,8 +451,7 @@ clean_name <- function(new, existing, protected = c()) {
       "rootfun_name", "eventfun_name", "convert_u_func", "sdbuildR_units",
       "MyCustomUnits", "init_sdbuildR"
     )])),
-    protected,
-    as.character(stats::na.omit(existing))
+    as.character(stats::na.omit(protected))
   ) |> unique()
 
   # Make syntactically valid and unique names out of character vectors; Insight Maker allows names to be double, so make unique
@@ -263,15 +466,15 @@ clean_name <- function(new, existing, protected = c()) {
   # If any names end in a suffix used by sdbuildR, add _
   pattern <- paste0(
     # e.g. names cannot end with _delay[0-9]+$ or _delay[0-9]+_acc[0-9]+$
-    .sdbuildR_env[["P"]][["conveyor_suffix"]], "$|", .sdbuildR_env[["P"]][["delay_suffix"]],
-    "[0-9]+$|", .sdbuildR_env[["P"]][["past_suffix"]], "[0-9]+$|",
-    .sdbuildR_env[["P"]][["fix_suffix"]], "$|",
-    .sdbuildR_env[["P"]][["fix_length_suffix"]], "$|",
-    .sdbuildR_env[["P"]][["conveyor_suffix"]], "$|",
-    .sdbuildR_env[["P"]][["delayN_suffix"]], "[0-9]+",
-    .sdbuildR_env[["P"]][["acc_suffix"]], "[0-9]+$|",
-    .sdbuildR_env[["P"]][["smoothN_suffix"]], "[0-9]+",
-    .sdbuildR_env[["P"]][["acc_suffix"]], "[0-9]+$"
+    P[["conveyor_suffix"]], "$|", P[["delay_suffix"]],
+    "[0-9]+$|", P[["past_suffix"]], "[0-9]+$|",
+    P[["fix_suffix"]], "$|",
+    P[["fix_length_suffix"]], "$|",
+    P[["conveyor_suffix"]], "$|",
+    P[["delayN_suffix"]], "[0-9]+",
+    P[["acc_suffix"]], "[0-9]+$|",
+    P[["smoothN_suffix"]], "[0-9]+",
+    P[["acc_suffix"]], "[0-9]+$"
   )
 
   idx <- grepl(new_names, pattern = pattern)
@@ -288,7 +491,10 @@ clean_name <- function(new, existing, protected = c()) {
 #' @noRd
 #' @returns Vector with names of model variables
 get_model_var <- function(sfm) {
-  c(unname(unlist(lapply(sfm[["model"]][["variables"]], names))), names(sfm[["macro"]]))
+  c(
+    unname(unlist(lapply(sfm[["model"]][["variables"]], names))),
+    names(sfm[[P[["macro_name"]]]])
+  )
 }
 
 
@@ -342,11 +548,11 @@ get_names <- function(sfm) {
   }
 
   # Add macros if any
-  if (!is.null(sfm[["macro"]]) && length(names(sfm[["macro"]])) > 0) {
+  if (!is.null(sfm[[P[["macro_name"]]]]) && length(names(sfm[[P[["macro_name"]]]])) > 0) {
     macro_df <- data.frame(
-      type = "macro",
-      name = names(sfm[["macro"]]),
-      label = names(sfm[["macro"]]),
+      type = P[["macro_name"]],
+      name = names(sfm[[P[["macro_name"]]]]),
+      label = names(sfm[[P[["macro_name"]]]]),
       units = "",
       stringsAsFactors = FALSE
     )
@@ -465,7 +671,7 @@ sort_args <- function(arg, func_name, default_arg = NULL, var_names = NULL) {
   } else {
     # Check whether all argument names are in the allowed argument names in case of no dots argument (...)
     idx <- !names_arg %in% names(default_arg) & !is.na(names_arg)
-    if (!varargs & any(idx)) {
+    if (!varargs && any(idx)) {
       stop(paste0(
         "Argument",
         ifelse(sum(idx) > 1, "s ", " "),
@@ -477,7 +683,7 @@ sort_args <- function(arg, func_name, default_arg = NULL, var_names = NULL) {
     }
 
     # Check if there are too many arguments
-    if (!varargs & length(arg) > length(default_arg)) {
+    if (!varargs && length(arg) > length(default_arg)) {
       stop(paste0(
         "Too many arguments for function ", func_name, "(). Allowed arguments: ",
         paste0(names(default_arg), collapse = ", "), "."
@@ -585,7 +791,10 @@ get_range_names <- function(eqn, var_names, names_with_brackets = FALSE) {
       idxs_df[["name"]] <- rep(original_names, vapply(idxs_names, nrow, numeric(1)))
 
       # Remove matches in characters
-      idxs_exclude <- get_seq_exclude(eqn, type = "quot", names_with_brackets = names_with_brackets)
+      idxs_exclude <- get_seq_exclude(eqn,
+        type = "quot",
+        names_with_brackets = names_with_brackets
+      )
 
       if (nrow(idxs_df) > 0) idxs_df <- idxs_df[!(idxs_df[["start"]] %in% idxs_exclude | idxs_df[["end"]] %in% idxs_exclude), ]
     }
@@ -625,11 +834,14 @@ get_seq_exclude <- function(eqn,
 
   if ("names" %in% type) {
     # Get start and end indices of variable names
-    pair_names <- get_range_names(eqn, var_names, names_with_brackets = names_with_brackets)
+    pair_names <- get_range_names(eqn, var_names,
+      names_with_brackets = names_with_brackets
+    )
     if (nrow(pair_names) > 0) pair_names[["type"]] <- "names"
   }
 
-  comb <- dplyr::bind_rows(pair_quotation_marks, pair_names)
+  # comb <- dplyr::bind_rows(pair_quotation_marks, pair_names)
+  comb <- bind_rows_(pair_quotation_marks, pair_names)
 
   # Create sequence
   if (nrow(comb) > 0) {

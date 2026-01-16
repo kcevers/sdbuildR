@@ -5,7 +5,7 @@
 julia_setup_ok <- function() {
   JuliaConnectoR::juliaSetupOk() &&
     isTRUE(.sdbuildR_env[["jl"]][["init"]]) # &&
-    # !is.null(.sdbuildR_env[["JULIA_BINDIR"]])
+  # !is.null(.sdbuildR_env[["JULIA_BINDIR"]])
 }
 
 
@@ -38,7 +38,7 @@ julia_init_ok <- function() {
   # Check init variable exists
   julia_cmd <- paste0(
     "isdefined(Main, :",
-    .sdbuildR_env[["P"]][["init_sdbuildR"]], ")"
+    P[["init_sdbuildR"]], ")"
   )
   init_sdbuildR <- JuliaConnectoR::juliaEval(julia_cmd)
 
@@ -85,11 +85,14 @@ julia_status <- function(verbose = TRUE) {
   )
 
   # Find Julia installation
-  julia_version <- tryCatch({
-    getJuliaVersionViaCmd(getJuliaExecutablePath())
-  }, error = function(e){
-    return(list(version = NULL))
-  })
+  julia_version <- tryCatch(
+    {
+      getJuliaVersionViaCmd(getJuliaExecutablePath())
+    },
+    error = function(e) {
+      return(list(version = NULL))
+    }
+  )
   # result[["julia_found"]] <- !is.null(julia_loc[["version"]]) && nzchar(julia_loc[["version"]]) && file.exists(julia_loc[["path"]]) #&& JuliaConnectoR::juliaSetupOk()
   result[["julia_found"]] <- !is.null(julia_version) && nzchar(julia_version)
 
@@ -317,10 +320,10 @@ check_julia_env_for_pkg <- function(pkg_name) {
 #'
 #' @examplesIf julia_status()$julia_found && Sys.getenv("NOT_CRAN") == "true"
 #' \dontrun{
-#'   install_julia_env()
+#' install_julia_env()
 #'
-#'   # Remove Julia environment
-#'   install_julia_env(remove = TRUE)
+#' # Remove Julia environment
+#' install_julia_env(remove = TRUE)
 #' }
 install_julia_env <- function(remove = FALSE) {
   status <- julia_status(verbose = FALSE)
@@ -346,7 +349,7 @@ install_julia_env <- function(remove = FALSE) {
     # Delete SystemDynamicsBuildR.jl
     JuliaConnectoR::juliaEval(sprintf(
       'using Pkg; Pkg.rm("%s")',
-      .sdbuildR_env[["jl"]][["pkg_name"]]
+      P[["jl_pkg_name"]]
     ))
 
     manifest_file <- system.file("Manifest.toml", package = "sdbuildR")
@@ -364,6 +367,10 @@ install_julia_env <- function(remove = FALSE) {
   } else {
     # Run the setup script
     setup_script <- system.file("setup.jl", package = "sdbuildR")
+    JuliaConnectoR::juliaEval(sprintf(
+      'jl_pkg_version = \"v%s\";',
+      .sdbuildR_env[["jl"]][["pkg_version"]]
+    ))
     JuliaConnectoR::juliaEval(sprintf('include("%s")', setup_script))
     status <- julia_status()
   }
@@ -484,7 +491,7 @@ use_julia <- function(
 
   # Check whether SystemDynamicsBuildR.jl is up to date
   required_pkg_version <- .sdbuildR_env[["jl"]][["pkg_version"]]
-  installed_pkg_version <- find_jl_pkg_version(pkg_name = .sdbuildR_env[["jl"]][["pkg_name"]])
+  installed_pkg_version <- find_jl_pkg_version(pkg_name = P[["jl_pkg_name"]])
 
   if (package_version(installed_pkg_version) < package_version(required_pkg_version)) {
     JuliaConnectoR::stopJulia()
@@ -515,7 +522,7 @@ find_jl_pkg_version <- function(pkg_name) {
     pkg_name
   )
 
-  if (pkg_check$installed & pkg_check$version == "0.0.0") {
+  if (pkg_check$installed && pkg_check$version == "0.0.0") {
     # Try alternative way of finding package version if this did not work
     pkg_check <- check_julia_env_for_pkg(pkg_name)
   }
@@ -562,8 +569,10 @@ getJuliaExecutablePath <- function() {
   } else { # use the JULIA_BINDIR variable, as it is specified
     juliaExe <- list.files(path = juliaBindir, pattern = "^julia.*")
     if (length(juliaExe) == 0) {
-      stop(paste0("No Julia executable file found in supposed bin directory \"" ,
-                  juliaBindir, "\""))
+      stop(paste0(
+        "No Julia executable file found in supposed bin directory \"",
+        juliaBindir, "\""
+      ))
     }
     juliaCmd <- file.path(juliaBindir, "julia")
   }
@@ -635,10 +644,10 @@ create_julia_init_env <- function() {
     "using Statistics\n",
     "using StatsBase\n",
     "using Unitful\n",
-    "using ", .sdbuildR_env[["jl"]][["pkg_name"]], "\n",
-    "using ", .sdbuildR_env[["jl"]][["pkg_name"]], ".",
-    .sdbuildR_env[["P"]][["sdbuildR_units"]], "\n",
-    # "Unitful.register(", .sdbuildR_env[["P"]][["jl_pkg_name"]], ".", .sdbuildR_env[["P"]][["sdbuildR_units"]], ")\n",
+    "using ", P[["jl_pkg_name"]], "\n",
+    "using ", P[["jl_pkg_name"]], ".",
+    P[["sdbuildR_units"]], "\n",
+    # "Unitful.register(", P[["jl_pkg_name"]], ".", P[["sdbuildR_units"]], ")\n",
 
     # # Required when extending a module’s function
     # #import Base: <, >, <=, >=, ==, != #, +, - #, *, /, ^
@@ -686,7 +695,7 @@ Base.ceil(x::Unitful.Quantity) = ceil(Unitful.ustrip.(x)) * Unitful.unit(x)
 Base.trunc(x::Unitful.Quantity) = trunc(Unitful.ustrip.(x)) * Unitful.unit(x)\n",
 
     # Add initialization of sdbuildR
-    paste0("\n", .sdbuildR_env[["P"]][["init_sdbuildR"]], " = true"),
+    paste0("\n", P[["init_sdbuildR"]], " = true"),
     collapse = "\n"
   )
 

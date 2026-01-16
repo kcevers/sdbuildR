@@ -41,11 +41,11 @@ simulate_julia <- function(sfm,
       start_t <- Sys.time()
 
       # Wrap in invisible and capture.output to not show message of units module being overwritten
-      out <- invisible({
-        utils::capture.output({
-          JuliaConnectoR::juliaEval(paste0('include("', filepath, '")'))
-        })
-      })
+      # out <- invisible({
+      #   utils::capture.output({
+      out <- JuliaConnectoR::juliaEval(paste0('include("', filepath, '")'))
+      #   })
+      # })
 
       end_t <- Sys.time()
 
@@ -54,12 +54,12 @@ simulate_julia <- function(sfm,
       }
 
       # Read the constants
-      constants <- as.numeric(JuliaConnectoR::juliaEval(.sdbuildR_env[["P"]][["parameter_name"]]))
-      names(constants) <- JuliaConnectoR::juliaEval(.sdbuildR_env[["P"]][["parameter_names"]])
+      constants <- as.numeric(JuliaConnectoR::juliaEval(P[["parameter_name"]]))
+      names(constants) <- JuliaConnectoR::juliaEval(P[["parameter_names"]])
 
       # Read the initial values of stocks
-      init <- as.numeric(JuliaConnectoR::juliaEval(.sdbuildR_env[["P"]][["initial_value_name"]]))
-      names(init) <- JuliaConnectoR::juliaEval(.sdbuildR_env[["P"]][["initial_value_names"]])
+      init <- as.numeric(JuliaConnectoR::juliaEval(P[["initial_value_name"]]))
+      names(init) <- JuliaConnectoR::juliaEval(P[["initial_value_names"]])
 
       df <- as.data.frame(data.table::fread(filepath_sim, na.strings = c("", "NA")))
 
@@ -125,28 +125,49 @@ compile_julia <- function(sfm, filepath_sim,
   # Add "inflow" and "outflow" entries to stocks to match flow "to" and "from" entries
   flow_df <- get_flow_df(sfm)
 
-  sfm[["model"]][["variables"]][["stock"]] <- lapply(
-    sfm[["model"]][["variables"]][["stock"]],
-    function(x) {
-      x[["inflow"]] <- flow_df[flow_df[["to"]] == x[["name"]], "name"]
-      x[["outflow"]] <- flow_df[flow_df[["from"]] == x[["name"]], "name"]
-
-      if (length(x[["inflow"]]) == 0) {
-        x[["inflow"]] <- ""
-      }
-      if (length(x[["outflow"]]) == 0) {
-        x[["outflow"]] <- ""
-      }
-
-      return(x)
+  stock_names <- names(sfm[["model"]][["variables"]][["stock"]])
+  inflows <- lapply(stock_names, function(stock_name) {
+    x <- flow_df[flow_df[["to"]] == stock_name, "name"]
+    if (length(x) == 0) {
+      x <- ""
     }
-  )
+    x
+  })
+  outflows <- lapply(stock_names, function(stock_name) {
+    x <- flow_df[flow_df[["from"]] == stock_name, "name"]
+    if (length(x) == 0) {
+      x <- ""
+    }
+    x
+  })
+
+  for (i in seq_along(stock_names)) {
+    sfm[["model"]][["variables"]][["stock"]][[stock_names[i]]][["inflow"]] <- inflows[[i]]
+    sfm[["model"]][["variables"]][["stock"]][[stock_names[i]]][["outflow"]] <- outflows[[i]]
+  }
+
+  # sfm[["model"]][["variables"]][["stock"]] <- lapply(
+  #   sfm[["model"]][["variables"]][["stock"]],
+  #   function(x) {
+  #     x[["inflow"]] <- flow_df[flow_df[["to"]] == x[["name"]], "name"]
+  #     x[["outflow"]] <- flow_df[flow_df[["from"]] == x[["name"]], "name"]
+  #
+  #     if (length(x[["inflow"]]) == 0) {
+  #       x[["inflow"]] <- ""
+  #     }
+  #     if (length(x[["outflow"]]) == 0) {
+  #       x[["outflow"]] <- ""
+  #     }
+  #
+  #     return(x)
+  #   }
+  # )
 
   # Adjust keep_unit to FALSE if there are no units defined
   names_df <- get_names(sfm)
   var_names <- get_model_var(sfm)
 
-  # ** check
+  # ** To do: check accuracy
   names_df_no_flow <- names_df
   # Don't check whether flows have units because these are automatically added
   names_df_no_flow <- names_df_no_flow[names_df_no_flow[["type"]] != "flow", ]
@@ -159,7 +180,7 @@ compile_julia <- function(sfm, filepath_sim,
         lapply(x, `[[`, "eqn")
       }
     ) |> unlist(),
-    unlist(lapply(sfm[["macro"]], `[[`, "eqn"))
+    unlist(lapply(sfm[[P[["macro_name"]]]], `[[`, "eqn"))
   )
   units_used <- unlist(stringr::str_extract_all(all_eqns, "\\bu\\([\"|'](.*?)[\"|']\\)"))
 
@@ -181,7 +202,7 @@ compile_julia <- function(sfm, filepath_sim,
 
 
   # Order stocks alphabetically for order in init_names and init
-  sfm[["model"]][["variables"]][["stock"]] <- sfm[["model"]][["variables"]][["stock"]][sort(names(sfm[["model"]][["variables"]][["stock"]]))]
+  sfm[[c("model", "variables", "stock")]] <- sfm[[c("model", "variables", "stock")]][sort(names(sfm[[c("model", "variables", "stock")]]))]
 
 
   # Check keyword arguments are not used for custom functions in Julia
@@ -194,7 +215,7 @@ compile_julia <- function(sfm, filepath_sim,
   rm(out)
 
   # Prepare model for delayN() and smoothN() functions
-  delayN_smoothN <- get_delayN_smoothN(sfm)
+  delayN_smoothN <- get_delay(sfm, type = "delayN_smoothN")
 
   sfm <- prep_delayN_smoothN(sfm, delayN_smoothN)
 
@@ -203,9 +224,9 @@ compile_julia <- function(sfm, filepath_sim,
   ordering <- order_equations(sfm)
 
   # If there are no dynamic variables or delayed variables, set only_stocks to TRUE
-  delay_past <- get_delay_past(sfm)
+  delay_past <- get_delay(sfm, type = "past")
 
-  if (!only_stocks & is.null(ordering[["dynamic"]][["order"]])) {
+  if (!only_stocks && is.null(ordering[["dynamic"]][["order"]])) {
     only_stocks <- TRUE
   }
 
@@ -241,7 +262,11 @@ compile_julia <- function(sfm, filepath_sim,
 
   # Seed string
   seed_str <- ifelse(!is_defined(sfm[["sim_specs"]][["seed"]]), "",
-    sprintf("# Ensure reproducibility across runs in case of random elements\nRandom.seed!(%s)\n", as.character(sfm[["sim_specs"]][["seed"]]))
+    paste0(
+      "# Ensure reproducibility across runs in case of random elements\n",
+      "Random.seed!(",
+      as.character(sfm[["sim_specs"]][["seed"]]), ")\n"
+    )
   )
 
   prep_script <- sprintf(
@@ -349,9 +374,12 @@ check_no_keyword_arg <- function(sfm, var_names) {
 
     if (any(named_idxs)) {
       stop(
-        paste0("The following variables were used as functions with named arguments in the Julia translated equation: ",
-        paste0(names(named_idxs)[unname(named_idxs)], collapse = ", "), ".\n",
-        "This is not allowed in Julia. Please use arguments without naming them."), call. = FALSE
+        paste0(
+          "The following variables were used as functions with named arguments in the Julia translated equation: ",
+          paste0(names(named_idxs)[unname(named_idxs)], collapse = ", "), ".\n",
+          "This is not allowed in Julia. Please use arguments without naming them."
+        ),
+        call. = FALSE
       )
     }
   }
@@ -427,8 +455,10 @@ prep_delayN_smoothN <- function(sfm, delayN_smoothN) {
 
         # Check whether the variable is in the model
         if (!bare_var %in% names_df[["name"]]) {
-          stop(paste0("The variable '", bare_var,
-                      "' used in delayN() or smoothN() is not defined in the model."), call. = FALSE)
+          stop(paste0(
+            "The variable '", bare_var,
+            "' used in delayN() or smoothN() is not defined in the model."
+          ), call. = FALSE)
         }
 
         # # Check whether variable is either a stock, flow, or aux
@@ -492,7 +522,7 @@ compile_units_julia <- function(sfm, keep_unit) {
   #     # Force garbage collection to clean up old module
   #     %s = nothing
   #     GC.gc()
-  # end\n", .sdbuildR_env[["P"]][["MyCustomUnits"]], .sdbuildR_env[["P"]][["MyCustomUnits"]])
+  # end\n", P[["MyCustomUnits"]], P[["MyCustomUnits"]])
   script <- ""
 
   if (length(sfm[["model_units"]]) > 0) {
@@ -526,18 +556,30 @@ compile_units_julia <- function(sfm, keep_unit) {
         "@unit ", x[["name"]], " \"", x[["name"]], "\" ",
         x[["name"]], " u\"", unit_def, "\" ", ifelse(x[["prefix"]], "true", "false")
       )
-    }) |> paste0(collapse = sprintf("\n\tUnitful.register(%s)\n\t", .sdbuildR_env[["P"]][["MyCustomUnits"]]))
+    }) |> paste0(collapse = sprintf(
+      "\n\tUnitful.register(%s)\n\t",
+      P[["MyCustomUnits"]]
+    ))
 
     script <- paste0(
       script,
-      "\n# Define custom units; register after each unit as some units may be defined by other units\nmodule ",
-      .sdbuildR_env[["P"]][["MyCustomUnits"]], "\n\tusing Unitful\n\tusing ",
-      .sdbuildR_env[["jl"]][["pkg_name"]], ".",
-      .sdbuildR_env[["P"]][["sdbuildR_units"]], "\n\t",
+      "\n# Define custom units; register after each unit as some units may be defined by other units\n",
+      # Turn off logging warnings to disable warnings about overwriting units
+
+      "old_logger = global_logger(NullLogger())\n",
+      "module ", P[["MyCustomUnits"]], "\n\t",
+
+      # Need to load libraries again in module
+      "using Unitful\n\tusing ",
+      P[["jl_pkg_name"]], ".",
+      P[["sdbuildR_units"]], "\n\t",
       unit_str,
       "\n\tUnitful.register(",
-      .sdbuildR_env[["P"]][["MyCustomUnits"]], ")\nend\n\n",
-      "Unitful.register(", .sdbuildR_env[["P"]][["MyCustomUnits"]], ")\n"
+      P[["MyCustomUnits"]], ")\nend\n\n",
+      "Unitful.register(", P[["MyCustomUnits"]], ")\n",
+
+      # Turn logging warnings back on again
+      "global_logger(old_logger)\n"
     )
   }
 
@@ -555,12 +597,10 @@ compile_macros_julia <- function(sfm) {
   script <- ""
 
   # If there are macros
-  if (any(nzchar(unlist(lapply(sfm[["macro"]], `[[`, "eqn_julia"))))) {
-    # names_df = get_names(sfm)
-
+  if (any(nzchar(unlist(lapply(sfm[[P[["macro_name"]]]], `[[`, "eqn_julia"))))) {
     script <- paste0(
       script, "\n",
-      lapply(sfm[["macro"]], `[[`, "eqn_julia") |> unlist() |>
+      lapply(sfm[[P[["macro_name"]]]], `[[`, "eqn_julia") |> unlist() |>
         paste0(collapse = "\n")
     )
   }
@@ -585,22 +625,22 @@ compile_times_julia <- function(sfm, keep_unit) {
   script <- sprintf(
     "\n\n# Simulation time unit (smallest time scale in your model)
 %s = u\"%s\"\n# Define time sequence\n%s = (%s, %s)%s\n# Initialize time (only necessary if constants use t)\n%s = %s[1]\n# Time step\n%s = %s%s\n# Save at value\n%s = %s%s\n# Define saving time sequence\n%s = %s%s; %s = %s:%s:%s[2]\n%s = %s[1]:%s:%s[2]\n",
-    .sdbuildR_env[["P"]][["time_units_name"]], sfm[["sim_specs"]][["time_units"]],
-    .sdbuildR_env[["P"]][["times_name"]], sfm[["sim_specs"]][["start"]], sfm[["sim_specs"]][["stop"]],
-    ifelse(keep_unit, paste0(" .* ", .sdbuildR_env[["P"]][["time_units_name"]]), ""),
-    .sdbuildR_env[["P"]][["time_name"]], .sdbuildR_env[["P"]][["times_name"]],
-    .sdbuildR_env[["P"]][["timestep_name"]], sfm[["sim_specs"]][["dt"]],
-    ifelse(keep_unit, paste0(" * ", .sdbuildR_env[["P"]][["time_units_name"]]), ""),
-    .sdbuildR_env[["P"]][["saveat_name"]], sfm[["sim_specs"]][["save_at"]],
-    ifelse(keep_unit, paste0(" * ", .sdbuildR_env[["P"]][["time_units_name"]]), ""),
-    .sdbuildR_env[["P"]][["savefrom_name"]], sfm[["sim_specs"]][["save_from"]],
-    ifelse(keep_unit, paste0(" .* ", .sdbuildR_env[["P"]][["time_units_name"]]), ""),
-    .sdbuildR_env[["P"]][["savefrom_name"]], .sdbuildR_env[["P"]][["savefrom_name"]],
-    .sdbuildR_env[["P"]][["saveat_name"]], .sdbuildR_env[["P"]][["times_name"]],
-    .sdbuildR_env[["P"]][["tstops_name"]],
-    .sdbuildR_env[["P"]][["times_name"]],
-    .sdbuildR_env[["P"]][["timestep_name"]],
-    .sdbuildR_env[["P"]][["times_name"]]
+    P[["time_units_name"]], sfm[["sim_specs"]][["time_units"]],
+    P[["times_name"]], sfm[["sim_specs"]][["start"]], sfm[["sim_specs"]][["stop"]],
+    ifelse(keep_unit, paste0(" .* ", P[["time_units_name"]]), ""),
+    P[["time_name"]], P[["times_name"]],
+    P[["timestep_name"]], sfm[["sim_specs"]][["dt"]],
+    ifelse(keep_unit, paste0(" * ", P[["time_units_name"]]), ""),
+    P[["saveat_name"]], sfm[["sim_specs"]][["save_at"]],
+    ifelse(keep_unit, paste0(" * ", P[["time_units_name"]]), ""),
+    P[["savefrom_name"]], sfm[["sim_specs"]][["save_from"]],
+    ifelse(keep_unit, paste0(" .* ", P[["time_units_name"]]), ""),
+    P[["savefrom_name"]], P[["savefrom_name"]],
+    P[["saveat_name"]], P[["times_name"]],
+    P[["tstops_name"]],
+    P[["times_name"]],
+    P[["timestep_name"]],
+    P[["times_name"]]
   )
 
   return(list(script = script))
@@ -637,7 +677,7 @@ prep_equations_variables_julia <- function(sfm, keep_unit, keep_nonnegative_flow
         if (keep_unit) {
           if (is_defined(x[["source"]])) {
             if (x[["source"]] == "t") {
-              xpts_str <- paste0(xpts_str, " .* ", .sdbuildR_env[["P"]][["time_units_name"]])
+              xpts_str <- paste0(xpts_str, " .* ", P[["time_units_name"]])
             } else {
               unit_source <- names_df[names_df[["name"]] == x[["source"]], "units"]
               if (unit_source != "1") {
@@ -676,7 +716,7 @@ prep_equations_variables_julia <- function(sfm, keep_unit, keep_nonnegative_flow
       if (keep_unit & is_defined(x[["units"]]) & x[["units"]] != "1") {
         x[["eqn_str"]] <- paste0(
           x[["name"]], " = ",
-          .sdbuildR_env[["P"]][["convert_u_func"]], "(",
+          P[["convert_u_func"]], "(",
           x[["eqn_julia"]], ", u\"", x[["units"]], "\")"
         )
       } else {
@@ -693,7 +733,7 @@ prep_equations_variables_julia <- function(sfm, keep_unit, keep_nonnegative_flow
       if (keep_unit & is_defined(x[["units"]]) & x[["units"]] != "1") {
         x[["eqn_str"]] <- paste0(
           x[["name"]], " = ",
-          .sdbuildR_env[["P"]][["convert_u_func"]], "(",
+          P[["convert_u_func"]], "(",
           x[["eqn_julia"]], ", u\"",
           x[["units"]], "\")"
         )
@@ -711,7 +751,7 @@ prep_equations_variables_julia <- function(sfm, keep_unit, keep_nonnegative_flow
     function(x) {
       if (keep_unit & is_defined(x[["units"]]) & x[["units"]] != "1") {
         x[["eqn_str"]] <- paste0(
-          x[["name"]], " = ", .sdbuildR_env[["P"]][["convert_u_func"]],
+          x[["name"]], " = ", P[["convert_u_func"]],
           "(", x[["eqn_julia"]], ", u\"",
           x[["units"]], "\")"
         )
@@ -727,7 +767,7 @@ prep_equations_variables_julia <- function(sfm, keep_unit, keep_nonnegative_flow
   )
 
   # Flow equations
-  flow_df <- get_flow_df(sfm)
+  # flow_df <- get_flow_df(sfm)
   sfm[["model"]][["variables"]][["flow"]] <- lapply(
     sfm[["model"]][["variables"]][["flow"]],
     function(x) {
@@ -738,7 +778,7 @@ prep_equations_variables_julia <- function(sfm, keep_unit, keep_nonnegative_flow
         ifelse(is_defined(x[["to"]]), paste0(" to ", x[["to"]]), ""),
         x[["name"]],
         ifelse(keep_unit & x[["units"]] != "1",
-          paste0(.sdbuildR_env[["P"]][["convert_u_func"]], "("), ""
+          paste0(P[["convert_u_func"]], "("), ""
         ),
         ifelse(x[["non_negative"]] & keep_nonnegative_flow, "nonnegative(", ""),
         x[["eqn_julia"]],
@@ -796,7 +836,7 @@ prep_intermediary_variables_julia <- function(sfm, ordering) {
   }
 
   # Add fixed delayed and past variables to intermediary_var
-  delay_past <- get_delay_past(sfm)
+  delay_past <- get_delay(sfm, type = "past")
   extra_intermediary_var <- list_extract(delay_past, "var")
 
 
@@ -807,12 +847,18 @@ prep_intermediary_variables_julia <- function(sfm, ordering) {
 
     idx <- !(extra_intermediary_var %in% names_df[["name"]])
     if (any(idx)) {
-      stop(paste0("The following variables used in delay() or past() are not defined in the model: ", paste0(extra_intermediary_var[idx], collapse = ", ")), call. = FALSE)
+      stop(paste0(
+        "The following variables used in delay() or past() are not defined in the model: ",
+        paste0(extra_intermediary_var[idx], collapse = ", ")
+      ), call. = FALSE)
     }
 
     idx <- !(extra_intermediary_var %in% allowed_intermediary_var)
     if (any(idx)) {
-      stop(paste0("The following variables used in delay() or past() are not stocks, flows, or auxiliaries: ", paste0(extra_intermediary_var[idx], collapse = ", ")), call. = FALSE)
+      stop(paste0(
+        "The following variables used in delay() or past() are not stocks, flows, or auxiliaries: ",
+        paste0(extra_intermediary_var[idx], collapse = ", ")
+      ), call. = FALSE)
     }
 
     # Get unique intermediary variables to add
@@ -825,7 +871,7 @@ prep_intermediary_variables_julia <- function(sfm, ordering) {
   }
 
   # If delayN() and smoothN() were used, state has to be unpacked differently
-  delayN_smoothN <- get_delayN_smoothN(sfm)
+  delayN_smoothN <- get_delay(sfm, type = "delayN_smoothN")
 
   if (length(delayN_smoothN) > 0) {
     delay_names <- names(unlist(unname(delayN_smoothN), recursive = FALSE))
@@ -859,7 +905,7 @@ prep_intermediary_variables_julia <- function(sfm, ordering) {
 #'
 #' @noRd
 compile_static_eqn_julia <- function(sfm, ensemble_pars, ordering, intermediaries, keep_unit) {
-  names_df <- get_names(sfm)
+  # names_df <- get_names(sfm)
 
   # Graphical functions
   gf_eqn <- lapply(sfm[["model"]][["variables"]][["gf"]], `[[`, "eqn_str")
@@ -875,30 +921,30 @@ compile_static_eqn_julia <- function(sfm, ensemble_pars, ordering, intermediarie
   if (length(ensemble_pars[["range"]]) > 0) {
     ensemble_def <- paste0(
       "\n\n# Generate ensemble design\n",
-      .sdbuildR_env[["P"]][["ensemble_n"]], " = ",
+      P[["ensemble_n"]], " = ",
       format(ensemble_pars[["n"]], scientific = FALSE), "\n",
-      .sdbuildR_env[["P"]][["ensemble_range"]], " = (\n",
+      P[["ensemble_range"]], " = (\n",
       paste0(paste0(
         names(ensemble_pars[["range"]]), " = ",
         unname(ensemble_pars[["range"]])
       ), collapse = ",\n"),
       ",\n)\n",
-      .sdbuildR_env[["P"]][["ensemble_pars"]], ", ",
-      .sdbuildR_env[["P"]][["ensemble_total_n"]],
+      P[["ensemble_pars"]], ", ",
+      P[["ensemble_total_n"]],
       " = generate_param_combinations(\n",
-      .sdbuildR_env[["P"]][["ensemble_range"]], "; crossed=",
+      P[["ensemble_range"]], "; crossed=",
       ifelse(ensemble_pars[["cross"]], "true", "false"), ", n_replicates = ",
-      .sdbuildR_env[["P"]][["ensemble_n"]], ")\n",
+      P[["ensemble_n"]], ")\n",
       # Initialize ensemble range iterator if specified
-      .sdbuildR_env[["P"]][["ensemble_iter"]], " = 1\n"
+      P[["ensemble_iter"]], " = 1\n"
     )
 
     ensemble_iter <- paste0(
       "\n\t# Assign ensemble parameters\n\t",
       paste0(names(ensemble_pars[["range"]]), collapse = ", "), ", = ",
-      .sdbuildR_env[["P"]][["ensemble_pars"]], "[div(",
-      .sdbuildR_env[["P"]][["ensemble_iter"]], "-1, ",
-      .sdbuildR_env[["P"]][["ensemble_n"]], ") + 1]\n\n"
+      P[["ensemble_pars"]], "[div(",
+      P[["ensemble_iter"]], "-1, ",
+      P[["ensemble_n"]], ") + 1]\n\n"
     )
 
     # Remove ensemble variables from equations
@@ -906,10 +952,10 @@ compile_static_eqn_julia <- function(sfm, ensemble_pars, ordering, intermediarie
     ordering[["static_and_dynamic"]][["order"]] <- ordering[["static_and_dynamic"]][["order"]][!ordering[["static_and_dynamic"]][["order"]] %in% names(ensemble_pars[["range"]])]
   } else if (!is.null(ensemble_pars)) {
     ensemble_def <- paste0(
-      .sdbuildR_env[["P"]][["ensemble_n"]], " = ", format(ensemble_pars[["n"]], scientific = FALSE), "\n",
-      .sdbuildR_env[["P"]][["ensemble_total_n"]], " = ", format(ensemble_pars[["n"]], scientific = FALSE), "\n",
+      P[["ensemble_n"]], " = ", format(ensemble_pars[["n"]], scientific = FALSE), "\n",
+      P[["ensemble_total_n"]], " = ", format(ensemble_pars[["n"]], scientific = FALSE), "\n",
       # Initialize ensemble range iterator if specified
-      .sdbuildR_env[["P"]][["ensemble_iter"]], " = 1\n"
+      P[["ensemble_iter"]], " = 1\n"
     )
     ensemble_iter <- ""
   } else {
@@ -942,29 +988,29 @@ compile_static_eqn_julia <- function(sfm, ensemble_pars, ordering, intermediarie
   static_eqn_str <- stringr::str_replace_all(
     static_eqn_str,
     paste0(
-      .sdbuildR_env[["P"]][["model_setup_name"]], "\\.",
-      .sdbuildR_env[["P"]][["intermediary_names"]]
+      P[["model_setup_name"]], "\\.",
+      P[["intermediary_names"]]
     ),
-    .sdbuildR_env[["P"]][["intermediary_names"]]
+    P[["intermediary_names"]]
   )
 
 
   # Put parameters together in named tuple; include graphical functions as otherwise these are not defined outside of the let block
-  if (length(sfm[["model"]][["variables"]][["constant"]]) > 0 | length(sfm[["model"]][["variables"]][["gf"]]) > 0) {
+  if (length(sfm[["model"]][["variables"]][["constant"]]) > 0 || length(sfm[["model"]][["variables"]][["gf"]]) > 0) {
     pars_def <- paste0(
       "\n\n# Define parameters in named tuple\n",
-      .sdbuildR_env[["P"]][["parameter_name"]], " = (",
+      P[["parameter_name"]], " = (",
       paste0(c(names(constant_eqn), names(gf_eqn)), " = ",
         c(names(constant_eqn), names(gf_eqn)),
         collapse = ", "
       ), ",)\n"
     )
   } else {
-    pars_def <- paste0("\n\n# Define empty parameters\n", .sdbuildR_env[["P"]][["parameter_name"]], " = ()\n")
+    pars_def <- paste0("\n\n# Define empty parameters\n", P[["parameter_name"]], " = ()\n")
   }
 
   # Check for delayN() and smoothN() functions
-  delayN_smoothN <- get_delayN_smoothN(sfm)
+  delayN_smoothN <- get_delay(sfm, type = "delayN_smoothN")
 
   if (length(delayN_smoothN) > 0) {
     delay_names <- names(unlist(unname(delayN_smoothN), recursive = FALSE))
@@ -981,11 +1027,11 @@ compile_static_eqn_julia <- function(sfm, ensemble_pars, ordering, intermediarie
 
     # Find indices of names in vector
     init_idx <- paste0(
-      "\n", .sdbuildR_env[["P"]][["delay_idx_name"]], " = (",
+      "\n", P[["delay_idx_name"]], " = (",
       paste0(paste0(
         delay_names, " = ",
-        "findall(n -> occursin(r\"", delay_names, .sdbuildR_env[["P"]][["acc_suffix"]], "[0-9]+$\", string(n)), ",
-        .sdbuildR_env[["P"]][["initial_value_names"]], ")"
+        "findall(n -> occursin(r\"", delay_names, P[["acc_suffix"]], "[0-9]+$\", string(n)), ",
+        P[["initial_value_names"]], ")"
       ), collapse = ",\n\t"),
       ",)\n"
     )
@@ -994,7 +1040,7 @@ compile_static_eqn_julia <- function(sfm, ensemble_pars, ordering, intermediarie
     # Make sure that any .outflow references are replaced with first(values(variable))
     dict <- stringr::fixed(stats::setNames(
       paste0("first(values(", delay_names, "))"),
-      paste0(delay_names, .sdbuildR_env[["P"]][["outflow_suffix"]])
+      paste0(delay_names, P[["outflow_suffix"]])
     ))
     static_eqn_str <- stringr::str_replace_all(static_eqn_str, dict)
   } else {
@@ -1007,7 +1053,7 @@ compile_static_eqn_julia <- function(sfm, ensemble_pars, ordering, intermediarie
   # Put initial states together in (unnamed) vector
   init_def <- paste0(
     "\n# Define initial condition in vector\n",
-    .sdbuildR_env[["P"]][["initial_value_name"]],
+    P[["initial_value_name"]],
     " = [Base.Iterators.flatten(",
     ifelse(keep_unit, "Unitful.ustrip.(", ""), "[",
     init_def_stocks,
@@ -1016,14 +1062,14 @@ compile_static_eqn_julia <- function(sfm, ensemble_pars, ordering, intermediarie
   )
 
   init_names <- paste0(
-    .sdbuildR_env[["P"]][["initial_value_names"]], " = [",
+    P[["initial_value_names"]], " = [",
     init_names,
     "]\n"
   )
 
 
   if (length(intermediaries[["names"]]) > 0) {
-    intermediary_names <- paste0(.sdbuildR_env[["P"]][["intermediary_names"]], " = [", paste0(
+    intermediary_names <- paste0(P[["intermediary_names"]], " = [", paste0(
       paste0(
         ":",
         intermediaries[["names"]]
@@ -1038,10 +1084,10 @@ compile_static_eqn_julia <- function(sfm, ensemble_pars, ordering, intermediarie
       paste0(intermediaries[["values"]], collapse = ", "),
       ifelse(length(intermediaries[["values"]]) == 1, ",", ""),
       ")))\n",
-      .sdbuildR_env[["P"]][["intermediary_names"]], " = ", .sdbuildR_env[["P"]][["intermediary_names"]], "[is_not_function]\n"
+      P[["intermediary_names"]], " = ", P[["intermediary_names"]], "[is_not_function]\n"
     )
   } else {
-    intermediary_names <- paste0(.sdbuildR_env[["P"]][["intermediary_names"]], " = Nothing\n")
+    intermediary_names <- paste0(P[["intermediary_names"]], " = Nothing\n")
     intermediary_names_correct <- ""
   }
 
@@ -1052,7 +1098,7 @@ compile_static_eqn_julia <- function(sfm, ensemble_pars, ordering, intermediarie
     ensemble_def = ensemble_def,
     script = paste0(
       "\n\n# Define parameters, initial conditions, and functions in correct order\n",
-      .sdbuildR_env[["P"]][["model_setup_name"]],
+      P[["model_setup_name"]],
       " = let\n",
       # Assign ensemble parameters for this iteration
       ensemble_iter,
@@ -1063,18 +1109,18 @@ compile_static_eqn_julia <- function(sfm, ensemble_pars, ordering, intermediarie
       init_names,
       init_idx,
       intermediary_names_correct,
-      "\n\t(", .sdbuildR_env[["P"]][["parameter_name"]], " = ",
-      .sdbuildR_env[["P"]][["parameter_name"]], ", ",
-      .sdbuildR_env[["P"]][["initial_value_name"]], " = ",
-      .sdbuildR_env[["P"]][["initial_value_name"]], ", ",
-      .sdbuildR_env[["P"]][["initial_value_names"]], " = ",
-      .sdbuildR_env[["P"]][["initial_value_names"]], ", ",
-      .sdbuildR_env[["P"]][["intermediary_names"]], " = ",
-      .sdbuildR_env[["P"]][["intermediary_names"]],
+      "\n\t(", P[["parameter_name"]], " = ",
+      P[["parameter_name"]], ", ",
+      P[["initial_value_name"]], " = ",
+      P[["initial_value_name"]], ", ",
+      P[["initial_value_names"]], " = ",
+      P[["initial_value_names"]], ", ",
+      P[["intermediary_names"]], " = ",
+      P[["intermediary_names"]],
       ifelse(nzchar(init_idx),
         paste0(
-          ", ", .sdbuildR_env[["P"]][["delay_idx_name"]], " = ",
-          .sdbuildR_env[["P"]][["delay_idx_name"]]
+          ", ", P[["delay_idx_name"]], " = ",
+          P[["delay_idx_name"]]
         ), ""
       ),
       ")\n",
@@ -1100,10 +1146,10 @@ prep_stock_change_julia <- function(sfm, keep_unit) {
       inflow <- outflow <- ""
 
       if (x[["type"]] == "delayN_smoothN") {
-        x[["sum_name"]] <- paste0(.sdbuildR_env[["P"]][["change_state_name"]], "[", .sdbuildR_env[["P"]][["model_setup_name"]], ".", .sdbuildR_env[["P"]][["delay_idx_name"]], ".", x[["name"]], "]")
-        x[["unpack_state"]] <- paste0(.sdbuildR_env[["P"]][["state_name"]], "[", .sdbuildR_env[["P"]][["model_setup_name"]], ".", .sdbuildR_env[["P"]][["delay_idx_name"]], ".", x[["name"]], "]")
+        x[["sum_name"]] <- paste0(P[["change_state_name"]], "[", P[["model_setup_name"]], ".", P[["delay_idx_name"]], ".", x[["name"]], "]")
+        x[["unpack_state"]] <- paste0(P[["state_name"]], "[", P[["model_setup_name"]], ".", P[["delay_idx_name"]], ".", x[["name"]], "]")
       } else {
-        x[["sum_name"]] <- paste0(.sdbuildR_env[["P"]][["change_state_name"]], "[", match(x[["name"]], stock_names), "]")
+        x[["sum_name"]] <- paste0(P[["change_state_name"]], "[", match(x[["name"]], stock_names), "]")
       }
 
 
@@ -1112,7 +1158,7 @@ prep_stock_change_julia <- function(sfm, keep_unit) {
         # # If keep_unit = TRUE, flows always need to have units as the times variable has units
         # if (keep_unit) {
         #   # Safer: in case x evaluates to a unit but no units were set
-        #   x[["sum_eqn"]] <- paste0(.sdbuildR_env[["P"]][["convert_u_func"]], "(0.0, Unitful.unit.(", x[["name"]], ")/", .sdbuildR_env[["P"]][["time_units_name"]], ")")
+        #   x[["sum_eqn"]] <- paste0(P[["convert_u_func"]], "(0.0, Unitful.unit.(", x[["name"]], ")/", P[["time_units_name"]], ")")
         # } else {
         x[["sum_eqn"]] <- "0.0"
         # }
@@ -1131,16 +1177,16 @@ prep_stock_change_julia <- function(sfm, keep_unit) {
         if (x[["type"]] == "delayN_smoothN") {
           x[["sum_eqn"]] <- paste0(
             x[["sum_eqn"]], " ./ ",
-            .sdbuildR_env[["P"]][["time_units_name"]]
+            P[["time_units_name"]]
             # ** Units need to be stripped again because init with units can give problems
           )
         } else {
           x[["sum_eqn"]] <- paste0(
-            .sdbuildR_env[["P"]][["convert_u_func"]],
+            P[["convert_u_func"]],
             "(", x[["sum_eqn"]],
             ", Unitful.unit.(",
             x[["name"]], ")/",
-            .sdbuildR_env[["P"]][["time_units_name"]],
+            P[["time_units_name"]],
             # Units need to be stripped again because init with units can give problems
             ") ./ Unitful.unit.(", x[["name"]], ")"
           )
@@ -1233,8 +1279,8 @@ compile_ode_julia <- function(sfm, ensemble_pars, ordering, intermediaries,
         if (x[["non_negative"]]) {
           sprintf(
             "if (%s * %s + %s < 0) %s = %s/%s end",
-            x[["sum_name"]], .sdbuildR_env[["P"]][["timestep_name"]], x[["name"]],
-            x[["sum_name"]], x[["name"]], .sdbuildR_env[["P"]][["timestep_name"]]
+            x[["sum_name"]], P[["timestep_name"]], x[["name"]],
+            x[["sum_name"]], x[["name"]], P[["timestep_name"]]
           )
         } else {
           return(NULL)
@@ -1251,21 +1297,21 @@ compile_ode_julia <- function(sfm, ensemble_pars, ordering, intermediaries,
     )
   }
 
-  # Names of changing Stocks, e.g. dR for stock R
-  stock_changes_names <- unname(unlist(
-    lapply(sfm[["model"]][["variables"]][["stock"]], `[[`, "sum_name")
-  ))
+  # # Names of changing stocks, e.g. dR for stock R
+  # stock_changes_names <- unname(unlist(
+  #   lapply(sfm[["model"]][["variables"]][["stock"]], `[[`, "sum_name")
+  # ))
 
   # If delayN() and smoothN() were used, state has to be unpacked differently
-  delayN_smoothN <- get_delayN_smoothN(sfm)
+  delayN_smoothN <- get_delay(sfm, type = "delayN_smoothN")
 
   if (length(delayN_smoothN) > 0) {
     delay_names <- names(unlist(unname(delayN_smoothN), recursive = FALSE))
 
     # Unpack non delayN stocks
     unpack_nondelayN <- paste0(
-      paste0(setdiff(names(stock_change), delay_names), collapse = ", "), ", = ", .sdbuildR_env[["P"]][["state_name"]], "[findall(n -> !occursin(r\"", .sdbuildR_env[["P"]][["delayN_suffix"]], "[0-9]+", .sdbuildR_env[["P"]][["acc_suffix"]], "[0-9]+$|",
-      .sdbuildR_env[["P"]][["smoothN_suffix"]], "[0-9]+", .sdbuildR_env[["P"]][["acc_suffix"]], "[0-9]+$\", string(n)), ", .sdbuildR_env[["P"]][["model_setup_name"]], ".", .sdbuildR_env[["P"]][["initial_value_names"]], ")]"
+      paste0(setdiff(names(stock_change), delay_names), collapse = ", "), ", = ", P[["state_name"]], "[findall(n -> !occursin(r\"", P[["delayN_suffix"]], "[0-9]+", P[["acc_suffix"]], "[0-9]+$|",
+      P[["smoothN_suffix"]], "[0-9]+", P[["acc_suffix"]], "[0-9]+$\", string(n)), ", P[["model_setup_name"]], ".", P[["initial_value_names"]], ")]"
     )
 
     # Unpack each delayN or smoothN stock separately
@@ -1282,7 +1328,7 @@ compile_ode_julia <- function(sfm, ensemble_pars, ordering, intermediaries,
   } else {
     unpack_state_str <- paste0(
       paste0(names(stock_change), collapse = ", "),
-      ", = ", .sdbuildR_env[["P"]][["state_name"]]
+      ", = ", P[["state_name"]]
     )
   }
 
@@ -1291,13 +1337,13 @@ compile_ode_julia <- function(sfm, ensemble_pars, ordering, intermediaries,
     sprintf(
       "\n\n# Define ODE
 function %s!(%s, %s%s, %s)",
-      .sdbuildR_env[["P"]][["ode_func_name"]],
-      .sdbuildR_env[["P"]][["change_state_name"]], .sdbuildR_env[["P"]][["state_name"]],
-      paste0(", ", .sdbuildR_env[["P"]][["parameter_name"]]), .sdbuildR_env[["P"]][["time_name"]]
+      P[["ode_func_name"]],
+      P[["change_state_name"]], P[["state_name"]],
+      paste0(", ", P[["parameter_name"]]), P[["time_name"]]
     ),
     # "\n\n\t# Round t to deal with inaccuracies in floating point arithmetic\n\t",
-    # .sdbuildR_env[["P"]][["time_name"]], " = round_(",
-    # .sdbuildR_env[["P"]][["time_name"]], ", digits = 12)",
+    # P[["time_name"]], " = round_(",
+    # P[["time_name"]], ", digits = 12)",
     "\n\n\t# Unpack state variables\n\t",
     unpack_state_str,
     # Assign units to stocks
@@ -1307,7 +1353,7 @@ function %s!(%s, %s%s, %s)",
         "\n\n\t# Unpack parameters\n\t",
         paste0(
           paste0(static_eqn[["par_names"]], collapse = ", "),
-          ", = ", .sdbuildR_env[["P"]][["parameter_name"]]
+          ", = ", P[["parameter_name"]]
         )
       ), ""
     ),
@@ -1322,19 +1368,19 @@ function %s!(%s, %s%s, %s)",
   if (only_stocks) {
     script_callback <- paste0(
       "\n\n# Define empty callback function\n",
-      .sdbuildR_env[["P"]][["intermediaries"]], " = nothing\n",
-      .sdbuildR_env[["P"]][["callback_name"]], " = nothing\n\n"
+      P[["intermediaries"]], " = nothing\n",
+      P[["callback_name"]], " = nothing\n\n"
     )
   } else {
     script_callback <- paste0(
       sprintf(
         "\n\n# Define callback function
 function %s(%s, %s, integrator)",
-        .sdbuildR_env[["P"]][["callback_func_name"]],
-        .sdbuildR_env[["P"]][["state_name"]], .sdbuildR_env[["P"]][["time_name"]]
+        P[["callback_func_name"]],
+        P[["state_name"]], P[["time_name"]]
       ),
       # "\n\n\t# Round t to deal with inaccuracies in floating point arithmetic\n\t",
-      # .sdbuildR_env[["P"]][["time_name"]], " = round_(", .sdbuildR_env[["P"]][["time_name"]], ", digits = 12)",
+      # P[["time_name"]], " = round_(", P[["time_name"]], ", digits = 12)",
       "\n\n\t# Unpack state variables\n\t",
       unpack_state_str,
       # Assign units to stocks
@@ -1342,12 +1388,12 @@ function %s(%s, %s, integrator)",
       ifelse(length(sfm[["model"]][["variables"]][["constant"]]) > 0,
         paste0(
           "\n\n\t# Get parameters from integrator\n\t",
-          paste0(.sdbuildR_env[["P"]][["parameter_name"]], " = integrator.p"),
+          paste0(P[["parameter_name"]], " = integrator.p"),
           # Check whether you're overwriting it
           "\n\n\t# Unpack parameters\n\t",
           paste0(
             paste0(static_eqn[["par_names"]], collapse = ", "),
-            ", = ", .sdbuildR_env[["P"]][["parameter_name"]]
+            ", = ", P[["parameter_name"]]
           )
         ), ""
       ),
@@ -1362,12 +1408,12 @@ function %s(%s, %s, integrator)",
 
       # Only define intermediaries if ensemble_pars is NULL
       ifelse(!is.null(ensemble_pars), "", paste0(
-        .sdbuildR_env[["P"]][["intermediaries"]], " = SavedValues(",
+        P[["intermediaries"]], " = SavedValues(",
         # Make time a Unitful.Quantity if keeping units, otherwise a float
-        "eltype(", .sdbuildR_env[["P"]][["time_name"]], "), Any)\n",
-        .sdbuildR_env[["P"]][["callback_name"]], " = SavingCallback(",
-        .sdbuildR_env[["P"]][["callback_func_name"]], ", ", .sdbuildR_env[["P"]][["intermediaries"]],
-        ", saveat = ", .sdbuildR_env[["P"]][["savefrom_name"]],
+        "eltype(", P[["time_name"]], "), Any)\n",
+        P[["callback_name"]], " = SavingCallback(",
+        P[["callback_func_name"]], ", ", P[["intermediaries"]],
+        ", saveat = ", P[["savefrom_name"]],
         ")\n"
       ))
     )
@@ -1404,147 +1450,147 @@ compile_run_ode_julia <- function(sfm,
   if (is.null(ensemble_pars)) {
     script <- paste0(
       "\n\n# Run ODE\n",
-      .sdbuildR_env[["P"]][["prob_name"]], " = ODEProblem(",
-      .sdbuildR_env[["P"]][["ode_func_name"]], "!, ",
-      .sdbuildR_env[["P"]][["model_setup_name"]], ".",
-      .sdbuildR_env[["P"]][["initial_value_name"]],
-      ", ", .sdbuildR_env[["P"]][["times_name"]], ", ",
-      .sdbuildR_env[["P"]][["model_setup_name"]], ".",
-      .sdbuildR_env[["P"]][["parameter_name"]],
-      ")\n", .sdbuildR_env[["P"]][["solution_name"]], " = solve(",
-      .sdbuildR_env[["P"]][["prob_name"]], ", ",
+      P[["prob_name"]], " = ODEProblem(",
+      P[["ode_func_name"]], "!, ",
+      P[["model_setup_name"]], ".",
+      P[["initial_value_name"]],
+      ", ", P[["times_name"]], ", ",
+      P[["model_setup_name"]], ".",
+      P[["parameter_name"]],
+      ")\n", P[["solution_name"]], " = solve(",
+      P[["prob_name"]], ", ",
       sfm[["sim_specs"]][["method"]],
       paste0(
-        ", dt = ", .sdbuildR_env[["P"]][["timestep_name"]],
-        ", saveat = ", .sdbuildR_env[["P"]][["savefrom_name"]],
-        ", tstops = ", .sdbuildR_env[["P"]][["tstops_name"]],
+        ", dt = ", P[["timestep_name"]],
+        ", saveat = ", P[["savefrom_name"]],
+        ", tstops = ", P[["tstops_name"]],
         ", adaptive = false"
       ),
       ifelse(!only_stocks,
         paste0(
-          ", ", .sdbuildR_env[["P"]][["callback_name"]], " = ",
-          .sdbuildR_env[["P"]][["callback_name"]]
+          ", ", P[["callback_name"]], " = ",
+          P[["callback_name"]]
         ), ""
       ),
       ")\n",
-      .sdbuildR_env[["P"]][["sim_df_name"]],
-      ", ", .sdbuildR_env[["P"]][["parameter_name"]],
-      ", ", .sdbuildR_env[["P"]][["parameter_names"]],
-      ", ", .sdbuildR_env[["P"]][["initial_value_name"]],
-      ", ", .sdbuildR_env[["P"]][["initial_value_names"]],
+      P[["sim_df_name"]],
+      ", ", P[["parameter_name"]],
+      ", ", P[["parameter_names"]],
+      ", ", P[["initial_value_name"]],
+      ", ", P[["initial_value_names"]],
       " = clean_df(",
-      .sdbuildR_env[["P"]][["prob_name"]], ", ",
-      .sdbuildR_env[["P"]][["solution_name"]], ", ",
-      .sdbuildR_env[["P"]][["model_setup_name"]], ".",
-      .sdbuildR_env[["P"]][["initial_value_names"]], ", ",
-      .sdbuildR_env[["P"]][["intermediaries"]], ", ",
-      .sdbuildR_env[["P"]][["model_setup_name"]], ".",
-      .sdbuildR_env[["P"]][["intermediary_names"]], ")\n"
+      P[["prob_name"]], ", ",
+      P[["solution_name"]], ", ",
+      P[["model_setup_name"]], ".",
+      P[["initial_value_names"]], ", ",
+      P[["intermediaries"]], ", ",
+      P[["model_setup_name"]], ".",
+      P[["intermediary_names"]], ")\n"
     )
 
     # Save to CSV
     script <- paste0(
       script, '\nCSV.write("', filepath_sim, '", ',
-      .sdbuildR_env[["P"]][["sim_df_name"]],
+      P[["sim_df_name"]],
       ")\n\n# Delete variables\n",
-      .sdbuildR_env[["P"]][["solution_name"]], " = Nothing\n",
-      .sdbuildR_env[["P"]][["sim_df_name"]], " = Nothing\n",
+      P[["solution_name"]], " = Nothing\n",
+      P[["sim_df_name"]], " = Nothing\n",
       "Nothing"
     )
   } else if (!is.null(ensemble_pars)) {
     script <- paste0(
       "\n\n# Create ODE problem\n",
-      .sdbuildR_env[["P"]][["prob_name"]], " = ODEProblem(",
-      .sdbuildR_env[["P"]][["ode_func_name"]], "!, ",
-      .sdbuildR_env[["P"]][["model_setup_name"]], ".",
-      .sdbuildR_env[["P"]][["initial_value_name"]],
-      ", ", .sdbuildR_env[["P"]][["times_name"]], ", ",
-      .sdbuildR_env[["P"]][["model_setup_name"]], ".",
-      .sdbuildR_env[["P"]][["parameter_name"]],
+      P[["prob_name"]], " = ODEProblem(",
+      P[["ode_func_name"]], "!, ",
+      P[["model_setup_name"]], ".",
+      P[["initial_value_name"]],
+      ", ", P[["times_name"]], ", ",
+      P[["model_setup_name"]], ".",
+      P[["parameter_name"]],
       ")\n\n",
 
       # Callback in ensemble
       ifelse(!only_stocks, paste0(
         "\n\n# Set up intermediaries for saving in callback\n",
-        .sdbuildR_env[["P"]][["intermediaries"]],
+        P[["intermediaries"]],
         " = Vector{SavedValues{eltype(",
-        .sdbuildR_env[["P"]][["time_name"]], "), Any}}(undef, ",
-        .sdbuildR_env[["P"]][["ensemble_total_n"]],
+        P[["time_name"]], "), Any}}(undef, ",
+        P[["ensemble_total_n"]],
         ")\n\n# Populate the vector above with something to avoid undef\n",
-        "for ", .sdbuildR_env[["P"]][["ensemble_iter"]], " in eachindex(",
-        .sdbuildR_env[["P"]][["intermediaries"]], ")\n\t",
-        .sdbuildR_env[["P"]][["intermediaries"]], "[",
-        .sdbuildR_env[["P"]][["ensemble_iter"]], "] = SavedValues(eltype(",
-        .sdbuildR_env[["P"]][["time_name"]], "), Any)\nend\n\n"
+        "for ", P[["ensemble_iter"]], " in eachindex(",
+        P[["intermediaries"]], ")\n\t",
+        P[["intermediaries"]], "[",
+        P[["ensemble_iter"]], "] = SavedValues(eltype(",
+        P[["time_name"]], "), Any)\nend\n\n"
       ), ""),
 
 
       # Ensemble problem function
       "# Define ensemble problem\nfunction ",
-      .sdbuildR_env[["P"]][["ensemble_func_name"]], "(prob, ",
-      .sdbuildR_env[["P"]][["ensemble_iter"]], ", repeat)\n",
+      P[["ensemble_func_name"]], "(prob, ",
+      P[["ensemble_iter"]], ", repeat)\n",
       static_eqn_script,
       ifelse(!only_stocks, paste0(
-        "\n\t", .sdbuildR_env[["P"]][["callback_name"]],
+        "\n\t", P[["callback_name"]],
         " = SavingCallback(",
-        .sdbuildR_env[["P"]][["callback_func_name"]], ", ",
-        .sdbuildR_env[["P"]][["intermediaries"]], "[",
-        .sdbuildR_env[["P"]][["ensemble_iter"]], "], saveat = ",
-        .sdbuildR_env[["P"]][["savefrom_name"]],
+        P[["callback_func_name"]], ", ",
+        P[["intermediaries"]], "[",
+        P[["ensemble_iter"]], "], saveat = ",
+        P[["savefrom_name"]],
         ")\n"
       ), ""),
       "\n\tremake(prob, u0 = ",
-      .sdbuildR_env[["P"]][["model_setup_name"]], ".",
-      .sdbuildR_env[["P"]][["initial_value_name"]],
-      ", p = ", .sdbuildR_env[["P"]][["model_setup_name"]], ".",
-      .sdbuildR_env[["P"]][["parameter_name"]],
+      P[["model_setup_name"]], ".",
+      P[["initial_value_name"]],
+      ", p = ", P[["model_setup_name"]], ".",
+      P[["parameter_name"]],
       ifelse(!only_stocks, paste0(
-        ", ", .sdbuildR_env[["P"]][["callback_name"]],
-        " = ", .sdbuildR_env[["P"]][["callback_name"]]
+        ", ", P[["callback_name"]],
+        " = ", P[["callback_name"]]
       ), ""),
       ")\nend\n\n",
 
       # Output function
-      "function ", .sdbuildR_env[["P"]][["ensemble_output_func"]], "(sol, i)\n",
+      "function ", P[["ensemble_output_func"]], "(sol, i)\n",
       "\t# Save both solution and parameters\n",
       "\treturn (t = sol.t, u = sol.u, p = sol.prob.p, u0 = sol.prob.u0), false\n",
       "end\n\n",
 
       # Ensemble problem definition
-      .sdbuildR_env[["P"]][["ensemble_prob_name"]], " = EnsembleProblem(",
-      .sdbuildR_env[["P"]][["prob_name"]], ", prob_func = ",
-      .sdbuildR_env[["P"]][["ensemble_func_name"]],
-      ", output_func = ", .sdbuildR_env[["P"]][["ensemble_output_func"]], ")\n",
+      P[["ensemble_prob_name"]], " = EnsembleProblem(",
+      P[["prob_name"]], ", prob_func = ",
+      P[["ensemble_func_name"]],
+      ", output_func = ", P[["ensemble_output_func"]], ")\n",
       # Solve ensemble problem
-      .sdbuildR_env[["P"]][["solution_name"]], " = solve(",
-      .sdbuildR_env[["P"]][["ensemble_prob_name"]], ", ",
+      P[["solution_name"]], " = solve(",
+      P[["ensemble_prob_name"]], ", ",
       sfm[["sim_specs"]][["method"]],
       ifelse(ensemble_pars[["threaded"]], ", EnsembleThreads()", ""),
-      ", dt = ", .sdbuildR_env[["P"]][["timestep_name"]],
-      ", saveat = ", .sdbuildR_env[["P"]][["savefrom_name"]],
-      ", tstops = ", .sdbuildR_env[["P"]][["tstops_name"]],
+      ", dt = ", P[["timestep_name"]],
+      ", saveat = ", P[["savefrom_name"]],
+      ", tstops = ", P[["tstops_name"]],
       ", adaptive = false, trajectories = ",
-      .sdbuildR_env[["P"]][["ensemble_total_n"]], ");\n"
+      P[["ensemble_total_n"]], ");\n"
     )
 
     # Save timeseries dataframe
     script <- paste0(
       script, "\n# Save timeseries dataframe\n",
-      .sdbuildR_env[["P"]][["sim_df_name"]], ", ",
-      .sdbuildR_env[["P"]][["parameter_name"]], ", ",
-      .sdbuildR_env[["P"]][["initial_value_name"]],
+      P[["sim_df_name"]], ", ",
+      P[["parameter_name"]], ", ",
+      P[["initial_value_name"]],
       ifelse(ensemble_pars[["threaded"]], " = ensemble_to_df_threaded(",
         " = ensemble_to_df("
       ),
-      .sdbuildR_env[["P"]][["solution_name"]], ", ",
-      .sdbuildR_env[["P"]][["model_setup_name"]], ".",
-      .sdbuildR_env[["P"]][["initial_value_names"]],
+      P[["solution_name"]], ", ",
+      P[["model_setup_name"]], ".",
+      P[["initial_value_names"]],
       ", ",
-      .sdbuildR_env[["P"]][["intermediaries"]],
+      P[["intermediaries"]],
       ", ",
-      .sdbuildR_env[["P"]][["model_setup_name"]], ".",
-      .sdbuildR_env[["P"]][["intermediary_names"]],
-      ", ", .sdbuildR_env[["P"]][["ensemble_n"]],
+      P[["model_setup_name"]], ".",
+      P[["intermediary_names"]],
+      ", ", P[["ensemble_n"]],
       ")\n"
     )
 
@@ -1552,65 +1598,65 @@ compile_run_ode_julia <- function(sfm,
       script <- paste0(
         script, 'CSV.write("',
         ensemble_pars[["filepath_df"]][["df"]], '", ',
-        .sdbuildR_env[["P"]][["sim_df_name"]], ")\n"
+        P[["sim_df_name"]], ")\n"
       )
       script <- paste0(
         script, 'CSV.write("',
         ensemble_pars[["filepath_df"]][["constants"]], '", ',
-        .sdbuildR_env[["P"]][["parameter_name"]], ")\n"
+        P[["parameter_name"]], ")\n"
       )
       script <- paste0(
         script, 'CSV.write("',
         ensemble_pars[["filepath_df"]][["init"]], '", ',
-        .sdbuildR_env[["P"]][["initial_value_name"]], ")\n"
+        P[["initial_value_name"]], ")\n"
       )
     }
 
     # Compute summary statistics
     script <- paste0(
       script, "\n# Compute summary statisics\n",
-      .sdbuildR_env[["P"]][["summary_df_name"]],
+      P[["summary_df_name"]],
       ifelse(ensemble_pars[["threaded"]], " = ensemble_summ_threaded(",
         " = ensemble_summ("
       ),
-      .sdbuildR_env[["P"]][["sim_df_name"]], ", ",
+      P[["sim_df_name"]], ", ",
       "[", paste0(ensemble_pars[["quantiles"]], collapse = ", "),
       "])\n\n",
-      .sdbuildR_env[["P"]][["parameter_name"]], "[!, :time] .= 0.0\n",
-      .sdbuildR_env[["P"]][["summary_df_constants_name"]],
+      P[["parameter_name"]], "[!, :time] .= 0.0\n",
+      P[["summary_df_constants_name"]],
       ifelse(ensemble_pars[["threaded"]], " = ensemble_summ_threaded(",
         " = ensemble_summ("
       ),
-      .sdbuildR_env[["P"]][["parameter_name"]], ", ",
+      P[["parameter_name"]], ", ",
       "[", paste0(ensemble_pars[["quantiles"]], collapse = ", "),
       "])\n",
-      "select!(", .sdbuildR_env[["P"]][["summary_df_constants_name"]],
+      "select!(", P[["summary_df_constants_name"]],
       ", Not(:time))\n\n",
-      .sdbuildR_env[["P"]][["initial_value_name"]], "[!, :time] .= 0.0\n",
-      .sdbuildR_env[["P"]][["summary_df_init_name"]],
+      P[["initial_value_name"]], "[!, :time] .= 0.0\n",
+      P[["summary_df_init_name"]],
       ifelse(ensemble_pars[["threaded"]], " = ensemble_summ_threaded(",
         " = ensemble_summ("
       ),
-      .sdbuildR_env[["P"]][["initial_value_name"]], ", ",
+      P[["initial_value_name"]], ", ",
       "[", paste0(ensemble_pars[["quantiles"]], collapse = ", "),
       "])\n",
-      "select!(", .sdbuildR_env[["P"]][["summary_df_init_name"]],
+      "select!(", P[["summary_df_init_name"]],
       ", Not(:time))\n\n",
       "\n# Save to CSV\n",
       "CSV.write(\"", ensemble_pars[["filepath_summary"]][["df"]], "\", ",
-      .sdbuildR_env[["P"]][["summary_df_name"]], ")\n\n",
+      P[["summary_df_name"]], ")\n\n",
       "CSV.write(\"", ensemble_pars[["filepath_summary"]][["constants"]], "\", ",
-      .sdbuildR_env[["P"]][["summary_df_constants_name"]], ")\n\n",
+      P[["summary_df_constants_name"]], ")\n\n",
       "CSV.write(\"", ensemble_pars[["filepath_summary"]][["init"]], "\", ",
-      .sdbuildR_env[["P"]][["summary_df_init_name"]], ")\n\n# Delete variables\n",
-      .sdbuildR_env[["P"]][["sim_df_name"]], " = Nothing\n",
-      .sdbuildR_env[["P"]][["parameter_name"]], " = Nothing\n",
-      .sdbuildR_env[["P"]][["initial_value_name"]], " = Nothing\n",
-      .sdbuildR_env[["P"]][["summary_df_name"]], " = Nothing\n",
-      .sdbuildR_env[["P"]][["summary_df_constants_name"]], " = Nothing\n",
-      .sdbuildR_env[["P"]][["summary_df_init_name"]], " = Nothing\n",
-      .sdbuildR_env[["P"]][["solution_name"]], " = Nothing\n",
-      .sdbuildR_env[["P"]][["intermediaries"]], " = Nothing\n"
+      P[["summary_df_init_name"]], ")\n\n# Delete variables\n",
+      P[["sim_df_name"]], " = Nothing\n",
+      P[["parameter_name"]], " = Nothing\n",
+      P[["initial_value_name"]], " = Nothing\n",
+      P[["summary_df_name"]], " = Nothing\n",
+      P[["summary_df_constants_name"]], " = Nothing\n",
+      P[["summary_df_init_name"]], " = Nothing\n",
+      P[["solution_name"]], " = Nothing\n",
+      P[["intermediaries"]], " = Nothing\n"
     )
   }
 

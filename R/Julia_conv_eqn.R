@@ -26,7 +26,7 @@ convert_equations_julia_wrapper <- function(sfm, regex_units) {
   )
 
   # Macros
-  sfm[["macro"]] <- lapply(sfm[["macro"]], function(x) {
+  sfm[[P[["macro_name"]]]] <- lapply(sfm[[P[["macro_name"]]]], function(x) {
     # If a name is defined, assign macro to that name (necessary for correct conversion of functions)
     if (nzchar(x[["name"]])) {
       x[["eqn_julia"]] <- paste0(x[["name"]], " = ", x[["eqn"]])
@@ -34,7 +34,7 @@ convert_equations_julia_wrapper <- function(sfm, regex_units) {
       x[["eqn_julia"]] <- x[["eqn"]]
     }
 
-    out <- convert_equations_julia("macro", "macro", x[["eqn_julia"]],
+    out <- convert_equations_julia(P[["macro_name"]], P[["macro_name"]], x[["eqn_julia"]],
       var_names,
       regex_units = regex_units
     )
@@ -58,7 +58,7 @@ convert_equations_julia_wrapper <- function(sfm, regex_units) {
 #' @noRd
 #'
 convert_equations_julia <- function(type, name, eqn, var_names, regex_units) {
-  if (.sdbuildR_env[["P"]][["debug"]]) {
+  if (P[["debug"]]) {
     # message("")
     # message(type)
     # message(name)
@@ -79,7 +79,7 @@ convert_equations_julia <- function(type, name, eqn, var_names, regex_units) {
     return(default_out)
   }
 
-  if (eqn == "0" | eqn == "0.0") {
+  if (eqn == "0" || eqn == "0.0") {
     return(default_out)
   }
 
@@ -95,24 +95,29 @@ convert_equations_julia <- function(type, name, eqn, var_names, regex_units) {
   )
 
   if ("error" %in% class(out)) {
-    stop(paste0("Parsing equation of ", name, " failed:\n", out[["message"]]), call. = FALSE)
+    stop(paste0(
+      "Parsing equation of \"",
+      name, "\" failed:\n", out[["message"]]
+    ), call. = FALSE)
   }
 
   if (any(grepl("%%", eqn))) {
     stop("The modulus operator a %% b is not supported in sdbuildR. Please use mod(a, b) instead.",
-         call. = FALSE)
+      call. = FALSE
+    )
   }
 
   if (any(grepl("na\\.rm", eqn))) {
     stop("na.rm is not supported as an argument in sdbuildR. Please use na.omit(x) instead.",
-         call. = FALSE)
+      call. = FALSE
+    )
   }
 
   # Remove comments we don't keep these
   eqn <- remove_comments(eqn)[["eqn"]]
 
   # If equation is now empty, don't run rest of functions but set equation to zero
-  if (!nzchar(eqn) | eqn == "0" | eqn == "0.0") {
+  if (!nzchar(eqn) || eqn == "0" || eqn == "0.0") {
     return(default_out)
   } else {
     # Ensure there is no scientific notation
@@ -405,10 +410,10 @@ find_curly_brackets <- function(df, paired_idxs) {
 #' @noRd
 #'
 convert_all_statements_julia <- function(eqn, var_names) {
-  eqn_old <- eqn
+  # eqn_old <- eqn
 
   # If curly brackets surround entire eqn, replace and surround with begin ... end
-  if (stringr::str_sub(eqn, 1, 1) == "{" & stringr::str_sub(eqn, nchar(eqn), nchar(eqn)) == "}") {
+  if (stringr::str_sub(eqn, 1, 1) == "{" && stringr::str_sub(eqn, nchar(eqn), nchar(eqn)) == "}") {
     stringr::str_sub(eqn, nchar(eqn), nchar(eqn)) <- "\nend"
     stringr::str_sub(eqn, 1, 1) <- "begin\n"
   }
@@ -442,7 +447,7 @@ convert_all_statements_julia <- function(eqn, var_names) {
       idxs_exclude <- get_seq_exclude(eqn, var_names, type = "quot")
       if (nrow(df_statements) > 0) df_statements <- df_statements[!(df_statements[["start"]] %in% idxs_exclude | df_statements[["end"]] %in% idxs_exclude), ]
 
-      if (!(nrow(paired_idxs) > 0 & nrow(df_statements) > 0)) {
+      if (!(nrow(paired_idxs) > 0 && nrow(df_statements) > 0)) {
         done <- TRUE
       } else {
         # Sort by start index
@@ -556,7 +561,7 @@ convert_all_statements_julia <- function(eqn, var_names) {
 
             # error when there are non-default arguments between default argumens or when default argument is not at the end
             if (any(!is.na(names_arg))) {
-              if (any(diff(which(!is.na(names_arg))) > 1) | max(which(!is.na(names_arg))) != length(names_arg)) {
+              if (any(diff(which(!is.na(names_arg))) > 1) || max(which(!is.na(names_arg))) != length(names_arg)) {
                 stop(paste0("Please change the function definition of ", pair[["func_name"]], ". All arguments with defaults have to be placed at the end of the function arguments."), call. = FALSE)
               }
             }
@@ -790,10 +795,10 @@ get_syntax_julia <- function() {
       "drop_u", "Unitful.ustrip", "syntax1", "", "", TRUE,
       # step() is already an existing function in Julia, so we use make_step()
       # instead, as well as for the others for consistency
-      "step", "make_step", "syntax1", .sdbuildR_env[["P"]][["time_units_name"]], "", FALSE,
-      "pulse", "make_pulse", "syntax1", .sdbuildR_env[["P"]][["time_units_name"]], "", FALSE,
-      "ramp", "make_ramp", "syntax1", .sdbuildR_env[["P"]][["time_units_name"]], "", FALSE,
-      "seasonal", "make_seasonal", "syntax1", .sdbuildR_env[["P"]][["timestep_name"]], "", FALSE,
+      "step", "make_step", "syntax1", P[["time_units_name"]], "", FALSE,
+      "pulse", "make_pulse", "syntax1", P[["time_units_name"]], "", FALSE,
+      "ramp", "make_ramp", "syntax1", P[["time_units_name"]], "", FALSE,
+      "seasonal", "make_seasonal", "syntax1", P[["timestep_name"]], "", FALSE,
       "length_IM", "length", "syntax1", "", "", FALSE,
       # "delay", "retrieve_delay", "delay", "", "", FALSE,
       # "past", "retrieve_past", "past", "", "", FALSE,
@@ -920,7 +925,7 @@ convert_builtin_functions_julia <- function(type, name, eqn, var_names) {
   if (grepl("[[:alpha:]]", eqn) && grepl("\\(", eqn) && grepl("\\)", eqn)) {
     # data.frame with regular expressions for each built-in R function
     syntax_df <- syntax_julia[["syntax_df"]]
-    conv_df <- syntax_julia[["conv_df"]]
+    # conv_df <- syntax_julia[["conv_df"]]
 
     # Preparation for first iteration
     done <- FALSE
@@ -971,7 +976,7 @@ convert_builtin_functions_julia <- function(type, name, eqn, var_names) {
       }
 
       # For the first iteration, add _replace to all detected functions, so we don't end in an infinite loop (some Julia and R functions have the same name)
-      if (i == 1 & nrow(idx_df) > 0) {
+      if (i == 1 && nrow(idx_df) > 0) {
         idx_df <- idx_df[order(idx_df[["start"]]), ]
         idx_df[["R_regex"]] <- stringr::str_replace_all(
           idx_df[["R_regex"]],
@@ -1018,7 +1023,8 @@ convert_builtin_functions_julia <- function(type, name, eqn, var_names) {
           # Add start_bracket column to prevent errors
           df2[["start_bracket"]] <- df2[["start"]]
           # Add back syntax1b which does not need brackets
-          idx_funcs <- dplyr::bind_rows(idx_funcs, df2)
+          # idx_funcs <- dplyr::bind_rows(idx_funcs, df2)
+          idx_funcs <- bind_rows_(idx_funcs, df2)
           idx_funcs <- idx_funcs[order(idx_funcs[["end"]]), ]
           idx_funcs
         } else {
@@ -1035,7 +1041,7 @@ convert_builtin_functions_julia <- function(type, name, eqn, var_names) {
         idx_funcs_ordered <- idx_funcs_ordered[order(idx_funcs_ordered[["is_nested_around"]]), ]
         idx_func <- idx_funcs_ordered[1, ] # Select first match
 
-        if (.sdbuildR_env[["P"]][["debug"]]) {
+        if (P[["debug"]]) {
           message("idx_func")
           message(idx_func)
         }
@@ -1083,7 +1089,7 @@ convert_builtin_functions_julia <- function(type, name, eqn, var_names) {
             ), call. = FALSE)
           }
 
-          func_name <- paste0(name, .sdbuildR_env[["P"]][["delay_suffix"]], length(add_Rcode[["func"]][[idx_func[["syntax"]]]]) + 1)
+          func_name <- paste0(name, P[["delay_suffix"]], length(add_Rcode[["func"]][[idx_func[["syntax"]]]]) + 1)
           arg3 <- ifelse(length(arg) > 2, arg[3], "nothing")
 
           replacement <- paste0(
@@ -1091,13 +1097,13 @@ convert_builtin_functions_julia <- function(type, name, eqn, var_names) {
             arg[1], ", ",
             arg[2], ", ",
             arg3, ", ",
-            .sdbuildR_env[["P"]][["time_name"]],
+            P[["time_name"]],
             # Symbols are faster
             ", :", arg[1],
             ", ",
-            .sdbuildR_env[["P"]][["intermediaries"]], ", ",
-            .sdbuildR_env[["P"]][["model_setup_name"]], ".",
-            .sdbuildR_env[["P"]][["intermediary_names"]], ")"
+            P[["intermediaries"]], ", ",
+            P[["model_setup_name"]], ".",
+            P[["intermediary_names"]], ")"
           )
 
           add_Rcode[["func"]][[idx_func[["syntax"]]]][[func_name]] <- list(
@@ -1123,18 +1129,18 @@ convert_builtin_functions_julia <- function(type, name, eqn, var_names) {
           }
 
           arg2 <- ifelse(length(arg) > 1, arg[2], "nothing")
-          func_name <- paste0(name, .sdbuildR_env[["P"]][["past_suffix"]], length(add_Rcode[["func"]][[idx_func[["syntax"]]]]) + 1)
+          func_name <- paste0(name, P[["past_suffix"]], length(add_Rcode[["func"]][[idx_func[["syntax"]]]]) + 1)
           replacement <- paste0(
             idx_func[["julia"]], "(",
             arg[1], ", ",
             arg2, ", nothing, ",
-            .sdbuildR_env[["P"]][["time_name"]],
+            P[["time_name"]],
             # Symbols are faster
             ", :", arg[1],
             ", ",
-            .sdbuildR_env[["P"]][["intermediaries"]], ", ",
-            .sdbuildR_env[["P"]][["model_setup_name"]], ".",
-            .sdbuildR_env[["P"]][["intermediary_names"]], ")"
+            P[["intermediaries"]], ", ",
+            P[["model_setup_name"]], ".",
+            P[["intermediary_names"]], ")"
           )
           add_Rcode[["func"]][[idx_func[["syntax"]]]][[func_name]] <- list(
             var = arg[1],
@@ -1168,11 +1174,11 @@ convert_builtin_functions_julia <- function(type, name, eqn, var_names) {
 
           # Number delayN() as there may be multiple
           func_name <- paste0(
-            name, .sdbuildR_env[["P"]][["delayN_suffix"]],
+            name, P[["delayN_suffix"]],
             length(add_Rcode[["func"]][[idx_func[["syntax"]]]]) + 1
           )
 
-          replacement <- paste0(func_name, .sdbuildR_env[["P"]][["outflow_suffix"]])
+          replacement <- paste0(func_name, P[["outflow_suffix"]])
           setup <- paste0(
             "setup_delayN(", arg4, ", ", arg[2], ", ", arg[3],
             # Symbols are faster
@@ -1227,9 +1233,9 @@ convert_builtin_functions_julia <- function(type, name, eqn, var_names) {
           arg4 <- ifelse(length(arg) > 3, arg[4], arg[1])
 
           # Number smoothN() as there may be multiple
-          func_name <- paste0(name, .sdbuildR_env[["P"]][["smoothN_suffix"]], length(add_Rcode[["func"]][[idx_func[["syntax"]]]]) + 1)
+          func_name <- paste0(name, P[["smoothN_suffix"]], length(add_Rcode[["func"]][[idx_func[["syntax"]]]]) + 1)
 
-          replacement <- paste0(func_name, .sdbuildR_env[["P"]][["outflow_suffix"]])
+          replacement <- paste0(func_name, P[["outflow_suffix"]])
           setup <- paste0(
             "setup_smoothN(", arg4, ", ", arg[2], ", ", arg[3],
             # Symbols are faster
@@ -1280,7 +1286,7 @@ convert_builtin_functions_julia <- function(type, name, eqn, var_names) {
           )
         }
 
-        if (.sdbuildR_env[["P"]][["debug"]]) {
+        if (P[["debug"]]) {
           message(stringr::str_sub(eqn, start_idx, end_idx))
           message(replacement)
           message("")
@@ -1322,7 +1328,7 @@ conv_distribution <- function(arg, R_func, julia_func, distribution) {
     paste0(arg[-1], collapse = ", "), arg[[1]]
   )
 
-  if (arg[1] == 1 & julia_func == "rand") {
+  if (arg[1] == 1 && julia_func == "rand") {
     julia_str <- sprintf(
       "%s(%s(%s))",
       julia_func, distribution,
@@ -1415,7 +1421,7 @@ conv_seq <- function(arg, R_func, julia_func) {
       )
     } else if (is_defined(arg[["length.out"]])) {
       # Julia throws an error in this case
-      if (as.numeric(arg[["length.out"]]) == 1 &
+      if (as.numeric(arg[["length.out"]]) == 1 &&
         as.numeric(arg[["from"]]) != as.numeric(arg[["to"]])) {
         julia_str <- arg[["from"]]
       } else {
@@ -1516,11 +1522,11 @@ scientific_notation <- function(eqn, task = c("remove", "add")[1], digits_max = 
   eqn <- as.character(eqn)
 
   if (task == "remove") {
-    scientific <- FALSE
+    # scientific <- FALSE
     # Regex for scientific notation
     pattern <- "-?(?:\\d+\\.?\\d*|\\.\\d+)[eE][+-]?\\d+"
   } else if (task == "add") {
-    scientific <- TRUE
+    # scientific <- TRUE
     # pattern = "\\d+"
     pattern <- "-?(?:\\d+\\.?\\d*|\\.\\d+)"
   }
@@ -1536,7 +1542,6 @@ scientific_notation <- function(eqn, task = c("remove", "add")[1], digits_max = 
 
     # Format to scientific notation if maximum digits are exceeded
     if (task == "add") {
-
       # Vectorized check - use ifelse instead of if
       exceeds_max <- nchar(format(num, scientific = FALSE)) > digits_max
 
@@ -1547,9 +1552,8 @@ scientific_notation <- function(eqn, task = c("remove", "add")[1], digits_max = 
           format(num, scientific = TRUE, trim = TRUE),
           ifelse(is.na(following_whitespace), "", following_whitespace)
         ),
-        match  # Change nothing if not exceeding max
+        match # Change nothing if not exceeding max
       )
-
     } else if (task == "remove") {
       replacement <- paste0(
         ifelse(is.na(leading_whitespace), "", leading_whitespace),

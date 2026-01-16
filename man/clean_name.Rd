@@ -4,14 +4,12 @@
 \alias{clean_name}
 \title{Clean variable name(s)}
 \usage{
-clean_name(new, existing, protected = c())
+clean_name(new, protected = NULL)
 }
 \arguments{
 \item{new}{Vector of names to transform to valid names}
 
-\item{existing}{Vector of existing names in model}
-
-\item{protected}{Optional vector of protected names}
+\item{protected}{Optional vector of protected names, e.g., existing names in model}
 }
 \value{
 Vector of cleaned names

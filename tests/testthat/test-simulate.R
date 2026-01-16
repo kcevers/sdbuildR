@@ -10,7 +10,7 @@ test_that("find_dependencies works", {
   expect_equal(dep[["c"]], character(0))
 
   # Reverse dependencies
-  dep <- expect_no_error(expect_no_warning(expect_no_message(find_dependencies(sfm, reverse = TRUE))))
+  dep <- expect_silent(find_dependencies(sfm, reverse = TRUE))
   expect_equal(sort(names(dep)), letters[1:3])
   expect_equal(dep[["a"]], character(0))
   expect_equal(dep[["b"]], "a")
@@ -20,7 +20,7 @@ test_that("find_dependencies works", {
 
 test_that("find_dependencies works", {
   sfm <- xmile("SIR")
-  dep <- expect_no_error(expect_no_message(find_dependencies(sfm)))
+  dep <- expect_silent(find_dependencies(sfm))
   expect_equal(dep[["Infected"]], character(0))
   expect_equal(dep[["Beta"]], c("Effective_Contact_Rate", "Total_Population"))
 
@@ -30,7 +30,7 @@ test_that("find_dependencies works", {
   )
 
   dep_rev <- find_dependencies(sfm, reverse = TRUE)
-  expect_equal(dep_rev[["Infected"]], c("Lambda", "Recovery_Rate"))
+  expect_setequal(dep_rev[["Infected"]], c("Lambda", "Recovery_Rate"))
   expect_equal(dep_rev[["Beta"]], "Lambda")
 
   expect_equal(

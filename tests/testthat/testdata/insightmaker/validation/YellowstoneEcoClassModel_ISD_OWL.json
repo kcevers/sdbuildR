@@ -1,0 +1,1267 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "YellowstoneEcoClassModel - ISD OWL",
+  "simulation": {
+    "version": "37",
+    "time_length": "57",
+    "time_start": "0",
+    "time_step": "1",
+    "time_units": "YEARS",
+    "algorithm": "RK1"
+  },
+  "elements": [
+    {
+      "name": "ELK",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "2400",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "ElkBirthRate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": ".55+(.1*[Aspenshoots])",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "CAlfsurvivalrate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.4",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Elk_newcalves_adult",
+      "type": "FLOW",
+      "from": null,
+      "to": "ELK",
+      "behavior": {
+        "value": "[CAlfsurvivalrate]*([ELK]*[ElkBirthRate])",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Coyotes",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "250",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "CoyoteNew",
+      "type": "FLOW",
+      "from": null,
+      "to": "Coyotes",
+      "behavior": {
+        "value": "[Coyotes]*[R_c]*[Readjusted_c]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "R_c",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "K_c",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "500",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Weighted_Coyotes",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": ".6*[Coyotes]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Readjusted_c",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1-(([Weighted_Wolves]+[Coyotes])/[K_c])",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Weighted_Wolves",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": ".4*[Wolves]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Wolves",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "200",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "K_w",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "300",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Readjusted_w",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "1-(([Wolves]+[Weighted_Coyotes_1])/[K_w])",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Weighted_Coyotes_1",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": ".6*[Coyotes]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "WolfBirths",
+      "type": "FLOW",
+      "from": null,
+      "to": "Wolves",
+      "behavior": {
+        "value": "([Wolfelkconversion_birth_rate]-[WolfBirth_drop_compeitioncoyotes]+[WolfALtfoodBirthgain])*[Wolves]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "WolfALtfoodBirthgain",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": ".26",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Wolfelkconversion_birth_rate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.0001*[ELK]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Bison",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "3500",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Bison_Birth_Rate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": ".24",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Bison_Births",
+      "type": "FLOW",
+      "from": null,
+      "to": "Bison",
+      "behavior": {
+        "value": "[Bison]*([Bison_Birth_Rate]-.25*[fooddroughtdeficit])",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Bison_Deaths",
+      "type": "FLOW",
+      "from": "Bison",
+      "to": null,
+      "behavior": {
+        "value": "[Bison]*([Bison_agerelated_death]+[Bison_Deathbywolf_Rate_Factor])",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Bison_Death_Rate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.001",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Bison_Deathbywolf_Rate_Factor",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Bison_Death_Rate]*[Wolves]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Bison_agerelated_death",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": ".08",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Grizzlies",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "405",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "BlackBear",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "575",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "GrizzlyBirthRate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": ".2",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "BlackBearBirthRate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": ".375",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Grizzlynewbirths",
+      "type": "FLOW",
+      "from": null,
+      "to": "Grizzlies",
+      "behavior": {
+        "value": "[GrizzlyBirthRate]*[Grizzlies]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Flow",
+      "type": "FLOW",
+      "from": null,
+      "to": "BlackBear",
+      "behavior": {
+        "value": "[BlackBear]*[BlackBearBirthRate]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Grizzlyagedeath",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": ".175",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Blkbearagedeathrate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": ".06",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Blkbearxgrizzlyrdeathfactor",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.0008*[Grizzlies]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Shortdroughtcycles",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "Pulse({4 years},0.6,1,4)",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Grizzlydeaths",
+      "type": "FLOW",
+      "from": "Grizzlies",
+      "to": null,
+      "behavior": {
+        "value": "[Grizzlies]*([Grizzlyagedeath]+[Grizzlyfooddeath])",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Blkbeardeaths",
+      "type": "FLOW",
+      "from": "BlackBear",
+      "to": null,
+      "behavior": {
+        "value": "[BlackBear]*([Blkbearagedeathrate]+[Blkbearxgrizzlyrdeathfactor])",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Grizzlyfooddeath",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[Shortdroughtcycles]*0.1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Fire_cycle",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "Pulse(10,0.15,1,10)",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "fooddroughtdeficit",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": ".25*[Shortdroughtcycles]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Aspenshoots",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "3",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Pine",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "76",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Grass",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "20",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "pinetoaspen",
+      "type": "FLOW",
+      "from": "Pine",
+      "to": "Aspenshoots",
+      "behavior": {
+        "value": "[Fire_cycle]*.05*[Pine]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "pinetograss",
+      "type": "FLOW",
+      "from": "Pine",
+      "to": "Grass",
+      "behavior": {
+        "value": "([Pine]*[Fire_cycle]*.05)",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "GreatHornedOwls",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "300",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "SmMammals",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "1000",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "SmMammalBirthRate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": ".2 + [GrassQuality]",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "OwlBirthRateFactor",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": ".06",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "OwlBirthRate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[SmMammals]*.06",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Owldeathrate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": ".25",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "SmMammalDeathRate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "[SmMammalagedeath]+([SmMammalDeathRateFactor]*[GreatHornedOwls])",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "OwlBirths",
+      "type": "FLOW",
+      "from": null,
+      "to": "GreatHornedOwls",
+      "behavior": {
+        "value": "[GreatHornedOwls]*[OwlBRdeptsmmammals]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Owldeaths",
+      "type": "FLOW",
+      "from": "GreatHornedOwls",
+      "to": null,
+      "behavior": {
+        "value": "[GreatHornedOwls]*[Owldeathrate]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "SmMammalBirths",
+      "type": "FLOW",
+      "from": null,
+      "to": "SmMammals",
+      "behavior": {
+        "value": "[SmMammals]*[SmMammalBirthRate]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "SmMammalDeaths",
+      "type": "FLOW",
+      "from": "SmMammals",
+      "to": null,
+      "behavior": {
+        "value": "[SmMammals]*[SmMammalDeathRate]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "SmMammalagedeath",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.2",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "SmMammalDeathRateFactor",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": ".00015",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "GrassQuality",
+      "type": "CONVERTER",
+      "behavior": {
+        "input": "ELEMENT",
+        "input_element": "Grass",
+        "interpolation": "LINEAR",
+        "data": [
+            [0, -0.2],
+            [10, -0.1],
+            [20, 0],
+            [25, 0.1],
+            [30, 0.25],
+            [40, 0.3]
+          ],
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "OwlBRdeptsmmammals",
+      "type": "CONVERTER",
+      "behavior": {
+        "input": "ELEMENT",
+        "input_element": "SmMammals",
+        "interpolation": "LINEAR",
+        "data": [
+            [0, 0.1527],
+            [500, 0.2],
+            [1000, 0.25],
+            [1500, 0.3],
+            [2000, 0.35]
+          ],
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "grassloss",
+      "type": "FLOW",
+      "from": "Grass",
+      "to": null,
+      "behavior": {
+        "value": "[Shortdroughtcycles]*.25",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Aspenelkeaten",
+      "type": "FLOW",
+      "from": "Aspenshoots",
+      "to": null,
+      "behavior": {
+        "value": "[Aspenshoots]*.001*[ELK]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "ElkWolfkill",
+      "type": "FLOW",
+      "from": "ELK",
+      "to": null,
+      "behavior": {
+        "value": "[ElkWolfKill_Coeff_]*[ELK]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "ElkBearkill",
+      "type": "FLOW",
+      "from": "ELK",
+      "to": null,
+      "behavior": {
+        "value": "[ELK]*[Grizzlies]*.0003",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Elkagedeaths",
+      "type": "FLOW",
+      "from": "ELK",
+      "to": null,
+      "behavior": {
+        "value": "[ELK]*.05",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Wolfdisease",
+      "type": "FLOW",
+      "from": "Wolves",
+      "to": null,
+      "behavior": {
+        "value": ".0792*[Wolves]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Wolfhuman",
+      "type": "FLOW",
+      "from": "Wolves",
+      "to": null,
+      "behavior": {
+        "value": ".1012*[Wolves]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Wolfunknown_death",
+      "type": "FLOW",
+      "from": "Wolves",
+      "to": null,
+      "behavior": {
+        "value": ".0308*[Wolves]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "WolfIntraCompetition",
+      "type": "CONVERTER",
+      "behavior": {
+        "input": "ELEMENT",
+        "input_element": "Wolves",
+        "interpolation": "LINEAR",
+        "data": [
+            [0, 0],
+            [100, 0],
+            [150, 0.075],
+            [200, 0.15],
+            [300, 0.25],
+            [400, 0.35]
+          ],
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Wolfloss_intracompeition",
+      "type": "FLOW",
+      "from": "Wolves",
+      "to": null,
+      "behavior": {
+        "value": "[Wolves]*[WolfIntraCompetition]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "WolfBirth_drop_compeitioncoyotes",
+      "type": "CONVERTER",
+      "behavior": {
+        "input": "ELEMENT",
+        "input_element": "Coyotes",
+        "interpolation": "LINEAR",
+        "data": [
+            [0, 0],
+            [125, 0.0709],
+            [250, 0.1327],
+            [300, 0.15]
+          ],
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "ElkWolfKill_Coeff_",
+      "type": "CONVERTER",
+      "behavior": {
+        "input": "ELEMENT",
+        "input_element": "Wolves",
+        "interpolation": "LINEAR",
+        "data": [
+            [0, 0],
+            [100, 0.05],
+            [150, 0.075],
+            [200, 0.085],
+            [300, 0.095],
+            [400, 0.1]
+          ],
+        "units": "Unitless"
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "Aspenshoots",
+      "to": "ElkBirthRate"
+    },
+    {
+      "type": "LINK",
+      "from": "ELK",
+      "to": "Elk_newcalves_adult"
+    },
+    {
+      "type": "LINK",
+      "from": "ElkBirthRate",
+      "to": "Elk_newcalves_adult"
+    },
+    {
+      "type": "LINK",
+      "from": "CAlfsurvivalrate",
+      "to": "Elk_newcalves_adult"
+    },
+    {
+      "type": "LINK",
+      "from": "ELK",
+      "to": "Elk_newcalves_adult"
+    },
+    {
+      "type": "LINK",
+      "from": "Coyotes",
+      "to": "CoyoteNew"
+    },
+    {
+      "type": "LINK",
+      "from": "R_c",
+      "to": "CoyoteNew"
+    },
+    {
+      "type": "LINK",
+      "from": "Readjusted_c",
+      "to": "CoyoteNew"
+    },
+    {
+      "type": "LINK",
+      "from": "Coyotes",
+      "to": "CoyoteNew"
+    },
+    {
+      "type": "LINK",
+      "from": "Coyotes",
+      "to": "Weighted_Coyotes"
+    },
+    {
+      "type": "LINK",
+      "from": "Coyotes",
+      "to": "Readjusted_c"
+    },
+    {
+      "type": "LINK",
+      "from": "K_c",
+      "to": "Readjusted_c"
+    },
+    {
+      "type": "LINK",
+      "from": "Weighted_Wolves",
+      "to": "Readjusted_c"
+    },
+    {
+      "type": "LINK",
+      "from": "Wolves",
+      "to": "Weighted_Wolves"
+    },
+    {
+      "type": "LINK",
+      "from": "Wolves",
+      "to": "Readjusted_w"
+    },
+    {
+      "type": "LINK",
+      "from": "K_w",
+      "to": "Readjusted_w"
+    },
+    {
+      "type": "LINK",
+      "from": "Weighted_Coyotes_1",
+      "to": "Readjusted_w"
+    },
+    {
+      "type": "LINK",
+      "from": "Coyotes",
+      "to": "Weighted_Coyotes_1"
+    },
+    {
+      "type": "LINK",
+      "from": "Wolves",
+      "to": "WolfBirths"
+    },
+    {
+      "type": "LINK",
+      "from": "WolfALtfoodBirthgain",
+      "to": "WolfBirths"
+    },
+    {
+      "type": "LINK",
+      "from": "Wolfelkconversion_birth_rate",
+      "to": "WolfBirths"
+    },
+    {
+      "type": "LINK",
+      "from": "WolfBirth_drop_compeitioncoyotes",
+      "to": "WolfBirths"
+    },
+    {
+      "type": "LINK",
+      "from": "Wolves",
+      "to": "WolfBirths"
+    },
+    {
+      "type": "LINK",
+      "from": "ELK",
+      "to": "Wolfelkconversion_birth_rate"
+    },
+    {
+      "type": "LINK",
+      "from": "Bison",
+      "to": "Bison_Births"
+    },
+    {
+      "type": "LINK",
+      "from": "Bison_Birth_Rate",
+      "to": "Bison_Births"
+    },
+    {
+      "type": "LINK",
+      "from": "fooddroughtdeficit",
+      "to": "Bison_Births"
+    },
+    {
+      "type": "LINK",
+      "from": "Bison",
+      "to": "Bison_Births"
+    },
+    {
+      "type": "LINK",
+      "from": "Bison",
+      "to": "Bison_Deaths"
+    },
+    {
+      "type": "LINK",
+      "from": "Bison_Deathbywolf_Rate_Factor",
+      "to": "Bison_Deaths"
+    },
+    {
+      "type": "LINK",
+      "from": "Bison_agerelated_death",
+      "to": "Bison_Deaths"
+    },
+    {
+      "type": "LINK",
+      "from": "Bison",
+      "to": "Bison_Deaths"
+    },
+    {
+      "type": "LINK",
+      "from": "Wolves",
+      "to": "Bison_Deathbywolf_Rate_Factor"
+    },
+    {
+      "type": "LINK",
+      "from": "Bison_Death_Rate",
+      "to": "Bison_Deathbywolf_Rate_Factor"
+    },
+    {
+      "type": "LINK",
+      "from": "Grizzlies",
+      "to": "Grizzlynewbirths"
+    },
+    {
+      "type": "LINK",
+      "from": "GrizzlyBirthRate",
+      "to": "Grizzlynewbirths"
+    },
+    {
+      "type": "LINK",
+      "from": "Grizzlies",
+      "to": "Grizzlynewbirths"
+    },
+    {
+      "type": "LINK",
+      "from": "BlackBear",
+      "to": "Flow"
+    },
+    {
+      "type": "LINK",
+      "from": "BlackBearBirthRate",
+      "to": "Flow"
+    },
+    {
+      "type": "LINK",
+      "from": "BlackBear",
+      "to": "Flow"
+    },
+    {
+      "type": "LINK",
+      "from": "Grizzlies",
+      "to": "Blkbearxgrizzlyrdeathfactor"
+    },
+    {
+      "type": "LINK",
+      "from": "Grizzlies",
+      "to": "Grizzlydeaths"
+    },
+    {
+      "type": "LINK",
+      "from": "Grizzlyagedeath",
+      "to": "Grizzlydeaths"
+    },
+    {
+      "type": "LINK",
+      "from": "Grizzlyfooddeath",
+      "to": "Grizzlydeaths"
+    },
+    {
+      "type": "LINK",
+      "from": "Grizzlies",
+      "to": "Grizzlydeaths"
+    },
+    {
+      "type": "LINK",
+      "from": "BlackBear",
+      "to": "Blkbeardeaths"
+    },
+    {
+      "type": "LINK",
+      "from": "Blkbearagedeathrate",
+      "to": "Blkbeardeaths"
+    },
+    {
+      "type": "LINK",
+      "from": "Blkbearxgrizzlyrdeathfactor",
+      "to": "Blkbeardeaths"
+    },
+    {
+      "type": "LINK",
+      "from": "BlackBear",
+      "to": "Blkbeardeaths"
+    },
+    {
+      "type": "LINK",
+      "from": "Shortdroughtcycles",
+      "to": "Grizzlyfooddeath"
+    },
+    {
+      "type": "LINK",
+      "from": "Shortdroughtcycles",
+      "to": "fooddroughtdeficit"
+    },
+    {
+      "type": "LINK",
+      "from": "Fire_cycle",
+      "to": "pinetoaspen"
+    },
+    {
+      "type": "LINK",
+      "from": "Pine",
+      "to": "pinetoaspen"
+    },
+    {
+      "type": "LINK",
+      "from": "Pine",
+      "to": "pinetoaspen"
+    },
+    {
+      "type": "LINK",
+      "from": "Aspenshoots",
+      "to": "pinetoaspen"
+    },
+    {
+      "type": "LINK",
+      "from": "Fire_cycle",
+      "to": "pinetograss"
+    },
+    {
+      "type": "LINK",
+      "from": "Pine",
+      "to": "pinetograss"
+    },
+    {
+      "type": "LINK",
+      "from": "Pine",
+      "to": "pinetograss"
+    },
+    {
+      "type": "LINK",
+      "from": "Grass",
+      "to": "pinetograss"
+    },
+    {
+      "type": "LINK",
+      "from": "GrassQuality",
+      "to": "SmMammalBirthRate"
+    },
+    {
+      "type": "LINK",
+      "from": "SmMammals",
+      "to": "OwlBirthRate"
+    },
+    {
+      "type": "LINK",
+      "from": "GreatHornedOwls",
+      "to": "SmMammalDeathRate"
+    },
+    {
+      "type": "LINK",
+      "from": "SmMammalagedeath",
+      "to": "SmMammalDeathRate"
+    },
+    {
+      "type": "LINK",
+      "from": "SmMammalDeathRateFactor",
+      "to": "SmMammalDeathRate"
+    },
+    {
+      "type": "LINK",
+      "from": "GreatHornedOwls",
+      "to": "OwlBirths"
+    },
+    {
+      "type": "LINK",
+      "from": "OwlBRdeptsmmammals",
+      "to": "OwlBirths"
+    },
+    {
+      "type": "LINK",
+      "from": "GreatHornedOwls",
+      "to": "OwlBirths"
+    },
+    {
+      "type": "LINK",
+      "from": "GreatHornedOwls",
+      "to": "Owldeaths"
+    },
+    {
+      "type": "LINK",
+      "from": "Owldeathrate",
+      "to": "Owldeaths"
+    },
+    {
+      "type": "LINK",
+      "from": "GreatHornedOwls",
+      "to": "Owldeaths"
+    },
+    {
+      "type": "LINK",
+      "from": "SmMammals",
+      "to": "SmMammalBirths"
+    },
+    {
+      "type": "LINK",
+      "from": "SmMammalBirthRate",
+      "to": "SmMammalBirths"
+    },
+    {
+      "type": "LINK",
+      "from": "SmMammals",
+      "to": "SmMammalBirths"
+    },
+    {
+      "type": "LINK",
+      "from": "SmMammals",
+      "to": "SmMammalDeaths"
+    },
+    {
+      "type": "LINK",
+      "from": "SmMammalDeathRate",
+      "to": "SmMammalDeaths"
+    },
+    {
+      "type": "LINK",
+      "from": "SmMammals",
+      "to": "SmMammalDeaths"
+    },
+    {
+      "type": "LINK",
+      "from": "Shortdroughtcycles",
+      "to": "grassloss"
+    },
+    {
+      "type": "LINK",
+      "from": "Grass",
+      "to": "grassloss"
+    },
+    {
+      "type": "LINK",
+      "from": "ELK",
+      "to": "Aspenelkeaten"
+    },
+    {
+      "type": "LINK",
+      "from": "Aspenshoots",
+      "to": "Aspenelkeaten"
+    },
+    {
+      "type": "LINK",
+      "from": "Aspenshoots",
+      "to": "Aspenelkeaten"
+    },
+    {
+      "type": "LINK",
+      "from": "ELK",
+      "to": "ElkWolfkill"
+    },
+    {
+      "type": "LINK",
+      "from": "ElkWolfKill_Coeff_",
+      "to": "ElkWolfkill"
+    },
+    {
+      "type": "LINK",
+      "from": "ELK",
+      "to": "ElkWolfkill"
+    },
+    {
+      "type": "LINK",
+      "from": "ELK",
+      "to": "ElkBearkill"
+    },
+    {
+      "type": "LINK",
+      "from": "Grizzlies",
+      "to": "ElkBearkill"
+    },
+    {
+      "type": "LINK",
+      "from": "ELK",
+      "to": "ElkBearkill"
+    },
+    {
+      "type": "LINK",
+      "from": "ELK",
+      "to": "Elkagedeaths"
+    },
+    {
+      "type": "LINK",
+      "from": "ELK",
+      "to": "Elkagedeaths"
+    },
+    {
+      "type": "LINK",
+      "from": "Wolves",
+      "to": "Wolfdisease"
+    },
+    {
+      "type": "LINK",
+      "from": "Wolves",
+      "to": "Wolfdisease"
+    },
+    {
+      "type": "LINK",
+      "from": "Wolves",
+      "to": "Wolfhuman"
+    },
+    {
+      "type": "LINK",
+      "from": "Wolves",
+      "to": "Wolfhuman"
+    },
+    {
+      "type": "LINK",
+      "from": "Wolves",
+      "to": "Wolfunknown_death"
+    },
+    {
+      "type": "LINK",
+      "from": "Wolves",
+      "to": "Wolfunknown_death"
+    },
+    {
+      "type": "LINK",
+      "from": "Wolves",
+      "to": "Wolfloss_intracompeition"
+    },
+    {
+      "type": "LINK",
+      "from": "WolfIntraCompetition",
+      "to": "Wolfloss_intracompeition"
+    },
+    {
+      "type": "LINK",
+      "from": "Wolves",
+      "to": "Wolfloss_intracompeition"
+    }
+  ],
+  "engine_settings": []
+}

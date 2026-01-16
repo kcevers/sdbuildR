@@ -1,0 +1,214 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "Growth and Underinvestment",
+  "simulation": {
+    "version": "37",
+    "time_length": "10",
+    "time_start": "0",
+    "time_step": "0.5",
+    "time_units": "DAYS",
+    "algorithm": "RK1"
+  },
+  "elements": [
+    {
+      "name": "Result",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0.9",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "action",
+      "type": "FLOW",
+      "from": null,
+      "to": "Result",
+      "behavior": {
+        "value": "[Result] * [action_factor]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "growth_inhibitor",
+      "type": "FLOW",
+      "from": "Result",
+      "to": null,
+      "behavior": {
+        "value": "([Result] - [Inhibitor_Avoidance]) * [inhibitor_factor]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Inhibitor_Avoidance",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "perceived_need",
+      "type": "FLOW",
+      "from": null,
+      "to": "Inhibitor_Avoidance",
+      "behavior": {
+        "value": "([growth_inhibitor] - [standard]) * [need_factor]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "standard",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": ".1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "action_factor",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": ".5",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "need_factor",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "inhibitor_factor",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": ".25",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "growing_action",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0",
+        "description": "Growing action promotes growth.",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "growth",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0",
+        "description": "Growth encourages more growing action and also interacts with inhibitor avoidance to promote the growth inhibitor.",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "growth_inhibitor_1",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0",
+        "description": "Growth interacting with inhibitor avoidance to promote a growth inhibitor.\n\nThis growth inhibitor after some delay inhibits growth though also interacts with a standard to promote a perceived need.",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "perceived_need_1",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0",
+        "description": "Interaction of the growth inhibitor with the defined standard result in a perceived need.\n\nThe perceived need promotes the development of inhibitor avoidance.",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "inhibitor_avoidance",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0",
+        "description": "perceived need promotes inhibitor avoidance which serves to limit the growth inhibitor.",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "standard_1",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": ".1",
+        "description": "A defined standard that is to be maintained.",
+        "units": "Unitless"
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "Result",
+      "to": "action"
+    },
+    {
+      "type": "LINK",
+      "from": "action_factor",
+      "to": "action"
+    },
+    {
+      "type": "LINK",
+      "from": "Result",
+      "to": "action"
+    },
+    {
+      "type": "LINK",
+      "from": "Result",
+      "to": "growth_inhibitor"
+    },
+    {
+      "type": "LINK",
+      "from": "Inhibitor_Avoidance",
+      "to": "growth_inhibitor"
+    },
+    {
+      "type": "LINK",
+      "from": "inhibitor_factor",
+      "to": "growth_inhibitor"
+    },
+    {
+      "type": "LINK",
+      "from": "Result",
+      "to": "growth_inhibitor"
+    },
+    {
+      "type": "LINK",
+      "from": "growth_inhibitor",
+      "to": "perceived_need"
+    },
+    {
+      "type": "LINK",
+      "from": "standard",
+      "to": "perceived_need"
+    },
+    {
+      "type": "LINK",
+      "from": "need_factor",
+      "to": "perceived_need"
+    },
+    {
+      "type": "LINK",
+      "from": "Inhibitor_Avoidance",
+      "to": "perceived_need"
+    }
+  ],
+  "engine_settings": []
+}

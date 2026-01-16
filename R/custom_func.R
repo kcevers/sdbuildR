@@ -107,7 +107,7 @@ rdist <- function(a, b) {
 #' indexof("haystack", "hay") # 1
 #' indexof("haystack", "m") # 0
 indexof <- function(haystack, needle) {
-  if (length(haystack) == 1 & is.character(haystack)) {
+  if (length(haystack) == 1 && is.character(haystack)) {
     matches <- stringr::str_locate(haystack, stringr::fixed(needle))
     positions <- unname(matches[, "start"][1]) # First match
 
@@ -142,7 +142,7 @@ indexof <- function(haystack, needle) {
 #' length_IM(c("a", "b", "c")) # 3
 #' length_IM("abcdef") # 6
 length_IM <- function(x) {
-  if (length(x) == 1 & is.character(x)) {
+  if (length(x) == 1 && is.character(x)) {
     return(stringr::str_length(x))
   } else {
     return(length(x))
@@ -165,7 +165,7 @@ length_IM <- function(x) {
 #' contains_IM(c("a", "b", "c"), "d") # FALSE
 #' contains_IM(c("abcdef"), "bc") # TRUE
 contains_IM <- function(haystack, needle) {
-  if (length(haystack) == 1 & is.character(haystack)) {
+  if (length(haystack) == 1 && is.character(haystack)) {
     return(grepl(needle, haystack, fixed = TRUE))
   } else {
     return(needle %in% haystack)
@@ -297,7 +297,7 @@ ramp <- function(times, start, finish, height = 1) {
 #'
 pulse <- function(times, start, height = 1, width = 1, repeat_interval = NULL) {
   if (width <= 0) {
-    stop(paste0("The width of the pulse cannot be equal to or less than 0. To indicate an 'instantaneous' pulse, specify the simulation step size (", .sdbuildR_env[["P"]][["timestep_name"]], ")."))
+    stop(paste0("The width of the pulse cannot be equal to or less than 0. To indicate an 'instantaneous' pulse, specify the simulation step size (", P[["timestep_name"]], ")."))
   }
 
   if (start < times[1]) {
@@ -572,8 +572,10 @@ mod <- function(a, b) {
 #' plot(x, logistic(x, slope = 1), type = "l", ylab = "f(x)", ylim = c(0, 1))
 #' lines(x, logistic(x, slope = 5), col = "blue")
 #' lines(x, logistic(x, slope = 50), col = "red")
-#' legend("topleft", legend = c("slope = 1", "slope = 5", "slope = 50"),
-#'        col = c("black", "blue", "red"), lty = 1)
+#' legend("topleft",
+#'   legend = c("slope = 1", "slope = 5", "slope = 50"),
+#'   col = c("black", "blue", "red"), lty = 1
+#' )
 logistic <- function(x, slope = 1, midpoint = 0, upper = 1) {
   stopifnot("slope must be numeric!" = is.numeric(slope))
   stopifnot("midpoint must be numeric!" = is.numeric(midpoint))

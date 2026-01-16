@@ -1,0 +1,289 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "Escalation",
+  "simulation": {
+    "version": "37",
+    "time_length": "10",
+    "time_start": "0",
+    "time_step": "1",
+    "time_units": "WEEKS",
+    "algorithm": "RK1"
+  },
+  "elements": [
+    {
+      "name": "Ted_Results",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0.3",
+        "description": "The results Ted produces.",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Anne_Results",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0.4",
+        "description": "The results Anne produces.",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "T_Flow",
+      "type": "FLOW",
+      "from": null,
+      "to": "Ted_Results",
+      "behavior": {
+        "value": "IfThenElse([Anne_Results]>[Ted_Results], [threat]*([Anne_Results]-[Ted_Results]), 0) + [T_act]",
+        "description": "Ted's action to produce results with is a function of normal action plus extra effort if Anne's results are greater than Ted's.",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "A_Flow",
+      "type": "FLOW",
+      "from": null,
+      "to": "Anne_Results",
+      "behavior": {
+        "value": "IfThenElse([Ted_Results]>[Anne_Results],[threat]*([Ted_Results]-[Anne_Results]), 0) + [A_act]",
+        "description": "Anne's action to produce results with is a function of normal action plus extra effort if Ted's results are greater than Anne's.",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "threat",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "2.4",
+        "description": "How paranoid are the participants about being out performed by each other.",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "T_act",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.1",
+        "description": "The default level of activity contributing to Ted's Results.",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "A_act",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.2",
+        "description": "The default level of activity adding to Anne's Results.",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Tom_results",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "threat_to_Anne",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "action_by_Anne",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "threat_to_Tom",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "action_by_Tom",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Anne_results",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "better_results_of_Anne_relative_to_Tom",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Tom_results_1",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "threat_to_Anne_1",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "action_by_Anne_1",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "threat_to_Tom_1",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "action_by_Tom_1",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Anne_results_1",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "better_results_of_Anne_relative_to_Tom_1",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "better_results_of_Anne_relative_to_Tom_2",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "Ted_Results",
+      "to": "T_Flow"
+    },
+    {
+      "type": "LINK",
+      "from": "Ted_Results",
+      "to": "T_Flow"
+    },
+    {
+      "type": "LINK",
+      "from": "Anne_Results",
+      "to": "T_Flow"
+    },
+    {
+      "type": "LINK",
+      "from": "Anne_Results",
+      "to": "T_Flow"
+    },
+    {
+      "type": "LINK",
+      "from": "threat",
+      "to": "T_Flow"
+    },
+    {
+      "type": "LINK",
+      "from": "T_act",
+      "to": "T_Flow"
+    },
+    {
+      "type": "LINK",
+      "from": "Ted_Results",
+      "to": "T_Flow"
+    },
+    {
+      "type": "LINK",
+      "from": "Ted_Results",
+      "to": "A_Flow"
+    },
+    {
+      "type": "LINK",
+      "from": "Ted_Results",
+      "to": "A_Flow"
+    },
+    {
+      "type": "LINK",
+      "from": "Anne_Results",
+      "to": "A_Flow"
+    },
+    {
+      "type": "LINK",
+      "from": "Anne_Results",
+      "to": "A_Flow"
+    },
+    {
+      "type": "LINK",
+      "from": "threat",
+      "to": "A_Flow"
+    },
+    {
+      "type": "LINK",
+      "from": "A_act",
+      "to": "A_Flow"
+    },
+    {
+      "type": "LINK",
+      "from": "Anne_Results",
+      "to": "A_Flow"
+    }
+  ],
+  "engine_settings": []
+}

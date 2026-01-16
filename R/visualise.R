@@ -162,13 +162,16 @@ export_plotly <- function(pl, file, format, width, height) {
   # Overwrite quiet option temporarily
   old_option <- getOption("webshot.quiet")
   options("webshot.quiet" = TRUE)
-  on.exit({
-    if (is.null(old_option)) {
-      options("webshot.quiet" = NULL)
-    } else {
-      options("webshot.quiet" = old_option)
-    }
-  })
+  on.exit(
+    {
+      if (is.null(old_option)) {
+        options("webshot.quiet" = NULL)
+      } else {
+        options("webshot.quiet" = old_option)
+      }
+    },
+    add = TRUE
+  )
 
   # Convert to specified format
   do.call(webshot2::webshot, webshot_params)
@@ -311,7 +314,8 @@ plot.sdbuildR_xmile <- function(x,
 
   # Text wrap to prevent long names
   df[["label"]] <- gsub("'", "\\\\'", df[["label"]])
-  df[["label"]] <- stringr::str_wrap(df[["label"]], width = wrap_width)
+  # df[["label"]] <- stringr::str_wrap(df[["label"]], width = wrap_width)
+  df[["label"]] <- str_wrap_(df[["label"]], width = wrap_width)
   dict <- stats::setNames(df[["label"]], df[["name"]])
 
   # Get equations and remove quotation marks from unit strings
@@ -441,7 +445,7 @@ plot.sdbuildR_xmile <- function(x,
     rank_statements <- paste(rank_statements, collapse = "\n")
   }
 
-  cloud_nodes <- flow_edges <- flow_nodes <- dependency_edges <- legend_nodes <- legend_edges <- ""
+  cloud_nodes <- flow_edges <- flow_nodes <- dependency_edges <- ""
 
   if (length(flow_names) > 0) {
     # # Create dataframe with direction of flows
@@ -679,7 +683,8 @@ prep_plot <- function(sfm, type_sim, df, constants, add_constants, vars, palette
           }) |>
             do.call(rbind, args = _) |>
             as.data.frame()
-          df <- dplyr::bind_rows(df, temp)
+          # df <- dplyr::bind_rows(df, temp)
+          df <- bind_rows_(df, temp)
           rm(temp)
         }
       } else if (type_sim == "ensemble") {
@@ -695,7 +700,8 @@ prep_plot <- function(sfm, type_sim, df, constants, add_constants, vars, palette
         # Clean up row names
         rownames(temp) <- NULL
 
-        df <- dplyr::bind_rows(df, temp)
+        # df <- dplyr::bind_rows(df, temp)
+        df <- bind_rows_(df, temp)
         rm(temp)
       }
     }
@@ -758,8 +764,10 @@ prep_plot <- function(sfm, type_sim, df, constants, add_constants, vars, palette
   nonhighlight_names <- stats::setNames(nonhighlight_names[["name"]], nonhighlight_names[["label"]])
 
   # Wrap names to prevent long names from squishing the plot
-  names(highlight_names) <- stringr::str_wrap(names(highlight_names), width = wrap_width)
-  names(nonhighlight_names) <- stringr::str_wrap(names(nonhighlight_names), width = wrap_width)
+  # names(highlight_names) <- stringr::str_wrap(names(highlight_names), width = wrap_width)
+  # names(nonhighlight_names) <- stringr::str_wrap(names(nonhighlight_names), width = wrap_width)
+  names(highlight_names) <- str_wrap_(names(highlight_names), width = wrap_width)
+  names(nonhighlight_names) <- str_wrap_(names(nonhighlight_names), width = wrap_width)
 
   # Split dataframe into stocks and non-stocks
   df_highlight <- df[df[["variable"]] %in% unname(highlight_names), , drop = FALSE]
@@ -867,7 +875,7 @@ plot.sdbuildR_sim <- function(x,
 
   validate_sdbuildR_sim(x)
 
-  if (x[["success"]] == FALSE) {
+  if (!x[["success"]]) {
     stop("Simulation failed!")
   }
 
@@ -908,7 +916,6 @@ plot.sdbuildR_sim <- function(x,
   df_highlight <- out[["df_highlight"]]
   df_nonhighlight <- out[["df_nonhighlight"]]
   colors <- out[["colors"]]
-
   x_col <- "time"
 
   # Initialize plotly object
@@ -961,7 +968,7 @@ plot.sdbuildR_sim <- function(x,
   )
 
   # If there is only one trace, legend doesn't show
-  if (showlegend & (length(highlight_names) + length(nonhighlight_names)) == 1) {
+  if (showlegend && (length(highlight_names) + length(nonhighlight_names)) == 1) {
     pl <- plotly::layout(pl, showlegend = TRUE)
   }
 
@@ -1147,7 +1154,7 @@ plot.sdbuildR_ensemble <- function(x,
 
   # Ensure there aren't more rows than j
   nrows <- min(nrows, length(j))
-  ncols <- ceiling(length(j) / nrows)
+  # ncols <- ceiling(length(j) / nrows)
 
   # Whether to create subplots or not
   create_subplots <- length(j) > 1
@@ -1194,8 +1201,8 @@ plot.sdbuildR_ensemble <- function(x,
     constants = x[["constants"]][["summary"]], add_constants = add_constants,
     vars = vars, palette = palette, colors = colors, wrap_width = wrap_width
   )
-  highlight_names <- out[["highlight_names"]]
-  nonhighlight_names <- out[["nonhighlight_names"]]
+  # highlight_names <- out[["highlight_names"]]
+  # nonhighlight_names <- out[["nonhighlight_names"]]
   summary_df_highlight <- out[["df_highlight"]]
   summary_df_nonhighlight <- out[["df_nonhighlight"]]
   colors <- out[["colors"]]
@@ -1506,7 +1513,7 @@ plot_ensemble_helper <- function(j_idx, j_name, j, j_labels,
         visible = TRUE
       )
     }
-  } else if (mode == "markers" & type == "summary") {
+  } else if (mode == "markers" && type == "summary") {
     if (plot_nonhighlight) {
       pl <- plotly::add_trace(pl,
         data = summary_df_nonhighlight,
@@ -1550,7 +1557,7 @@ plot_ensemble_helper <- function(j_idx, j_name, j, j_labels,
         visible = TRUE
       )
     }
-  } else if (mode == "markers" & type == "sims") {
+  } else if (mode == "markers" && type == "sims") {
     if (plot_nonhighlight) {
       pl <- plotly::add_trace(pl,
         data = summary_df_nonhighlight,
@@ -1598,7 +1605,7 @@ plot_ensemble_helper <- function(j_idx, j_name, j, j_labels,
   )
 
   # If there is only one trace, legend doesn't show
-  if (showlegend & (nr_var == 1)) {
+  if (showlegend && (nr_var == 1)) {
     pl <- plotly::layout(pl, showlegend = TRUE)
   }
 
@@ -1614,7 +1621,7 @@ plot_ensemble_helper <- function(j_idx, j_name, j, j_labels,
 
 
   # Add subplot title
-  if (create_subplots & j_labels) {
+  if (create_subplots && j_labels) {
     pl <- plotly::layout(pl,
       annotations = list(
         list(

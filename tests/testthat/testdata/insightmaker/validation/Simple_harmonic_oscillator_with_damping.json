@@ -1,0 +1,138 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "Simple harmonic oscillator with damping",
+  "simulation": {
+    "version": "36",
+    "time_length": "5",
+    "time_start": "0",
+    "time_step": "0.01",
+    "time_units": "SECONDS",
+    "algorithm": "RK4"
+  },
+  "elements": [
+    {
+      "name": "velocity",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0",
+        "description": "",
+        "units": "Meters per Second"
+      }
+    },
+    {
+      "name": "Force",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "-[Elastic_Constant]*[position]-[Damping_coefficient]*[velocity]",
+        "description": "",
+        "units": "Newtons"
+      }
+    },
+    {
+      "name": "Acceleration",
+      "type": "FLOW",
+      "from": null,
+      "to": "velocity",
+      "behavior": {
+        "value": "[Force]/[Mass]",
+        "description": "",
+        "units": "Meters per Second Squared",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "Mass",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": ".25",
+        "description": "",
+        "units": "Kilograms"
+      }
+    },
+    {
+      "name": "position",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "0.02",
+        "description": "",
+        "units": "Meters"
+      }
+    },
+    {
+      "name": "velocity_1",
+      "type": "FLOW",
+      "from": null,
+      "to": "position",
+      "behavior": {
+        "value": "[velocity]",
+        "description": "",
+        "units": "Meters per Second",
+        "non_negative": false
+      }
+    },
+    {
+      "name": "Elastic_Constant",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "10",
+        "description": "",
+        "units": "Newtons/Meters"
+      }
+    },
+    {
+      "name": "Damping_coefficient",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.5",
+        "description": "",
+        "units": "Newtons/Meters*Second"
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "velocity",
+      "to": "Force"
+    },
+    {
+      "type": "LINK",
+      "from": "position",
+      "to": "Force"
+    },
+    {
+      "type": "LINK",
+      "from": "Elastic_Constant",
+      "to": "Force"
+    },
+    {
+      "type": "LINK",
+      "from": "Damping_coefficient",
+      "to": "Force"
+    },
+    {
+      "type": "LINK",
+      "from": "Force",
+      "to": "Acceleration"
+    },
+    {
+      "type": "LINK",
+      "from": "Mass",
+      "to": "Acceleration"
+    },
+    {
+      "type": "LINK",
+      "from": "velocity",
+      "to": "Acceleration"
+    },
+    {
+      "type": "LINK",
+      "from": "velocity",
+      "to": "velocity_1"
+    },
+    {
+      "type": "LINK",
+      "from": "position",
+      "to": "velocity_1"
+    }
+  ],
+  "engine_settings": []
+}

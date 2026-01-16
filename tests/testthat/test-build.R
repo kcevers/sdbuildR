@@ -86,10 +86,14 @@ test_that("sim_specs() works", {
   expect_equal(sim_specs(sfm, seed = NULL)$sim_specs$seed, NULL)
 
   # Check that dt must be smaller than stop - start
-  expect_error(xmile() |> sim_specs(start = 0, stop = .05, dt = .1),
-               "dt must be smaller than the difference between start and stop!")
-  expect_error(xmile() |> sim_specs(start = 0, stop = 1, save_at = 2),
-               "save_at must be smaller than the difference between start and stop!")
+  expect_error(
+    xmile() |> sim_specs(start = 0, stop = .05, dt = .1),
+    "dt must be smaller than the difference between start and stop!"
+  )
+  expect_error(
+    xmile() |> sim_specs(start = 0, stop = 1, save_at = 2),
+    "save_at must be smaller than the difference between start and stop!"
+  )
 
   # save_at and dt
   expect_no_error(xmile() |> sim_specs(dt = .1))
@@ -146,6 +150,12 @@ test_that("sim_specs() works", {
   expect_equal(sim_specs(sfm, time_units = "Years")$sim_specs$time_units, "yr")
   expect_equal(sim_specs(sfm, time_units = "Months")$sim_specs$time_units, "month")
   expect_equal(sim_specs(sfm, time_units = "Quarters")$sim_specs$time_units, "quarter")
+
+  # method cannot be NULL
+  expect_error(sim_specs(sfm, method = NULL), "method must be a single string")
+  expect_error(sim_specs(sfm, method = NA), "method must be a single string")
+  expect_error(sim_specs(sfm, method = 9), "method must be a single string")
+  expect_error(sim_specs(sfm, method = c("a", "b")), "method must be a single string")
 })
 
 
@@ -172,13 +182,13 @@ test_that("flow cannot have same stock as to and from", {
 
   # Check that this works when adding to or from later
   sfm <- xmile() |> build("b", "flow", to = "a")
-  expect_message(
+  expect_warning(
     sfm |> build("b", from = "a"),
     "b is flowing to and from the same variable \\(a\\)"
   )
 
   sfm <- xmile() |> build("b", "flow", from = "a")
-  expect_message(
+  expect_warning(
     sfm |> build("b", to = "a"),
     "b is flowing to and from the same variable \\(a\\)"
   )
@@ -234,13 +244,13 @@ test_that("incorrect equations throw error", {
     {
       xmile() |> build("a", "aux", eqn = "a + (1,")
     },
-    "Parsing equation of a failed"
+    "Parsing equation of \"a\" failed"
   )
   expect_error(
     {
       xmile() |> build("a", "aux", eqn = "<- (1)")
     },
-    "Parsing equation of a failed"
+    "Parsing equation of \"a\" failed"
   )
 })
 
@@ -370,12 +380,18 @@ test_that("change_name and change_type in build()", {
 
 
 test_that("from and to can only be stocks", {
-  sfm <- expect_no_error(expect_no_message(expect_no_warning(xmile() |> build("a", "flow", to = "b"))))
-  sfm <- expect_warning(sfm |> build("b", "flow"), "a is flowing to a variable which is not a stock \\(b\\)! Removing b from `to`")
+  sfm <- expect_silent(xmile() |> build("a", "flow", to = "b"))
+  sfm <- expect_warning(
+    sfm |> build("b", "flow"),
+    "a is flowing to a variable which is not a stock \\(b\\)! Removing b from `to`"
+  )
   expect_null(sfm[["model"]][["variables"]][["flow"]][["a"]][["to"]])
 
   sfm <- expect_no_error(expect_no_message(expect_no_warning(xmile() |> build("a", "flow", from = "b"))))
-  sfm <- expect_warning(sfm |> build("b", "flow"), "a is flowing from a variable which is not a stock \\(b\\)! Removing b from `from`")
+  sfm <- expect_warning(
+    sfm |> build("b", "flow"),
+    "a is flowing from a variable which is not a stock \\(b\\)! Removing b from `from`"
+  )
   expect_null(sfm[["model"]][["variables"]][["flow"]][["a"]][["from"]])
 
   expect_error(
@@ -603,7 +619,10 @@ test_that("build() works", {
   expect_equal(sfm$model$variables$aux$c$eqn_julia, "0.0")
 
   # Ensure equation with missing brackets throws useful error
-  expect_error(xmile() |> build("c", "aux", eqn = "a + (1, "), "Parsing equation of c failed")
+  expect_error(
+    xmile() |> build("c", "aux", eqn = "a + (1, "),
+    "Parsing equation of \"c\" failed"
+  )
 
   # Multiple equations but only one name should throw error
   expect_error(
@@ -831,8 +850,10 @@ test_that("debugger() works", {
 
   # Dependency on itself
   sfm <- xmile() |> build("a", "stock", eqn = "cos(a)")
-  expect_warning(sim <- simulate(sfm),
-                        "The variable 'a' is referenced in a\\$eqn but hasn't been defined")
+  expect_warning(
+    sim <- simulate(sfm),
+    "The variable 'a' is referenced in a\\$eqn but hasn't been defined"
+  )
   expect_false(sim$success)
 })
 
@@ -1202,8 +1223,10 @@ test_that("graphical functions accept source parameter", {
 
   sfm <- build(sfm, "lookup_with_source", source = "stock2")
 
-  expect_warning(sim <- simulate(sfm),
-               "The variable 'stock2' is referenced in lookup_with_source\\$source but hasn't been defined")
+  expect_warning(
+    sim <- simulate(sfm),
+    "The variable 'stock2' is referenced in lookup_with_source\\$source but hasn't been defined"
+  )
   expect_false(sim$success)
 })
 

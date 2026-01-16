@@ -38,7 +38,8 @@ sfm <- model_units(sfm, "BMI", eqn = "kilogram/meters^2")
 # Remove unit:
 sfm <- model_units(sfm, "BMI", erase = TRUE)
 
-# Unit names may be changed to be syntactically valid and avoid overlap:
+# Unit names may need to be changed to be syntactically valid or to avoid
+# overlap with existing units:
 sfm <- model_units(xmile(), "C0^2")
 \dontshow{\}) # examplesIf}
 }

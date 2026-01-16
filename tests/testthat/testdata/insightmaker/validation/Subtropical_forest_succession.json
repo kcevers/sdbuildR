@@ -1,0 +1,422 @@
+{
+  "engine": "SIMULATION_PACKAGE",
+  "name": "Subtropical forest succession",
+  "simulation": {
+    "version": "38",
+    "time_length": "2400",
+    "time_start": "0",
+    "time_step": "2",
+    "time_units": "MONTHS",
+    "algorithm": "RK4"
+  },
+  "elements": [
+    {
+      "name": "Pioneer",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Intermediate",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Late",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "1",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Nutrients",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "4.04",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Growth_of_pioneer",
+      "type": "FLOW",
+      "from": "Nutrients",
+      "to": "Pioneer",
+      "behavior": {
+        "value": "If [Shade]<0.1 Then\n  [Pioneer]*[Nutrients]*0.0025\nElse\n  [Pioneer]*[Nutrients]*0.0025*(1-[Shade])\nEnd If",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Growth_of_intermediate",
+      "type": "FLOW",
+      "from": "Nutrients",
+      "to": "Intermediate",
+      "behavior": {
+        "value": "If [Shade]<0.5 Then\n  [Intermediate]*[Nutrients]*0.0015\nElse\n  [Intermediate]*[Nutrients]*0.0015*(1-[Intermediate]/[Shade])\nEnd If",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Growth_of_late",
+      "type": "FLOW",
+      "from": "Nutrients",
+      "to": "Late",
+      "behavior": {
+        "value": "If [Shade]<0.8 Then\n  [Late]*[Nutrients]*0.001\nElse\n  [Late]*[Nutrients]*0.001*(1-[Late]/[Shade])\nEnd If",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Detritus",
+      "type": "STOCK",
+      "behavior": {
+        "initial_value": "94.62",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Death_of_pioneer",
+      "type": "FLOW",
+      "from": "Pioneer",
+      "to": "Detritus",
+      "behavior": {
+        "value": "If [Shade]<0.1 Then\n  [Pioneer]*0.01\nElse\n  [Pioneer]*4\nEnd If",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Death_of_intermediate",
+      "type": "FLOW",
+      "from": "Intermediate",
+      "to": "Detritus",
+      "behavior": {
+        "value": "If [Shade]<0.3 Then\n  [Intermediate]*0.004\nElse\n  [Intermediate]*0.003*([Intermediate]/[Shade])\nEnd If",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Death_of_late",
+      "type": "FLOW",
+      "from": "Late",
+      "to": "Detritus",
+      "behavior": {
+        "value": "If [Shade]<0.8 Then\n  [Late]*0.002\nElse\n  [Late]*0.002*([Late]/[Shade])\nEnd If",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Decomposition",
+      "type": "FLOW",
+      "from": "Detritus",
+      "to": "Nutrients",
+      "behavior": {
+        "value": "[Detritus]*[Decomposition_rate]",
+        "description": "",
+        "units": "Unitless",
+        "non_negative": true
+      }
+    },
+    {
+      "name": "Shade",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "([Pioneer]+[Intermediate]+[Late])/1000",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "name": "Decomposition_rate",
+      "type": "VARIABLE",
+      "behavior": {
+        "value": "0.9641",
+        "description": "",
+        "units": "Unitless"
+      }
+    },
+    {
+      "type": "LINK",
+      "from": "Pioneer",
+      "to": "Growth_of_pioneer"
+    },
+    {
+      "type": "LINK",
+      "from": "Pioneer",
+      "to": "Growth_of_pioneer"
+    },
+    {
+      "type": "LINK",
+      "from": "Nutrients",
+      "to": "Growth_of_pioneer"
+    },
+    {
+      "type": "LINK",
+      "from": "Nutrients",
+      "to": "Growth_of_pioneer"
+    },
+    {
+      "type": "LINK",
+      "from": "Shade",
+      "to": "Growth_of_pioneer"
+    },
+    {
+      "type": "LINK",
+      "from": "Shade",
+      "to": "Growth_of_pioneer"
+    },
+    {
+      "type": "LINK",
+      "from": "Nutrients",
+      "to": "Growth_of_pioneer"
+    },
+    {
+      "type": "LINK",
+      "from": "Pioneer",
+      "to": "Growth_of_pioneer"
+    },
+    {
+      "type": "LINK",
+      "from": "Intermediate",
+      "to": "Growth_of_intermediate"
+    },
+    {
+      "type": "LINK",
+      "from": "Intermediate",
+      "to": "Growth_of_intermediate"
+    },
+    {
+      "type": "LINK",
+      "from": "Intermediate",
+      "to": "Growth_of_intermediate"
+    },
+    {
+      "type": "LINK",
+      "from": "Nutrients",
+      "to": "Growth_of_intermediate"
+    },
+    {
+      "type": "LINK",
+      "from": "Nutrients",
+      "to": "Growth_of_intermediate"
+    },
+    {
+      "type": "LINK",
+      "from": "Shade",
+      "to": "Growth_of_intermediate"
+    },
+    {
+      "type": "LINK",
+      "from": "Shade",
+      "to": "Growth_of_intermediate"
+    },
+    {
+      "type": "LINK",
+      "from": "Nutrients",
+      "to": "Growth_of_intermediate"
+    },
+    {
+      "type": "LINK",
+      "from": "Intermediate",
+      "to": "Growth_of_intermediate"
+    },
+    {
+      "type": "LINK",
+      "from": "Late",
+      "to": "Growth_of_late"
+    },
+    {
+      "type": "LINK",
+      "from": "Late",
+      "to": "Growth_of_late"
+    },
+    {
+      "type": "LINK",
+      "from": "Late",
+      "to": "Growth_of_late"
+    },
+    {
+      "type": "LINK",
+      "from": "Nutrients",
+      "to": "Growth_of_late"
+    },
+    {
+      "type": "LINK",
+      "from": "Nutrients",
+      "to": "Growth_of_late"
+    },
+    {
+      "type": "LINK",
+      "from": "Shade",
+      "to": "Growth_of_late"
+    },
+    {
+      "type": "LINK",
+      "from": "Shade",
+      "to": "Growth_of_late"
+    },
+    {
+      "type": "LINK",
+      "from": "Nutrients",
+      "to": "Growth_of_late"
+    },
+    {
+      "type": "LINK",
+      "from": "Late",
+      "to": "Growth_of_late"
+    },
+    {
+      "type": "LINK",
+      "from": "Pioneer",
+      "to": "Death_of_pioneer"
+    },
+    {
+      "type": "LINK",
+      "from": "Pioneer",
+      "to": "Death_of_pioneer"
+    },
+    {
+      "type": "LINK",
+      "from": "Shade",
+      "to": "Death_of_pioneer"
+    },
+    {
+      "type": "LINK",
+      "from": "Pioneer",
+      "to": "Death_of_pioneer"
+    },
+    {
+      "type": "LINK",
+      "from": "Detritus",
+      "to": "Death_of_pioneer"
+    },
+    {
+      "type": "LINK",
+      "from": "Intermediate",
+      "to": "Death_of_intermediate"
+    },
+    {
+      "type": "LINK",
+      "from": "Intermediate",
+      "to": "Death_of_intermediate"
+    },
+    {
+      "type": "LINK",
+      "from": "Intermediate",
+      "to": "Death_of_intermediate"
+    },
+    {
+      "type": "LINK",
+      "from": "Shade",
+      "to": "Death_of_intermediate"
+    },
+    {
+      "type": "LINK",
+      "from": "Shade",
+      "to": "Death_of_intermediate"
+    },
+    {
+      "type": "LINK",
+      "from": "Intermediate",
+      "to": "Death_of_intermediate"
+    },
+    {
+      "type": "LINK",
+      "from": "Detritus",
+      "to": "Death_of_intermediate"
+    },
+    {
+      "type": "LINK",
+      "from": "Late",
+      "to": "Death_of_late"
+    },
+    {
+      "type": "LINK",
+      "from": "Late",
+      "to": "Death_of_late"
+    },
+    {
+      "type": "LINK",
+      "from": "Late",
+      "to": "Death_of_late"
+    },
+    {
+      "type": "LINK",
+      "from": "Shade",
+      "to": "Death_of_late"
+    },
+    {
+      "type": "LINK",
+      "from": "Shade",
+      "to": "Death_of_late"
+    },
+    {
+      "type": "LINK",
+      "from": "Late",
+      "to": "Death_of_late"
+    },
+    {
+      "type": "LINK",
+      "from": "Detritus",
+      "to": "Death_of_late"
+    },
+    {
+      "type": "LINK",
+      "from": "Detritus",
+      "to": "Decomposition"
+    },
+    {
+      "type": "LINK",
+      "from": "Decomposition_rate",
+      "to": "Decomposition"
+    },
+    {
+      "type": "LINK",
+      "from": "Detritus",
+      "to": "Decomposition"
+    },
+    {
+      "type": "LINK",
+      "from": "Nutrients",
+      "to": "Decomposition"
+    },
+    {
+      "type": "LINK",
+      "from": "Pioneer",
+      "to": "Shade"
+    },
+    {
+      "type": "LINK",
+      "from": "Intermediate",
+      "to": "Shade"
+    },
+    {
+      "type": "LINK",
+      "from": "Late",
+      "to": "Shade"
+    }
+  ],
+  "engine_settings": []
+}
