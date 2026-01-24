@@ -26,7 +26,7 @@ A stock-and-flow model object of class \code{\link[=xmile]{sdbuildR_xmile}}
 A large library of units already exists, but you may want to define your own custom units. Use \code{\link[=model_units]{model_units()}} to add, change, or erase custom units from a stock-and-flow model. Custom units may be new base units, or may be defined in terms of other (custom) units. See \code{\link[=u]{u()}} for more information on the rules of specifying units. Note that units are only supported in Julia, not in R.
 }
 \examples{
-\dontshow{if (julia_status()$status == "ready") (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+\dontshow{if (julia_status()$status == "ready") withAutoprint(\{ # examplesIf}
 # Units are only supported with Julia
 sfm <- xmile("Crielaard2022")
 sfm <- model_units(sfm, "BMI", eqn = "kg/m^2", doc = "Body Mass Index")

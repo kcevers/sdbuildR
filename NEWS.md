@@ -1,5 +1,7 @@
 # sdbuildR (development version)
 
+* textutils is now a required, not suggested dependency.
+
 # sdbuildR 1.0.8
 
 ## Minor improvements and bug fixes

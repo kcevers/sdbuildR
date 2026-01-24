@@ -23,7 +23,7 @@ Import and convert a stock-and-flow model from \href{https://insightmaker.com/}{
 Insight Maker models can be imported using a URL or Insight Maker file. Ensure the URL refers to a public (not private) model. To download a model file from Insight Maker, first clone the model if it is not your own. Then, go to "Share" (top right), "Export", and "Download Insight Maker file".
 }
 \examples{
-\dontshow{if (has_internet() && Sys.getenv("NOT_CRAN") == "true") (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+\dontshow{if (has_internet() && Sys.getenv("NOT_CRAN") == "true") withAutoprint(\{ # examplesIf}
 # Convert a model from Insight Maker to json
 destfile <- tempfile(fileext = ".json")
 json <- insightmaker_to_json(

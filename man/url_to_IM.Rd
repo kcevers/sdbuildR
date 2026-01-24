@@ -18,7 +18,7 @@ XML string with Insight Maker model
 Create XML string from Insight Maker URL. For internal use; use \code{insightmaker_to_sfm()} to import an Insight Maker model.
 }
 \examples{
-\dontshow{if (has_internet()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+\dontshow{if (has_internet()) withAutoprint(\{ # examplesIf}
 URL <- "https://insightmaker.com/insight/43tz1nvUgbIiIOGSGtzIzj/Romeo-Juliet"
 xml <- url_to_IM(URL)
 

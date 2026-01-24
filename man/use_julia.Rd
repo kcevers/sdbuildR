@@ -23,7 +23,7 @@ Julia supports running stock-and-flow models with units as well as ensemble simu
 In every R session, \code{use_julia()} needs to be run once (which is done automatically in \code{simulate()}), which can take around 30-60 seconds.
 }
 \examples{
-\dontshow{if (julia_status()$status == "ready") (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+\dontshow{if (julia_status()$status == "ready") withAutoprint(\{ # examplesIf}
 # Start a Julia session and activate the Julia environment for sdbuildR
 use_julia()
 

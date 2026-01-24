@@ -56,7 +56,7 @@ plot(sim)
 sim <- simulate(sfm, only_stocks = FALSE)
 plot(sim, add_constants = TRUE)
 
-\dontshow{if (julia_status()$status == "ready") (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+\dontshow{if (julia_status()$status == "ready") withAutoprint(\{ # examplesIf}
 # Use Julia for models with units
 sfm <- sim_specs(xmile("coffee_cup"), language = "Julia")
 sim <- simulate(sfm)
