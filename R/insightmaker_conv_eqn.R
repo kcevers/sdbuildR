@@ -8,7 +8,12 @@
 #' @param type Name of model element to which the eqn belongs
 #' @inheritParams clean_unit
 #'
-#' @returns data.frame with transformed eqn and additional R code needed to make the eqn function
+#' @returns List with flat structure:
+#'   - eqn: Converted equation string
+#'   - translated_func: Functions used in equation translation
+#'   - add_vars_aux: Auxiliary variables to add to model
+#'   - add_vars_gf: Ghost functions to add to model
+#'   - doc: Documentation extracted from comments
 #' @noRd
 #' @importFrom rlang .data
 #'
@@ -18,22 +23,29 @@ convert_equations_IM <- function(type,
                                  var_names,
                                  regex_units) {
   if (P[["debug"]]) {
-    message("")
-    # message(type)
-    message(name)
-    message(eqn)
+    cli::cli_inform("")
+    # cli::cli_inform(type)
+    cli::cli_inform(name)
+    cli::cli_inform(eqn)
   }
 
   # Check whether eqn is empty or NULL
   if (is.null(eqn) || !nzchar(eqn)) {
-    return(eqn)
+    return(list(
+      eqn = eqn,
+      translated_func = c(),
+      add_vars_aux = list(),
+      add_vars_gf = list(),
+      doc = ""
+    ))
   }
 
   # If equation is now empty, don't run rest of functions but set equation to zero
   if (!nzchar(eqn)) {
     eqn <- "0.0"
     translated_func <- c()
-    add_Rcode <- list()
+    add_vars_aux <- list()
+    add_vars_gf <- list()
   } else {
     # Step 2. Syntax (bracket types, destructuring assignment, time units {1 Month})
     # Replace curly brackets {} with c()
@@ -54,7 +66,8 @@ convert_equations_IM <- function(type,
     # Step 5. Replace built-in functions
     conv_list <- convert_builtin_functions_IM(type, name, eqn, var_names)
     eqn <- conv_list[["eqn"]]
-    add_Rcode <- conv_list[["add_Rcode"]]
+    add_vars_aux <- conv_list[["add_vars_aux"]]
+    add_vars_gf <- conv_list[["add_vars_gf"]]
     translated_func <- conv_list[["translated_func"]]
 
     # Ensure units which need scientific notation have it
@@ -70,19 +83,17 @@ convert_equations_IM <- function(type,
     }
 
     if (P[["debug"]]) {
-      message(eqn)
+      cli::cli_inform(eqn)
     }
   }
 
-  out <- list(list(list(
+  return(list(
     eqn = eqn,
-    translated_func = translated_func
-  )) |>
-    stats::setNames(name)) |>
-    stats::setNames(type) |>
-    append(add_Rcode)
-
-  return(out)
+    translated_func = translated_func,
+    add_vars_aux = add_vars_aux,
+    add_vars_gf = add_vars_gf,
+    doc = ""
+  ))
 }
 
 
@@ -125,40 +136,6 @@ replace_comments <- function(eqn) {
   return(eqn)
 }
 
-
-#' Get start and end indices of all comments
-#'
-#' @inheritParams convert_equations_IM
-#' @returns data.frame with start and end indices of all comments in eqn
-#' @noRd
-#'
-get_range_comments <- function(eqn) {
-  # Get indices of string which are in comments
-  idxs_comments <- stringr::str_locate_all(eqn, "#")[[1]][, "start"]
-
-  # Get indices of new line (where comment ends), and append length of string
-  idxs_newline <- unname(stringr::str_locate_all(eqn, "\n")[[1]][, 1]) |>
-    c(nchar(eqn) + 1) # Add 1 because of subtraction later
-
-  if (length(idxs_comments) > 0) {
-    # Create sequence from comment character to next closest new line or the closest new comment
-    pair_comments <- lapply(idxs_comments, function(i) {
-      c(i, min(
-        # Next closest comment
-        idxs_comments[idxs_comments > i][1],
-        # Next closest newline
-        idxs_newline[idxs_newline > i][1],
-        na.rm = TRUE
-      ) - 1) # Subtract 1 to not include it
-    }) |>
-      do.call(rbind, args = _) |>
-      set_colnames(c("start", "end")) |>
-      as.data.frame()
-  } else {
-    pair_comments <- data.frame()
-  }
-  return(pair_comments)
-}
 
 
 #' Clean equation and extract comments
@@ -618,10 +595,10 @@ convert_statement <- function(line, var_names) {
   ) |> stringr::str_c(collapse = "")
 
   if (P[["debug"]]) {
-    message("Converting statements:")
-    message(line)
-    message(join_str)
-    message("")
+    cli::cli_inform("Converting statements:")
+    cli::cli_inform(line)
+    cli::cli_inform(join_str)
+    cli::cli_inform("")
   }
   return(join_str)
 }
@@ -720,238 +697,7 @@ convert_all_statements <- function(eqn, var_names) {
 #' @returns Data frame with indices of enclosures and nesting properties.
 #' @noRd
 #' @importFrom stringr str_locate_all str_sub
-get_range_pairs <- function(eqn, var_names,
-                            opening = "c(", closing = ")",
-                            names_with_brackets = FALSE) {
-  # Find all pairs of "bare" brackets first, e.g. () instead of c(), as to get all matching pairs of c() we need to exclude other (). The bare brackets are the last character of opening and the last character of closing
-  opening_bare <- substr(opening, nchar(opening), nchar(opening))
-  closing_bare <- substr(closing, nchar(closing), nchar(closing))
 
-  # Find all bare bracket indices
-  open_locs <- stringr::str_locate_all(eqn, stringr::fixed(opening_bare))[[1]][, 1]
-  close_locs <- stringr::str_locate_all(eqn, stringr::fixed(closing_bare))[[1]][, 1]
-
-  # Exclude indices in quotes or variable names
-  exclude_idxs <- get_seq_exclude(eqn, var_names, names_with_brackets)
-  open_locs <- open_locs[!open_locs %in% exclude_idxs]
-  close_locs <- close_locs[!close_locs %in% exclude_idxs]
-
-  # Check for mismatched brackets
-  if (length(open_locs) != length(close_locs)) {
-    stop(sprintf(
-      "Missing brackets in equation:\n%s\n %s were found but %s",
-      eqn,
-      if (length(open_locs) > length(close_locs)) {
-        sprintf("%d %s", length(open_locs), opening_bare)
-      } else {
-        sprintf("%d %s", length(close_locs), closing_bare)
-      },
-      if (length(open_locs) > length(close_locs)) {
-        sprintf("%d %s", length(close_locs), closing_bare)
-      } else {
-        sprintf("%d %s", length(open_locs), opening_bare)
-      }
-    ), call. = FALSE)
-  }
-
-  # Return empty data frame if no brackets
-  if (length(open_locs) == 0 || length(close_locs) == 0) {
-    return(data.frame(
-      pair = integer(), start = integer(), end = integer(),
-      id = integer(), nested_around = character(), nested_within = character(), match = character()
-    ))
-  }
-
-  # Pair brackets using a stack-based approach
-  stack <- integer()
-  pairs <- matrix(NA, nrow = length(open_locs), ncol = 2)
-  pair_id <- 0
-  for (i in seq_along(sort(c(open_locs, close_locs)))) {
-    idx <- sort(c(open_locs, close_locs))[i]
-    if (idx %in% open_locs) {
-      stack <- c(stack, idx)
-    } else {
-      pair_id <- pair_id + 1
-      pairs[pair_id, ] <- c(stack[length(stack)], idx)
-      stack <- stack[-length(stack)]
-    }
-  }
-
-  # Create pair data frame
-  pair_df <- data.frame(pair = seq_len(pair_id), start = pairs[, 1], end = pairs[, 2])
-
-  # Filter for specific opening (e.g., "c(" instead of just "(")
-  if (opening != opening_bare) {
-    opening_strip <- substr(opening, 1, nchar(opening) - 1)
-    matches <- stringr::str_sub(eqn, pair_df[["start"]] - nchar(opening_strip), pair_df[["start"]] - 1) == opening_strip
-    pair_df <- pair_df[matches, ]
-    pair_df[["start"]] <- pair_df[["start"]] - nchar(opening_strip)
-  }
-
-  # Return empty data frame if no valid pairs
-  if (nrow(pair_df) == 0) {
-    return(data.frame(
-      pair = integer(), start = integer(), end = integer(),
-      id = integer(), nested_around = character(), nested_within = character(), match = character()
-    ))
-  }
-
-  # Add nesting information
-  pair_df[["id"]] <- seq_len(nrow(pair_df))
-  pair_df[["match"]] <- stringr::str_sub(eqn, pair_df[["start"]], pair_df[["end"]])
-  pair_df[["nested_around"]] <- vapply(seq_len(nrow(pair_df)), function(i) {
-    paste(which(pair_df[["start"]] < pair_df[["start"]][i] & pair_df[["end"]] > pair_df[["end"]][i]), collapse = ",")
-  }, character(1))
-  pair_df[["nested_within"]] <- vapply(seq_len(nrow(pair_df)), function(i) {
-    paste(which(pair_df[["start"]] > pair_df[["start"]][i] & pair_df[["end"]] < pair_df[["end"]][i]), collapse = ",")
-  }, character(1))
-
-  return(pair_df)
-}
-
-
-#' Get indices of all quotation marks
-#'
-#' @inheritParams convert_equations_IM
-#' @returns data.frame with indices of quotation marks in eqn
-#' @noRd
-#'
-get_range_quot <- function(eqn) {
-  # Get indices of quotation marks (no such thing as nested quotation marks, luckily, so we only need to find indices of all quotation marks and consecutive ones belong together)
-  pair_quotation_marks <- data.frame()
-
-  idx_quot_single <- gregexpr("'", eqn)[[1]] # Match both single and double quotes
-  idx_quot_escape <- gregexpr("\"", eqn)[[1]] # Match both single and double quotes
-
-  # Concatenate (don't sort, important to match right ' and \")
-  idx_quot <- c(idx_quot_single, idx_quot_escape)
-  idx_quot <- idx_quot[idx_quot != -1]
-
-  # -1 is returned for no match
-  if (length(idx_quot) > 0) {
-    # Remove those that are in comments (#)
-    # Find indices of comments
-    comment_df <- get_range_comments(eqn)
-
-    # Remove matches of quotations within comments
-    if (nrow(comment_df) > 0) {
-      idxs_comments <- unlist(mapply(seq, comment_df[, "start"], comment_df[, "end"], SIMPLIFY = FALSE))
-
-      idx_quot <- setdiff(idx_quot, idxs_comments)
-    }
-
-    if (length(idx_quot) > 0) {
-      # Create data.frame with start and end indices of quotation marks
-      pair_quotation_marks <- data.frame(
-        start = idx_quot[seq(1, length(idx_quot), by = 2)],
-        end = idx_quot[seq(2, length(idx_quot), by = 2)]
-      )
-    }
-  }
-
-  return(pair_quotation_marks)
-}
-
-
-#' Get indices of all pairs of square, round, and vector brackets and quotation marks
-#'
-#' @inheritParams convert_equations_IM
-#' @inheritParams get_range_names
-#' @param add_custom String with custom enclosure to look for, e.g. "paste0()", defaults to NULL
-#' @param type Vector with types of enclosures to look for
-#'
-#' @returns data.frame with indices per type of bracket
-#' @importFrom rlang .data
-#' @noRd
-#'
-get_range_all_pairs <- function(eqn, var_names,
-                                add_custom = NULL,
-                                type = c("square", "curly", "round", "vector", "quot"),
-                                names_with_brackets = FALSE) {
-  pair_square_brackets <- data.frame()
-  pair_curly_brackets <- data.frame()
-  pair_round_brackets <- data.frame()
-  pair_vector_brackets <- data.frame()
-  pair_quotation_marks <- data.frame()
-  pair_custom <- data.frame()
-
-  # Get start and end indices of paired []
-  if ("square" %in% type) {
-    pair_square_brackets <- get_range_pairs(eqn, var_names, opening = "[", closing = "]", names_with_brackets = names_with_brackets)
-    if (nrow(pair_square_brackets) > 0) pair_square_brackets[["type"]] <- "square"
-  }
-
-  # Get start and end indices of paired {}
-  if ("curly" %in% type) {
-    pair_curly_brackets <- get_range_pairs(eqn, var_names, opening = "{", closing = "}", names_with_brackets = names_with_brackets)
-    if (nrow(pair_curly_brackets) > 0) pair_curly_brackets[["type"]] <- "curly"
-  }
-
-  # Get start and end indices of ()
-  if ("round" %in% type) {
-    pair_round_brackets <- get_range_pairs(eqn, var_names, opening = "(", closing = ")", names_with_brackets = names_with_brackets)
-    if (nrow(pair_round_brackets) > 0) pair_round_brackets[["type"]] <- "round"
-  }
-
-  # Get start and end indices of paired c()
-  if ("vector" %in% type) {
-    pair_vector_brackets <- get_range_pairs(eqn, var_names, opening = "c(", closing = ")", names_with_brackets = names_with_brackets)
-    if (nrow(pair_vector_brackets) > 0) pair_vector_brackets[["type"]] <- "vector"
-  }
-
-  # Get start and end indices of paired ''
-  if ("quot" %in% type) {
-    pair_quotation_marks <- get_range_quot(eqn)
-    if (nrow(pair_quotation_marks) > 0) pair_quotation_marks[["type"]] <- "quot"
-  }
-
-  # Custom element to look for, e.g. add_custom = "paste0()"
-  if (!is.null(add_custom)) {
-    l <- nchar(add_custom)
-    name_custom <- substr(add_custom, 1, l - 2)
-    opening <- substr(add_custom, 1, l - 1) # Extract second to last character
-    closing <- substr(add_custom, l, l) # Extract last character
-    type <- c(type, name_custom)
-    pair_custom <- get_range_pairs(eqn, var_names, opening = opening, closing = closing)
-    if (nrow(pair_custom) > 0) pair_custom[["type"]] <- name_custom
-  } else {
-    pair_custom <- data.frame()
-  }
-
-  paired_idxs <-
-    # dplyr::bind_rows(
-    bind_rows_(
-      pair_square_brackets,
-      pair_curly_brackets,
-      pair_round_brackets,
-      pair_vector_brackets,
-      pair_quotation_marks,
-      pair_custom
-    ) |> set_rownames(NULL)
-
-  if (nrow(paired_idxs) > 0) {
-    # Filter by type
-    paired_idxs <- paired_idxs[paired_idxs[["type"]] %in% type, ]
-
-    # Arrange by start
-    paired_idxs <- paired_idxs[order(paired_idxs[["start"]]), ]
-
-    # 3. For each unique end, keep the row with the smallest start
-    # Split by end
-    split_by_end <- split(paired_idxs, paired_idxs[["end"]])
-
-    # Keep the row with the minimum start for each end
-    paired_idxs <- do.call(rbind, lapply(split_by_end, function(group) {
-      group[which.min(group[["start"]]), ]
-    }))
-
-    # 4. Reset row names and ensure it's a data frame
-    rownames(paired_idxs) <- NULL
-    return(paired_idxs)
-  } else {
-    return(data.frame())
-  }
-}
 
 
 #' Get regular expressions for built-in Insight Maker functions
@@ -1210,7 +956,7 @@ get_syntax_IM <- function() {
 convert_builtin_functions_IM <- function(type, name, eqn, var_names) {
   # If there are no letters in the eqn, don't run function
   translated_func <- c()
-  add_Rcode_list <- add_Rcode <- list()
+  add_Rcode_list <- list()  # Will accumulate all add_Rcode structures
 
   if (grepl("[[:alpha:]]", eqn)) {
     # data.frame with regular expressions for each built-in Insight Maker function
@@ -1461,9 +1207,9 @@ convert_builtin_functions_IM <- function(type, name, eqn, var_names) {
         }
 
         if (P[["debug"]]) {
-          message(stringr::str_sub(eqn, start_idx, end_idx))
-          message(replacement)
-          message("")
+          cli::cli_inform(stringr::str_sub(eqn, start_idx, end_idx))
+          cli::cli_inform(replacement)
+          cli::cli_inform("")
         }
 
         # Replace eqn
@@ -1493,11 +1239,11 @@ convert_builtin_functions_IM <- function(type, name, eqn, var_names) {
     idx_ABM <- stringr::str_detect(eqn_no_names, syntax4[["insightmaker_regex"]])
 
     if (any(idx_ABM)) {
-      message(
+      cli::cli_inform(
         "Agent-Based Modelling functions were detected in equation of ",
         name, ", and won't be translated: "
       )
-      message(paste0(syntax4[idx_ABM, "insightmaker"], ")"))
+      cli::cli_inform(paste0(syntax4[idx_ABM, "insightmaker"], ")"))
     }
 
     # Syntax 5: Unsupported Insight Maker functions
@@ -1508,15 +1254,24 @@ convert_builtin_functions_IM <- function(type, name, eqn, var_names) {
     idx5 <- stringr::str_detect(eqn_no_names, syntax5[["insightmaker_regex"]])
 
     if (any(idx5)) {
-      message(
+      cli::cli_inform(
         "Unsupported Insight Maker functions were detected in equation of ",
         name, ", and won't be translated: "
       )
-      message(paste0(syntax5[idx5, "insightmaker"], collapse = ", "))
+      cli::cli_inform(paste0(syntax5[idx5, "insightmaker"], collapse = ", "))
     }
   }
 
-  return(list(eqn = eqn, add_Rcode = add_Rcode, translated_func = translated_func))
+  # Flatten nested add_Rcode to flat structure
+  flat_vars <- flatten_add_vars(add_Rcode_list)
+
+  return(list(
+    eqn = eqn,
+    translated_func = translated_func,
+    add_vars_aux = flat_vars[["add_vars_aux"]],
+    add_vars_gf = flat_vars[["add_vars_gf"]],
+    doc = ""
+  ))
 }
 
 

@@ -14,7 +14,10 @@ sim_specs(
   save_from = start,
   seed = NULL,
   time_units = "s",
-  language = "R"
+  language = "R",
+  keep_nonnegative_flow = TRUE,
+  keep_nonnegative_stock = FALSE,
+  keep_unit = TRUE
 )
 }
 \arguments{

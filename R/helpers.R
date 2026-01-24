@@ -323,7 +323,7 @@ str_wrap_ <- function(str, width) {
 #'
 ensure_length <- function(arg, target) {
   if (length(arg) != 1 && length(arg) != length(target)) {
-    stop(sprintf(
+    cli::cli_abort(sprintf(
       "The length of %s = %s must be either 1 or equal to the length of %s = %s.",
       deparse(substitute(arg)), paste0(arg, collapse = ", "),
       deparse(substitute(target)), paste0(target, collapse = ", ")
@@ -368,7 +368,11 @@ get_exported_functions <- function(package) {
 clean_language <- function(language) {
   language <- trimws(tolower(language))
   if (!language %in% c("r", "julia", "jl")) {
-    stop(sprintf("The language %s is not one of the languages available in sdbuildR. The available languages are 'Julia' or 'R'.", language))
+    cli::cli_abort(c(
+      "Invalid {.arg language} value.",
+      "x" = "Received {.val {language}}.",
+      ">" = "Use {.code 'Julia'} or {.code 'R'}."
+    ))
   } else {
     language <- stringr::str_to_title(language)
     language <- ifelse(language == "Jl", "Julia", language)
@@ -385,7 +389,10 @@ clean_language <- function(language) {
 #' @noRd
 clean_type <- function(type) {
   if (!(all(is.character(type)))) {
-    stop("type must be a character!")
+    cli::cli_abort(c(
+      "Invalid {.arg type} argument.",
+      "x" = "Must be {.cls character}."
+    ))
   }
 
   type <- Filter(nzchar, trimws(tolower(type)))
@@ -492,8 +499,8 @@ clean_name <- function(new, protected = NULL) {
 #' @returns Vector with names of model variables
 get_model_var <- function(sfm) {
   c(
-    unname(unlist(lapply(sfm[["model"]][["variables"]], names))),
-    names(sfm[[P[["macro_name"]]]])
+    sfm[["variables"]][["name"]],
+    sfm[[P[["macro_name"]]]][["name"]]
   )
 }
 
@@ -506,54 +513,26 @@ get_model_var <- function(sfm) {
 #' @noRd
 #'
 get_names <- function(sfm) {
-  # Return empty dataframe if no variables
-  nr_var <- sum(lengths(sfm[["model"]][["variables"]]))
-  if (nr_var == 0) {
+  # Return variables data frame (already has type, name, label, units)
+  if (nrow(sfm[["variables"]]) == 0) {
     names_df <- data.frame(
       type = character(0),
       name = character(0),
       label = character(0),
-      units = character(0)
+      units = character(0),
+      stringsAsFactors = FALSE
     )
-    return(names_df)
-  }
-
-  # Building blocks to check
-  blocks <- c("stock", "aux", "constant", "flow", "gf")
-  entries <- list()
-
-  # Collect variable information
-  for (block in blocks) {
-    if (!is.null(sfm[["model"]][["variables"]][[block]])) {
-      for (var in sfm[["model"]][["variables"]][[block]]) {
-        if (!is.null(var[["name"]])) {
-          entries[[length(entries) + 1]] <- list(
-            type = block,
-            name = var[["name"]],
-            label = var[["label"]],
-            units = var[["units"]]
-          )
-        }
-      }
-    }
-  }
-
-  # Convert to dataframe
-  if (length(entries) > 0) {
-    names_df <- do.call(rbind, lapply(entries, as.data.frame, stringsAsFactors = FALSE))
   } else {
-    column_names <- c("type", "name", "label", "units")
-    names_df <- as.data.frame(matrix(NA, nrow = 1, ncol = length(column_names)))
-    colnames(names_df) <- column_names
+    names_df <- sfm[["variables"]][, c("type", "name", "label", "units")]
   }
 
   # Add macros if any
-  if (!is.null(sfm[[P[["macro_name"]]]]) && length(names(sfm[[P[["macro_name"]]]])) > 0) {
+  if (nrow(sfm[[P[["macro_name"]]]]) > 0) {
     macro_df <- data.frame(
       type = P[["macro_name"]],
-      name = names(sfm[[P[["macro_name"]]]]),
-      label = names(sfm[[P[["macro_name"]]]]),
-      units = "",
+      name = sfm[[P[["macro_name"]]]][["name"]],
+      label = sfm[[P[["macro_name"]]]][["name"]],
+      units = sfm[[P[["macro_name"]]]][["units"]],
       stringsAsFactors = FALSE
     )
     names_df <- rbind(names_df, macro_df)
@@ -672,7 +651,7 @@ sort_args <- function(arg, func_name, default_arg = NULL, var_names = NULL) {
     # Check whether all argument names are in the allowed argument names in case of no dots argument (...)
     idx <- !names_arg %in% names(default_arg) & !is.na(names_arg)
     if (!varargs && any(idx)) {
-      stop(paste0(
+      cli::cli_abort(paste0(
         "Argument",
         ifelse(sum(idx) > 1, "s ", " "),
         paste0(names_arg[idx], collapse = ", "),
@@ -684,7 +663,7 @@ sort_args <- function(arg, func_name, default_arg = NULL, var_names = NULL) {
 
     # Check if there are too many arguments
     if (!varargs && length(arg) > length(default_arg)) {
-      stop(paste0(
+      cli::cli_abort(paste0(
         "Too many arguments for function ", func_name, "(). Allowed arguments: ",
         paste0(names(default_arg), collapse = ", "), "."
       ))
@@ -704,7 +683,7 @@ sort_args <- function(arg, func_name, default_arg = NULL, var_names = NULL) {
     idx <- !names(default_arg[obligatory_args]) %in% names_arg
 
     if (any(idx)) {
-      stop(paste0(
+      cli::cli_abort(paste0(
         "Obligatory argument",
         ifelse(sum(idx) > 1, "s ", " "),
         paste0(names(default_arg[obligatory_args])[idx], collapse = ", "),
@@ -873,4 +852,482 @@ get_words <- function(eqn) {
   if (nrow(idxs_word) > 0) idxs_word[["word"]] <- stringr::str_sub(eqn, idxs_word[["start"]], idxs_word[["end"]])
 
   return(idxs_word)
+}
+
+#' Extract variables of a specific type from the flat variables data frame
+#' 
+#' Helper functions to convert from old nested structure access to new flat data frame access.
+#' Old: sfm[["model"]][["variables"]][["stock"]]
+#' New: get_variables_by_type(sfm, "stock")
+#'
+#' @param sfm A stock-and-flow model
+#' @param type Type of variable to extract (e.g., "stock", "flow", "aux", "constant", "gf")
+#'
+#' @returns data.frame of variables of the specified type
+#' @noRd
+get_variables_by_type <- function(sfm, type) {
+  sfm[["variables"]][sfm[["variables"]][["type"]] == type, ]
+}
+
+#' Extract a column from variables of a specific type as a named list
+#'
+#' @param sfm A stock-and-flow model
+#' @param type Type of variable to extract
+#' @param column Column name to extract (e.g., "eqn_str", "units", etc.)
+#'
+#' @returns Named list where names are variable names and values are the column values
+#' @noRd
+get_vars_column_as_list <- function(sfm, type, column) {
+  vars_df <- get_variables_by_type(sfm, type)
+  if (nrow(vars_df) == 0) {
+    return(list())
+  }
+  stats::setNames(as.list(vars_df[[column]]), vars_df[["name"]])
+}
+
+# ===== Equation Conversion Utilities =====
+# These functions are shared between insightmaker_conv_eqn.R and julia_conv_eqn.R
+# They help identify positions in equations while respecting quotation marks,
+# comments, variable names, and bracket pairs.
+
+#' Get indices of all comments in equation
+#'
+#' @param eqn Equation string
+#' @returns data.frame with start and end indices of all comments in eqn
+#' @noRd
+get_range_comments <- function(eqn) {
+  idxs_comments <- stringr::str_locate_all(eqn, "#")[[1]][, "start"]
+  idxs_newline <- unname(stringr::str_locate_all(eqn, "\n")[[1]][, 1]) |>
+    c(nchar(eqn) + 1)
+
+  if (length(idxs_comments) > 0) {
+    pair_comments <- lapply(idxs_comments, function(i) {
+      c(i, min(
+        idxs_comments[idxs_comments > i][1],
+        idxs_newline[idxs_newline > i][1],
+        na.rm = TRUE
+      ) - 1)
+    }) |>
+      do.call(rbind, args = _) |>
+      set_colnames(c("start", "end")) |>
+      as.data.frame()
+  } else {
+    pair_comments <- data.frame()
+  }
+  return(pair_comments)
+}
+
+#' Get indices of all quotation marks
+#'
+#' @param eqn Equation string
+#' @returns data.frame with indices of quotation marks in eqn
+#' @noRd
+get_range_quot <- function(eqn) {
+  pair_quotation_marks <- data.frame()
+  idx_quot_single <- gregexpr("'", eqn)[[1]]
+  idx_quot_escape <- gregexpr("\"", eqn)[[1]]
+  idx_quot <- c(idx_quot_single, idx_quot_escape)
+  idx_quot <- idx_quot[idx_quot != -1]
+
+  if (length(idx_quot) > 0) {
+    comment_df <- get_range_comments(eqn)
+    if (nrow(comment_df) > 0) {
+      idxs_comments <- unlist(mapply(seq, comment_df[, "start"], comment_df[, "end"], SIMPLIFY = FALSE))
+      idx_quot <- setdiff(idx_quot, idxs_comments)
+    }
+    if (length(idx_quot) > 0) {
+      pair_quotation_marks <- data.frame(
+        start = idx_quot[seq(1, length(idx_quot), by = 2)],
+        end = idx_quot[seq(2, length(idx_quot), by = 2)]
+      )
+    }
+  }
+  return(pair_quotation_marks)
+}
+
+#' Flatten nested add_Rcode structure to variables
+#'
+#' Converts nested structure list(aux = list(...), gf = list(...)) 
+#' to flat structure list(add_vars_aux = list(...), add_vars_gf = list(...))
+#'
+#' @param add_Rcode_list List of accumulated add_Rcode structures
+#'
+#' @returns List with add_vars_aux and add_vars_gf fields
+#' @noRd
+#'
+flatten_add_vars <- function(add_Rcode_list) {
+  add_vars_aux <- list()
+  add_vars_gf <- list()
+  
+  if (length(add_Rcode_list) > 0) {
+    for (add_code in add_Rcode_list) {
+      if ("aux" %in% names(add_code)) {
+        add_vars_aux <- append(add_vars_aux, add_code[["aux"]])
+      }
+      if ("gf" %in% names(add_code)) {
+        add_vars_gf <- append(add_vars_gf, add_code[["gf"]])
+      }
+    }
+  }
+  
+  return(list(
+    add_vars_aux = add_vars_aux,
+    add_vars_gf = add_vars_gf
+  ))
+}
+
+#' Get indices of paired brackets
+#'
+#' @param eqn Equation string
+#' @param var_names Variable names data frame
+#' @param opening Opening bracket character(s)
+#' @param closing Closing bracket character
+#' @param names_with_brackets Whether to exclude variable names with brackets
+#' @returns data.frame with start and end indices of bracket pairs
+#' @noRd
+get_range_pairs <- function(eqn, var_names,
+                            opening = "c(", closing = ")",
+                            names_with_brackets = FALSE) {
+  opening_bare <- substr(opening, nchar(opening), nchar(opening))
+  closing_bare <- substr(closing, nchar(closing), nchar(closing))
+
+  open_locs <- stringr::str_locate_all(eqn, stringr::fixed(opening_bare))[[1]][, 1]
+  close_locs <- stringr::str_locate_all(eqn, stringr::fixed(closing_bare))[[1]][, 1]
+
+  exclude_idxs <- get_seq_exclude(eqn, var_names, names_with_brackets = names_with_brackets)
+  open_locs <- open_locs[!open_locs %in% exclude_idxs]
+  close_locs <- close_locs[!close_locs %in% exclude_idxs]
+
+  if (length(open_locs) != length(close_locs)) {
+    cli::cli_abort(sprintf(
+      "Missing brackets in equation:\n%s\n %s were found but %s",
+      eqn,
+      if (length(open_locs) > length(close_locs)) {
+        sprintf("%d %s", length(open_locs), opening_bare)
+      } else {
+        sprintf("%d %s", length(close_locs), closing_bare)
+      },
+      if (length(open_locs) > length(close_locs)) {
+        sprintf("%d %s", length(close_locs), closing_bare)
+      } else {
+        sprintf("%d %s", length(open_locs), opening_bare)
+      }
+    ), call. = FALSE)
+  }
+
+  if (length(open_locs) == 0 || length(close_locs) == 0) {
+    return(data.frame(
+      pair = integer(), start = integer(), end = integer(),
+      id = integer(), nested_around = character(), nested_within = character(), match = character()
+    ))
+  }
+
+  stack <- integer()
+  pairs <- matrix(NA, nrow = length(open_locs), ncol = 2)
+  pair_id <- 0
+  for (i in seq_along(sort(c(open_locs, close_locs)))) {
+    idx <- sort(c(open_locs, close_locs))[i]
+    if (idx %in% open_locs) {
+      stack <- c(stack, idx)
+    } else {
+      pair_id <- pair_id + 1
+      pairs[pair_id, ] <- c(stack[length(stack)], idx)
+      stack <- stack[-length(stack)]
+    }
+  }
+
+  pair_df <- data.frame(pair = seq_len(pair_id), start = pairs[, 1], end = pairs[, 2])
+
+  if (opening != opening_bare) {
+    opening_strip <- substr(opening, 1, nchar(opening) - 1)
+    matches <- stringr::str_sub(eqn, pair_df[["start"]] - nchar(opening_strip), pair_df[["start"]] - 1) == opening_strip
+    pair_df <- pair_df[matches, ]
+    pair_df[["start"]] <- pair_df[["start"]] - nchar(opening_strip)
+  }
+
+  if (nrow(pair_df) == 0) {
+    return(data.frame(
+      pair = integer(), start = integer(), end = integer(),
+      id = integer(), nested_around = character(), nested_within = character(), match = character()
+    ))
+  }
+
+  pair_df[["id"]] <- seq_len(nrow(pair_df))
+  pair_df[["match"]] <- stringr::str_sub(eqn, pair_df[["start"]], pair_df[["end"]])
+  pair_df[["nested_around"]] <- vapply(seq_len(nrow(pair_df)), function(i) {
+    paste(which(pair_df[["start"]] < pair_df[["start"]][i] & pair_df[["end"]] > pair_df[["end"]][i]), collapse = ",")
+  }, character(1))
+  pair_df[["nested_within"]] <- vapply(seq_len(nrow(pair_df)), function(i) {
+    paste(which(pair_df[["start"]] > pair_df[["start"]][i] & pair_df[["end"]] < pair_df[["end"]][i]), collapse = ",")
+  }, character(1))
+
+  return(pair_df)
+}
+
+#' Get indices of all paired brackets and quotation marks
+#'
+#' @param eqn Equation string
+#' @param var_names Variable names data frame
+#' @param add_custom Custom bracket pattern to add (e.g., "paste0()")
+#' @param type Types of pairs to find (square, curly, round, vector, quot)
+#' @param names_with_brackets Whether to exclude variable names with brackets
+#' @returns data.frame with all bracket pairs
+#' @noRd
+get_range_all_pairs <- function(eqn, var_names,
+                                add_custom = NULL,
+                                type = c("square", "curly", "round", "vector", "quot"),
+                                names_with_brackets = FALSE) {
+  pair_square_brackets <- data.frame()
+  pair_curly_brackets <- data.frame()
+  pair_round_brackets <- data.frame()
+  pair_vector_brackets <- data.frame()
+  pair_quotation_marks <- data.frame()
+  pair_custom <- data.frame()
+
+  if ("square" %in% type) {
+    pair_square_brackets <- get_range_pairs(eqn, var_names, opening = "[", closing = "]", names_with_brackets = names_with_brackets)
+    if (nrow(pair_square_brackets) > 0) pair_square_brackets[["type"]] <- "square"
+  }
+
+  if ("curly" %in% type) {
+    pair_curly_brackets <- get_range_pairs(eqn, var_names, opening = "{", closing = "}", names_with_brackets = names_with_brackets)
+    if (nrow(pair_curly_brackets) > 0) pair_curly_brackets[["type"]] <- "curly"
+  }
+
+  if ("round" %in% type) {
+    pair_round_brackets <- get_range_pairs(eqn, var_names, opening = "(", closing = ")", names_with_brackets = names_with_brackets)
+    if (nrow(pair_round_brackets) > 0) pair_round_brackets[["type"]] <- "round"
+  }
+
+  if ("vector" %in% type) {
+    pair_vector_brackets <- get_range_pairs(eqn, var_names, opening = "c(", closing = ")", names_with_brackets = names_with_brackets)
+    if (nrow(pair_vector_brackets) > 0) pair_vector_brackets[["type"]] <- "vector"
+  }
+
+  if ("quot" %in% type) {
+    pair_quotation_marks <- get_range_quot(eqn)
+    if (nrow(pair_quotation_marks) > 0) pair_quotation_marks[["type"]] <- "quot"
+  }
+
+  if (!is.null(add_custom)) {
+    l <- nchar(add_custom)
+    name_custom <- substr(add_custom, 1, l - 2)
+    opening <- substr(add_custom, 1, l - 1)
+    closing <- substr(add_custom, l, l)
+    type <- c(type, name_custom)
+    pair_custom <- get_range_pairs(eqn, var_names, opening = opening, closing = closing)
+    if (nrow(pair_custom) > 0) pair_custom[["type"]] <- name_custom
+  }
+
+  paired_idxs <- bind_rows_(
+    pair_square_brackets,
+    pair_curly_brackets,
+    pair_round_brackets,
+    pair_vector_brackets,
+    pair_quotation_marks,
+    pair_custom
+  ) |> set_rownames(NULL)
+
+  return(paired_idxs)
+}
+
+#' Add accumulated auxiliary and graphical function variables to model
+#'
+#' Creates new rows in the variables data frame for auxiliary variables 
+#' and graphical functions that were created during equation conversion
+#'
+#' @param sfm Stock-and-flow model
+#' @param accumulated_add_vars_aux List of auxiliary variables (from Step, Pulse, Ramp)
+#' @param accumulated_add_vars_gf List of graphical functions (Lookup interpolations)
+#'
+#' @returns Updated sfm with new variables added to sfm[["variables"]]
+#' @noRd
+#'
+add_accumulated_variables <- function(sfm, accumulated_add_vars_aux, accumulated_add_vars_gf) {
+  # Add auxiliary variables
+  if (length(accumulated_add_vars_aux) > 0) {
+    for (var_name in names(accumulated_add_vars_aux)) {
+      var_spec <- accumulated_add_vars_aux[[var_name]]
+      
+      # Create new row with auxiliary variable
+      new_row <- data.frame(
+        name = var_name,
+        type = "aux",
+        eqn = var_spec,  # The equation is stored directly
+        eqn_julia = NA_character_,
+        units = "",
+        label = "",
+        doc = "",
+        non_negative = FALSE,
+        to = NA_character_,
+        from = NA_character_,
+        source = NA_character_,
+        interpolation = NA_character_,
+        extrapolation = NA_character_,
+        stringsAsFactors = FALSE
+      )
+      
+      # Add list columns
+      new_row$xpts <- list()
+      new_row$ypts <- list()
+      
+      # Append to variables data frame
+      sfm[["variables"]] <- rbind(sfm[["variables"]], new_row)
+    }
+  }
+  
+  # Add graphical functions
+  if (length(accumulated_add_vars_gf) > 0) {
+    for (var_name in names(accumulated_add_vars_gf)) {
+      gf_spec <- accumulated_add_vars_gf[[var_name]]
+      
+      # Create new row with graphical function
+      new_row <- data.frame(
+        name = var_name,
+        type = "gf",
+        eqn = NA_character_,
+        eqn_julia = NA_character_,
+        units = "",
+        label = "",
+        doc = "",
+        non_negative = FALSE,
+        to = NA_character_,
+        from = NA_character_,
+        source = gf_spec[["source"]] %||% NA_character_,
+        interpolation = gf_spec[["interpolation"]] %||% "linear",
+        extrapolation = gf_spec[["extrapolation"]] %||% "nearest",
+        stringsAsFactors = FALSE
+      )
+      
+      # Add list columns with graphical function data
+      new_row$xpts <- list(gf_spec[["xpts"]] %||% numeric(0))
+      new_row$ypts <- list(gf_spec[["ypts"]] %||% numeric(0))
+      
+      # Append to variables data frame
+      sfm[["variables"]] <- rbind(sfm[["variables"]], new_row)
+    }
+  }
+  
+  return(sfm)
+}
+
+#' Create transformation tracking environment
+#'
+#' Initializes a tracking environment for logging equation transformations.
+#' This helps with debugging and understanding what transformations were applied.
+#'
+#' @returns Environment with tracking state
+#' @noRd
+#'
+create_transformation_tracker <- function() {
+  tracker <- new.env()
+  tracker$transformations <- list()
+  tracker$stats <- list(
+    functions_replaced = 0,
+    auxiliary_vars_created = 0,
+    graphical_functions_created = 0,
+    transformation_passes = 0
+  )
+  return(tracker)
+}
+
+#' Log a transformation step
+#'
+#' Records a transformation step in the tracking environment
+#'
+#' @param tracker Environment from create_transformation_tracker
+#' @param variable_name Name of variable being transformed
+#' @param transformation_type Type of transformation (e.g., "replace_function", "create_aux")
+#' @param details Details about the transformation (before/after, function name, etc.)
+#'
+#' @returns Invisibly returns tracker (for chaining)
+#' @noRd
+#'
+log_transformation <- function(tracker, variable_name, transformation_type, details = list()) {
+  if (!is.environment(tracker) || !exists("transformations", envir = tracker)) {
+    return(invisible(tracker))
+  }
+  
+  entry <- list(
+    variable = variable_name,
+    type = transformation_type,
+    timestamp = Sys.time(),
+    details = details
+  )
+  
+  tracker$transformations[[length(tracker$transformations) + 1]] <- entry
+  
+  # Update stats
+  if (transformation_type == "replace_function") {
+    tracker$stats$functions_replaced <- tracker$stats$functions_replaced + 1
+  } else if (transformation_type == "create_auxiliary") {
+    tracker$stats$auxiliary_vars_created <- tracker$stats$auxiliary_vars_created + 1
+  } else if (transformation_type == "create_graphical_function") {
+    tracker$stats$graphical_functions_created <- tracker$stats$graphical_functions_created + 1
+  }
+  
+  invisible(tracker)
+}
+
+#' Summarize transformation log
+#'
+#' Creates a human-readable summary of all transformations applied
+#'
+#' @param tracker Environment from create_transformation_tracker
+#'
+#' @returns Character vector with summary information
+#' @noRd
+#'
+summarize_transformations <- function(tracker) {
+  if (!is.environment(tracker) || !exists("transformations", envir = tracker)) {
+    return("No transformations tracked")
+  }
+  
+  lines <- character()
+  
+  # Statistics summary
+  lines <- c(lines, "=== Transformation Summary ===")
+  lines <- c(lines, sprintf("Functions replaced: %d", tracker$stats$functions_replaced))
+  lines <- c(lines, sprintf("Auxiliary variables created: %d", tracker$stats$auxiliary_vars_created))
+  lines <- c(lines, sprintf("Graphical functions created: %d", tracker$stats$graphical_functions_created))
+  lines <- c(lines, "")
+  
+  # Group by variable
+  if (length(tracker$transformations) > 0) {
+    vars <- unique(vapply(tracker$transformations, function(x) x$variable, character(1)))
+    
+    for (var in vars) {
+      lines <- c(lines, sprintf("Variable: %s", var))
+      var_transforms <- Filter(function(x) x$variable == var, tracker$transformations)
+      
+      for (item in enumerate_(var_transforms)) {
+        i <- item$index
+        trans <- item$value
+        lines <- c(lines, sprintf("  [%d] %s", i, trans$type))
+        if (length(trans$details) > 0) {
+          for (detail_key in names(trans$details)) {
+            detail_val <- trans$details[[detail_key]]
+            if (is.character(detail_val) && nchar(detail_val) > 60) {
+              detail_val <- paste0(substr(detail_val, 1, 57), "...")
+            }
+            lines <- c(lines, sprintf("      %s: %s", detail_key, detail_val))
+          }
+        }
+      }
+      lines <- c(lines, "")
+    }
+  }
+  
+  return(lines)
+}
+
+#' Helper function to enumerate a list with indices
+#'
+#' @param x List to enumerate
+#'
+#' @returns List of c(index, value) pairs
+#' @noRd
+#'
+enumerate_ <- function(x) {
+  Map(function(i, v) list(i, v), seq_along(x), x)
 }

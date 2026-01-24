@@ -22,6 +22,7 @@ BugReports: https://github.com/KCEvers/sdbuildR/issues
 Depends: 
     R (>= 4.2.0)
 Imports: 
+    cli,
     data.table,
     deSolve,
     DiagrammeR,
@@ -42,6 +43,7 @@ Suggests:
     rsvg,
     styler,
     testthat (>= 3.0.0),
+    vdiffr (>= 1.0.0),
     webshot2
 Config/Needs/website: rmarkdown
 Config/testthat/edition: 3

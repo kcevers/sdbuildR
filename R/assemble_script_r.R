@@ -124,7 +124,7 @@ compile_r <- function(sfm,
 
   # Compile all parts of the R script
   times <- compile_times(sfm)
-  ordering <- order_equations(sfm)
+  ordering <- if (!is.null(sfm[["ordering"]])) sfm[["ordering"]] else order_equations(sfm)
 
   # Only need to save stocks if there are no dynamic variables
   only_stocks <- ifelse(is.null(ordering[["dynamic"]][["order"]]), TRUE, only_stocks)
@@ -138,8 +138,8 @@ compile_r <- function(sfm,
   # # Add prefixes (constants$ and init$) to static equations
   # sfm = substitute_var(sfm)
 
-  # Prepare equations
-  sfm <- prep_equations_variables(sfm, keep_nonnegative_flow)
+  # Prepare equations (centralized in R/prep_functions.R)
+  sfm <- prep_equations_variables(sfm)
 
   # Static equations
   static_eqn <- compile_static_eqn(sfm, ordering)
@@ -396,93 +396,7 @@ compile_static_eqn <- function(sfm, ordering) {
 #'
 #' @returns A stock-and-flow model object of class [`sdbuildR_xmile`][xmile]
 #' @noRd
-prep_equations_variables <- function(sfm, keep_nonnegative_flow) {
-  # Graphical functions
-  sfm[["model"]][["variables"]][["gf"]] <- lapply(
-    sfm[["model"]][["variables"]][["gf"]],
-    function(x) {
-      if (is_defined(x[["xpts"]])) {
-        if (inherits(x[["xpts"]], "numeric")) {
-          xpts_str <- paste0("c(", paste0(as.character(x[["xpts"]]), collapse = ", "), ")")
-        } else {
-          xpts_str <- x[["xpts"]]
-        }
-
-        # ypts is not obligatory in Insight Maker (?)
-        if (!is_defined(x[["ypts"]])) {
-          ypts_str <- ""
-        } else {
-          if (inherits(x[["ypts"]], "numeric")) {
-            x[["ypts"]] <- paste0("c(", paste0(as.character(x[["ypts"]]), collapse = ", "), ")")
-          }
-          ypts_str <- sprintf("\n\t\ty = %s,", x[["ypts"]])
-        }
-
-        x[["eqn_str"]] <- sprintf(
-          "%s = stats::approxfun(x = %s,%s\n\t\tmethod = '%s', rule = %s)",
-          x[["name"]], xpts_str,
-          ypts_str,
-          x[["interpolation"]], ifelse(x[["extrapolation"]] == "nearest", 2,
-            ifelse(x[["extrapolation"]] == "NA", 1, x[["extrapolation"]])
-          )
-        )
-      }
-
-      return(x)
-    }
-  )
-
-  # Constant equations
-  sfm[["model"]][["variables"]][["constant"]] <- lapply(sfm[["model"]][["variables"]][["constant"]], function(x) {
-    x[["eqn_str"]] <- paste0(x[["name"]], " = ", x[["eqn"]])
-    return(x)
-  })
-
-  # Initial states of Stocks
-  sfm[["model"]][["variables"]][["stock"]] <- lapply(
-    sfm[["model"]][["variables"]][["stock"]],
-    function(x) {
-      x[["eqn_str"]] <- paste0(x[["name"]], " = ", x[["eqn"]])
-
-      return(x)
-    }
-  )
-
-  # Auxiliary equations (dynamic auxiliaries)
-  sfm[["model"]][["variables"]][["aux"]] <- lapply(
-    sfm[["model"]][["variables"]][["aux"]],
-    function(x) {
-      x[["eqn_str"]] <- sprintf("%s <- %s", x[["name"]], x[["eqn"]])
-
-      if (!is.null(x[["preceding_eqn"]])) {
-        x[["eqn_str"]] <- c(x[["preceding_eqn"]], x[["eqn_str"]])
-      }
-      return(x)
-    }
-  )
-
-  # Flow equations
-  sfm[["model"]][["variables"]][["flow"]] <- lapply(sfm[["model"]][["variables"]][["flow"]], function(x) {
-    x[["eqn_str"]] <- sprintf(
-      "%s <- %s%s%s # Flow%s%s",
-      x[["name"]],
-      ifelse(x[["non_negative"]], "nonnegative(", ""),
-      x[["eqn"]],
-      ifelse(x[["non_negative"]], "\n\t\t)", ""),
-      # Add comment
-      ifelse(is_defined(x[["from"]]), paste0(" from ", x[["from"]]), ""),
-      ifelse(is_defined(x[["to"]]), paste0(" to ", x[["to"]]), "")
-    )
-
-    if (!is.null(x[["preceding_eqn"]])) {
-      x[["eqn_str"]] <- c(x[["preceding_eqn"]], x[["eqn_str"]])
-    }
-    return(x)
-  })
-
-
-  return(sfm)
-}
+## prep_equations_variables centralized in R/prep_functions.R
 
 
 #' Prepare for summing change in stocks in stock-and-flow model
@@ -493,40 +407,7 @@ prep_equations_variables <- function(sfm, keep_nonnegative_flow) {
 #' @noRd
 #' @returns A stock-and-flow model object of class [`sdbuildR_xmile`][xmile]
 #'
-prep_stock_change <- function(sfm) {
-  # Add temporary property to sum change in Stocks
-  sfm[["model"]][["variables"]][["stock"]] <- lapply(sfm[["model"]][["variables"]][["stock"]], function(x) {
-    if (!is.null(x[["delayN"]])) {
-      x[["sum_name"]] <- paste0(x[["inflow"]], "$update")
-      x[["sum_eqn"]] <- ""
-      x[["sum_units"]] <- ""
-    } else {
-      inflow <- outflow <- ""
-      x[["sum_name"]] <- paste0(P[["change_prefix"]], x[["name"]])
-
-      # y_str <- paste0(P[["change_prefix"]], x[["name"]])
-
-      # In case no inflow and no outflow is defined, update with 0
-      if (!is_defined(x[["inflow"]]) & !is_defined(x[["outflow"]])) {
-        x[["sum_eqn"]] <- "0"
-      } else {
-        if (is_defined(x[["inflow"]])) {
-          inflow <- paste0(x[["inflow"]], collapse = " + ")
-        }
-        if (is_defined(x[["outflow"]])) {
-          outflow <- paste0(paste0(" - ", x[["outflow"]]), collapse = "")
-        }
-        x[["sum_eqn"]] <- sprintf("%s%s", inflow, outflow)
-      }
-      x[["sum_units"]] <- ""
-    }
-    return(x)
-  }) |> compact_()
-
-  sfm <- validate_xmile(sfm)
-
-  return(sfm)
-}
+## prep_stock_change centralized in R/prep_functions.R
 
 
 #' Compile script for non-negative Stocks

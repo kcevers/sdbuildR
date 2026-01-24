@@ -33,15 +33,29 @@ solvers <- function(method,
   from_spec <- !missing(from) && !is.null(from) && !any(is.na(from))
   to_spec <- !missing(to) && !is.null(to) && !any(is.na(to))
   if (!method_spec && !from_spec) {
-    stop("Either method or from must be specified!")
+    cli::cli_abort(c(
+      "Missing required arguments.",
+      "x" = "Either {.arg method} or {.arg from} must be specified.",
+      ">" = "Provide at least one of these arguments."
+    ))
   }
 
   if (method_spec && (!inherits(method, "character") || length(method) > 1)) {
-    stop("method must be a single string!")
+    cli::cli_abort(c(
+      "Invalid {.arg method} argument.",
+      "x" = "The {.arg method} argument must be a single {.cls character} string.",
+      "i" = "You provided {.cls {class(method)}} with length {.val {length(method)}}.",
+      ">" = "Provide a single solver method name as a string."
+    ))
   }
 
   if (from_spec && (!inherits(from, "character") || length(from) > 1)) {
-    stop("from must be a single string!")
+    cli::cli_abort(c(
+      "Invalid {.arg from} argument.",
+      "x" = "The {.arg from} argument must be a single {.cls character} string.",
+      "i" = "You provided {.cls {class(from)}} with length {.val {length(from)}}.",
+      ">" = "Specify either {.code 'R'} or {.code 'Julia'} as the source language."
+    ))
   }
 
   if (from_spec) {
@@ -53,7 +67,12 @@ solvers <- function(method,
     translate <- FALSE
   } else {
     if (to_spec && (!inherits(to, "character") || length(to) > 1)) {
-      stop("to must be a single string!")
+      cli::cli_abort(c(
+        "Invalid {.arg to} argument.",
+        "x" = "The {.arg to} argument must be a single {.cls character} string.",
+        "i" = "You provided {.cls {class(to)}} with length {.val {length(to)}}.",
+        ">" = "Specify either {.code 'R'} or {.code 'Julia'} as the target language."
+      ))
     }
 
     translate <- TRUE
@@ -783,18 +802,19 @@ solvers <- function(method,
         )
 
         if (method %in% c(deSolve::rkMethod(), additional_methods)) {
-          stop(
-            "Method ",
-            method,
-            " is in deSolve, but not yet supported by sdbuildR. Please post an issue on Github."
-          )
+          cli::cli_abort(c(
+            "Unsupported solver method.",
+            "x" = "The method {.val {method}} exists in {.pkg deSolve} but is not yet supported by {.pkg sdbuildR}.",
+            "i" = "This solver has not been implemented yet.",
+            ">" = "Please post an issue on GitHub to request support for this method."
+          ))
         } else {
-          stop(
-            "Method ",
-            method,
-            " is not found in deSolve methods. Choose from: ",
-            paste0(names(solver_dict[["r_to_julia"]]), collapse = ", ")
-          )
+          cli::cli_abort(c(
+            "Unknown solver method.",
+            "x" = "The method {.val {method}} is not found in {.pkg deSolve} methods.",
+            "i" = "Available solvers: {.val {names(solver_dict[[\"r_to_julia\"]])}}.",
+            ">" = "Choose a valid solver method from the list above."
+          ))
         }
       } else {
         solver_info <- solver_dict[["r_to_julia"]][[method]]
@@ -822,12 +842,12 @@ solvers <- function(method,
           }
         }
         if (!found) {
-          stop(
-            "Method ",
-            method,
-            " not found in Julia DifferentialEquations methods, or not supported by sdbuildR. Choose from: ",
-            paste0(names(solver_dict[["julia_to_r"]]), collapse = ", ")
-          )
+          cli::cli_abort(c(
+            "Unknown Julia solver method.",
+            "x" = "The method {.val {method}} is not found in Julia {.pkg DifferentialEquations} or is not supported by {.pkg sdbuildR}.",
+            "i" = "Available solvers: {.val {names(solver_dict[[\"julia_to_r\"]])}}.",
+            ">" = "Choose a valid Julia solver method from the list above."
+          ))
         } else {
           method <- method_clean
         }
@@ -842,13 +862,12 @@ solvers <- function(method,
     # Perform translation
     if (from == "R" && to == "Julia") {
       if (!method %in% names(solver_dict[["r_to_julia"]])) {
-        stop(
-          paste(
-            "Solver",
-            method,
-            "not found in deSolve methods. Run solvers(from='R') to see available solvers."
-          )
-        )
+        cli::cli_abort(c(
+          "Solver not found.",
+          "x" = "The solver {.val {method}} is not found in {.pkg deSolve} methods.",
+          "i" = "Run {.code solvers(from = 'R')} to see available solvers.",
+          ">" = "Choose a valid {.pkg deSolve} solver method."
+        ))
       }
 
       solver_info <- solver_dict[["r_to_julia"]][[method]]
@@ -872,13 +891,12 @@ solvers <- function(method,
           }
         }
         if (!found) {
-          stop(
-            paste(
-              "Solver",
-              method,
-              "not found in Julia DifferentialEquations methods. Run solvers(from='Julia') to see available solvers."
-            )
-          )
+          cli::cli_abort(c(
+            "Solver not found.",
+            "x" = "The solver {.val {method}} is not found in Julia {.pkg DifferentialEquations} methods.",
+            "i" = "Run {.code solvers(from = 'Julia')} to see available solvers.",
+            ">" = "Choose a valid Julia solver method."
+          ))
         } else {
           method <- method_clean
         }

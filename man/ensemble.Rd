@@ -12,9 +12,6 @@ ensemble(
   cross = TRUE,
   quantiles = c(0.025, 0.975),
   only_stocks = TRUE,
-  keep_nonnegative_flow = TRUE,
-  keep_nonnegative_stock = FALSE,
-  keep_unit = TRUE,
   verbose = TRUE
 )
 }
@@ -37,12 +34,6 @@ Defaults to NULL (no parameter variation).}
 \item{quantiles}{Quantiles to calculate in the summary, e.g. c(0.025, 0.975).}
 
 \item{only_stocks}{If TRUE, only return stocks in output, discarding flows and auxiliaries. If FALSE, flows and auxiliaries are saved, which slows down the simulation. Defaults to FALSE.}
-
-\item{keep_nonnegative_flow}{If TRUE, keeps original non-negativity setting of flows. Defaults to TRUE.}
-
-\item{keep_nonnegative_stock}{If TRUE, keeps original non-negativity setting of stocks Defaults to FALSE.}
-
-\item{keep_unit}{If TRUE, keeps units of variables. Defaults to TRUE.}
 
 \item{verbose}{If TRUE, print details and duration of simulation. Defaults to TRUE.}
 }

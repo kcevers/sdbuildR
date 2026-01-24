@@ -19,25 +19,39 @@ template <- function(name) {
   )
 
   if (missing(name)) {
-    message(sprintf(
-      "Choose one of the available templates:\n\n%s",
-      paste0(model_names, collapse = "\n")
+    cli::cli_inform(c(
+      "Available model templates:",
+      "i" = "Choose from the following templates:",
+      " " = paste0(model_names, collapse = "\n")
     ))
     return(invisible())
   }
 
   if (!is.character(name)) {
-    stop("name must be a string!")
+    cli::cli_abort(c(
+      "Invalid {.arg name} argument.",
+      "x" = "The {.arg name} argument must be {.cls character}.",
+      "i" = "You provided an object of class {.cls {class(name)}}.",
+      ">" = "Provide a character string for {.arg name}."
+    ))
   }
 
   if (length(name) != 1) {
-    stop("name must be of length 1!")
+    cli::cli_abort(c(
+      "Invalid {.arg name} length.",
+      "x" = "The {.arg name} argument must be a single {.cls character} string.",
+      "i" = "You provided {.val {length(name)}} value{?s}.",
+      ">" = "Provide exactly one template name."
+    ))
   }
 
   if (!name %in% model_names) {
-    stop(sprintf(
-      "%s is not an available template. The available templates are:\n\n%s", name,
-      paste0(model_names, collapse = "\n")
+    cli::cli_abort(c(
+      "Template not found.",
+      "x" = "The template {.val {name}} is not available.",
+      "i" = "Available templates are:",
+      " " = paste0(model_names, collapse = "\n"),
+      ">" = "Choose one of the listed templates."
     ))
   }
 

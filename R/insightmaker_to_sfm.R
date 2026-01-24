@@ -37,8 +37,8 @@ insightmaker_to_sfm <- function(URL,
                                 keep_nonnegative_stock = FALSE,
                                 keep_solver = FALSE) {
   if (P[["debug"]]) {
-    message("URL: ", URL)
-    message("file: ", file)
+    cli::cli_inform("URL: {URL}")
+    cli::cli_inform("file: {file}")
   }
 
   # Get Insight Maker model
@@ -53,9 +53,11 @@ insightmaker_to_sfm <- function(URL,
       file_to_xmile(read_file, ext)
     },
     error = function(e) {
-      stop("Failed to convert Insight Maker model structure to XMILE format.\n",
-        "Original error: ", conditionMessage(e),
-        call. = FALSE
+      cli::cli_abort(
+        c("Failed to convert Insight Maker model structure to XMILE format.",
+          "x" = "Check for unsupported Insight Maker syntax or model structure.",
+          "i" = "Original error: {conditionMessage(e)}"),
+        call = NULL
       )
     }
   )
@@ -67,7 +69,7 @@ insightmaker_to_sfm <- function(URL,
 
   # Clean up units
   if (P[["debug"]]) {
-    message("Cleaning units...")
+    cli::cli_inform("Cleaning units")
   }
 
   regex_units <- get_regex_units()
@@ -77,9 +79,11 @@ insightmaker_to_sfm <- function(URL,
       clean_units_IM(sfm, regex_units)
     },
     error = function(e) {
-      stop("Failed to clean units in the model.\n",
-        "Original error: ", conditionMessage(e),
-        call. = FALSE
+      cli::cli_abort(
+        c("Failed to clean units in the model.",
+          "x" = "Check for invalid unit syntax or unsupported unit types.",
+          "i" = "Original error: {conditionMessage(e)}"),
+        call = NULL
       )
     }
   )
@@ -90,16 +94,18 @@ insightmaker_to_sfm <- function(URL,
       check_nonnegativity(sfm, keep_nonnegative_flow, keep_nonnegative_stock, keep_solver)
     },
     error = function(e) {
-      stop("Failed to check non-negativity constraints.\n",
-        "Original error: ", conditionMessage(e),
-        call. = FALSE
+      cli::cli_abort(
+        c("Failed to check non-negativity constraints.",
+          "x" = "Review your keep_nonnegative_flow and keep_nonnegative_stock settings.",
+          "i" = "Original error: {conditionMessage(e)}"),
+        call = NULL
       )
     }
   )
 
   # Convert macros
   if (P[["debug"]]) {
-    message("Converting macros from Insight Maker to R...")
+    cli::cli_inform("Converting macros")
   }
 
   sfm <- tryCatch(
@@ -107,17 +113,18 @@ insightmaker_to_sfm <- function(URL,
       convert_macros_IM_wrapper(sfm, regex_units = regex_units)
     },
     error = function(e) {
-      stop("Failed to convert macros from Insight Maker format.\n",
-        "Check for unsupported macro syntax or functions.\n",
-        "Original error: ", conditionMessage(e),
-        call. = FALSE
+      cli::cli_abort(
+        c("Failed to convert macros from Insight Maker format.",
+          "x" = "Check for unsupported macro syntax or functions.",
+          "i" = "Original error: {conditionMessage(e)}"),
+        call = NULL
       )
     }
   )
 
   # Convert equations in model variables
   if (P[["debug"]]) {
-    message("Converting equations from Insight Maker to R...")
+    cli::cli_inform("Converting equations")
   }
 
   sfm <- tryCatch(
@@ -125,10 +132,11 @@ insightmaker_to_sfm <- function(URL,
       convert_equations_IM_wrapper(sfm, regex_units = regex_units)
     },
     error = function(e) {
-      stop("Failed to convert equations from Insight Maker format.\n",
-        "Check for unsupported functions or syntax in your model equations.\n",
-        "Original error: ", conditionMessage(e),
-        call. = FALSE
+      cli::cli_abort(
+        c("Failed to convert equations from Insight Maker format.",
+          "x" = "Check for unsupported functions or syntax in your model equations.",
+          "i" = "Original error: {conditionMessage(e)}"),
+        call = NULL
       )
     }
   )
@@ -139,9 +147,10 @@ insightmaker_to_sfm <- function(URL,
       remove_brackets_from_names(sfm)
     },
     error = function(e) {
-      stop("Failed to clean variable names.\n",
-        "Original error: ", conditionMessage(e),
-        call. = FALSE
+      cli::cli_abort(
+        c("Failed to clean variable names.",
+          "i" = "Original error: {conditionMessage(e)}"),
+        call = NULL
       )
     }
   )
@@ -152,9 +161,10 @@ insightmaker_to_sfm <- function(URL,
       convert_equations_julia_wrapper(sfm, regex_units = regex_units)
     },
     error = function(e) {
-      stop("Failed to convert equations to Julia format.\n",
-        "Original error: ", conditionMessage(e),
-        call. = FALSE
+      cli::cli_abort(
+        c("Failed to convert equations to Julia format.",
+          "i" = "Original error: {conditionMessage(e)}"),
+        call = NULL
       )
     }
   )
@@ -165,9 +175,10 @@ insightmaker_to_sfm <- function(URL,
       split_aux_wrapper(sfm)
     },
     error = function(e) {
-      stop("Failed to split auxiliary variables into constants and auxiliaries.\n",
-        "Original error: ", conditionMessage(e),
-        call. = FALSE
+      cli::cli_abort(
+        c("Failed to split auxiliary variables into constants and auxiliaries.",
+          "i" = "Original error: {conditionMessage(e)}"),
+        call = NULL
       )
     }
   )
@@ -176,10 +187,12 @@ insightmaker_to_sfm <- function(URL,
   unit_strings <- find_unit_strings(sfm)
   df <- as.data.frame(sfm, type = c("stock", "aux", "constant", "gf"), properties = "units")
 
-  if (length(unit_strings) > 0 || length(sfm[["model_units"]]) > 0 ||
+  if (length(unit_strings) > 0 || nrow(sfm[["model_units"]]) > 0 ||
     any(df[["units"]] != "1")) {
-    message("Detected use of units. Setting simulation language to Julia.")
-    sfm <- sim_specs(sfm, language = "Julia")
+    cli::cli_inform("Units detected. Setting language to {.code Julia}")
+    sfm <- sim_specs(sfm, language = "Julia", keep_nonnegative_flow = keep_nonnegative_flow, keep_nonnegative_stock = keep_nonnegative_stock)
+  } else {
+    sfm <- sim_specs(sfm, keep_nonnegative_flow = keep_nonnegative_flow, keep_nonnegative_stock = keep_nonnegative_stock)
   }
 
   sfm <- validate_xmile(sfm)

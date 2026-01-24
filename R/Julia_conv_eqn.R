@@ -11,37 +11,108 @@ convert_equations_julia_wrapper <- function(sfm, regex_units) {
   # Get variable names
   var_names <- get_model_var(sfm)
 
-  sfm[["model"]][["variables"]][c("stock", "flow", "constant", "aux")] <- lapply(
-    sfm[["model"]][["variables"]][c("stock", "flow", "constant", "aux")],
-    function(x) {
-      lapply(x, function(y) {
-        out <- convert_equations_julia(y[["type"]], y[["name"]],
-          y[["eqn"]], var_names,
-          regex_units = regex_units
-        )
-        y <- utils::modifyList(y, out)
-        return(y)
-      })
+  # Initialize transformation tracking if debug mode is on
+  tracker <- if (P[["debug"]]) create_transformation_tracker() else NULL
+
+  # Initialize accumulators for auxiliary variables (similar to IM wrapper)
+  accumulated_add_vars_aux <- list()
+  accumulated_add_vars_gf <- list()
+
+  # Update equations in variables data frame
+  for (i in seq_len(nrow(sfm[["variables"]]))) {
+    if (sfm[["variables"]][i, "type"] %in% c("stock", "flow", "constant", "aux")) {
+      var_name <- sfm[["variables"]][i, "name"]
+      var_type <- sfm[["variables"]][i, "type"]
+      eqn_before <- sfm[["variables"]][i, "eqn"]
+      
+      out <- convert_equations_julia(
+        var_type,
+        var_name,
+        eqn_before,
+        var_names,
+        regex_units = regex_units
+      )
+      
+      # Track transformation
+      if (!is.null(tracker)) {
+        eqn_after <- out[["eqn_julia"]]
+        n_aux_created <- length(out[["add_vars_aux"]])
+        
+        if (eqn_before != eqn_after || n_aux_created > 0) {
+          log_transformation(tracker, var_name, "equation_conversion_julia", list(
+            variable_type = var_type,
+            auxiliary_vars = n_aux_created,
+            equation_changed = eqn_before != eqn_after
+          ))
+        }
+      }
+      
+      sfm[["variables"]][i, "eqn_julia"] <- out[["eqn_julia"]]
+      
+      # Accumulate auxiliary variables
+      if (length(out[["add_vars_aux"]]) > 0) {
+        accumulated_add_vars_aux <- append(accumulated_add_vars_aux, out[["add_vars_aux"]])
+        if (!is.null(tracker)) {
+          for (aux_var_name in names(out[["add_vars_aux"]])) {
+            log_transformation(tracker, aux_var_name, "create_auxiliary_julia", list(
+              created_by = var_name
+            ))
+          }
+        }
+      }
+      if (length(out[["add_vars_gf"]]) > 0) {
+        accumulated_add_vars_gf <- append(accumulated_add_vars_gf, out[["add_vars_gf"]])
+      }
     }
-  )
+  }
 
-  # Macros
-  sfm[[P[["macro_name"]]]] <- lapply(sfm[[P[["macro_name"]]]], function(x) {
-    # If a name is defined, assign macro to that name (necessary for correct conversion of functions)
-    if (nzchar(x[["name"]])) {
-      x[["eqn_julia"]] <- paste0(x[["name"]], " = ", x[["eqn"]])
-    } else {
-      x[["eqn_julia"]] <- x[["eqn"]]
+  # Add accumulated auxiliary and graphical function variables to the model
+  sfm <- add_accumulated_variables(sfm, accumulated_add_vars_aux, accumulated_add_vars_gf)
+
+  # Print transformation summary if debug mode is on
+  if (!is.null(tracker) && P[["debug"]]) {
+    cli::cli_h2("R\u2192Julia Conversion Summary")
+    for (line in summarize_transformations(tracker)) {
+      cli::cli_text(line)
+    }
+  }
+
+  # Macros (data frame structure)
+  macro_df <- sfm[[P[["macro_name"]]]]
+  if (nrow(macro_df) > 0) {
+    for (i in seq_len(nrow(macro_df))) {
+      row_list <- as.list(macro_df[i, , drop = FALSE])
+
+      # If a name is defined, assign macro to that name (necessary for correct conversion of functions)
+      if (nzchar(row_list[["name"]])) {
+        row_list[["eqn_julia"]] <- paste0(row_list[["name"]], " = ", row_list[["eqn"]])
+      } else {
+        row_list[["eqn_julia"]] <- row_list[["eqn"]]
+      }
+
+      out <- convert_equations_julia(
+        P[["macro_name"]],
+        P[["macro_name"]],
+        row_list[["eqn_julia"]],
+        var_names,
+        regex_units = regex_units
+      )
+
+      row_list <- utils::modifyList(row_list, out)
+
+      # Ensure macro_df has all fields present in row_list
+      missing_cols <- setdiff(names(row_list), names(macro_df))
+      if (length(missing_cols) > 0) {
+        for (col in missing_cols) {
+          macro_df[[col]] <- NA
+        }
+      }
+
+      macro_df[i, names(row_list)] <- row_list
     }
 
-    out <- convert_equations_julia(P[["macro_name"]], P[["macro_name"]], x[["eqn_julia"]],
-      var_names,
-      regex_units = regex_units
-    )
-    x <- utils::modifyList(x, out)
-
-    return(x)
-  })
+    sfm[[P[["macro_name"]]]] <- macro_df
+  }
 
   return(sfm)
 }
@@ -57,21 +128,39 @@ convert_equations_julia_wrapper <- function(sfm, regex_units) {
 #' @importFrom rlang .data
 #' @noRd
 #'
+#' Convert all R equations to Julia code
+#'
+#' @inheritParams build
+#' @inheritParams simulate_julia
+#' @inheritParams clean_unit
+#'
+#' @returns List with flat structure:
+#'   - eqn_julia: Converted Julia equation
+#'   - add_vars_aux: Auxiliary variables to add
+#'   - doc: Documentation from comments
+#'
+#' @noRd
+#'
 convert_equations_julia <- function(type, name, eqn, var_names, regex_units) {
   if (P[["debug"]]) {
-    # message("")
-    # message(type)
-    # message(name)
-    message(eqn)
+    # cli::cli_inform("")
+    # cli::cli_inform(type)
+    # cli::cli_inform(name)
+    cli::cli_inform(eqn)
   }
 
   if (length(eqn) > 1) {
-    stop("eqn must be of length 1!", call. = FALSE)
+    cli::cli_abort(c(
+      "Invalid {.arg eqn} length.",
+      "x" = "Must be length 1."
+    ), call. = FALSE)
   }
 
   default_out <- list(
     eqn_julia = "0.0",
-    func = list()
+    add_vars_aux = list(),
+    add_vars_gf = list(),
+    doc = ""
   )
 
   # Check whether eqn is empty or NULL
@@ -95,22 +184,25 @@ convert_equations_julia <- function(type, name, eqn, var_names, regex_units) {
   )
 
   if ("error" %in% class(out)) {
-    stop(paste0(
+    cli::cli_abort(paste0(
       "Parsing equation of \"",
       name, "\" failed:\n", out[["message"]]
     ), call. = FALSE)
   }
 
   if (any(grepl("%%", eqn))) {
-    stop("The modulus operator a %% b is not supported in sdbuildR. Please use mod(a, b) instead.",
-      call. = FALSE
-    )
+    cli::cli_abort(c(
+      "Modulus operator not supported.",
+      "x" = "The operator {.code a %% b} is not supported.",
+      ">" = "Use {.fn mod}(a, b) instead."
+    ), call. = FALSE)
   }
 
   if (any(grepl("na\\.rm", eqn))) {
-    stop("na.rm is not supported as an argument in sdbuildR. Please use na.omit(x) instead.",
-      call. = FALSE
-    )
+    cli::cli_abort(c(
+      "Argument {.arg na.rm} not supported.",
+      ">" = "Use {.fn na.omit}(x) instead."
+    ), call. = FALSE)
   }
 
   # Remove comments we don't keep these
@@ -149,8 +241,9 @@ convert_equations_julia <- function(type, name, eqn, var_names, regex_units) {
 
     # Step 5. Replace R functions to Julia functions
     conv_list <- convert_builtin_functions_julia(type, name, eqn, var_names)
-    eqn <- conv_list[["eqn"]]
-    add_Rcode <- conv_list[["add_Rcode"]]
+    eqn <- conv_list[["eqn_julia"]]
+    add_vars_aux <- conv_list[["add_vars_aux"]]
+    add_vars_gf <- conv_list[["add_vars_gf"]]
 
 
     # **to do:
@@ -169,15 +262,12 @@ convert_equations_julia <- function(type, name, eqn, var_names, regex_units) {
     # Units: replace u("") with u""
     eqn <- stringr::str_replace_all(eqn, "(?:^|(?<=\\W))u\\([\"|'](.*?)[\"|']\\)", "u\"\\1\"")
 
-    # # # If it is a multi-line statement, surround by brackets in case they aren't macros
-    # # eqn = trimws(eqn)
-    # if (stringr::str_detect(eqn, stringr::fixed("\n")) & !stringr::str_starts(eqn, "begin") & !stringr::str_ends(eqn, "end")) {
-    #   eqn = paste0("begin\n", eqn, "\nend")
-    # }
-
-    out <- append(list(eqn_julia = eqn), add_Rcode)
-
-    return(out)
+    return(list(
+      eqn_julia = eqn,
+      add_vars_aux = add_vars_aux,
+      add_vars_gf = add_vars_gf,
+      doc = ""
+    ))
   }
 }
 
@@ -562,7 +652,7 @@ convert_all_statements_julia <- function(eqn, var_names) {
             # error when there are non-default arguments between default argumens or when default argument is not at the end
             if (any(!is.na(names_arg))) {
               if (any(diff(which(!is.na(names_arg))) > 1) || max(which(!is.na(names_arg))) != length(names_arg)) {
-                stop(paste0("Please change the function definition of ", pair[["func_name"]], ". All arguments with defaults have to be placed at the end of the function arguments."), call. = FALSE)
+                cli::cli_abort(paste0("Please change the function definition of ", pair[["func_name"]], ". All arguments with defaults have to be placed at the end of the function arguments."), call. = FALSE)
               }
             }
 
@@ -636,7 +726,7 @@ convert_all_statements_julia <- function(eqn, var_names) {
       # error when there are non-default arguments between default argumens or when default argument is not at the end
       if (any(!is.na(names_arg))) {
         if (any(diff(which(!is.na(names_arg))) > 1) | max(which(!is.na(names_arg))) != length(names_arg)) {
-          stop(paste0("Please change the function definition of ", pair[["first_word"]], ". All arguments with defaults have to be placed at the end of the function arguments."), call. = FALSE)
+          cli::cli_abort(paste0("Please change the function definition of ", pair[["first_word"]], ". All arguments with defaults have to be placed at the end of the function arguments."), call. = FALSE)
         }
       }
 
@@ -1042,8 +1132,8 @@ convert_builtin_functions_julia <- function(type, name, eqn, var_names) {
         idx_func <- idx_funcs_ordered[1, ] # Select first match
 
         if (P[["debug"]]) {
-          message("idx_func")
-          message(idx_func)
+          cli::cli_inform("idx_func")
+          cli::cli_inform(idx_func)
         }
 
         # Extract argument between brackets (excluding brackets)
@@ -1074,7 +1164,7 @@ convert_builtin_functions_julia <- function(type, name, eqn, var_names) {
           )
         } else if (idx_func[["syntax"]] == "delay") {
           if (type %in% c("stock", "gf", "constant", "macro")) {
-            stop(paste0(
+            cli::cli_abort(paste0(
               "Adjust equation of ", name,
               ": delay() cannot be used for a ", type, "."
             ), call. = FALSE)
@@ -1083,7 +1173,7 @@ convert_builtin_functions_julia <- function(type, name, eqn, var_names) {
           # Check arguments
           arg[2] <- trimws(arg[2])
           if (arg[2] == "0" || arg[2] == "0.0" || arg[2] == "0L") {
-            stop(paste0(
+            cli::cli_abort(paste0(
               "Adjust equation of ", name,
               ": the delay length in delay() must be greater than 0."
             ), call. = FALSE)
@@ -1113,7 +1203,7 @@ convert_builtin_functions_julia <- function(type, name, eqn, var_names) {
           )
         } else if (idx_func[["syntax"]] == "past") {
           if (type %in% c("stock", "gf", "constant", "macro")) {
-            stop(paste0(
+            cli::cli_abort(paste0(
               "Adjust equation of ", name,
               ": past() cannot be used for a ", type, "."
             ), call. = FALSE)
@@ -1122,7 +1212,7 @@ convert_builtin_functions_julia <- function(type, name, eqn, var_names) {
           # Check arguments
           arg[2] <- trimws(arg[2])
           if (arg[2] == "0" || arg[2] == "0.0" || arg[2] == "0L") {
-            stop(paste0(
+            cli::cli_abort(paste0(
               "Adjust equation of ", name,
               ": the past interval in past() must be greater than 0."
             ), call. = FALSE)
@@ -1148,7 +1238,7 @@ convert_builtin_functions_julia <- function(type, name, eqn, var_names) {
           )
         } else if (idx_func[["syntax"]] == "delayN") {
           if (type %in% c("stock", "gf", "constant", "macro")) {
-            stop(paste0(
+            cli::cli_abort(paste0(
               "Adjust equation of ", name,
               ": delayN() cannot be used for a ", type, "."
             ), call. = FALSE)
@@ -1157,14 +1247,14 @@ convert_builtin_functions_julia <- function(type, name, eqn, var_names) {
           # Check arguments
           arg[2] <- trimws(arg[2])
           if (arg[2] == "0" || arg[2] == "0.0" || arg[2] == "0L") {
-            stop(paste0(
+            cli::cli_abort(paste0(
               "Adjust equation of ", name,
               ": the delay length in delayN() must be greater than 0."
             ), call. = FALSE)
           }
 
           if (arg[3] == "0" || arg[3] == "0.0" || arg[3] == "0L") {
-            stop(paste0(
+            cli::cli_abort(paste0(
               "Adjust equation of ", name,
               ": the delay order in delayN() must be greater than 0."
             ), call. = FALSE)
@@ -1207,7 +1297,7 @@ convert_builtin_functions_julia <- function(type, name, eqn, var_names) {
           )
         } else if (idx_func[["syntax"]] == "smoothN") {
           if (type %in% c("stock", "gf", "constant", "macro")) {
-            stop(paste0(
+            cli::cli_abort(paste0(
               "Adjust equation of ", name,
               ": smoothN() cannot be used for a ", type, "."
             ), call. = FALSE)
@@ -1216,7 +1306,7 @@ convert_builtin_functions_julia <- function(type, name, eqn, var_names) {
           # Check arguments
           arg[2] <- trimws(arg[2])
           if (arg[2] == "0" || arg[2] == "0.0" || arg[2] == "0L") {
-            stop(paste0(
+            cli::cli_abort(paste0(
               "Adjust equation of ", name,
               ": the smoothing time in smoothN() must be greater than 0."
             ), call. = FALSE)
@@ -1224,7 +1314,7 @@ convert_builtin_functions_julia <- function(type, name, eqn, var_names) {
 
           arg[3] <- trimws(arg[3])
           if (arg[3] == "0" || arg[3] == "0.0" || arg[3] == "0L") {
-            stop(paste0(
+            cli::cli_abort(paste0(
               "Adjust equation of ", name,
               ": the smoothing order in smoothN() must be greater than 0."
             ), call. = FALSE)
@@ -1287,9 +1377,9 @@ convert_builtin_functions_julia <- function(type, name, eqn, var_names) {
         }
 
         if (P[["debug"]]) {
-          message(stringr::str_sub(eqn, start_idx, end_idx))
-          message(replacement)
-          message("")
+          cli::cli_inform(stringr::str_sub(eqn, start_idx, end_idx))
+          cli::cli_inform(replacement)
+          cli::cli_inform("")
         }
 
         # Replace eqn
@@ -1297,7 +1387,17 @@ convert_builtin_functions_julia <- function(type, name, eqn, var_names) {
       }
     }
   }
-  return(list(eqn = eqn, add_Rcode = add_Rcode))
+  
+  # Flatten the add_Rcode structure - extract all functions from add_Rcode[["func"]]
+  add_vars_aux <- list()
+  if (length(add_Rcode[["func"]]) > 0) {
+    # Flatten all functions from different syntax types
+    for (syntax_type in names(add_Rcode[["func"]])) {
+      add_vars_aux <- append(add_vars_aux, add_Rcode[["func"]][[syntax_type]])
+    }
+  }
+  
+  return(list(eqn_julia = eqn, add_vars_aux = add_vars_aux, add_vars_gf = list(), doc = ""))
 }
 
 
@@ -1317,7 +1417,10 @@ conv_distribution <- function(arg, R_func, julia_func, distribution) {
   arg[[1]] <- safe_convert(arg[[1]], "integer")
 
   if (!is.integer(arg[[1]])) {
-    stop("The first argument of ", R_func, "() must be an integer!", call. = FALSE)
+    cli::cli_abort(c(
+      "Invalid first argument of {.fn {R_func}}.",
+      "x" = "Must be {.cls integer}."
+    ), call. = FALSE)
   }
 
   # If n = 1, don't include it, as rand(..., 1) generates a vector. n is the first argument.

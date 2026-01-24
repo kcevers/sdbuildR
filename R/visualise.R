@@ -77,7 +77,11 @@ export_plot <- function(pl, file, width = 3, height = 4, units = "cm", dpi = 300
       width = width, height = height
     )
   } else {
-    stop("export_plot does not support plot object of class ", class(pl))
+    cli::cli_abort(c(
+      "Unsupported plot object class.",
+      "x" = "The {.fn export_plot} function does not support plot objects of class {.cls {class(pl)}}.",
+      ">" = "Use a {.cls grViz} or {.cls plotly} object."
+    ))
   }
 
   return(invisible())
@@ -94,11 +98,19 @@ export_plot <- function(pl, file, width = 3, height = 4, units = "cm", dpi = 300
 #'
 export_diagram <- function(pl, file, format, width, height) {
   if (!requireNamespace("rsvg", quietly = TRUE)) {
-    stop("rsvg needs to be installed!")
+    cli::cli_abort(c(
+      "Package {.pkg rsvg} is required.",
+      "x" = "The {.pkg rsvg} package is not installed.",
+      ">" = "Install it with: {.code install.packages('rsvg')}."
+    ))
   }
 
   if (!requireNamespace("DiagrammeRsvg", quietly = TRUE)) {
-    stop("DiagrammeRsvg needs to be installed!")
+    cli::cli_abort(c(
+      "Package {.pkg DiagrammeRsvg} is required.",
+      "x" = "The {.pkg DiagrammeRsvg} package is not installed.",
+      ">" = "Install it with: {.code install.packages('DiagrammeRsvg')}."
+    ))
   }
 
   temp <- charToRaw(DiagrammeRsvg::export_svg(pl))
@@ -116,7 +128,11 @@ export_diagram <- function(pl, file, format, width, height) {
   } else if (format == "eps") {
     rsvg::rsvg_eps(temp, file, width = width, height = height)
   } else {
-    stop("format ", format, " not supported")
+    cli::cli_abort(c(
+      "Unsupported {.arg format} value.",
+      "x" = "The format {.val {format}} is not supported.",
+      ">" = "Use one of: {.code c('webp', 'png', 'pdf', 'svg', 'ps', 'eps')}."
+    ))
   }
 
   return(invisible())
@@ -133,11 +149,19 @@ export_diagram <- function(pl, file, format, width, height) {
 #'
 export_plotly <- function(pl, file, format, width, height) {
   if (!requireNamespace("htmlwidgets", quietly = TRUE)) {
-    stop("htmlwidgets needs to be installed!")
+    cli::cli_abort(c(
+      "Package {.pkg htmlwidgets} is required.",
+      "x" = "The {.pkg htmlwidgets} package is not installed.",
+      ">" = "Install it with: {.code install.packages('htmlwidgets')}."
+    ))
   }
 
   if (!requireNamespace("webshot2", quietly = TRUE)) {
-    stop("webshot2 needs to be installed!")
+    cli::cli_abort(c(
+      "Package {.pkg webshot2} is required.",
+      "x" = "The {.pkg webshot2} package is not installed.",
+      ">" = "Install it with: {.code install.packages('webshot2')}."
+    ))
   }
 
   # Create temporary HTML file
@@ -156,7 +180,11 @@ export_plotly <- function(pl, file, format, width, height) {
 
   # Format-specific settings
   if (!format %in% c("jpg", "jpeg", "webp", "png", "pdf")) {
-    warning("Format '", format, "' may not be supported by webshot2. Trying anyway...")
+    cli::cli_warn(c(
+      "Potentially unsupported format.",
+      "!" = "The format {.val {format}} may not be supported by {.pkg webshot2}.",
+      "i" = "Attempting export anyway..."
+    ))
   }
 
   # Overwrite quiet option temporarily
@@ -241,7 +269,11 @@ plot.sdbuildR_xmile <- function(x,
 
   # Check whether there are any variables
   if (nrow(df) == 0) {
-    stop("Your model contains no variables!")
+    cli::cli_warn(c(
+      "i" = "Model contains no variables.",
+      ">" = "Add variables using {.fn build} before plotting."
+    ))
+    return(invisible(NULL))
   }
 
   # Get dependencies
@@ -250,19 +282,28 @@ plot.sdbuildR_xmile <- function(x,
 
   if (!is.null(vars)) {
     if (!is.character(vars)) {
-      stop("vars must be a character vector!")
+      cli::cli_abort(c(
+        "Invalid {.arg vars} argument.",
+        "x" = "The {.arg vars} argument must be {.cls character}.",
+        "i" = "Received: {.cls {typeof(vars)}}.",
+        ">" = "Provide a character vector of variable names."
+      ))
     }
 
     vars <- unique(vars)
 
     if (length(vars) == 0) {
-      stop("vars cannot be of length zero!")
+      cli::cli_abort(c(
+        "Empty {.arg vars} vector.",
+        "x" = "The {.arg vars} argument cannot be of length zero.",
+        ">" = "Provide at least one variable name."
+      ))
     }
 
     # Check whether specified variables are in the model
     idx <- !(vars %in% df[["name"]])
     if (any(idx)) {
-      stop(paste0(
+      cli::cli_abort(paste0(
         paste0(vars[idx], collapse = ", "),
         ifelse(sum(idx) == 1, " is not a variable", " are not variables"),
         " in the model! Model variables: ",
@@ -344,13 +385,15 @@ plot.sdbuildR_xmile <- function(x,
 
   # Prepare stock nodes
   if (length(stock_names) > 0) {
+    # Recycle stock_col if needed
+    stock_cols <- rep_len(stock_col, length(stock_names))
     stock_nodes <- sprintf(
       "%s [id=%s,label='%s',tooltip = 'eqn = %s',shape=box,style=filled,fillcolor='%s',fontsize=%s,fontname='%s']",
       paste0("'", stock_names, "'"),
       paste0("'", stock_names, "'"),
       dict[stock_names],
       dict_eqn[stock_names],
-      stock_col, font_size, font_family
+      stock_cols, font_size, font_family
     )
   } else {
     stock_nodes <- ""
@@ -494,6 +537,9 @@ plot.sdbuildR_xmile <- function(x,
 
     # Create edges: from -> flow_node -> to
     flow_edges <- c()
+    # Recycle flow_col if needed
+    flow_cols <- rep_len(flow_col, nrow(flow_df))
+    
     for (i in seq_len(nrow(flow_df))) {
       flow_name <- flow_df[i, "name"]
       flow_node <- flow_name
@@ -508,7 +554,7 @@ plot.sdbuildR_xmile <- function(x,
         paste0(
           "black:",
           # flow_col,":",
-          flow_col, ":black"
+          flow_cols[i], ":black"
         ),
         minlen
       ))
@@ -521,7 +567,7 @@ plot.sdbuildR_xmile <- function(x,
         paste0(
           "black:",
           # flow_col,":",
-          flow_col, ":black"
+          flow_cols[i], ":black"
         ),
         minlen
       ))
@@ -619,13 +665,22 @@ prep_plot <- function(sfm, type_sim, df, constants, add_constants, vars, palette
 
   if (!is.null(vars)) {
     if (!is.character(vars)) {
-      stop("vars must be a character vector!")
+      cli::cli_abort(c(
+        "Invalid {.arg vars} argument.",
+        "x" = "The {.arg vars} argument must be {.cls character}.",
+        "i" = "Received: {.cls {typeof(vars)}}.",
+        ">" = "Provide a character vector of variable names."
+      ))
     }
 
     vars <- unique(vars)
 
     if (length(vars) == 0) {
-      stop("vars cannot be of length zero!")
+      cli::cli_abort(c(
+        "Empty {.arg vars} vector.",
+        "x" = "The {.arg vars} argument cannot be of length zero.",
+        ">" = "Provide at least one variable name."
+      ))
     }
   }
 
@@ -713,7 +768,7 @@ prep_plot <- function(sfm, type_sim, df, constants, add_constants, vars, palette
     # Check whether specified variables are in the model
     idx <- !(vars %in% names_df[["name"]])
     if (any(idx)) {
-      stop(paste0(
+      cli::cli_abort(paste0(
         paste0(vars[idx], collapse = ", "),
         ifelse(sum(idx) == 1, " is not a variable", " are not variables"),
         " in the model! Model variables: ",
@@ -724,7 +779,7 @@ prep_plot <- function(sfm, type_sim, df, constants, add_constants, vars, palette
     # Check if variables are in the model but not in the dataframe
     idx <- !(vars %in% df[["variable"]])
     if (any(idx)) {
-      stop(paste0(
+      cli::cli_abort(paste0(
         paste0(vars[idx], collapse = ", "),
         ifelse(sum(idx) == 1, " is", " are"),
         " in the model, but not in the simulated data frame. Run simulate() with only_stocks = FALSE."
@@ -791,7 +846,11 @@ prep_plot <- function(sfm, type_sim, df, constants, add_constants, vars, palette
   gen_colors <- FALSE
   if (!is.null(colors)) {
     if (length(colors) < nr_var) {
-      stop(paste0("Length of colors (", length(colors), ") must be equal to the number of variables in the simulation data frame (", nr_var, ").\nUsing palette instead..."))
+      cli::cli_abort(c(
+        "Insufficient colors provided.",
+        "x" = "The {.arg colors} vector has length {.val {length(colors)}}, but {.val {nr_var}} variables need colors.",
+        ">" = "Provide at least {.val {nr_var}} colors or use {.arg palette} instead."
+      ))
       gen_colors <- TRUE
     }
   } else {
@@ -865,7 +924,11 @@ plot.sdbuildR_sim <- function(x,
                               showlegend = TRUE,
                               ...) {
   if (missing(x)) {
-    stop("No simulation data provided! Use simulate() to run a simulation.")
+    cli::cli_abort(c(
+      "No simulation data available.",
+      "x" = "The simulation object is missing.",
+      ">" = "Run a simulation first with {.fn simulate()}."
+    ))
   }
 
   # # Check whether it is an sdbuildR_sim object
@@ -876,15 +939,23 @@ plot.sdbuildR_sim <- function(x,
   validate_sdbuildR_sim(x)
 
   if (!x[["success"]]) {
-    stop("Simulation failed!")
+    cli::cli_abort(c(
+      "Simulation failed.",
+      "x" = "The simulation did not complete successfully.",
+      ">" = "Check your model specification and try again."
+    ))
   }
 
   if (nrow(x[["df"]]) == 0) {
-    stop("Data frame has no rows!")
+    cli::cli_abort("Simulation data frame has no rows")
   }
 
   if (!is.logical(showlegend)) {
-    stop("showlegend must be TRUE or FALSE!")
+    cli::cli_abort(c(
+      "Invalid {.arg showlegend} argument.",
+      "x" = "The {.arg showlegend} argument must be {.cls logical}.",
+      ">" = "Use {.code TRUE} or {.code FALSE}."
+    ))
   }
 
   dots <- list(...)
@@ -1039,38 +1110,66 @@ plot.sdbuildR_ensemble <- function(x,
                                    central_tendency_width = 3,
                                    ...) {
   if (missing(x)) {
-    stop("No simulation data provided! Use simulate() to run a simulation.")
+    cli::cli_abort(c(
+      "No simulation data available.",
+      "x" = "The ensemble simulation object is missing.",
+      ">" = "Generate an ensemble first with {.fn ensemble()}."
+    ))
   }
 
   # Check whether it is an xmile object
   if (!inherits(x, "sdbuildR_ensemble")) {
-    stop("This is not an object of class sdbuildR_ensemble! Generate an ensemble of simulations with ensemble().")
+    cli::cli_abort(c(
+      "Invalid object class.",
+      "x" = "This is not an object of class {.cls sdbuildR_ensemble}.",
+      ">" = "Generate an ensemble of simulations with {.fn ensemble()}."
+    ))
   }
 
   if (x[["success"]] == FALSE) {
-    stop("Ensemble simulation failed!")
+    cli::cli_abort(c(
+      "Ensemble simulation failed.",
+      "x" = "The ensemble simulation did not complete successfully.",
+      ">" = "Check your model specification and try again."
+    ))
   }
 
   if (!is.logical(showlegend)) {
-    stop("showlegend must be TRUE or FALSE!")
+    cli::cli_abort(c(
+      "Invalid {.arg showlegend} argument.",
+      "x" = "The {.arg showlegend} argument must be {.cls logical}.",
+      ">" = "Use {.code TRUE} or {.code FALSE}."
+    ))
   }
 
   if (!is.logical(j_labels)) {
-    stop("j_labels must be TRUE or FALSE!")
+    cli::cli_abort(c(
+      "Invalid {.arg j_labels} argument.",
+      "x" = "The {.arg j_labels} argument must be {.cls logical}.",
+      ">" = "Use {.code TRUE} or {.code FALSE}."
+    ))
   }
 
   # Check type
   type <- trimws(tolower(type))
   type <- ifelse(type == "sim", "sims", type)
   if (!type %in% c("summary", "sims")) {
-    stop("type must be one of 'summary' or 'sims'.")
+    cli::cli_abort(c(
+      "Invalid {.arg type} value.",
+      "x" = "The {.arg type} argument must be {.code 'summary'} or {.code 'sims'}.",
+      ">" = "Specify one of these valid plot types: {.code c('summary', 'sims')}."
+    ))
   }
 
   # Check central tendency
   if (!isFALSE(central_tendency)) {
     central_tendency <- trimws(tolower(central_tendency))
     if (!central_tendency %in% c("mean", "median")) {
-      stop("central_tendency must be 'mean', 'median', or FALSE.")
+      cli::cli_abort(c(
+        "Invalid {.arg central_tendency} value.",
+        "x" = "The {.arg central_tendency} argument must be {.code 'mean'}, {.code 'median'}, or {.code FALSE}.",
+        ">" = "Specify one of the valid options."
+      ))
     }
   }
 
@@ -1130,25 +1229,45 @@ plot.sdbuildR_ensemble <- function(x,
   if (!is.null(x[["summary"]])) {
     summary_df <- x[["summary"]]
   } else {
-    stop("No summary data available!")
+    cli::cli_abort(c(
+      "No summary data available.",
+      "x" = "The ensemble object does not contain summary statistics.",
+      ">" = "Regenerate the ensemble with {.fn ensemble()}."
+    ))
   }
 
   # Check if j is a valid index
   if ("j" %in% passed_arg) {
     if (length(j) == 0) {
-      stop("j must be a non-empty vector of indices.")
+      cli::cli_abort(c(
+        "Empty {.arg j} vector.",
+        "x" = "The {.arg j} argument must be a non-empty vector of indices.",
+        ">" = "Provide at least one condition index."
+      ))
     }
 
     if (is.numeric(j)) {
       if (any(j < 1 | j > x[["n_conditions"]])) {
         if (x[["n_conditions"]] == 1) {
-          stop(paste0("There is only one condition. Set j = 1."))
+          cli::cli_abort(c(
+            "Invalid {.arg j} index.",
+            "x" = "There is only one condition in the ensemble.",
+            ">" = "Set {.code j = 1}."
+          ))
         } else {
-          stop(paste0("j must be a vector with integers between 1 and ", x[["n_conditions"]], "."))
+          cli::cli_abort(c(
+            "Invalid {.arg j} indices.",
+            "x" = "The {.arg j} argument must contain integers between {.val 1} and {.val {x[[\"n_conditions\"]]}}.",
+            ">" = "Provide valid condition indices."
+          ))
         }
       }
     } else {
-      stop("j must be a numeric vector.")
+      cli::cli_abort(c(
+        "Invalid {.arg j} type.",
+        "x" = "The {.arg j} argument must be {.cls numeric}.",
+        "i" = "Received: {.cls {typeof(j)}}."
+      ))
     }
   }
 
@@ -1167,30 +1286,53 @@ plot.sdbuildR_ensemble <- function(x,
       # Check if i is a valid index
       if ("i" %in% passed_arg) {
         if (length(i) == 0) {
-          stop("i must be a non-empty vector of indices.")
+          cli::cli_abort(c(
+            "Empty {.arg i} vector.",
+            "x" = "The {.arg i} argument must be a non-empty vector of indices.",
+            ">" = "Provide at least one simulation index."
+          ))
         }
 
         if (is.numeric(i)) {
           if (any(i < 1 | i > x[["n"]])) {
             if (x[["n"]] == 1) {
-              stop(paste0("There is only one simulation. Set i = 1."))
+              cli::cli_abort(c(
+                "Invalid {.arg i} index.",
+                "x" = "There is only one simulation in the ensemble.",
+                ">" = "Set {.code i = 1}."
+              ))
             } else {
-              stop(paste0("i must be a vector with integers between 1 and ", x[["n"]], "."))
+              cli::cli_abort(c(
+                "Invalid {.arg i} indices.",
+                "x" = "The {.arg i} argument must contain integers between {.val 1} and {.val {x[[\"n\"]]}}.",
+                ">" = "Provide valid simulation indices."
+              ))
             }
           }
         } else {
-          stop("i must be a numeric vector.")
+          cli::cli_abort(c(
+            "Invalid {.arg i} type.",
+            "x" = "The {.arg i} argument must be {.cls numeric}.",
+            "i" = "Received: {.cls {typeof(i)}}."
+          ))
         }
       }
 
       # Filter condition
       df <- df[df[["i"]] %in% i, , drop = FALSE]
     } else {
-      stop("No simulation data available! Run ensemble() with return_sims = TRUE.")
+      cli::cli_abort(c(
+        "No simulation data available.",
+        "x" = "Individual simulation data is required for {.code type = 'sims'}.",
+        ">" = "Run {.fn ensemble} with {.code return_sims = TRUE}."
+      ))
     }
   } else if (type == "summary") {
     if ("i" %in% passed_arg) {
-      message("i is not used when type = 'summary'. Set type = 'sims' to plot individual trajectories.")
+      cli::cli_inform(c(
+        "i" = "The {.arg i} argument is ignored when {.code type = 'summary'}.",
+        ">" = "Set {.code type = 'sims'} to plot individual trajectories."
+      ))
     }
 
     df <- NULL

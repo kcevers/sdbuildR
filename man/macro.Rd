@@ -4,7 +4,15 @@
 \alias{macro}
 \title{Create, modify or remove a global variable or function}
 \usage{
-macro(sfm, name, eqn = "0.0", doc = "", change_name = NULL, erase = FALSE)
+macro(
+  sfm,
+  name,
+  eqn = "0.0",
+  doc = "",
+  units = NULL,
+  change_name = NULL,
+  erase = FALSE
+)
 }
 \arguments{
 \item{sfm}{Stock-and-flow model, object of class \code{\link[=xmile]{sdbuildR_xmile}}.}
@@ -14,6 +22,8 @@ macro(sfm, name, eqn = "0.0", doc = "", change_name = NULL, erase = FALSE)
 \item{eqn}{Equation of the macro. A character vector. Defaults to "0.0".}
 
 \item{doc}{Documentation of the macro. Defaults to "".}
+
+\item{units}{Unit of variable, such as 'meter'. Defaults to "1" (no units).}
 
 \item{change_name}{New name for macro (optional). Defaults to NULL to indicate no change.}
 

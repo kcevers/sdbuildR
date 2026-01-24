@@ -4,24 +4,10 @@
 \alias{simulate}
 \title{Simulate stock-and-flow model}
 \usage{
-simulate(
-  sfm,
-  keep_nonnegative_flow = TRUE,
-  keep_nonnegative_stock = FALSE,
-  keep_unit = TRUE,
-  only_stocks = TRUE,
-  verbose = FALSE,
-  ...
-)
+simulate(sfm, only_stocks = TRUE, verbose = FALSE, ...)
 }
 \arguments{
 \item{sfm}{Stock-and-flow model, object of class \code{\link[=xmile]{sdbuildR_xmile}}.}
-
-\item{keep_nonnegative_flow}{If TRUE, keeps original non-negativity setting of flows. Defaults to TRUE.}
-
-\item{keep_nonnegative_stock}{If TRUE, keeps original non-negativity setting of stocks Defaults to FALSE.}
-
-\item{keep_unit}{If TRUE, keeps units of variables. Defaults to TRUE.}
 
 \item{only_stocks}{If TRUE, only return stocks in output, discarding flows and auxiliaries. If FALSE, flows and auxiliaries are saved, which slows down the simulation. Defaults to FALSE.}
 

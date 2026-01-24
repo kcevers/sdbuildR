@@ -61,7 +61,12 @@ url_to_IM <- function(URL, file = NULL) {
     gregexpr("<mxGraphModel>(.*?)</mxGraphModel>", script_model, perl = TRUE)
   )
   if (length(xml_str) == 0) {
-    stop("Failed to extract Insight Maker model from URL. Ensure the model is public and the URL is correct.", call. = FALSE)
+    cli::cli_abort(c(
+      "Failed to extract model from URL.",
+      "x" = "Could not extract {.pkg InsightMaker} model from the provided URL.",
+      "i" = "Ensure the model is public and the URL is correct.",
+      ">" = "Check that the URL is accessible and points to a valid model."
+    ))
   }
 
   xml_str <- xml_str[[1]][1]
@@ -120,20 +125,26 @@ read_IM_file <- function(file, fileext) {
   ext <- tools::file_ext(file)
 
   if (!ext %in% fileext) {
-    stop(
-      "Your file does not have the file extension ",
-      paste0(paste0(".", fileext), collapse = " or "), ".\n",
-      "Download your InsightMaker model by clicking on the share button in the top right corner,\n",
-      "'Import/Export', the down arrow, and ",
+    expected_exts <- paste0(paste0(".", fileext), collapse = " or ")
+    download_instructions <- paste0(
       ifelse("InsightMaker" %in% fileext, "'Download Insight Maker File'", ""),
       ifelse(length(fileext) > 1, " or ", ""),
-      ifelse("json" %in% fileext, "'ModelJSON File'", ""), ".",
-      call. = FALSE
+      ifelse("json" %in% fileext, "'ModelJSON File'", "")
     )
+    cli::cli_abort(c(
+      "Invalid file extension.",
+      "x" = "The {.arg file} does not have the required extension {.code {expected_exts}}.",
+      "i" = "Download your {.pkg InsightMaker} model from the share button (top right).",
+      ">" = "Go to 'Import/Export', click the down arrow, and select {download_instructions}."
+    ))
   }
 
   if (!file.exists(file)) {
-    stop("Your file refers to a file that does not exist: ", file, call. = FALSE)
+    cli::cli_abort(c(
+      "File not found.",
+      "x" = "The specified {.arg file} does not exist: {.file {file}}.",
+      ">" = "Check the file path and ensure the file exists."
+    ))
   }
 
   # Read file
@@ -146,11 +157,12 @@ read_IM_file <- function(file, fileext) {
       }
     },
     error = function(e) {
-      stop("Failed to parse file.\n",
-        "File: ", file, "\n",
-        "Original error: ", conditionMessage(e),
-        call. = FALSE
-      )
+      cli::cli_abort(c(
+        "Failed to parse file.",
+        "x" = "Could not parse the file: {.file {file}}.",
+        "i" = "Original error: {conditionMessage(e)}.",
+        ">" = "Ensure the file is a valid {.pkg InsightMaker} or {.code .json} file."
+      ))
     }
   )
 
@@ -163,11 +175,20 @@ get_IM_model <- function(URL, file, fileext = c("InsightMaker", "json")) {
   URL_spec <- !missing(URL) && !is.null(URL) && !is.na(URL)
   file_spec <- !missing(file) && !is.null(file) && !is.na(file)
   if (!URL_spec && !file_spec) {
-    stop("Either URL or file needs to be specified!", call. = FALSE)
+    cli::cli_abort(c(
+      "Missing required arguments.",
+      "x" = "Either {.arg URL} or {.arg file} must be specified.",
+      ">" = "Provide one of these arguments to import a model."
+    ))
   }
 
   if (URL_spec && file_spec) {
-    stop("Either URL or file needs to be specified, not both!", call. = FALSE)
+    cli::cli_abort(c(
+      "Too many arguments specified.",
+      "x" = "Both {.arg URL} and {.arg file} were specified.",
+      "i" = "Only one input method can be used at a time.",
+      ">" = "Specify either {.arg URL} or {.arg file}, not both."
+    ))
   }
 
   # Load XML file
@@ -180,7 +201,12 @@ get_IM_model <- function(URL, file, fileext = c("InsightMaker", "json")) {
     )
 
     if (!is_valid_URL) {
-      stop("This is not a URL to an Insight Maker model! URL must start with http://insightmaker or https://insightmaker", call. = FALSE)
+      cli::cli_abort(c(
+        "Invalid {.pkg InsightMaker} URL.",
+        "x" = "The {.arg URL} is not a valid {.pkg InsightMaker} model URL.",
+        "i" = "URLs must start with {.code http://insightmaker} or {.code https://insightmaker}.",
+        ">" = "Provide a valid {.pkg InsightMaker} URL."
+      ))
     }
 
     ext <- "InsightMaker"
@@ -189,10 +215,12 @@ get_IM_model <- function(URL, file, fileext = c("InsightMaker", "json")) {
         read_file <- url_to_IM(URL, file)
       },
       error = function(e) {
-        stop("Failed to download Insight Maker model from URL.\n",
-          "Original error: ", conditionMessage(e),
-          call. = FALSE
-        )
+        cli::cli_abort(c(
+          "Failed to download model.",
+          "x" = "Could not download {.pkg InsightMaker} model from the URL.",
+          "i" = "Original error: {conditionMessage(e)}.",
+          ">" = "Check your internet connection and ensure the URL is accessible."
+        ))
       }
     )
   } else {
@@ -208,7 +236,11 @@ get_IM_model <- function(URL, file, fileext = c("InsightMaker", "json")) {
 validate_json_path <- function(path, add_fileext = TRUE) {
   # Check it's a character string
   if (!is.character(path) || length(path) != 1) {
-    stop("'path' must be a single character string", call. = FALSE)
+    cli::cli_abort(c(
+      "Invalid {.arg path} argument.",
+      "x" = "The {.arg path} argument must be a single {.cls character} string.",
+      ">" = "Provide the path as a single string."
+    ))
   }
 
   # Check extension
@@ -216,13 +248,21 @@ validate_json_path <- function(path, add_fileext = TRUE) {
   if (ext == "" && add_fileext) {
     path <- paste0(path, ".json")
   } else if (ext != "json") {
-    stop("'path' must have a .json extension", call. = FALSE)
+    cli::cli_abort(c(
+      "Invalid file extension.",
+      "x" = "The {.arg path} must have a {.code .json} extension.",
+      ">" = "Specify a path ending with {.code .json}."
+    ))
   }
 
   # Check directory exists (if creating file)
   dir_path <- dirname(path)
   if (!dir.exists(dir_path)) {
-    stop("Directory does not exist: ", dir_path, call. = FALSE)
+    cli::cli_abort(c(
+      "Directory not found.",
+      "x" = "The directory does not exist: {.file {dir_path}}.",
+      ">" = "Create the directory or specify a valid path."
+    ))
   }
 
   # # Optional: check if file already exists
@@ -643,20 +683,22 @@ prep_settings_IM <- function(settings, type = c("InsightMaker", "json")) {
   if (type == "InsightMaker") {
     # Check whether the model uses an early version of Insight Maker
     if (as.numeric(settings[["version"]]) < 37) {
-      warning(sprintf(
-        "This model uses an earlier version (%s) of Insight Maker, in which links were bi-directional by default. This may cause issues in translating the model. Please choose 'Clone Insight' in Insight Maker, and provide the URL to the updated model.",
-        settings[["version"]]
-      ), call. = FALSE)
+      cli::cli_warn(c(
+        "Old {.pkg InsightMaker} version detected.",
+        "i" = "This model uses version {.val {settings[[\"version\"]]}} where links were bi-directional by default.",
+        "!" = "This may cause issues in translating the model.",
+        ">" = "Clone the model in {.pkg InsightMaker} and provide the URL to the updated version."
+      ))
     }
 
 
     # Check whether model is later version of Insight Maker than the package was made for
     if (as.numeric(settings[["version"]]) > P[["insightmaker_version"]]) {
-      warning(sprintf(
-        "This model uses an earlier version (%s) of Insight Maker, whereas sdbuildR was based on version %d. Some features may not be available.",
-        settings[["version"]],
-        P[["insightmaker_version"]]
-      ), call. = FALSE)
+      cli::cli_warn(c(
+        "Newer {.pkg InsightMaker} version detected.",
+        "i" = "This model uses version {.val {settings[[\"version\"]]}}, but {.pkg sdbuildR} was based on version {.val {P[[\"insightmaker_version\"]]}}.",
+        "!" = "Some features may not be available or may behave differently."
+      ))
     }
   }
 
@@ -1043,14 +1085,22 @@ file_to_xmile <- function(read_file, ext) {
     sfm[["header"]] <- utils::modifyList(sfm[["header"]], header)
   }
 
-  # Variables
-  sfm[["model"]][["variables"]] <- sfm[["model"]][["variables"]] |>
-    utils::modifyList(list(
-      stock = model_elements["stock" == model_element_types],
-      aux = model_elements["variable" == model_element_types],
-      flow = model_elements["flow" == model_element_types],
-      gf = model_elements["converter" == model_element_types]
-    ))
+  # Variables - convert from nested lists to data frame rows
+  # Combine all model elements into a single list
+  all_elements <- c(
+    model_elements["stock" == model_element_types],
+    model_elements["variable" == model_element_types],
+    model_elements["flow" == model_element_types],
+    model_elements["converter" == model_element_types]
+  )
+  
+  # Create data frame from model elements
+  if (length(all_elements) > 0) {
+    for (elem in all_elements) {
+      # Add each element as a row using build()
+      sfm <- do.call(build, c(list(sfm = sfm), elem))
+    }
+  }
 
   # Prepare globals/macros, conveyors, converters
   sfm <- prep_globals_IM(sfm, macros, units)
@@ -1059,56 +1109,43 @@ file_to_xmile <- function(read_file, ext) {
 
 
   if (P[["debug"]]) {
-    message(sprintf(
-      "Detected %d Stock%s, %d Flow%s, %d Auxiliar%s, and %d Graphical Function%s",
-      length(sfm[["model"]][["variables"]][["stock"]]),
-      ifelse(length(sfm[["model"]][["variables"]][["stock"]]) == 1, "", "s"),
-      length(sfm[["model"]][["variables"]][["flow"]]),
-      ifelse(length(sfm[["model"]][["variables"]][["flow"]]) == 1, "", "s"),
-      length(sfm[["model"]][["variables"]][["aux"]]),
-      ifelse(length(sfm[["model"]][["variables"]][["aux"]]) == 1, "y", "ies"),
-      length(sfm[["model"]][["variables"]][["gf"]]),
-      ifelse(length(sfm[["model"]][["variables"]][["gf"]]) == 1, "", "s")
+    n_stocks <- sum(sfm[["variables"]][["type"]] == "stock")
+    n_flows <- sum(sfm[["variables"]][["type"]] == "flow")
+    n_auxs <- sum(sfm[["variables"]][["type"]] == "aux")
+    n_gfs <- sum(sfm[["variables"]][["type"]] == "gf")
+    
+    cli::cli_inform(c(
+      "Model elements detected:",
+      "i" = "Stocks: {.val {n_stocks}}",
+      "i" = "Flows: {.val {n_flows}}",
+      "i" = "Auxiliaries: {.val {n_auxs}}",
+      "i" = "Graphical Functions: {.val {n_gfs}}"
     ))
 
     if (nzchar(sfm[["macros_temp"]][["eqn"]])) {
-      message("User-defined macros and globals detected", call. = FALSE)
+      cli::cli_inform(c(
+        "i" = "User-defined macros and globals detected in model."
+      ))
     } else {
-      message("No user-defined macros and globals detected", call. = FALSE)
+      cli::cli_inform(c(
+        "i" = "No user-defined macros or globals detected."
+      ))
     }
   }
 
-  # Already add eqn and units
-  sfm[["model"]][["variables"]] <- lapply(
-    sfm[["model"]][["variables"]],
-    function(y) {
-      lapply(y, function(x) {
-        if (x[["type"]] != "gf") {
-          x[["eqn"]] <- x[["eqn_insightmaker"]]
-
-
-          # if (is_defined(x[["eqn_insightmaker"]])) {
-          #   x[["eqn"]] <- trimws(x[["eqn_insightmaker"]])
-          #
-          #   if (!is_defined(x[["eqn"]])) {
-          #     x[["eqn"]] <- "0.0"
-          #   }
-          # }
-        }
-
-        x[["units_insightmaker"]] <- x[["units"]]
-
-        # if (is_defined(x[["units_insightmaker"]])) {
-        #   # x[["units"]] <- trimws(x[["units_insightmaker"]])
-        #   #
-        #   # if (!is_defined(x[["units"]])) {
-        #   #   x[["units"]] <- "1"
-        #   # }
-        # }
-        return(x)
-      })
+  # Already add eqn and units - update in data frame
+  for (i in seq_len(nrow(sfm[["variables"]]))) {
+    if (sfm[["variables"]][i, "type"] != "gf") {
+      if ("eqn_insightmaker" %in% colnames(sfm[["variables"]])) {
+        sfm[["variables"]][i, "eqn"] <- sfm[["variables"]][i, "eqn_insightmaker"]
+      }
     }
-  )
+    
+    if ("units_insightmaker" %in% colnames(sfm[["variables"]])) {
+      # Store original InsightMaker units for reference
+      # The units column is already set from the initial creation
+    }
+  }
 
   sfm <- validate_xmile(sfm)
 
@@ -1146,9 +1183,10 @@ sim_specs_IM <- function(sfm, method, time_units, start, length, dt) {
 
   if ("dt" %in% names(args)) {
     if ("method" %in% names(args) && as.numeric(args[["dt"]]) >= 1 && args[["method"]] == "rk4") {
-      message(sprintf(
-        "The chosen timestep dt = %s is not suitable for the Runge-Kutta 4th order solver. Setting dt = 0.1...",
-        args[["dt"]]
+      cli::cli_inform(c(
+        "Adjusting timestep for solver.",
+        "i" = "The timestep {.code dt = {args[[\"dt\"]]}} is not suitable for {.fn rk4} solver.",
+        ">" = "Setting {.code dt = 0.1} for better accuracy."
       ))
       args[["dt"]] <- ".1"
     }
@@ -1193,20 +1231,24 @@ sim_specs_IM <- function(sfm, method, time_units, start, length, dt) {
 is_sfm_IM <- function(type, name) {
   type <- tolower(type)
   if (!any(c("variable", "stock", "flow") %in% tolower(type))) {
-    stop("This model does not contain any variables, stocks, or flows!\nNote that sdbuildR only supports importing stock-and-flow models.",
-      call. = FALSE
-    )
+    cli::cli_abort(c(
+      "Model contains no stock-and-flow elements.",
+      "x" = "The imported model contains no variables, stocks, or flows.",
+      "i" = "{.pkg sdbuildR} only supports stock-and-flow models.",
+      ">" = "Import a model with at least one variable, stock, or flow."
+    ))
   }
 
 
   # Check for Agent-Based Model (ABM) elements
   idx <- which(type %in% c("state", "transition"))
   if (length(idx) > 0) {
-    stop("Agent-Based Modelling elements detected:\n",
-      paste0(name[idx], collapse = ", "),
-      "\nNote that sdbuildR only supports importing stock-and-flow models.",
-      call. = FALSE
-    )
+    cli::cli_abort(c(
+      "Unsupported model type detected.",
+      "x" = "Agent-Based Modelling elements found: {paste0(name[idx], collapse = \", \")}.",
+      "i" = "{.pkg sdbuildR} only supports stock-and-flow models.",
+      ">" = "Remove agent-based elements or import a different model."
+    ))
   }
 
   return(invisible())
@@ -1566,30 +1608,40 @@ prep_conveyors_IM <- function(sfm) {
   # for a stock A which is a conveyor,
   # [A] refers to A_conveyor
   # [[A]] refers to A
-  conveyor_stocks <- names(unlist(lapply(sfm[["model"]][["variables"]][["stock"]], `[[`, "conveyor")))
+  
+  # Find conveyor stocks - check if conveyor column exists
+  conveyor_stocks <- character(0)
+  if ("conveyor" %in% colnames(sfm[["variables"]])) {
+    conveyor_idx <- !is.na(sfm[["variables"]][["conveyor"]]) & 
+                    sfm[["variables"]][["conveyor"]] != "" &
+                    sfm[["variables"]][["type"]] == "stock"
+    if (any(conveyor_idx)) {
+      conveyor_stocks <- sfm[["variables"]][conveyor_idx, "name"]
+    }
+  }
 
   if (length(conveyor_stocks) > 0) {
     # Ensure correct referencing of conveyors
     dict <- paste0("[", conveyor_stocks, P[["conveyor_suffix"]], "]") |>
       stats::setNames(paste0("[[", conveyor_stocks, "]]"))
 
-    sfm[["model"]][["variables"]] <- lapply(sfm[["model"]][["variables"]], function(x) {
-      lapply(x, function(y) {
-        if ("eqn_insightmaker" %in% names(y)) {
-          y[["eqn_insightmaker"]] <- stringr::str_replace_all(
-            y[["eqn_insightmaker"]],
+    # Update equations in data frame
+    for (i in seq_len(nrow(sfm[["variables"]]))) {
+      if ("eqn_insightmaker" %in% colnames(sfm[["variables"]])) {
+        if (!is.na(sfm[["variables"]][i, "eqn_insightmaker"])) {
+          sfm[["variables"]][i, "eqn_insightmaker"] <- stringr::str_replace_all(
+            sfm[["variables"]][i, "eqn_insightmaker"],
             stringr::fixed(dict, ignore_case = TRUE)
           )
 
           # Remove any left-over double bracket notations - these should be []
-          y[["eqn_insightmaker"]] <- stringr::str_replace_all(
-            y[["eqn_insightmaker"]],
+          sfm[["variables"]][i, "eqn_insightmaker"] <- stringr::str_replace_all(
+            sfm[["variables"]][i, "eqn_insightmaker"],
             stringr::fixed(c("[[" = "[", "]]" = "]"))
           )
         }
-        return(y)
-      })
-    })
+      }
+    }
   }
 
   return(sfm)
@@ -1597,8 +1649,15 @@ prep_conveyors_IM <- function(sfm) {
 
 
 prep_converters_IM <- function(sfm) {
-  converters <- names(sfm[["model"]][["variables"]][["gf"]])
-  converters_sources <- unlist(lapply(sfm[["model"]][["variables"]][["gf"]], `[[`, "source"))
+  # Get graphical function names and sources
+  gf_idx <- sfm[["variables"]][["type"]] == "gf"
+  converters <- character(0)
+  converters_sources <- character(0)
+  
+  if (any(gf_idx)) {
+    converters <- sfm[["variables"]][gf_idx, "name"]
+    converters_sources <- sfm[["variables"]][gf_idx, "source"]
+  }
 
   if (length(converters) > 0) {
     # # Ensure correct referencing of converters
@@ -1636,15 +1695,16 @@ prep_converters_IM <- function(sfm) {
     dict_real <- stringr::fixed(dict_real)
 
     # Replace graphical functions in all equations
-    sfm[["model"]][["variables"]] <- lapply(sfm[["model"]][["variables"]], function(x) {
-      lapply(x, function(y) {
-        if ("eqn_insightmaker" %in% names(y)) {
-          y[["eqn_insightmaker"]] <- stringr::str_replace_all(y[["eqn_insightmaker"]], dict_temp) |>
+    for (i in seq_len(nrow(sfm[["variables"]]))) {
+      if ("eqn_insightmaker" %in% colnames(sfm[["variables"]])) {
+        if (!is.na(sfm[["variables"]][i, "eqn_insightmaker"])) {
+          sfm[["variables"]][i, "eqn_insightmaker"] <- stringr::str_replace_all(
+            sfm[["variables"]][i, "eqn_insightmaker"], dict_temp
+          ) |>
             stringr::str_replace_all(dict_real)
         }
-        return(y)
-      })
-    })
+      }
+    }
   }
 
   return(sfm)
@@ -1864,34 +1924,24 @@ clean_units_IM <- function(sfm, regex_units) {
   # Replace units in macros - only one macro in case of Insight Maker model
   sfm[["macros_temp"]][["eqn"]] <- clean_units_curly(sfm[["macros_temp"]][["eqn"]], regex_units)
 
-  # Replace units in equations and unit definition
-  sfm[["model"]][["variables"]] <- lapply(sfm[["model"]][["variables"]], function(y) {
-    lapply(y, function(x) {
-      if (is_defined(x[["eqn"]])) {
-        x[["eqn"]] <- clean_units_curly(x[["eqn"]], regex_units)
-      }
-      if (is_defined(x[["units"]])) {
-        x[["units"]] <- clean_unit(tolower(x[["units"]]), regex_units, ignore_case = TRUE)
-      }
-
-      return(x)
-    })
-  })
+  # Replace units in equations and unit definition in data frame
+  for (i in seq_len(nrow(sfm[["variables"]]))) {
+    if (!is.na(sfm[["variables"]][i, "eqn"])) {
+      sfm[["variables"]][i, "eqn"] <- clean_units_curly(sfm[["variables"]][i, "eqn"], regex_units)
+    }
+    if (!is.na(sfm[["variables"]][i, "units"])) {
+      sfm[["variables"]][i, "units"] <- clean_unit(tolower(sfm[["variables"]][i, "units"]), 
+                                                      regex_units, ignore_case = TRUE)
+    }
+  }
 
   # Ensure all units are defined
   add_model_units <- detect_undefined_units(sfm,
     new_eqns = c(
-      sfm[["model"]][["variables"]] |>
-        lapply(function(x) {
-          lapply(x, `[[`, "eqn")
-        }) |> unlist(),
+      sfm[["variables"]][["eqn"]],
       sfm[["macros_temp"]][["eqn"]]
-      # unlist(lapply(sfm[[P[["macro_name"]]]], `[[`, "eqn"))
     ),
-    new_units = unlist(sfm[["model"]][["variables"]] |>
-      lapply(function(x) {
-        lapply(x, `[[`, "units")
-      })),
+    new_units = sfm[["variables"]][["units"]],
     regex_units = regex_units, R_or_Julia = "R"
   )
   sfm[["model_units"]] <- utils::modifyList(add_model_units, sfm[["model_units"]])
@@ -1914,18 +1964,27 @@ clean_units_IM <- function(sfm, regex_units) {
 check_nonnegativity <- function(sfm, keep_nonnegative_flow,
                                 keep_nonnegative_stock, keep_solver) {
   # Non-negative Stocks and Flows
-  if (length(sfm[["model"]][["variables"]][["stock"]]) == 0) {
+  stock_idx <- sfm[["variables"]][["type"]] == "stock"
+  if (!any(stock_idx)) {
     return(sfm)
   }
 
-  nonneg_stock <- which(unlist(lapply(
-    sfm[["model"]][["variables"]][["stock"]],
-    `[[`, "non_negative"
-  )))
+  # Check for non-negative stocks
+  if ("non_negative" %in% colnames(sfm[["variables"]])) {
+    nonneg_stock_idx <- stock_idx & sfm[["variables"]][["non_negative"]]
+    nonneg_stock <- which(nonneg_stock_idx)
+  } else {
+    nonneg_stock <- integer(0)
+  }
 
   if (keep_nonnegative_stock && length(nonneg_stock) > 0) {
     if (!keep_solver && sfm[["sim_specs"]][["method"]] == "rk4") {
-      message("Non-negative stocks detected! Switching the ODE solver to Euler to ensure Insight Maker and sdbuildR produce the same output. Turn off by setting keep_solver = TRUE.")
+      cli::cli_inform(c(
+        "Adjusting solver for non-negative stocks.",
+        "i" = "Non-negative stocks detected in the model.",
+        ">" = "Switching ODE solver from {.fn rk4} to {.fn euler} for consistency with {.pkg InsightMaker}.",
+        "i" = "Disable this by setting {.arg keep_solver = TRUE}."
+      ))
       sfm[["sim_specs"]][["insightmaker_method"]] <- sfm[["sim_specs"]][["method"]]
       sfm[["sim_specs"]][["method"]] <- "euler"
     }
@@ -1959,10 +2018,12 @@ convert_macros_IM_wrapper <- function(sfm, regex_units) {
     )
 
     if (P[["debug"]]) {
-      message(out)
+      cli::cli_inform(c(
+        "i" = "Conversion output: {out}"
+      ))
     }
 
-    sfm[["macros_temp"]][["eqn"]] <- unname(unlist(out[[P[["macro_name"]]]][[P[["macro_name"]]]][["eqn"]]))
+    sfm[["macros_temp"]][["eqn"]] <- out[["eqn"]]
 
     # Extract names and separate equations
     sfm <- split_macros_IM(sfm)
@@ -2142,20 +2203,17 @@ replace_macro_names_IM <- function(sfm) {
     )
 
     # Use same dictionary to replace macro names in other equations
-    # Replace units in equations and unit definition
-    sfm[["model"]][["variables"]] <- lapply(sfm[["model"]][["variables"]], function(y) {
-      lapply(y, function(x) {
-        if (is_defined(x[["eqn"]])) {
-          # Important! Don't simply replace names, as some names may be in (unit) strings.
-          x[["eqn"]] <- replace_safely(
-            eqn = x[["eqn"]],
-            dict = dict,
-            var_names = var_names, ignore_case = TRUE
-          )
-        }
-        return(x)
-      })
-    })
+    # Replace in equations in data frame
+    for (i in seq_len(nrow(sfm[["variables"]]))) {
+      if (!is.na(sfm[["variables"]][i, "eqn"])) {
+        # Important! Don't simply replace names, as some names may be in (unit) strings.
+        sfm[["variables"]][i, "eqn"] <- replace_safely(
+          eqn = sfm[["variables"]][i, "eqn"],
+          dict = dict,
+          var_names = var_names, ignore_case = TRUE
+        )
+      }
+    }
   }
 
   return(sfm)
@@ -2274,79 +2332,89 @@ convert_equations_IM_wrapper <- function(sfm, regex_units) {
   # Convert each equation and create list of model elements to add
   var_names <- get_model_var(sfm)
 
-  unlist_vars <- unlist(unname(sfm[["model"]][["variables"]][c("stock", "aux", "flow")]),
-    recursive = FALSE
-  )
-
-
-  # add_model_elements1 <- lapply(unlist_vars, function(x) {
-  #     if (P[["debug"]]) {
-  #       message(x[["name"]])
-  #       message(x[["eqn"]])
-  #     }
-  #
-  #     # Convert equation
-  #     out <- convert_equations_IM(
-  #       type = x[["type"]],
-  #       name = x[["name"]],
-  #       eqn = x[["eqn"]],
-  #       var_names = var_names,
-  #       regex_units = regex_units
-  #     )
-  #
-  #     if (P[["debug"]]) {
-  #       message(out)
-  #     }
-  #
-  #     return(out)
-  #   }) |>
-  #   purrr::flatten()
-  #
-  #
-  #
-  # add_model_elements1 <- lapply(add_model_elements, function(x) {
-  #   z <- names(x)
-  #   lapply(seq_along(x), function(i) {
-  #     y <- x[[i]]
-  #     name <- names(x)[i]
-  #     y[["name"]] <- name
-  #     return(y)
-  #   }) |> stats::setNames(z)
-  # })
-
-
-  # Extract all fields as vectors (much faster than repeated list access)
-  types <- vapply(unlist_vars, `[[`, character(1), "type")
-  names <- vapply(unlist_vars, `[[`, character(1), "name")
-  eqns <- vapply(unlist_vars, `[[`, character(1), "eqn")
-
-  # Call function with vectorized arguments
-  add_model_elements <- Map(
-    convert_equations_IM,
-    type = types,
-    name = names,
-    eqn = eqns,
-    MoreArgs = list(
+  # Get variables to convert (stock, aux, flow)
+  convert_idx <- sfm[["variables"]][["type"]] %in% c("stock", "aux", "flow")
+  
+  if (!any(convert_idx)) {
+    return(sfm)
+  }
+  
+  # Initialize transformation tracking if debug mode is on
+  tracker <- if (P[["debug"]]) create_transformation_tracker() else NULL
+  
+  # Accumulate variables to add to the model
+  accumulated_add_vars_aux <- list()
+  accumulated_add_vars_gf <- list()
+  
+  # Convert equations for each variable using flat list structure
+  for (i in which(convert_idx)) {
+    var_name <- sfm[["variables"]][i, "name"]
+    var_type <- sfm[["variables"]][i, "type"]
+    eqn_before <- sfm[["variables"]][i, "eqn"]
+    
+    # Convert equation
+    out <- convert_equations_IM(
+      type = var_type,
+      name = var_name,
+      eqn = eqn_before,
       var_names = var_names,
       regex_units = regex_units
     )
-  ) |>
-    flatten()
-  # purrr::flatten()
-
-
-  # Add name
-  add_model_elements <- lapply(add_model_elements, function(x) {
-    for (i in seq_along(x)) {
-      x[[i]][["name"]] <- names(x)[i]
+    
+    # Track transformation
+    if (!is.null(tracker)) {
+      eqn_after <- out[["eqn"]]
+      n_aux_created <- length(out[["add_vars_aux"]])
+      n_gf_created <- length(out[["add_vars_gf"]])
+      
+      if (eqn_before != eqn_after || n_aux_created > 0 || n_gf_created > 0) {
+        log_transformation(tracker, var_name, "equation_conversion", list(
+          variable_type = var_type,
+          functions_used = paste(out[["translated_func"]], collapse = ", "),
+          auxiliary_vars = n_aux_created,
+          graphical_functions = n_gf_created,
+          equation_changed = eqn_before != eqn_after
+        ))
+      }
     }
-    x
-  })
+    
+    # Update the variables data frame with converted equation
+    sfm[["variables"]][i, "eqn"] <- out[["eqn"]]
+    
+    # Accumulate auxiliary and graphical function variables
+    if (length(out[["add_vars_aux"]]) > 0) {
+      accumulated_add_vars_aux <- append(accumulated_add_vars_aux, out[["add_vars_aux"]])
+      if (!is.null(tracker)) {
+        for (aux_var_name in names(out[["add_vars_aux"]])) {
+          log_transformation(tracker, aux_var_name, "create_auxiliary", list(
+            created_by = var_name,
+            equation = out[["add_vars_aux"]][[aux_var_name]]
+          ))
+        }
+      }
+    }
+    if (length(out[["add_vars_gf"]]) > 0) {
+      accumulated_add_vars_gf <- append(accumulated_add_vars_gf, out[["add_vars_gf"]])
+      if (!is.null(tracker)) {
+        for (gf_var_name in names(out[["add_vars_gf"]])) {
+          log_transformation(tracker, gf_var_name, "create_graphical_function", list(
+            created_by = var_name,
+            interpolation = out[["add_vars_gf"]][[gf_var_name]][["interpolation"]]
+          ))
+        }
+      }
+    }
+  }
 
-  # Add to sfm
-  for (i in seq_along(add_model_elements)) {
-    sfm[["model"]][["variables"]] <- sfm[["model"]][["variables"]] |>
-      utils::modifyList(add_model_elements[i])
+  # Add accumulated auxiliary and graphical function variables to the model
+  sfm <- add_accumulated_variables(sfm, accumulated_add_vars_aux, accumulated_add_vars_gf)
+
+  # Print transformation summary if debug mode is on
+  if (!is.null(tracker) && P[["debug"]]) {
+    cli::cli_h2("IM\u2192R Conversion Summary")
+    for (line in summarize_transformations(tracker)) {
+      cli::cli_text(line)
+    }
   }
 
   sfm <- validate_xmile(sfm)
@@ -2370,12 +2438,13 @@ remove_brackets_from_names <- function(sfm) {
   var_names <- get_model_var(sfm)
   dict <- stringr::fixed(stats::setNames(var_names, paste0("[", var_names, "]")))
 
-  sfm[["model"]][["variables"]] <- lapply(sfm[["model"]][["variables"]], function(y) {
-    lapply(y, function(x) {
-      x[["eqn"]] <- stringr::str_replace_all(x[["eqn"]], dict)
-      return(x)
-    })
-  })
+  for (i in seq_len(nrow(sfm[["variables"]]))) {
+    if (!is.na(sfm[["variables"]][i, "eqn"])) {
+      sfm[["variables"]][i, "eqn"] <- stringr::str_replace_all(
+        sfm[["variables"]][i, "eqn"], dict
+      )
+    }
+  }
 
   return(sfm)
 }
@@ -2392,9 +2461,17 @@ split_aux_wrapper <- function(sfm) {
   # Get names
   var_names <- get_model_var(sfm)
 
+  # Get auxiliary variables
+  aux_idx <- sfm[["variables"]][["type"]] == "aux"
+  if (!any(aux_idx)) {
+    return(character(0))
+  }
+  
+  aux_eqns <- sfm[["variables"]][aux_idx, "eqn"]
+  names(aux_eqns) <- sfm[["variables"]][aux_idx, "name"]
+  
   # Separate auxiliary variables into static parameters and dynamically updated auxiliaries
-  dependencies <- lapply(sfm[["model"]][["variables"]][["aux"]], `[[`, "eqn") |>
-    find_dependencies_(sfm, eqns = _, only_model_var = FALSE)
+  dependencies <- find_dependencies_(sfm, eqns = aux_eqns, only_model_var = FALSE)
 
   # Constants are not dependent on time, have no dependencies in names, or are only dependent on constants
   temp <- dependencies
@@ -2410,15 +2487,11 @@ split_aux_wrapper <- function(sfm) {
     old_constants <- constants
 
     # Are there any remaining auxiliary variables to be split into constants or aux?
-    remaining_aux <- setdiff(names(sfm[["model"]][["variables"]][["aux"]]), constants)
+    aux_names <- sfm[["variables"]][aux_idx, "name"]
+    remaining_aux <- setdiff(aux_names, constants)
     if (length(remaining_aux) == 0) {
       done <- TRUE
     } else {
-      # new_constants <- dependencies[remaining_aux] |>
-      #   purrr::keep(function(x) {
-      #     (!P[["time_name"]] %in% x) & all(intersect(x, var_names) %in% constants)
-      #   })
-
       new_constants <- dependencies[remaining_aux]
       idx <- unlist(lapply(new_constants, function(x) {
         (!P[["time_name"]] %in% x) & all(intersect(x, var_names) %in% constants)
@@ -2433,20 +2506,11 @@ split_aux_wrapper <- function(sfm) {
     }
   }
 
-  # Create constants as variable type
-  sfm[["model"]][["variables"]][["constant"]] <- sfm[["model"]][["variables"]][["aux"]][constants]
-
-  # Remove constants from aux
-  sfm[["model"]][["variables"]][["aux"]][constants] <- NULL
-
-  # Add type entry to constants
-  sfm[["model"]][["variables"]][["constant"]] <- lapply(
-    sfm[["model"]][["variables"]][["constant"]],
-    function(x) {
-      x[["type"]] <- "constant"
-      return(x)
-    }
-  )
+  # Update variable types in data frame
+  for (const_name in constants) {
+    idx <- sfm[["variables"]][["name"]] == const_name
+    sfm[["variables"]][idx, "type"] <- "constant"
+  }
 
   sfm <- validate_xmile(sfm)
 

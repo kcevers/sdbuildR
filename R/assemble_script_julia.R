@@ -6,15 +6,12 @@
 #' @noRd
 #'
 simulate_julia <- function(sfm,
-                           keep_nonnegative_flow,
-                           keep_nonnegative_stock,
-                           keep_unit,
                            only_stocks,
                            verbose) {
-  # # Collect arguments
-  # argg <- c(as.list(environment()))
-  # # Remove NULL arguments
-  # argg <- argg[!lengths(argg) == 0]
+  # Access assembly specs from sim_specs
+  keep_nonnegative_flow <- sfm[["sim_specs"]][["keep_nonnegative_flow"]]
+  keep_nonnegative_stock <- sfm[["sim_specs"]][["keep_nonnegative_stock"]]
+  keep_unit <- sfm[["sim_specs"]][["keep_unit"]]
 
   # Get output filepaths
   filepath_sim <- get_tempfile(fileext = ".csv")
@@ -24,10 +21,7 @@ simulate_julia <- function(sfm,
   script <- compile_julia(sfm,
     filepath_sim = filepath_sim,
     ensemble_pars = NULL,
-    keep_nonnegative_flow = keep_nonnegative_flow,
-    keep_nonnegative_stock = keep_nonnegative_stock,
-    only_stocks = only_stocks,
-    keep_unit = keep_unit
+    only_stocks = only_stocks
   )
   write_script(script, filepath)
   script <- paste0(readLines(filepath), collapse = "\n")
@@ -50,7 +44,7 @@ simulate_julia <- function(sfm,
       end_t <- Sys.time()
 
       if (verbose) {
-        message(paste0("Simulation took ", round(end_t - start_t, 4), " seconds"))
+        cli::cli_inform(paste0("Simulation took ", round(end_t - start_t, 4), " seconds"))
       }
 
       # Read the constants
@@ -61,22 +55,8 @@ simulate_julia <- function(sfm,
       init <- as.numeric(JuliaConnectoR::juliaEval(P[["initial_value_name"]]))
       names(init) <- JuliaConnectoR::juliaEval(P[["initial_value_names"]])
 
+      # Read the simulation results dataframe
       df <- as.data.frame(data.table::fread(filepath_sim, na.strings = c("", "NA")))
-
-      # Delete files
-      file.remove(filepath)
-      file.remove(filepath_sim)
-
-      # list(
-      #   success = TRUE,
-      #   df = df,
-      #   init = init,
-      #   constants = constants,
-      #   script = script,
-      #   duration = end_t - start_t
-      # ) |>
-      #   # utils::modifyList(argg) |>
-      #   structure(class = "sdbuildR_sim")
 
       new_sdbuildR_sim(
         success = TRUE,
@@ -90,12 +70,6 @@ simulate_julia <- function(sfm,
     },
     error = function(e) {
       warning("\nAn error occurred while running the Julia script.")
-      # list(
-      #   success = FALSE, error_message = e[["message"]], script = script
-      # ) |>
-      #   # utils::modifyList(argg) |>
-      #   structure(class = "sdbuildR_sim")
-
       new_sdbuildR_sim(
         success = FALSE,
         error_message = e[["message"]],
@@ -104,6 +78,9 @@ simulate_julia <- function(sfm,
       )
     }
   )
+
+  # Clean up temporary file
+  file.remove(filepath)
 
   return(sim)
 }
@@ -119,59 +96,38 @@ simulate_julia <- function(sfm,
 #'
 compile_julia <- function(sfm, filepath_sim,
                           ensemble_pars,
-                          keep_nonnegative_flow,
-                          keep_nonnegative_stock,
-                          keep_unit, only_stocks) {
+                          only_stocks) {
   # Add "inflow" and "outflow" entries to stocks to match flow "to" and "from" entries
   flow_df <- get_flow_df(sfm)
 
-  stock_names <- names(sfm[["model"]][["variables"]][["stock"]])
-  inflows <- lapply(stock_names, function(stock_name) {
-    x <- flow_df[flow_df[["to"]] == stock_name, "name"]
-    if (length(x) == 0) {
-      x <- ""
-    }
-    x
-  })
-  outflows <- lapply(stock_names, function(stock_name) {
-    x <- flow_df[flow_df[["from"]] == stock_name, "name"]
-    if (length(x) == 0) {
-      x <- ""
-    }
-    x
-  })
+  sfm[["model"]][["variables"]][["stock"]] <- lapply(
+    sfm[["model"]][["variables"]][["stock"]],
+    function(x) {
+      x[["inflow"]] <- flow_df[flow_df[["to"]] == x[["name"]], "name"]
+      x[["outflow"]] <- flow_df[flow_df[["from"]] == x[["name"]], "name"]
 
-  for (i in seq_along(stock_names)) {
-    sfm[["model"]][["variables"]][["stock"]][[stock_names[i]]][["inflow"]] <- inflows[[i]]
-    sfm[["model"]][["variables"]][["stock"]][[stock_names[i]]][["outflow"]] <- outflows[[i]]
-  }
+      if (length(x[["inflow"]]) == 0) {
+        x[["inflow"]] <- ""
+      }
+      if (length(x[["outflow"]]) == 0) {
+        x[["outflow"]] <- ""
+      }
 
-  # sfm[["model"]][["variables"]][["stock"]] <- lapply(
-  #   sfm[["model"]][["variables"]][["stock"]],
-  #   function(x) {
-  #     x[["inflow"]] <- flow_df[flow_df[["to"]] == x[["name"]], "name"]
-  #     x[["outflow"]] <- flow_df[flow_df[["from"]] == x[["name"]], "name"]
-  #
-  #     if (length(x[["inflow"]]) == 0) {
-  #       x[["inflow"]] <- ""
-  #     }
-  #     if (length(x[["outflow"]]) == 0) {
-  #       x[["outflow"]] <- ""
-  #     }
-  #
-  #     return(x)
-  #   }
-  # )
+      return(x)
+    }
+  )
+
+  # Extract sim_specs for keep_* flags
+  keep_nonnegative_flow <- sfm[["sim_specs"]][["keep_nonnegative_flow"]]
+  keep_nonnegative_stock <- sfm[["sim_specs"]][["keep_nonnegative_stock"]]
+  keep_unit <- sfm[["sim_specs"]][["keep_unit"]]
 
   # Adjust keep_unit to FALSE if there are no units defined
   names_df <- get_names(sfm)
   var_names <- get_model_var(sfm)
 
-  # ** To do: check accuracy
   names_df_no_flow <- names_df
-  # Don't check whether flows have units because these are automatically added
   names_df_no_flow <- names_df_no_flow[names_df_no_flow[["type"]] != "flow", ]
-  # keep_unit = ifelse(!any(nzchar(names_df_no_flow$units) & names_df_no_flow$units != "1"), FALSE, keep_unit)
 
   all_eqns <- c(
     lapply(
@@ -180,30 +136,14 @@ compile_julia <- function(sfm, filepath_sim,
         lapply(x, `[[`, "eqn")
       }
     ) |> unlist(),
-    unlist(lapply(sfm[[P[["macro_name"]]]], `[[`, "eqn"))
+    unlist(lapply(sfm[["macro"]], `[[`, "eqn"))
   )
   units_used <- unlist(stringr::str_extract_all(all_eqns, "\\bu\\([\"|'](.*?)[\"|']\\)"))
 
   keep_unit <- ifelse(!any(names_df_no_flow[["units"]] != "1" & nzchar(names_df_no_flow[["units"]])) & length(units_used) == 0, FALSE, keep_unit)
 
-  # if (keep_unit){
-  #   # Ensure all units are defined
-  #   add_model_units = detect_undefined_units(sfm,
-  #                                      new_eqns = c(sfm[["model"]][["variables"]] |> lapply(function(x){lapply(x, `[[`, "eqn_julia")}) |> unlist(),
-  #                                                   unlist(lapply(sfm[["macro"]], `[[`, "eqn_julia"))),
-  #                                      new_units = sfm[["model"]][["variables"]] |> lapply(function(x){lapply(x, `[[`, "units")}) |> unlist())
-  #   sfm[["model_units"]] = add_model_units |> utils::modifyList(sfm[["model_units"]])
-  # }
-
-
-  # **# Convert conveyors
-  # sfm = convert_conveyor(sfm)
-  #
-
-
   # Order stocks alphabetically for order in init_names and init
-  sfm[[c("model", "variables", "stock")]] <- sfm[[c("model", "variables", "stock")]][sort(names(sfm[[c("model", "variables", "stock")]]))]
-
+  sfm[["model"]][["variables"]][["stock"]] <- sfm[["model"]][["variables"]][["stock"]][sort(names(sfm[["model"]][["variables"]][["stock"]]))]
 
   # Check keyword arguments are not used for custom functions in Julia
   check_no_keyword_arg(sfm, var_names)
@@ -219,14 +159,14 @@ compile_julia <- function(sfm, filepath_sim,
 
   sfm <- prep_delayN_smoothN(sfm, delayN_smoothN)
 
-
   # Order equations including delayN() and smoothN() functions, if any
-  ordering <- order_equations(sfm)
+  # Use cached ordering if available, otherwise compute it
+  ordering <- if (!is.null(sfm[["ordering"]])) sfm[["ordering"]] else order_equations(sfm)
 
   # If there are no dynamic variables or delayed variables, set only_stocks to TRUE
   delay_past <- get_delay(sfm, type = "past")
 
-  if (!only_stocks && is.null(ordering[["dynamic"]][["order"]])) {
+  if (!only_stocks & is.null(ordering[["dynamic"]][["order"]])) {
     only_stocks <- TRUE
   }
 
@@ -234,17 +174,17 @@ compile_julia <- function(sfm, filepath_sim,
     only_stocks <- FALSE
   }
 
-  # Compile all parts of the R script
-  times <- compile_times_julia(sfm, keep_unit)
+  # Compile all parts of the Julia script
+  times <- compile_times_julia(sfm)
 
   # Macros
   macros <- compile_macros_julia(sfm)
 
-  # Prepare equations
-  sfm <- prep_equations_variables_julia(sfm, keep_unit, keep_nonnegative_flow)
+  # Prepare equations (centralized in R/prep_functions.R)
+  sfm <- prep_equations_variables_julia(sfm)
 
-  # Stocks
-  sfm <- prep_stock_change_julia(sfm, keep_unit)
+  # Stocks (centralized in R/prep_functions.R)
+  sfm <- prep_stock_change_julia(sfm)
 
   # Prepare intermediary variables
   intermediaries <- prep_intermediary_variables_julia(sfm, ordering = ordering)
@@ -253,20 +193,15 @@ compile_julia <- function(sfm, filepath_sim,
   static_eqn <- compile_static_eqn_julia(sfm,
     ensemble_pars = ensemble_pars,
     ordering = ordering,
-    intermediaries = intermediaries,
-    keep_unit = keep_unit
+    intermediaries = intermediaries
   )
 
   # Compile unit definitions
-  units_def <- compile_units_julia(sfm, keep_unit)
+  units_def <- compile_units_julia(sfm)
 
   # Seed string
   seed_str <- ifelse(!is_defined(sfm[["sim_specs"]][["seed"]]), "",
-    paste0(
-      "# Ensure reproducibility across runs in case of random elements\n",
-      "Random.seed!(",
-      as.character(sfm[["sim_specs"]][["seed"]]), ")\n"
-    )
+    sprintf("# Ensure reproducibility across runs in case of random elements\nRandom.seed!(%s)\n", as.character(sfm[["sim_specs"]][["seed"]]))
   )
 
   prep_script <- sprintf(
@@ -283,8 +218,6 @@ compile_julia <- function(sfm, filepath_sim,
     ordering = ordering,
     intermediaries = intermediaries,
     prep_script = prep_script, static_eqn = static_eqn,
-    keep_nonnegative_stock = keep_nonnegative_stock,
-    keep_unit = keep_unit,
     only_stocks = only_stocks
   )
 
@@ -293,8 +226,7 @@ compile_julia <- function(sfm, filepath_sim,
     static_eqn_script = static_eqn[["script"]],
     filepath_sim = filepath_sim,
     only_stocks = only_stocks,
-    stock_names = static_eqn[["stock_names"]],
-    keep_unit = keep_unit
+    stock_names = static_eqn[["stock_names"]]
   )
 
   script <- paste0(
@@ -305,7 +237,6 @@ compile_julia <- function(sfm, filepath_sim,
     static_eqn[["script"]],
     run_ode[["script"]]
   )
-
 
   return(script)
 }
@@ -323,15 +254,7 @@ compile_julia <- function(sfm, filepath_sim,
 check_no_keyword_arg <- function(sfm, var_names) {
   # Check for all variable names if they are used as functions. If so, throw error if they are used with keyword arguments in the Julia translated equation.
 
-  eqns <- lapply(
-    sfm[["model"]][["variables"]],
-    function(x) {
-      lapply(x, `[[`, "eqn_julia")
-    }
-  ) |>
-    compact_() |>
-    unname() |>
-    unlist()
+  eqns <- sfm[["variables"]][["eqn_julia"]]
 
   # Find if any variables were used as functions
   idx <- stringr::str_detect(eqns, paste0(paste0(var_names, "\\("), collapse = "|"))
@@ -373,7 +296,7 @@ check_no_keyword_arg <- function(sfm, var_names) {
     }, logical(1))
 
     if (any(named_idxs)) {
-      stop(
+      cli::cli_abort(
         paste0(
           "The following variables were used as functions with named arguments in the Julia translated equation: ",
           paste0(names(named_idxs)[unname(named_idxs)], collapse = ", "), ".\n",
@@ -411,15 +334,15 @@ prep_ensemble_range <- function(sfm, ensemble_pars) {
 
     # Set the equations of the variables in the model to 0 because these will be replaced by the ensemble parameters
     names_df <- get_names(sfm)
-    stocks <- names_df[match(
-      names(ensemble_pars[["range"]]),
-      names_df[["name"]]
-    ), "type"]
-
+    
     for (i in seq_along(ensemble_pars[["range"]])) {
       name <- names(ensemble_pars[["range"]])[i]
       # Replace the equations of the chosen variables with ensemble_pars.name[i]
-      sfm[["model"]][["variables"]][[stocks[i]]][[name]][["eqn_julia"]] <- "0.0"
+      # Find the variable in the data frame and update its eqn_julia
+      var_idx <- sfm[["variables"]][["name"]] == name
+      if (any(var_idx)) {
+        sfm[["variables"]][var_idx, "eqn_julia"] <- "0.0"
+      }
     }
   }
 
@@ -444,65 +367,90 @@ prep_delayN_smoothN <- function(sfm, delayN_smoothN) {
     allowed_delay_var <- names_df[names_df[["type"]] %in% c("stock", "flow", "aux", "gf"), "name"]
     delayN_smoothN <- unlist(unname(delayN_smoothN), recursive = FALSE)
 
-    sfm[["model"]][["variables"]][["stock"]] <- append(
-      sfm[["model"]][["variables"]][["stock"]],
-      lapply(seq_along(delayN_smoothN), function(i) {
-        x <- delayN_smoothN[[i]]
-        y <- list()
+    # Create new delay stocks and auxiliaries as data frame rows instead of nested lists
+    new_stocks_data <- list()
+    new_aux_data <- list()
+    
+    for (i in seq_along(delayN_smoothN)) {
+      x <- delayN_smoothN[[i]]
+      name <- names(delayN_smoothN)[i]
+      
+      # In rare cases, the delayed variable is a graphical function, and in that case the unit of that variable cannot be found
+      bare_var <- sub("\\(.*", "", x[["var"]])
 
-        # In rare cases, the delayed variable is a graphical function, and in that case the unit of that variable cannot be found
-        bare_var <- sub("\\(.*", "", x[["var"]])
+      # Check whether the variable is in the model
+      if (!bare_var %in% names_df[["name"]]) {
+        cli::cli_abort(paste0(
+          "The variable '", bare_var,
+          "' used in delayN() or smoothN() is not defined in the model."
+        ), call. = FALSE)
+      }
 
-        # Check whether the variable is in the model
-        if (!bare_var %in% names_df[["name"]]) {
-          stop(paste0(
-            "The variable '", bare_var,
-            "' used in delayN() or smoothN() is not defined in the model."
-          ), call. = FALSE)
-        }
+      # Check whether variable is either a stock, flow, aux, or gf
+      if (!bare_var %in% allowed_delay_var) {
+        cli::cli_abort(paste0(name, " attempts to delay a constant ('", bare_var, "') in a delayN() or smoothN() function. Please only use dynamic variables (stock, flow, aux, or gf) in delayN() or smoothN()."), call. = FALSE)
+      }
 
-        # # Check whether variable is either a stock, flow, or aux
-        # if (!bare_var %in% allowed_delay_var){
-        #   stop(paste0("The variable '", bare_var, "' used in delayN() or smoothN() is not a stock, flow, auxiliary, or graphical function variable."))
-        # }
-        # Check whether variable is either a stock, flow, aux, or gf
-        if (!bare_var %in% allowed_delay_var) {
-          stop(paste0(x[["name"]], " attempts to delay a constant ('", bare_var, "') in a delayN() or smoothN() function. Please only use dynamic variables (stock, flow, aux, or gf) in delayN() or smoothN()."), call. = FALSE)
-        }
-
-        # Unit is the same as the delayed variable
-        y[["units"]] <- names_df[names_df[["name"]] == bare_var, ][["units"]]
-        y[["name"]] <- y[["label"]] <- names(delayN_smoothN)[i]
-        y[["type"]] <- "delayN_smoothN"
-
-        # To get the dependencies right, we need the initial value, length and order in eqn
-        y[["eqn"]] <- paste0(x[["initial"]], " / ", x[["length"]], " * ", x[["order"]])
-        y[["eqn_julia"]] <- x[["setup"]]
-        y[["inflow"]] <- x[["update"]]
-        return(y)
-      }) |> stats::setNames(names(delayN_smoothN))
-    )
-
-    sfm[["model"]][["variables"]][["aux"]] <- append(
-      sfm[["model"]][["variables"]][["aux"]],
-      lapply(seq_along(delayN_smoothN), function(i) {
-        x <- delayN_smoothN[[i]]
-        y <- list()
-
-        # In rare cases, the delayed variable is a graphical function, and in that case the unit of that variable cannot be found
-        bare_var <- sub("\\(.*", "", x[["var"]])
-
-        # Unit is the same as the delayed variable
-        y[["units"]] <- names_df[names_df[["name"]] == bare_var, ][["units"]]
-        y[["name"]] <- y[["label"]] <- names(delayN_smoothN)[i]
-        y[["type"]] <- "delayN_smoothN"
-
-        # To get the dependencies right, we need the delayed variable, length and order in eqn
-        y[["eqn"]] <- paste0(bare_var, " / ", x[["length"]], " * ", x[["order"]])
-        y[["eqn_julia"]] <- x[["compute"]]
-        return(y)
-      }) |> stats::setNames(names(delayN_smoothN))
-    )
+      # Unit is the same as the delayed variable
+      unit_val <- names_df[names_df[["name"]] == bare_var, ][["units"]]
+      
+      # Create stock row
+      new_stocks_data[[i]] <- data.frame(
+        name = name,
+        type = "delayN_smoothN",
+        eqn = paste0(x[["initial"]], " / ", x[["length"]], " * ", x[["order"]]),
+        eqn_julia = x[["setup"]],
+        units = unit_val,
+        label = name,
+        doc = "",
+        non_negative = FALSE,
+        to = NA,
+        from = NA,
+        source = NA,
+        interpolation = NA,
+        extrapolation = NA,
+        xpts = NA,
+        ypts = NA,
+        inflow = list(x[["update"]]),
+        outflow = NA,
+        delayN = NULL,
+        stringsAsFactors = FALSE
+      )
+      
+      # Create auxiliary row
+      new_aux_data[[i]] <- data.frame(
+        name = name,
+        type = "delayN_smoothN",
+        eqn = paste0(bare_var, " / ", x[["length"]], " * ", x[["order"]]),
+        eqn_julia = x[["compute"]],
+        units = unit_val,
+        label = name,
+        doc = "",
+        non_negative = FALSE,
+        to = NA,
+        from = NA,
+        source = NA,
+        interpolation = NA,
+        extrapolation = NA,
+        xpts = NA,
+        ypts = NA,
+        inflow = NA,
+        outflow = NA,
+        delayN = NULL,
+        stringsAsFactors = FALSE
+      )
+    }
+    
+    # Combine and add to data frame
+    if (length(new_stocks_data) > 0) {
+      new_stocks_df <- do.call(rbind, new_stocks_data)
+      sfm[["variables"]] <- rbind(sfm[["variables"]], new_stocks_df)
+    }
+    
+    if (length(new_aux_data) > 0) {
+      new_aux_df <- do.call(rbind, new_aux_data)
+      sfm[["variables"]] <- rbind(sfm[["variables"]], new_aux_df)
+    }
   }
 
   return(sfm)
@@ -516,7 +464,7 @@ prep_delayN_smoothN <- function(sfm, delayN_smoothN) {
 #' @returns List with script
 #'
 #' @noRd
-compile_units_julia <- function(sfm, keep_unit) {
+compile_units_julia <- function(sfm) {
   #   script <- sprintf("\n# Clear any existing definitions to avoid conflicts
   # if @isdefined(%s)
   #     # Force garbage collection to clean up old module
@@ -538,7 +486,7 @@ compile_units_julia <- function(sfm, keep_unit) {
       out <- topological_sort(dependencies)
 
       if (out[["issue"]]) {
-        message(paste0("Ordering custom units failed. ", paste0(out[["msg"]])))
+        cli::cli_inform(paste0("Ordering custom units failed. ", paste0(out[["msg"]])))
       }
 
       sfm[["model_units"]] <- sfm[["model_units"]][out[["order"]]]
@@ -596,17 +544,16 @@ compile_units_julia <- function(sfm, keep_unit) {
 compile_macros_julia <- function(sfm) {
   script <- ""
 
-  # If there are macros
-  if (any(nzchar(unlist(lapply(sfm[[P[["macro_name"]]]], `[[`, "eqn_julia"))))) {
-    script <- paste0(
-      script, "\n",
-      lapply(sfm[[P[["macro_name"]]]], `[[`, "eqn_julia") |> unlist() |>
-        paste0(collapse = "\n")
-    )
-  }
+  macro_df <- sfm[[P[["macro_name"]]]]
+  if (nrow(macro_df) > 0 && "eqn_julia" %in% names(macro_df)) {
+    eqns <- macro_df[["eqn_julia"]]
+    eqns[is.na(eqns)] <- ""
+    has_eqn <- nzchar(eqns)
 
-  if (nzchar(script)) {
-    script <- paste0("\n\n# User-specified macros\n", script, "\n\n")
+    if (any(has_eqn)) {
+      script_body <- paste0(eqns[has_eqn], collapse = "\n")
+      script <- paste0("\n\n# User-specified macros\n", script_body, "\n\n")
+    }
   }
 
   return(list(script = script))
@@ -621,7 +568,8 @@ compile_macros_julia <- function(sfm) {
 #' @inheritParams compile_julia
 #'
 #' @noRd
-compile_times_julia <- function(sfm, keep_unit) {
+compile_times_julia <- function(sfm) {
+  keep_unit <- sfm[["sim_specs"]][["keep_unit"]]
   script <- sprintf(
     "\n\n# Simulation time unit (smallest time scale in your model)
 %s = u\"%s\"\n# Define time sequence\n%s = (%s, %s)%s\n# Initialize time (only necessary if constants use t)\n%s = %s[1]\n# Time step\n%s = %s%s\n# Save at value\n%s = %s%s\n# Define saving time sequence\n%s = %s%s; %s = %s:%s:%s[2]\n%s = %s[1]:%s:%s[2]\n",
@@ -654,20 +602,26 @@ compile_times_julia <- function(sfm, keep_unit) {
 #'
 #' @returns A stock-and-flow model object of class [`sdbuildR_xmile`][xmile]
 #' @noRd
-prep_equations_variables_julia <- function(sfm, keep_unit, keep_nonnegative_flow) {
+prep_equations_variables_julia <- function(sfm) {
+  keep_unit <- sfm[["sim_specs"]][["keep_unit"]]
+  keep_nonnegative_flow <- sfm[["sim_specs"]][["keep_nonnegative_flow"]]
   names_df <- get_names(sfm)
 
-  # Graphical functions
-  sfm[["model"]][["variables"]][["gf"]] <- lapply(
-    sfm[["model"]][["variables"]][["gf"]],
-    function(x) {
+  # Graphical functions - refactored to use data frame approach
+  gf_idx <- sfm[["variables"]][["type"]] == "gf"
+  
+  if (any(gf_idx)) {
+    for (i in which(gf_idx)) {
+      x <- sfm[["variables"]][i, ]
+      
       if (is_defined(x[["xpts"]]) & is_defined(x[["ypts"]])) {
         # Check whether xpts is defined as numeric or string
-        if (inherits(x[["xpts"]], "numeric")) {
-          xpts_str <- paste0("[", paste0(as.character(x[["xpts"]]), collapse = ", "), "]")
+        xpts_val <- x[["xpts"]][[1]]  # Extract from list-column
+        if (inherits(xpts_val, "numeric")) {
+          xpts_str <- paste0("[", paste0(as.character(xpts_val), collapse = ", "), "]")
         } else {
           xpts_str <- stringr::str_replace_all(
-            x[["xpts"]],
+            xpts_val,
             "^c\\(", "["
           ) |>
             stringr::str_replace_all("\\)$", "]")
@@ -680,7 +634,7 @@ prep_equations_variables_julia <- function(sfm, keep_unit, keep_nonnegative_flow
               xpts_str <- paste0(xpts_str, " .* ", P[["time_units_name"]])
             } else {
               unit_source <- names_df[names_df[["name"]] == x[["source"]], "units"]
-              if (unit_source != "1") {
+              if (is_defined(unit_source) && unit_source != "1") {
                 xpts_str <- paste0(xpts_str, " .* u\"", unit_source, "\"")
               }
             }
@@ -688,10 +642,11 @@ prep_equations_variables_julia <- function(sfm, keep_unit, keep_nonnegative_flow
         }
 
         # Check whether ypts is defined as numeric or string
-        if (inherits(x[["ypts"]], "numeric")) {
-          ypts_str <- paste0("[", paste0(as.character(x[["ypts"]]), collapse = ", "), "]")
+        ypts_val <- x[["ypts"]][[1]]  # Extract from list-column
+        if (inherits(ypts_val, "numeric")) {
+          ypts_str <- paste0("[", paste0(as.character(ypts_val), collapse = ", "), "]")
         } else {
-          ypts_str <- stringr::str_replace_all(x[["ypts"]], "^c\\(", "[") |>
+          ypts_str <- stringr::str_replace_all(ypts_val, "^c\\(", "[") |>
             stringr::str_replace_all("\\)$", "]")
         }
 
@@ -699,101 +654,121 @@ prep_equations_variables_julia <- function(sfm, keep_unit, keep_nonnegative_flow
           ypts_str <- paste0(ypts_str, " .* u\"", x[["units"]], "\"")
         }
 
-        x[["eqn_str"]] <- sprintf(
+        sfm[["variables"]][i, "eqn_str"] <- sprintf(
           "%s = itp(%s,\n\t%s, method = \"%s\", extrapolation = \"%s\")",
           x[["name"]], xpts_str, ypts_str,
           x[["interpolation"]], x[["extrapolation"]]
         )
       }
-      return(x)
     }
-  )
+  }
 
-  # Constant equations
-  sfm[["model"]][["variables"]][["constant"]] <- lapply(
-    sfm[["model"]][["variables"]][["constant"]],
-    function(x) {
-      if (keep_unit & is_defined(x[["units"]]) & x[["units"]] != "1") {
-        x[["eqn_str"]] <- paste0(
-          x[["name"]], " = ",
+  # Constant equations - refactored to use data frame approach
+  const_idx <- sfm[["variables"]][["type"]] == "constant"
+  
+  if (any(const_idx)) {
+    for (i in which(const_idx)) {
+      if (keep_unit & is_defined(sfm[["variables"]][i, "units"]) & sfm[["variables"]][i, "units"] != "1") {
+        sfm[["variables"]][i, "eqn_str"] <- paste0(
+          sfm[["variables"]][i, "name"], " = ",
           P[["convert_u_func"]], "(",
-          x[["eqn_julia"]], ", u\"", x[["units"]], "\")"
+          sfm[["variables"]][i, "eqn_julia"], ", u\"", 
+          sfm[["variables"]][i, "units"], "\")"
         )
       } else {
-        x[["eqn_str"]] <- paste0(x[["name"]], " = ", x[["eqn_julia"]])
+        sfm[["variables"]][i, "eqn_str"] <- paste0(
+          sfm[["variables"]][i, "name"], " = ", 
+          sfm[["variables"]][i, "eqn_julia"]
+        )
       }
-      return(x)
     }
-  )
+  }
 
-  # Initial states of stocks
-  sfm[["model"]][["variables"]][["stock"]] <- lapply(
-    sfm[["model"]][["variables"]][["stock"]],
-    function(x) {
-      if (keep_unit & is_defined(x[["units"]]) & x[["units"]] != "1") {
-        x[["eqn_str"]] <- paste0(
-          x[["name"]], " = ",
+  # Initial states of stocks - refactored to use data frame approach
+  stock_idx <- sfm[["variables"]][["type"]] == "stock"
+  
+  if (any(stock_idx)) {
+    for (i in which(stock_idx)) {
+      if (keep_unit & is_defined(sfm[["variables"]][i, "units"]) & sfm[["variables"]][i, "units"] != "1") {
+        sfm[["variables"]][i, "eqn_str"] <- paste0(
+          sfm[["variables"]][i, "name"], " = ",
           P[["convert_u_func"]], "(",
-          x[["eqn_julia"]], ", u\"",
-          x[["units"]], "\")"
+          sfm[["variables"]][i, "eqn_julia"], ", u\"",
+          sfm[["variables"]][i, "units"], "\")"
         )
       } else {
-        x[["eqn_str"]] <- paste0(x[["name"]], " = ", x[["eqn_julia"]])
+        sfm[["variables"]][i, "eqn_str"] <- paste0(
+          sfm[["variables"]][i, "name"], " = ", 
+          sfm[["variables"]][i, "eqn_julia"]
+        )
       }
-      return(x)
     }
-  )
+  }
 
 
-  # Auxiliary equations (dynamic auxiliaries)
-  sfm[["model"]][["variables"]][["aux"]] <- lapply(
-    sfm[["model"]][["variables"]][["aux"]],
-    function(x) {
-      if (keep_unit & is_defined(x[["units"]]) & x[["units"]] != "1") {
-        x[["eqn_str"]] <- paste0(
-          x[["name"]], " = ", P[["convert_u_func"]],
-          "(", x[["eqn_julia"]], ", u\"",
-          x[["units"]], "\")"
+  # Auxiliary equations (dynamic auxiliaries) - refactored to use data frame approach
+  aux_idx <- sfm[["variables"]][["type"]] == "aux"
+  
+  if (any(aux_idx)) {
+    for (i in which(aux_idx)) {
+      if (keep_unit & is_defined(sfm[["variables"]][i, "units"]) & sfm[["variables"]][i, "units"] != "1") {
+        eqn_str <- paste0(
+          sfm[["variables"]][i, "name"], " = ", 
+          P[["convert_u_func"]],
+          "(", sfm[["variables"]][i, "eqn_julia"], ", u\"",
+          sfm[["variables"]][i, "units"], "\")"
         )
       } else {
-        x[["eqn_str"]] <- paste0(x[["name"]], " = ", x[["eqn_julia"]])
+        eqn_str <- paste0(
+          sfm[["variables"]][i, "name"], " = ", 
+          sfm[["variables"]][i, "eqn_julia"]
+        )
       }
 
-      if (!is.null(x[["preceding_eqn"]])) {
-        x[["eqn_str"]] <- c(x[["preceding_eqn"]], x[["eqn_str"]])
+      if (!is.null(sfm[["variables"]][i, "preceding_eqn"])) {
+        eqn_str <- c(sfm[["variables"]][i, "preceding_eqn"], eqn_str)
       }
-      return(x)
+      
+      sfm[["variables"]][i, "eqn_str"] <- list(eqn_str)
     }
-  )
+  }
 
-  # Flow equations
-  # flow_df <- get_flow_df(sfm)
-  sfm[["model"]][["variables"]][["flow"]] <- lapply(
-    sfm[["model"]][["variables"]][["flow"]],
-    function(x) {
-      x[["eqn_str"]] <- sprintf(
+  # Flow equations - refactored to use data frame approach
+  flow_idx <- sfm[["variables"]][["type"]] == "flow"
+  
+  if (any(flow_idx)) {
+    for (i in which(flow_idx)) {
+      flow_name <- sfm[["variables"]][i, "name"]
+      flow_from <- sfm[["variables"]][i, "from"]
+      flow_to <- sfm[["variables"]][i, "to"]
+      flow_eqn_julia <- sfm[["variables"]][i, "eqn_julia"]
+      flow_units <- sfm[["variables"]][i, "units"]
+      flow_non_neg <- sfm[["variables"]][i, "non_negative"]
+      
+      eqn_str <- sprintf(
         "\n\t# Flow%s%s\n\t%s = %s%s%s%s%s",
         # Add comment
-        ifelse(is_defined(x[["from"]]), paste0(" from ", x[["from"]]), ""),
-        ifelse(is_defined(x[["to"]]), paste0(" to ", x[["to"]]), ""),
-        x[["name"]],
-        ifelse(keep_unit & x[["units"]] != "1",
+        ifelse(is_defined(flow_from), paste0(" from ", flow_from), ""),
+        ifelse(is_defined(flow_to), paste0(" to ", flow_to), ""),
+        flow_name,
+        ifelse(keep_unit & flow_units != "1",
           paste0(P[["convert_u_func"]], "("), ""
         ),
-        ifelse(x[["non_negative"]] & keep_nonnegative_flow, "nonnegative(", ""),
-        x[["eqn_julia"]],
-        ifelse(x[["non_negative"]] & keep_nonnegative_flow, ")", ""),
-        ifelse(keep_unit & x[["units"]] != "1",
-          paste0(", u\"", x[["units"]], "\")"), ""
+        ifelse(flow_non_neg & keep_nonnegative_flow, "nonnegative(", ""),
+        flow_eqn_julia,
+        ifelse(flow_non_neg & keep_nonnegative_flow, ")", ""),
+        ifelse(keep_unit & flow_units != "1",
+          paste0(", u\"", flow_units, "\")"), ""
         )
       )
 
-      if (!is.null(x[["preceding_eqn"]])) {
-        x[["eqn_str"]] <- c(x[["preceding_eqn"]], x[["eqn_str"]])
+      if (!is.null(sfm[["variables"]][i, "preceding_eqn"])) {
+        eqn_str <- c(sfm[["variables"]][i, "preceding_eqn"], eqn_str)
       }
-      return(x)
+      
+      sfm[["variables"]][i, "eqn_str"] <- list(eqn_str)
     }
-  )
+  }
 
 
   return(sfm)
@@ -813,9 +788,13 @@ prep_intermediary_variables_julia <- function(sfm, ordering) {
 
   # Graphical functions (gf)
   gf_str <- ""
-  if (length(sfm[["model"]][["variables"]][["gf"]]) > 0) {
+  gf_idx <- sfm[["variables"]][["type"]] == "gf"
+  
+  if (any(gf_idx)) {
     # Some gf have other gf as source; recursively replace
-    gf_sources <- lapply(sfm[["model"]][["variables"]][["gf"]], `[[`, "source") |>
+    gf_sources <- sfm[["variables"]][gf_idx, "source"]
+    gf_names <- sfm[["variables"]][gf_idx, "name"]
+    gf_sources_named <- stats::setNames(gf_sources, gf_names)
       compact_() |>
       unlist()
 
@@ -847,7 +826,7 @@ prep_intermediary_variables_julia <- function(sfm, ordering) {
 
     idx <- !(extra_intermediary_var %in% names_df[["name"]])
     if (any(idx)) {
-      stop(paste0(
+      cli::cli_abort(paste0(
         "The following variables used in delay() or past() are not defined in the model: ",
         paste0(extra_intermediary_var[idx], collapse = ", ")
       ), call. = FALSE)
@@ -855,7 +834,7 @@ prep_intermediary_variables_julia <- function(sfm, ordering) {
 
     idx <- !(extra_intermediary_var %in% allowed_intermediary_var)
     if (any(idx)) {
-      stop(paste0(
+      cli::cli_abort(paste0(
         "The following variables used in delay() or past() are not stocks, flows, or auxiliaries: ",
         paste0(extra_intermediary_var[idx], collapse = ", ")
       ), call. = FALSE)
@@ -904,17 +883,20 @@ prep_intermediary_variables_julia <- function(sfm, ordering) {
 #' @returns List with necessary scripts
 #'
 #' @noRd
-compile_static_eqn_julia <- function(sfm, ensemble_pars, ordering, intermediaries, keep_unit) {
+compile_static_eqn_julia <- function(sfm, ensemble_pars, ordering, intermediaries) {
+  # Access keep_unit from sim_specs
+  keep_unit <- sfm[["sim_specs"]][["keep_unit"]]
+
   # names_df <- get_names(sfm)
 
   # Graphical functions
-  gf_eqn <- lapply(sfm[["model"]][["variables"]][["gf"]], `[[`, "eqn_str")
+  gf_eqn <- get_vars_column_as_list(sfm, "gf", "eqn_str")
 
   # Constant equations
-  constant_eqn <- lapply(sfm[["model"]][["variables"]][["constant"]], `[[`, "eqn_str")
+  constant_eqn <- get_vars_column_as_list(sfm, "constant", "eqn_str")
 
   # Initial states of stocks
-  stock_eqn <- lapply(sfm[["model"]][["variables"]][["stock"]], `[[`, "eqn_str")
+  stock_eqn <- get_vars_column_as_list(sfm, "stock", "eqn_str")
 
 
   # Prepare ensemble range if specified
@@ -970,10 +952,10 @@ compile_static_eqn_julia <- function(sfm, ensemble_pars, ordering, intermediarie
       paste0(collapse = "\n")
   } else {
     # Auxiliary equations (dynamic auxiliaries)
-    aux_eqn <- lapply(sfm[["model"]][["variables"]][["aux"]], `[[`, "eqn_str")
+    aux_eqn <- get_vars_column_as_list(sfm, "aux", "eqn_str")
 
     # Flow equations
-    flow_eqn <- lapply(sfm[["model"]][["variables"]][["flow"]], `[[`, "eqn_str")
+    flow_eqn <- get_vars_column_as_list(sfm, "flow", "eqn_str")
 
     # Compile and order static and dynamic equations
     static_eqn_str <- c(
@@ -996,7 +978,7 @@ compile_static_eqn_julia <- function(sfm, ensemble_pars, ordering, intermediarie
 
 
   # Put parameters together in named tuple; include graphical functions as otherwise these are not defined outside of the let block
-  if (length(sfm[["model"]][["variables"]][["constant"]]) > 0 || length(sfm[["model"]][["variables"]][["gf"]]) > 0) {
+  if (nrow(get_variables_by_type(sfm, "constant")) > 0 || nrow(get_variables_by_type(sfm, "gf")) > 0) {
     pars_def <- paste0(
       "\n\n# Define parameters in named tuple\n",
       P[["parameter_name"]], " = (",
@@ -1137,69 +1119,7 @@ compile_static_eqn_julia <- function(sfm, ensemble_pars, ordering, intermediarie
 #' @returns Updated stock-and-flow model
 #' @noRd
 #'
-prep_stock_change_julia <- function(sfm, keep_unit) {
-  # Add temporary property to sum change in stocks
-  stock_names <- names(sfm[["model"]][["variables"]][["stock"]])
-  sfm[["model"]][["variables"]][["stock"]] <- lapply(
-    sfm[["model"]][["variables"]][["stock"]],
-    function(x) {
-      inflow <- outflow <- ""
-
-      if (x[["type"]] == "delayN_smoothN") {
-        x[["sum_name"]] <- paste0(P[["change_state_name"]], "[", P[["model_setup_name"]], ".", P[["delay_idx_name"]], ".", x[["name"]], "]")
-        x[["unpack_state"]] <- paste0(P[["state_name"]], "[", P[["model_setup_name"]], ".", P[["delay_idx_name"]], ".", x[["name"]], "]")
-      } else {
-        x[["sum_name"]] <- paste0(P[["change_state_name"]], "[", match(x[["name"]], stock_names), "]")
-      }
-
-
-      # In case no inflow and no outflow is defined, update with 0
-      if (!is_defined(x[["inflow"]]) & !is_defined(x[["outflow"]])) {
-        # # If keep_unit = TRUE, flows always need to have units as the times variable has units
-        # if (keep_unit) {
-        #   # Safer: in case x evaluates to a unit but no units were set
-        #   x[["sum_eqn"]] <- paste0(P[["convert_u_func"]], "(0.0, Unitful.unit.(", x[["name"]], ")/", P[["time_units_name"]], ")")
-        # } else {
-        x[["sum_eqn"]] <- "0.0"
-        # }
-      } else {
-        if (is_defined(x[["inflow"]])) {
-          inflow <- paste0(x[["inflow"]], collapse = " + ")
-        }
-        if (is_defined(x[["outflow"]])) {
-          outflow <- paste0(paste0(" - ", x[["outflow"]]), collapse = "")
-        }
-        x[["sum_eqn"]] <- sprintf("%s%s", inflow, outflow)
-      }
-
-      # Add units if defined
-      if (keep_unit & is_defined(x[["units"]])) {
-        if (x[["type"]] == "delayN_smoothN") {
-          x[["sum_eqn"]] <- paste0(
-            x[["sum_eqn"]], " ./ ",
-            P[["time_units_name"]]
-            # ** Units need to be stripped again because init with units can give problems
-          )
-        } else {
-          x[["sum_eqn"]] <- paste0(
-            P[["convert_u_func"]],
-            "(", x[["sum_eqn"]],
-            ", Unitful.unit.(",
-            x[["name"]], ")/",
-            P[["time_units_name"]],
-            # Units need to be stripped again because init with units can give problems
-            ") ./ Unitful.unit.(", x[["name"]], ")"
-          )
-        }
-      }
-
-      return(x)
-    }
-  )
-  sfm[["model"]][["variables"]][["stock"]] <- sfm[["model"]][["variables"]][["stock"]][lengths(sfm[["model"]][["variables"]][["stock"]]) > 0]
-
-  return(sfm)
-}
+## prep_stock_change_julia centralized in R/prep_functions.R
 
 
 #' Compile Julia script for ODE function
@@ -1219,13 +1139,14 @@ prep_stock_change_julia <- function(sfm, keep_unit) {
 #'
 compile_ode_julia <- function(sfm, ensemble_pars, ordering, intermediaries,
                               prep_script, static_eqn,
-                              keep_nonnegative_stock, keep_unit,
                               only_stocks) {
+  keep_nonnegative_stock <- sfm[["sim_specs"]][["keep_nonnegative_stock"]]
+  keep_unit <- sfm[["sim_specs"]][["keep_unit"]]
   # Auxiliary equations (dynamic auxiliaries)
-  aux_eqn <- lapply(sfm[["model"]][["variables"]][["aux"]], `[[`, "eqn_str")
+  aux_eqn <- get_vars_column_as_list(sfm, "aux", "eqn_str")
 
   # Flow equations
-  flow_eqn <- lapply(sfm[["model"]][["variables"]][["flow"]], `[[`, "eqn_str")
+  flow_eqn <- get_vars_column_as_list(sfm, "flow", "eqn_str")
 
   # Compile and order all dynamic equations
   dynamic_eqn <- unlist(c(aux_eqn, flow_eqn)[ordering[["dynamic"]][["order"]]])
@@ -1235,8 +1156,10 @@ compile_ode_julia <- function(sfm, ensemble_pars, ordering, intermediaries,
 
   # Sum change in stock equations
   stock_change <- lapply(
-    sfm[["model"]][["variables"]][["stock"]],
-    function(x) {
+    get_variables_by_type(sfm, "stock")[["name"]],
+    function(stock_name) {
+      stock_row <- sfm[["variables"]][sfm[["variables"]][["name"]] == stock_name, ]
+      x <- as.list(stock_row)
       sprintf(
         "%s %s %s", x[["sum_name"]],
         # Broadcast assignment for delayed variables
@@ -1252,8 +1175,9 @@ compile_ode_julia <- function(sfm, ensemble_pars, ordering, intermediaries,
   add_stock_units <- ""
   if (keep_unit) {
     # For each stock that has a unit, add
-    stock_names <- names(sfm[["model"]][["variables"]][["stock"]])
-    stock_units <- lapply(sfm[["model"]][["variables"]][["stock"]], `[[`, "units")
+    stock_vars <- get_variables_by_type(sfm, "stock")
+    stock_names <- stock_vars[["name"]]
+    stock_units <- stock_vars[["units"]]
     idx <- stock_units != "1"
     if (any(idx)) {
       add_stock_units <- paste0(
@@ -1268,14 +1192,16 @@ compile_ode_julia <- function(sfm, ensemble_pars, ordering, intermediaries,
   }
 
   # Non-negative stocks
-  nonneg_stocks <- lapply(sfm[["model"]][["variables"]][["stock"]], `[[`, "non_negative") |> unlist()
+  stock_vars_df <- get_variables_by_type(sfm, "stock")
+  nonneg_stocks <- stock_vars_df[["non_negative"]] |> unlist()
   add_nonneg <- any(nonneg_stocks) & keep_nonnegative_stock
 
   if (add_nonneg) {
     # Create if-statement to keep selected stocks non-negative
     nonneg_str <- lapply(
-      sfm[["model"]][["variables"]][["stock"]],
-      function(x) {
+      seq_len(nrow(stock_vars_df)),
+      function(i) {
+        x <- as.list(stock_vars_df[i, ])
         if (x[["non_negative"]]) {
           sprintf(
             "if (%s * %s + %s < 0) %s = %s/%s end",
@@ -1316,8 +1242,9 @@ compile_ode_julia <- function(sfm, ensemble_pars, ordering, intermediaries,
 
     # Unpack each delayN or smoothN stock separately
     unpack_delayN <- lapply(
-      sfm[["model"]][["variables"]][["stock"]],
-      function(x) {
+      seq_len(nrow(stock_vars_df)),
+      function(i) {
+        x <- as.list(stock_vars_df[i, ])
         if (is_defined(x[["unpack_state"]])) {
           return(paste0(x[["name"]], " = ", x[["unpack_state"]]))
         }
@@ -1348,7 +1275,7 @@ function %s!(%s, %s%s, %s)",
     unpack_state_str,
     # Assign units to stocks
     add_stock_units,
-    ifelse(length(sfm[["model"]][["variables"]][["constant"]]) > 0,
+    ifelse(nrow(get_variables_by_type(sfm, "constant")) > 0,
       paste0(
         "\n\n\t# Unpack parameters\n\t",
         paste0(
@@ -1385,7 +1312,7 @@ function %s(%s, %s, integrator)",
       unpack_state_str,
       # Assign units to stocks
       add_stock_units,
-      ifelse(length(sfm[["model"]][["variables"]][["constant"]]) > 0,
+      ifelse(nrow(get_variables_by_type(sfm, "constant")) > 0,
         paste0(
           "\n\n\t# Get parameters from integrator\n\t",
           paste0(P[["parameter_name"]], " = integrator.p"),
@@ -1446,7 +1373,8 @@ compile_run_ode_julia <- function(sfm,
                                   filepath_sim,
                                   nonneg_stocks,
                                   stock_names,
-                                  only_stocks, keep_unit) {
+                                  only_stocks) {
+  keep_unit <- sfm[["sim_specs"]][["keep_unit"]]
   if (is.null(ensemble_pars)) {
     script <- paste0(
       "\n\n# Run ODE\n",

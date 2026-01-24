@@ -239,9 +239,12 @@ clean_unit_in_u <- function(x, regex_units) {
 
   # Throw error if a match includes u(''): units cannot be nested
   if (any(stringr::str_detect(matches_no_u, "u\\([\"|']"))) {
-    stop("Nested units u(' u('') ') are not allowed. Please remove the u() from the unit string.",
-      call. = FALSE
-    )
+    cli::cli_abort(c(
+      "Nested unit specification detected.",
+      "x" = "Nested units like {.code u('u(\"meter\")')} are not allowed.",
+      "i" = "Units cannot be nested within {.fn u} function calls.",
+      ">" = "Remove the inner {.fn u} call from the unit string."
+    ), call. = FALSE)
   }
 
 
@@ -385,7 +388,7 @@ detect_undefined_units <- function(sfm, new_eqns, new_units, regex_units, R_or_J
     }, x = _)
 
   # Find units to define: ones not already included in Julia
-  existing_units <- names(sfm[["model_units"]])
+  existing_units <- if (nrow(sfm[["model_units"]]) > 0) sfm[["model_units"]][["name"]] else character(0)
   units_to_define <- setdiff(
     units_in_model,
     c(
@@ -414,22 +417,21 @@ detect_undefined_units <- function(sfm, new_eqns, new_units, regex_units, R_or_J
 #' @noRd
 find_unit_strings <- function(sfm) {
   # Extract all unit strings from equations
-  var_units <- lapply(sfm[["model"]][["variables"]], function(y) {
-    lapply(y, function(x) {
-      if (is_defined(x[["eqn"]])) {
-        return(stringr::str_extract_all(x[["eqn"]], "(?:^|(?<=\\W))u\\([\"|'](.*?)[\"|']\\)"))
+  var_units <- sfm[["variables"]][["eqn"]] |>
+    lapply(function(x) {
+      if (is_defined(x)) {
+        return(stringr::str_extract_all(x, "(?:^|(?<=\\W))u\\([\"|'](.*?)[\"|']\\)"))
       }
-    })
-  }) |>
-    unname() |>
+    }) |>
     unlist()
 
-  # Extract all unit strings from macros
-  macro_units <- lapply(sfm[[P[["macro_name"]]]], function(x) {
-    if (is_defined(x[["eqn"]])) {
-      return(stringr::str_extract_all(x[["eqn"]], "(?:^|(?<=\\W))u\\([\"|'](.*?)[\"|']\\)"))
+  # Extract all unit strings from macros (data frame structure)
+  macro_units <- sfm[[P[["macro_name"]]]][["eqn"]]
+  macro_units <- lapply(macro_units, function(eqn) {
+    if (is_defined(eqn)) {
+      return(stringr::str_extract_all(eqn, "(?:^|(?<=\\W))u\\([\"|'](.*?)[\"|']\\)"))
     }
-    return(x)
+    return(NULL)
   }) |> unlist()
 
   eqn_units <- c(var_units, macro_units)
@@ -851,11 +853,11 @@ get_regex_units <- function(sfm = NULL) {
 
   # If there are custom units added with power of ten prefixes enabled, add regular expressions
   if (!is.null(sfm)) {
-    if (length(sfm[["model_units"]]) > 0) {
+    if (nrow(sfm[["model_units"]]) > 0) {
       # Only if there are any units with power-of-ten
-      prefix <- unlist(lapply(sfm[["model_units"]], `[[`, "prefix"))
+      prefix <- sfm[["model_units"]][["prefix"]]
       if (any(prefix)) {
-        unit_names <- names(sfm[["model_units"]])
+        unit_names <- sfm[["model_units"]][["name"]]
         add_custom_regex <- lapply(unit_names[prefix], function(unit_name) {
           stats::setNames(
             paste0(unname(si_prefixes), unit_name),

@@ -99,7 +99,7 @@ julia_status <- function(verbose = TRUE) {
   if (!result[["julia_found"]]) {
     result$status <- "julia_not_installed"
     if (verbose) {
-      message("Julia not found. Install Julia from https://julialang.org/install/")
+      cli::cli_inform("Julia not found. Install from {.url https://julialang.org/install/}")
     }
     return(result)
   }
@@ -113,12 +113,11 @@ julia_status <- function(verbose = TRUE) {
   if (package_version(result[["julia_version"]]) < package_version(required_jl_version)) {
     result$status <- "julia_needs_update"
     if (verbose) {
-      message(
-        "Detected Julia version ", result[["julia_version"]],
-        ", which is older than needed for sdbuildR (version >= ",
-        required_jl_version,
-        "). Please go to https://julialang.org/install/ to update Julia."
-      )
+      cli::cli_inform(c(
+        "Julia version {.val {result[[\"julia_version\"]]}} is too old.",
+        "i" = "Requires version {.val {required_jl_version}} or higher.",
+        ">" = "Update at {.url https://julialang.org/install/}"
+      ))
     }
     return(result)
   }
@@ -134,7 +133,7 @@ julia_status <- function(verbose = TRUE) {
   if (!result$env_exists) {
     result$status <- "sdbuildR_needs_reinstall"
     if (verbose) {
-      message("sdbuildR Project.toml not found. This shouldn't happen - try reinstalling sdbuildR.")
+      cli::cli_inform("sdbuildR {.file Project.toml} not found. Try reinstalling {.pkg sdbuildR}.")
     }
     return(result)
   }
@@ -142,7 +141,7 @@ julia_status <- function(verbose = TRUE) {
   if (!result$env_instantiated) {
     result$status <- "install_julia_env"
     if (verbose) {
-      message("Julia environment not instantiated. Run: install_julia_env()")
+      cli::cli_inform("Julia environment not instantiated. Run {.fn install_julia_env()}")
     }
     return(result)
   }
@@ -151,7 +150,7 @@ julia_status <- function(verbose = TRUE) {
   result$status <- "ready"
 
   if (verbose) {
-    message("Julia environment is ready to be activated.")
+    cli::cli_inform("Julia environment ready.")
   }
 
   return(result)
@@ -224,7 +223,7 @@ check_manifest_for_pkg <- function(manifest_file, pkg_name) {
       }
     },
     error = function(e) {
-      warning("Error reading Manifest.toml: ", conditionMessage(e))
+      cli::cli_warn("Error reading Manifest.toml: ", conditionMessage(e))
     }
   )
 
@@ -330,7 +329,7 @@ install_julia_env <- function(remove = FALSE) {
 
   if (!status[["status"]] %in% c("install_julia_env", "ready")) {
     status <- julia_status()
-    stop()
+    cli::cli_abort()
   }
 
   # Start Julia
@@ -360,9 +359,9 @@ install_julia_env <- function(remove = FALSE) {
     status <- julia_status(verbose = FALSE)
 
     if (status[["status"]] != "install_julia_env") {
-      warning("Removing Julia environment FAILED!")
+      cli::cli_warn("Failed to remove Julia environment")
     } else {
-      message("Julia environment successfully removed.")
+      cli::cli_inform("Julia environment removed")
     }
   } else {
     # Run the setup script
@@ -412,12 +411,12 @@ use_julia <- function(
   if (stop) {
     # Check whether a session is active
     if (!julia_setup_ok()) {
-      message("No active Julia session found.")
+      cli::cli_inform("No active Julia session")
     } else {
       .sdbuildR_env[["jl"]][["init"]] <- FALSE
       JuliaConnectoR::stopJulia()
 
-      message("Julia session closed.")
+      cli::cli_inform("Julia session closed")
     }
     return(invisible())
   }
@@ -431,7 +430,7 @@ use_julia <- function(
 
   if (status[["status"]] != "ready") {
     status <- julia_status()
-    stop()
+    cli::cli_abort()
   }
 
   # # Set JULIA_BINDIR to ensure JuliaConnectoR uses the right Julia version for sdbuildR
@@ -449,7 +448,7 @@ use_julia <- function(
   # })
 
   if (!JuliaConnectoR::juliaSetupOk()) {
-    stop("JuliaConnectoR setup of Julia FAILED!")
+    cli::cli_abort("JuliaConnectoR setup failed")
   }
 
   tryCatch(
@@ -486,7 +485,7 @@ use_julia <- function(
   }
 
   if (!julia_init_ok()) {
-    stop("Setup of Julia environment FAILED!")
+    cli::cli_abort("Julia environment setup failed")
   }
 
   # Check whether SystemDynamicsBuildR.jl is up to date
@@ -495,7 +494,10 @@ use_julia <- function(
 
   if (package_version(installed_pkg_version) < package_version(required_pkg_version)) {
     JuliaConnectoR::stopJulia()
-    stop("Julia packages need to be updated!\nPlease run install_julia_env().")
+    cli::cli_abort(c(
+      "Julia packages need updating.",
+      ">" = "Run {.fn install_julia_env()}"
+    ))
   }
 
   # Set global option of initialization
@@ -536,7 +538,7 @@ find_jl_pkg_version <- function(pkg_name) {
 #' @returns NULL
 #' @noRd
 run_init <- function() {
-  message("Setting up Julia environment for sdbuildR...\n")
+  cli::cli_inform("Setting up Julia environment for {.pkg sdbuildR}...")
 
   # Find set-up location for sdbuildR in Julia
   env_path <- system.file(package = "sdbuildR")
@@ -569,7 +571,7 @@ getJuliaExecutablePath <- function() {
   } else { # use the JULIA_BINDIR variable, as it is specified
     juliaExe <- list.files(path = juliaBindir, pattern = "^julia.*")
     if (length(juliaExe) == 0) {
-      stop(paste0(
+      cli::cli_abort(paste0(
         "No Julia executable file found in supposed bin directory \"",
         juliaBindir, "\""
       ))
@@ -586,11 +588,12 @@ fallbackOnDefaultJuliaupPath <- function() {
   # Julia has been installed in the default way via Juliaup.)
   juliaCmd <- file.path(Sys.getenv("HOME"), ".juliaup", "bin", "julia")
   if (!file.exists(juliaCmd) || Sys.info()["sysname"] == "Windows") {
-    stop('Julia could not be found.
-Julia needs to be installed and findable for the "JuliaConnectoR" package to work.
-After installing Julia, the best way make Julia findable is to put the folder containing the Julia executable into the PATH environment variable.
-For more information, see the help topic ?`Julia-Setup`.
-')
+    cli::cli_abort(c(
+      "Julia could not be found.",
+      "x" = "Julia needs to be installed and findable by {.pkg JuliaConnectoR}.",
+      "i" = "After installing, add the Julia executable to the {.envvar PATH} environment variable.",
+      ">" = "See {.help Julia-Setup} for more information."
+    ), call = NULL)
   } else {
     return(juliaCmd)
   }

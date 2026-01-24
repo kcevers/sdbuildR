@@ -83,21 +83,56 @@ new_sdbuildR_xmile <- function() {
   spec_defaults[["save_at"]] <- spec_defaults[["dt"]]
   spec_defaults[["save_from"]] <- spec_defaults[["start"]]
 
+  # Create data frame for variables (all types in one data frame)
+  variables_df <- data.frame(
+    name = character(0),
+    type = character(0),
+    eqn = character(0),
+    eqn_julia = character(0),
+    units = character(0),
+    label = character(0),
+    doc = character(0),
+    non_negative = logical(0),
+    # Flow-specific
+    to = character(0),
+    from = character(0),
+    # Graphical function-specific (list-columns)
+    source = character(0),
+    interpolation = character(0),
+    extrapolation = character(0),
+    stringsAsFactors = FALSE
+  )
+  
+  # Add list-columns for xpts and ypts (graphical functions)
+  variables_df$xpts <- list()
+  variables_df$ypts <- list()
+
+  # Create data frame for macros
+  macros_df <- data.frame(
+    name = character(0),
+    eqn = character(0),
+    eqn_julia = character(0),
+    units = character(0),
+    doc = character(0),
+    stringsAsFactors = FALSE
+  )
+
+  # Create data frame for model_units
+  model_units_df <- data.frame(
+    name = character(0),
+    eqn = character(0),
+    doc = character(0),
+    prefix = logical(0),
+    stringsAsFactors = FALSE
+  )
+
   # Create list
   obj <- list(
     header = header_defaults,
     sim_specs = spec_defaults,
-    model = list(
-      variables = list(
-        stock = list(),
-        constant = list(),
-        aux = list(),
-        flow = list(),
-        gf = list()
-      )
-    ),
-    macro = list(),
-    model_units = list()
+    variables = variables_df,
+    macro = macros_df,
+    model_units = model_units_df
   )
 
   sfm <- structure(obj, class = "sdbuildR_xmile")
@@ -115,13 +150,17 @@ new_sdbuildR_xmile <- function() {
 get_flow_df <- function(sfm) {
   check_xmile(sfm)
 
-  flow_to <- get_map(sfm[[c("model", "variables", "flow")]], "to")
-  flow_from <- get_map(sfm[[c("model", "variables", "flow")]], "from")
+  flows <- sfm[["variables"]][sfm[["variables"]][["type"]] == "flow", ]
+  
+  if (nrow(flows) == 0) {
+    return(data.frame(name = character(0), to = character(0), from = character(0)))
+  }
 
   data.frame(
-    name = names(flow_to),
-    to = unname(flow_to),
-    from = unname(flow_from)
+    name = flows[["name"]],
+    to = ifelse(is.na(flows[["to"]]), "", flows[["to"]]),
+    from = ifelse(is.na(flows[["from"]]), "", flows[["from"]]),
+    stringsAsFactors = FALSE
   )
 }
 
@@ -161,7 +200,10 @@ as.data.frame.sdbuildR_sim <- function(x,
 
   direction <- trimws(tolower(direction))
   if (!direction %in% c("long", "wide")) {
-    stop("direction should either be \"long\" or \"wide\"!")
+    cli::cli_abort(c(
+      "Invalid {.arg direction} argument.",
+      "x" = "Must be either {.code 'long'} or {.code 'wide'}."
+    ))
   }
 
   if (direction == "long") {
@@ -183,10 +225,10 @@ as.data.frame.sdbuildR_sim <- function(x,
   # Handle row.names if provided
   if (!is.null(row.names)) {
     if (length(row.names) != nrow(df)) {
-      stop(
-        "Length of row.names (", length(row.names),
-        ") does not match number of rows (", nrow(df), ")"
-      )
+      cli::cli_abort(sprintf(
+        "Length of row.names (%d) does not match number of rows (%d)",
+        length(row.names), nrow(df)
+      ))
     }
     rownames(df) <- row.names
   }
@@ -204,6 +246,11 @@ as.data.frame.sdbuildR_sim <- function(x,
 #' @noRd
 find_matching_regex <- function(x, regex_units) {
   matches <- names(regex_units[regex_units == x])
+
+  # Return empty string if no matches found
+  if (length(matches) == 0) {
+    return("")
+  }
 
   # Clean regex and select longest match
   matches <- sub("\\$$", "", sub("^\\^", "", matches))
@@ -224,25 +271,33 @@ find_matching_regex <- function(x, regex_units) {
 #' @returns List with delayN and smoothN functions
 #' @noRd
 get_delay <- function(sfm, type = c("delayN_smoothN", "past")) {
-  if (type == "delayN_smoothN") {
-    func_name1 <- "delayN"
-    func_name2 <- "smoothN"
-  } else if (type == "past") {
-    func_name1 <- "delay"
-    func_name2 <- "past"
-  } else {
-    stop("type must be either 'delayN_smoothN' or 'past'!")
+  type <- match.arg(type)
+  
+  result <- list()
+  
+  # Search through equations for delay functions
+  if (nrow(sfm[["variables"]]) > 0) {
+    for (i in seq_len(nrow(sfm[["variables"]]))) {
+      var_name <- sfm[["variables"]][i, "name"]
+      var_eqn <- sfm[["variables"]][i, "eqn"]
+      
+      if (!is.na(var_eqn) && nzchar(var_eqn)) {
+        if (type == "past") {
+          # Look for past() or delay() functions
+          if (grepl("\\bpast\\s*\\(|\\bdelay\\s*\\(", var_eqn)) {
+            result[[var_name]] <- var_eqn
+          }
+        } else if (type == "delayN_smoothN") {
+          # Look for delayN(), smoothN() functions
+          if (grepl("\\bdelay[0-9]+\\s*\\(|\\bsmooth[0-9]+\\s*\\(", var_eqn)) {
+            result[[var_name]] <- var_eqn
+          }
+        }
+      }
+    }
   }
-
-  z <- unlist(unname(sfm[[c("model", "variables")]]),
-    recursive = FALSE,
-    use.names = TRUE
-  )
-  z <- lapply(z, function(x) {
-    c(x[["func"]][[func_name1]], x[["func"]][[func_name2]])
-  })
-  z <- z[lengths(z) > 0]
-  return(z)
+  
+  return(result)
 }
 
 
@@ -255,7 +310,10 @@ get_delay <- function(sfm, type = c("delayN_smoothN", "past")) {
 check_xmile <- function(sfm) {
   # Check whether it is an xmile object
   if (!inherits(sfm, "sdbuildR_xmile")) {
-    stop("This is not an object of class sdbuildR_xmile! Create a stock-and-flow model with xmile() or insightmaker_to_sfm().", call. = FALSE)
+    cli::cli_abort(c(
+      "Expected object of class {.cls sdbuildR_xmile}.",
+      "i" = "Create a stock-and-flow model with {.fn xmile()} or {.fn insightmaker_to_sfm()}."
+    ))
   }
 }
 
@@ -272,311 +330,99 @@ check_xmile <- function(sfm) {
 validate_xmile <- function(sfm) {
   check_xmile(sfm)
 
-  # Ensure model units have default properties
-  defaults <- as.list(formals(model_units))
-  defaults <- defaults[!names(defaults) %in% c(
-    "sfm", "name", "erase",
-    "change_name"
-  )]
-  sfm[["model_units"]] <- lapply(sfm[["model_units"]], function(x) {
-    x[["prefix"]] <- FALSE
-
-    # Merge with defaults
-    utils::modifyList(defaults, x)
-  })
-
-  # Ensure names are the same as names properties
-  names(sfm[["model_units"]]) <- unname(unlist(lapply(
-    sfm[["model_units"]],
-    `[[`, "name"
-  )))
-
-
-  # No need to validate model variables if there are no variables
-  nr_var <- sum(lengths(sfm[[c("model", "variables")]]))
-  if (nr_var > 0) {
-    # Make sure name property matches with the name of the list entry
-    vars <- sfm[["model"]][["variables"]]
-    type_names <- names(vars)
-
-    for (i in seq_along(vars)) {
-      x <- vars[[i]]
-      if (length(x) > 0) {
-        # Extract names once using vapply (faster than lapply + unlist)
-        var_names <- vapply(x, `[[`, character(1), "name", USE.NAMES = FALSE)
-        names(x) <- var_names
-
-        # Assign type in place
-        type <- type_names[i]
-        for (j in seq_along(x)) {
-          x[[j]][["type"]] <- type
-        }
-
-        vars[[i]] <- x
-      }
-    }
-
-    sfm[["model"]][["variables"]] <- vars
-
-
-    # type_names <- names(sfm[[c("model", "variables")]])
-    # sfm[[c("model", "variables")]] <- lapply(
-    #   seq_along(sfm[[c("model", "variables")]]),
-    #   function(i) {
-    #     x <- sfm[[c("model", "variables")]][[i]]
-    #
-    #     if (length(x) == 0) {
-    #       x <- list()
-    #     } else {
-    #       var_names <- unname(unlist(lapply(x, `[[`, "name")))
-    #       x <- stats::setNames(x, var_names)
-    #
-    #       # Make sure the type matches
-    #       type <- type_names[i]
-    #       x <- lapply(x, function(y) {
-    #         y[["type"]] <- type
-    #         return(y)
-    #       })
-    #     }
-    #     return(x)
-    #   }
-    # )
-    # names(sfm[[c("model", "variables")]]) <- type_names
-
-
-    # Ensure each variable has the necessary properties for its building block;
-    # otherwise, add defaults.
-    keep_prop <- get_building_block_prop()
-    defaults <- as.list(formals(build))
+  # Ensure model_units data frame has default properties
+  if (nrow(sfm[["model_units"]]) > 0) {
+    defaults <- as.list(formals(model_units))
     defaults <- defaults[!names(defaults) %in% c(
-      "sfm", "name", "type", "label", "erase",
-      "change_name", "change_type", "..."
+      "sfm", "name", "erase", "change_name"
     )]
-
-    # Process variables
-    type_names <- names(sfm[[c("model", "variables")]])
-
-    # for (type in type_names){
-    #   # Pre-compute type-specific defaults
-    #   type_defaults <- defaults[names(defaults) %in% keep_prop[[type]]]
-    #   names_defaults <- names(type_defaults)
-    #
-    #   elements <- lapply(sfm[[c("model", "variables", type)]], names)
-    #   invalid_elements <- Map(function(x, y) setdiff(y, x),
-    #                          elements,
-    #                          MoreArgs = list(y = names_defaults)) |> compact_()
-    #
-    #   # Add missing defaults
-    #   if (length(invalid_elements) > 0){
-    #     for (var in names(invalid_elements)){
-    #       for (elem in invalid_elements[[var]]){
-    #         sfm[[c("model", "variables", type, var, elem)]] <- type_defaults[[elem]]
-    #       }
-    #     }
-    #   }
-    #
-    #   # Add label & eqn_julia if missing
-    #   missing_label <- vapply(
-    #     sfm[[c("model", "variables", type)]],
-    #     function(x) is.null(x[["label"]]),
-    #     logical(1)
-    #   )
-    #   if (any(missing_label)){
-    #     for (var in names(sfm[[c("model", "variables", type)]])[missing_label]){
-    #       sfm[[c("model", "variables", type, var, "label")]] <- var
-    #     }
-    #   }
-    #
-    #   missing_eqn_julia <- vapply(
-    #     sfm[[c("model", "variables", type)]],
-    #     function(x) is.null(x[["eqn_julia"]]),
-    #     logical(1)
-    #   )
-    #
-    #   if (any(missing_eqn_julia)){
-    #     for (var in names(sfm[[c("model", "variables", type)]])[missing_eqn_julia]){
-    #       sfm[[c("model", "variables", type, var, "eqn_julia")]] <- "0.0"
-    #     }
-    #   }
-    # }
-
-
-    sfm[[c("model", "variables")]] <- lapply(
-      names(sfm[[c("model", "variables")]]),
-      function(type) {
-        vars <- sfm[[c("model", "variables")]][[type]]
-
-        # Pre-compute type-specific defaults
-        type_defaults <- defaults[names(defaults) %in% keep_prop[[type]]]
-
-        lapply(vars, function(y) {
-          # Add label, eqn, eqn_julia if missing
-          if (is.null(y[["label"]])) y[["label"]] <- y[["name"]]
-          # if (is.null(y[["eqn"]])) y[["eqn"]] <- "0.0"
-          if (is.null(y[["eqn_julia"]])) y[["eqn_julia"]] <- "0.0"
-
-          # Merge with type-specific defaults
-          utils::modifyList(type_defaults, y)
-        })
-      }
-    )
-
-    # Preserve names
-    names(sfm[[c("model", "variables")]]) <- type_names
-
-    # Ensure to and from in flows are only referring to stocks
-    names_df <- get_names(sfm)
-    flow_names <- names_df[names_df[["type"]] == "flow", "name"]
-    stock_names <- names_df[names_df[["type"]] == "stock", "name"]
-    nonstock_names <- names_df[names_df[["type"]] != "stock", "name"]
-
-    flows_to <- get_map(sfm[[c("model", "variables", "flow")]], "to")
-    flows_from <- get_map(sfm[[c("model", "variables", "flow")]], "from")
-
-    # Identify flows with invalid to/from
-    flows_to_invalid <- flows_to %in% nonstock_names
-    flows_from_invalid <- flows_from %in% nonstock_names
-    flows_invalid <- flows_to == flows_from & flows_to != ""
-
-
-    if (any(flows_to_invalid)) {
-      # warning(paste0(
-      #   "The following flows are flowing to variables which are not stocks: ",
-      #   paste0(flow_names[flows_to_invalid], collapse = ", "),
-      #   ". These will be corrected in the model."
-      # ))
-      #
-
-      for (i in seq_len(sum(flows_to_invalid))) {
-        flow <- flow_names[flows_to_invalid][i]
-        to <- flows_to[flows_to_invalid][i]
-
-        warning(paste0(
-          flow,
-          " is flowing to a variable which is not a stock (",
-          paste0(to, collapse = ", "), ")! Removing ",
-          paste0(to, collapse = ", "), " from `to`..."
-        ), call. = FALSE)
-
-        sfm[[c("model", "variables", "flow", flow, "to")]] <- ""
+    
+    # Ensure all necessary columns exist
+    for (col in names(defaults)) {
+      if (!col %in% colnames(sfm[["model_units"]])) {
+        sfm[["model_units"]][[col]] <- defaults[[col]]
       }
     }
-
-    if (any(flows_from_invalid)) {
-      # warning(paste0(
-      #   "The following flows are flowing from variables which are not stocks: ",
-      #   paste0(flow_names[flows_from_invalid], collapse = ", "),
-      #   ". These will be corrected in the model."
-      # ))
-
-      for (i in seq_len(sum(flows_from_invalid))) {
-        flow <- flow_names[flows_from_invalid][i]
-        from <- flows_from[flows_from_invalid][i]
-
-        warning(paste0(
-          flow,
-          " is flowing from a variable which is not a stock (",
-          paste0(from, collapse = ", "), ")! Removing ",
-          paste0(from, collapse = ", "), " from `from`..."
-        ), call. = FALSE)
-
-        sfm[[c("model", "variables", "flow", flow, "from")]] <- ""
-      }
+    
+    # Ensure prefix is FALSE if not set
+    if (!"prefix" %in% colnames(sfm[["model_units"]])) {
+      sfm[["model_units"]][["prefix"]] <- FALSE
     }
-
-    if (any(flows_invalid)) {
-      # warning(paste0(
-      #   "The following flows are flowing to and from the same variable: ",
-      #   paste0(flow_names[flows_invalid], collapse = ", "),
-      #   ". These will be corrected in the model."
-      # ))
-
-      for (i in seq_len(sum(flows_invalid))) {
-        flow <- flow_names[flows_invalid][i]
-        from <- flows_from[flows_invalid][i]
-
-        warning(paste0(
-          flow,
-          " is flowing to and from the same variable (",
-          paste0(from, collapse = ", "), ")! Removing ",
-          paste0(from, collapse = ", "), " from `from`..."
-        ), call. = FALSE)
-
-        sfm[[c("model", "variables", "flow", flow, "from")]] <- ""
-      }
-    }
-
-
-    # sfm[[c("model", "variables", "flow")]] <- lapply(
-    #   sfm[[c("model", "variables", "flow")]], function(x) {
-    #     if (is_defined(x[["from"]])) {
-    #       # If from is not in stocks but is another variable, remove
-    #       non_stocks <- x[["from"]][!x[["from"]] %in% stock_names &
-    #         x[["from"]] %in% nonstock_names]
-    #       if (length(non_stocks) > 0) {
-    # warning(paste0(
-    #   x[["name"]],
-    #   " is flowing from a variable which is not a stock (",
-    #   paste0(non_stocks, collapse = ", "), ")! Removing ",
-    #   paste0(non_stocks, collapse = ", "), " from `from`..."
-    # ))
-    #         x[["from"]] <- intersect(x[["from"]], stock_names)
-    #         if (length(x[["from"]]) == 0) {
-    #           x[["from"]] <- ""
-    #         }
-    #       }
-    #     }
-    #
-    #     if (is_defined(x[["to"]])) {
-    #       # If to is not in stocks but is another variable, remove
-    #       non_stocks <- x[["to"]][!x[["to"]] %in% stock_names &
-    #         x[["to"]] %in% nonstock_names]
-    #       if (length(non_stocks) > 0) {
-    #         warning(paste0(
-    #           x[["name"]],
-    #           " is flowing to a variable which is not a stock (",
-    #           paste0(non_stocks, collapse = ", "), ")! Removing ",
-    #           paste0(non_stocks, collapse = ", "), " from `to`..."
-    #         ))
-    #         x[["to"]] <- intersect(x[["to"]], stock_names)
-    #         if (length(x[["to"]]) == 0) {
-    #           x[["to"]] <- ""
-    #         }
-    #       }
-    #     }
-    #
-    #     # Ensure that to and from are not the same
-    #     if (is_defined(x[["to"]]) && is_defined(x[["from"]]) &&
-    #       x[["to"]] == x[["from"]]) {
-    #       message(paste0(
-    #         x[["name"]],
-    #   " is flowing to and from the same variable (",
-    #   x[["to"]], ")! Removing `from`..."
-    # ))
-    #       x[["from"]] <- ""
-    #     }
-    #
-    #     return(x)
-    #   }
-    # )
   }
 
-  # Ensure macros have default properties
-  defaults <- as.list(formals(macro))
-  defaults <- defaults[!names(defaults) %in% c(
-    "sfm", "name", "erase",
-    "change_name"
-  )]
-  sfm[[P[["macro_name"]]]] <- lapply(sfm[[P[["macro_name"]]]], function(x) {
-    if (is.null(x[["eqn"]])) x[["eqn"]] <- "0.0"
-    if (is.null(x[["eqn_julia"]])) x[["eqn_julia"]] <- "0.0"
+  # Validate variables data frame
+  if (nrow(sfm[["variables"]]) > 0) {
+    # Ensure label is set (defaults to name if missing)
+    if (any(is.na(sfm[["variables"]][["label"]]) | sfm[["variables"]][["label"]] == "")) {
+      idx_missing_label <- is.na(sfm[["variables"]][["label"]]) | sfm[["variables"]][["label"]] == ""
+      sfm[["variables"]][idx_missing_label, "label"] <- sfm[["variables"]][idx_missing_label, "name"]
+    }
+    
+    # Ensure eqn_julia is set (defaults to "0.0" if missing)
+    if (any(is.na(sfm[["variables"]][["eqn_julia"]]) | sfm[["variables"]][["eqn_julia"]] == "")) {
+      idx_missing_eqn_julia <- is.na(sfm[["variables"]][["eqn_julia"]]) | sfm[["variables"]][["eqn_julia"]] == ""
+      sfm[["variables"]][idx_missing_eqn_julia, "eqn_julia"] <- "0.0"
+    }
+    
+    # Validate flows: ensure to and from only refer to stocks
+    flows <- sfm[["variables"]][sfm[["variables"]][["type"]] == "flow", ]
+    stocks <- sfm[["variables"]][sfm[["variables"]][["type"]] == "stock", ]
+    stock_names <- stocks[["name"]]
+    non_stock_names <- sfm[["variables"]][sfm[["variables"]][["type"]] != "stock", "name"]
+    
+    if (nrow(flows) > 0) {
+      # Check invalid 'to'
+      flows_to_invalid <- !is.na(flows[["to"]]) & flows[["to"]] != "" & flows[["to"]] %in% non_stock_names
+      if (any(flows_to_invalid)) {
+        for (i in which(flows_to_invalid)) {
+          cli::cli_warn(sprintf(
+            "%s is flowing to a variable which is not a stock (%s)! Removing %s from `to`...",
+            flows[i, "name"], flows[i, "to"], flows[i, "to"]
+          ))
+          sfm[["variables"]][sfm[["variables"]][["name"]] == flows[i, "name"], "to"] <- ""
+        }
+      }
+      
+      # Check invalid 'from'
+      flows_from_invalid <- !is.na(flows[["from"]]) & flows[["from"]] != "" & flows[["from"]] %in% non_stock_names
+      if (any(flows_from_invalid)) {
+        for (i in which(flows_from_invalid)) {
+          cli::cli_warn(sprintf(
+            "%s is flowing from a variable which is not a stock (%s)! Removing %s from `from`...",
+            flows[i, "name"], flows[i, "from"], flows[i, "from"]
+          ))
+          sfm[["variables"]][sfm[["variables"]][["name"]] == flows[i, "name"], "from"] <- ""
+        }
+      }
+      
+      # Check if to and from are the same
+      flows_invalid <- !is.na(flows[["to"]]) & !is.na(flows[["from"]]) & 
+                       flows[["to"]] == flows[["from"]] & flows[["to"]] != ""
+      if (any(flows_invalid)) {
+        for (i in which(flows_invalid)) {
+          cli::cli_warn(sprintf(
+            "%s is flowing to and from the same variable (%s)! Removing %s from `from`...",
+            flows[i, "name"], flows[i, "from"], flows[i, "from"]
+          ))
+          sfm[["variables"]][sfm[["variables"]][["name"]] == flows[i, "name"], "from"] <- ""
+        }
+      }
+    }
+  }
 
-    # Merge with defaults
-    utils::modifyList(defaults, x)
-  })
-
-  # Ensure names are the same as names properties
-  names(sfm[[P[["macro_name"]]]]) <- unname(unlist(lapply(sfm[[P[["macro_name"]]]], `[[`, "name")))
+  # Ensure macros data frame has default properties
+  macro_name <- P[["macro_name"]]
+  if (nrow(sfm[[macro_name]]) > 0) {
+    # Ensure eqn and eqn_julia are set
+    if (any(is.na(sfm[[macro_name]][["eqn"]]) | sfm[[macro_name]][["eqn"]] == "")) {
+      idx_missing <- is.na(sfm[[macro_name]][["eqn"]]) | sfm[[macro_name]][["eqn"]] == ""
+      sfm[[macro_name]][idx_missing, "eqn"] <- "0.0"
+    }
+    if (any(is.na(sfm[[macro_name]][["eqn_julia"]]) | sfm[[macro_name]][["eqn_julia"]] == "")) {
+      idx_missing <- is.na(sfm[[macro_name]][["eqn_julia"]]) | sfm[[macro_name]][["eqn_julia"]] == ""
+      sfm[[macro_name]][idx_missing, "eqn_julia"] <- "0.0"
+    }
+  }
 
   # To prevent downstream errors, don't:
   # - add inflows and outflows to stocks
@@ -626,36 +472,78 @@ model_units <- function(sfm, name, eqn = "1", doc = "",
                         erase = FALSE, change_name = NULL) {
   # Basic check
   if (missing(sfm)) {
-    stop("No model specified!")
+    cli::cli_abort("The {.arg sfm} argument is required.")
   }
 
   if (missing(name)) {
-    stop("name must be specified!")
+    cli::cli_abort("The {.arg name} argument must be specified.")
   }
 
   check_xmile(sfm)
 
-  idx_nonexist <- which(!name %in% names(sfm[["model_units"]]))
+  # Handle rename first, before other operations
+  if (!is.null(change_name)) {
+    # Check if unit exists
+    idx_exist <- name %in% sfm[["model_units"]][["name"]]
+    if (!idx_exist) {
+      cli::cli_abort("Cannot rename a unit that does not exist: {.code {name}}")
+    }
+    
+    # Check if new name would cause a duplicate
+    new_name_exists <- change_name %in% sfm[["model_units"]][["name"]] && change_name != name
+    if (new_name_exists) {
+      cli::cli_abort("A custom unit with this name already exists: {.code {change_name}}")
+    }
+    
+    # Update the unit name in the data frame
+    old_idx <- which(sfm[["model_units"]][["name"]] == name)
+    if (length(old_idx) > 0) {
+      sfm[["model_units"]][old_idx, "name"] <- change_name
+    }
+
+    # Ensure the unit is translated in the entire model
+    dict <- stats::setNames(change_name, paste0("^", name, "$"))
+
+    # Update units and equations in variables data frame
+    var_names <- get_model_var(sfm)
+    
+    for (i in seq_len(nrow(sfm[["variables"]]))) {
+      if (is_defined(sfm[["variables"]][i, "units"])) {
+        sfm[["variables"]][i, "units"] <- clean_unit(sfm[["variables"]][i, "units"], dict)
+      }
+      
+      if (is_defined(sfm[["variables"]][i, "eqn"])) {
+        old_eqn <- sfm[["variables"]][i, "eqn"]
+        new_eqn <- clean_unit_in_u(old_eqn, dict)
+        sfm[["variables"]][i, "eqn"] <- new_eqn
+        
+        # If equation changed, redo Julia translation
+        if (old_eqn != new_eqn) {
+          sfm[["variables"]][i, "eqn_julia"] <- convert_equations_julia(
+            sfm[["variables"]][i, "type"], 
+            sfm[["variables"]][i, "name"], 
+            new_eqn,
+            var_names,
+            regex_units = dict
+          )
+        }
+      }
+    }
+    
+    sfm <- validate_xmile(sfm)
+    return(sfm)
+  }
+
+  idx_nonexist <- which(!name %in% sfm[["model_units"]][["name"]])
 
   # Remove unit from model
   if (erase) {
     if (length(idx_nonexist) == 0) {
-      sfm[["model_units"]][name] <- NULL
+      sfm[["model_units"]] <- sfm[["model_units"]][!sfm[["model_units"]][["name"]] %in% name, ]
     } else {
-      stop(paste0(
-        paste0(name[idx_nonexist], collapse = ", "),
-        ifelse(length(idx_nonexist) == 1,
-          " does not exist as a custom unit!",
-          " do not exist as custom units!"
-        ),
-        ifelse(length(sfm[["model_units"]]) > 0,
-          paste0(
-            "\nExisting model units: ",
-            paste0(names(sfm[["model_units"]]), collapse = ", ")
-          ),
-          "Your model has no custom units."
-        )
-      ))
+      cli::cli_abort(
+        "Cannot erase non-existent custom unit{ifelse(length(idx_nonexist) > 1, 's', '')}: {.code {paste0(name[idx_nonexist], collapse = ', ')}}"
+      )
     }
   } else {
     # Change units to units valid for Julia's Unitful package
@@ -663,7 +551,10 @@ model_units <- function(sfm, name, eqn = "1", doc = "",
 
     if (!is.null(change_name)) {
       if (length(name) > 1 || length(change_name) > 1) {
-        stop("You can only change the name of one custom unit at a time.")
+        cli::cli_abort(c(
+          "Cannot rename multiple custom units at once.",
+          "x" = "Please rename one unit at a time using {.fn model_units()}."
+        ))
       }
 
       old_name <- name
@@ -686,7 +577,7 @@ model_units <- function(sfm, name, eqn = "1", doc = "",
     name_in_units <- name %in% unname(regex_units)
 
     if (any(name_in_units)) {
-      stop(sprintf(
+      cli::cli_abort(sprintf(
         "The custom unit name%s %s match%s the standard unit%s %s, which cannot be overwritten.\nPlease choose %sunique name%s for: %s ",
         ifelse(sum(name_in_units) > 1, "s", ""),
         paste0(chosen_name[name_in_units], collapse = ", "),
@@ -703,7 +594,7 @@ model_units <- function(sfm, name, eqn = "1", doc = "",
     idx_invalid <- !grepl("[a-zA-Z0-9]", name)
 
     if (any(idx_invalid)) {
-      stop(sprintf(
+      cli::cli_abort(sprintf(
         "Each custom unit name needs at least one letter or number.\nPlease choose %sdifferent name%s for: %s ",
         ifelse(sum(name_in_units) > 1, "", "a "),
         ifelse(sum(name_in_units) > 1, "s", ""),
@@ -712,68 +603,59 @@ model_units <- function(sfm, name, eqn = "1", doc = "",
     }
 
     if (any(idx_changed)) {
-      warning(sprintf(
-        "The custom unit name%s %s %s modified to %s to comply with Julia's syntactic rules.\nUse sfm |> model_units('old_name', change_name = 'new_name') to update the name%s in your model.",
-        ifelse(sum(idx_changed) > 1, "s", ""),
-        paste0(chosen_name[idx_changed], collapse = ", "),
-        ifelse(sum(idx_changed) > 1, "were", "was"),
-        paste0(name[idx_changed], collapse = ", "),
-        ifelse(sum(idx_changed) > 1, "s", "")
+      old_names <- paste0(chosen_name[idx_changed], collapse = ", ")
+      new_names <- paste0(name[idx_changed], collapse = ", ")
+      cli::cli_warn(c(
+        "Custom unit name{ifelse(sum(idx_changed) > 1, 's', '')} modified for Julia compatibility.",
+        "i" = "{ifelse(sum(idx_changed) > 1, 'Names', 'Name')} {ifelse(sum(idx_changed) > 1, 'were', 'was')}: {.code {old_names}} → {.code {new_names}}.",
+        ">" = "Use {.fn model_units}({.code 'old_name'}, {.arg change_name} = {.code 'new_name'}) to update in your model."
       ))
     }
 
 
     if (!is.null(change_name)) {
-      # Check if name is already in use
-      unit_exists <- name %in% setdiff(names(sfm[["model_units"]]), old_name)
-
+      # Check if new name is already in use
+      unit_exists <- change_name %in% sfm[["model_units"]][["name"]] && change_name != name
+      
       if (!unit_exists) {
-        sfm[["model_units"]][name] <- sfm[["model_units"]][old_name]
-        sfm[["model_units"]][old_name] <- NULL
+        # Update the unit name in the data frame
+        old_idx <- which(sfm[["model_units"]][["name"]] == old_name)
+        if (length(old_idx) > 0) {
+          sfm[["model_units"]][old_idx, "name"] <- name
+        }
 
         # Ensure the unit is translated in the entire model
         dict <- stats::setNames(name, paste0("^", old_name, "$"))
 
-        sfm[["model_units"]] <- lapply(
-          sfm[["model_units"]],
-          function(x) {
-            if (is_defined(x[["eqn"]])) {
-              x[["eqn"]] <- clean_unit(x[["eqn"]], dict)
-            }
-            return(x)
-          }
-        )
-
+        # Update units and equations in variables data frame
         var_names <- get_model_var(sfm)
-        sfm[["model"]][["variables"]] <- lapply(
-          sfm[["model"]][["variables"]],
-          function(y) {
-            lapply(y, function(x) {
-              if (is_defined(x[["units"]])) {
-                x[["units"]] <- clean_unit(x[["units"]], dict)
-              }
-
-              if (is_defined(x[["eqn"]])) {
-                old_eqn <- x[["eqn"]]
-                x[["eqn"]] <- clean_unit_in_u(x[["eqn"]], dict)
-
-                # If equation changed, redo Julia translation
-                if (old_eqn != x[["eqn"]]) {
-                  x[["eqn_julia"]] <- convert_equations_julia(
-                    x[["type"]], x[["name"]], x[["eqn"]],
-                    var_names,
-                    regex_units = dict
-                  )
-                }
-              }
-              return(x)
-            })
+        
+        for (i in seq_len(nrow(sfm[["variables"]]))) {
+          if (is_defined(sfm[["variables"]][i, "units"])) {
+            sfm[["variables"]][i, "units"] <- clean_unit(sfm[["variables"]][i, "units"], dict)
           }
-        )
+          
+          if (is_defined(sfm[["variables"]][i, "eqn"])) {
+            old_eqn <- sfm[["variables"]][i, "eqn"]
+            new_eqn <- clean_unit_in_u(old_eqn, dict)
+            sfm[["variables"]][i, "eqn"] <- new_eqn
+            
+            # If equation changed, redo Julia translation
+            if (old_eqn != new_eqn) {
+              sfm[["variables"]][i, "eqn_julia"] <- convert_equations_julia(
+                sfm[["variables"]][i, "type"], 
+                sfm[["variables"]][i, "name"], 
+                new_eqn,
+                var_names,
+                regex_units = dict
+              )
+            }
+          }
+        }
       } else {
-        stop(sprintf(
-          "%s already exists as a custom unit! Choose a different new name for %s",
-          name, old_name
+        cli::cli_abort(sprintf(
+          "A custom unit with this name already exists: %s",
+          change_name
         ))
       }
     }
@@ -786,7 +668,10 @@ model_units <- function(sfm, name, eqn = "1", doc = "",
     argg[["name"]] <- name
 
     if ("eqn" %in% passed_arg) {
-      eqn <- vapply(eqn, clean_unit, character(1), regex_units, USE.NAMES = FALSE)
+      # Validate equation
+      if (any(!nzchar(eqn))) {
+        cli::cli_abort("eqn cannot be an empty string.")
+      }
       eqn <- ensure_length(eqn, name)
       argg[["eqn"]] <- eqn
     }
@@ -796,11 +681,25 @@ model_units <- function(sfm, name, eqn = "1", doc = "",
       argg[["doc"]] <- doc
     }
 
-    new_units <- stats::setNames(transpose_(argg), name)
+    new_units <- transpose_(argg) |> stats::setNames(name)
 
-    # Add units to model (in for-loop, as otherwise not all elements are added or overwritten)
+    # Add or update elements in the model_units data frame
     for (i in seq_along(name)) {
-      sfm[["model_units"]] <- utils::modifyList(sfm[["model_units"]], new_units[i])
+      unit_name_i <- name[i]
+      
+      # Check if unit already exists
+      existing_idx <- which(sfm[["model_units"]][["name"]] == unit_name_i)
+      
+      if (length(existing_idx) > 0) {
+        # Update existing unit row
+        for (col in names(new_units[[i]])) {
+          sfm[["model_units"]][existing_idx, col] <- new_units[[i]][[col]]
+        }
+      } else {
+        # Add new unit row
+        new_row <- as.data.frame(new_units[[i]], stringsAsFactors = FALSE)
+        sfm[["model_units"]] <- bind_rows_(sfm[["model_units"]], new_row)
+      }
     }
   }
 
@@ -843,135 +742,149 @@ model_units <- function(sfm, name, eqn = "1", doc = "",
 #'  }") |>
 #'   build("c", "constant", eqn = "func(2, slope = 50)")
 #'
-macro <- function(sfm, name, eqn = "0.0", doc = "", change_name = NULL, erase = FALSE) {
+macro <- function(sfm, name, eqn = "0.0", doc = "", units = NULL, change_name = NULL, erase = FALSE) {
   # Basic check
   if (missing(sfm)) {
-    stop("No model specified!")
+    cli::cli_abort("The {.arg sfm} argument is required.")
   }
 
   check_xmile(sfm)
 
   if (missing(name)) {
-    stop("name must be specified!")
+    cli::cli_abort("The {.arg name} argument must be specified.")
   }
 
   # Check change name of variable
   if (!is.null(change_name)) {
     if (length(change_name) > 1 || length(name) > 1) {
-      stop("You can only change the name of one variable at a time!")
+      cli::cli_abort(c(
+        "Cannot rename multiple macros at once.",
+        "x" = "Please rename one macro at a time using {.fn macro()}."
+      ))
     }
   }
 
   passed_arg <- names(as.list(match.call())[-1]) |>
     # Remove some arguments
     setdiff(c("sfm", "erase", "change_name"))
-  argg <- list()
 
   names_df <- get_names(sfm)
   var_names <- get_model_var(sfm)
 
-  idx_exist <- name %in% names(sfm[[P[["macro_name"]]]])
+  idx_exist <- name %in% sfm[[P[["macro_name"]]]][["name"]]
 
   if (erase) {
-    if (any(!idx_exist) == 0) {
-      sfm[[P[["macro_name"]]]][name] <- NULL
+    if (all(idx_exist)) {
+      # Remove rows where name matches
+      sfm[[P[["macro_name"]]]] <- sfm[[P[["macro_name"]]]][!sfm[[P[["macro_name"]]]][["name"]] %in% name, ]
     } else {
-      stop(sprintf(
-        "%s do%s not exist as %scustom macro%s! %s",
-        paste0(name[!idx_exist], collapse = ", "),
-        ifelse(length(name[!idx_exist]) > 1, "", "es"),
-        ifelse(length(name[!idx_exist]) > 1, "", "a "),
-        ifelse(length(name[!idx_exist]) > 1, "s", ""),
-        ifelse(length(sfm[[P[["macro_name"]]]]) > 0, paste0(
-          "Existing macros: ",
-          paste0(names(sfm[[P[["macro_name"]]]]), collapse = ", ")
-        ),
+      missing_macros <- paste0(name[!idx_exist], collapse = ", ")
+      existing_msg <- ifelse(nrow(sfm[[P[["macro_name"]]]]) > 0,
+        paste0("Existing macros: ", paste0(sfm[[P[["macro_name"]]]][["name"]], collapse = ", ")),
         "Your model has no custom macros."
-        )
+      )
+      cli::cli_abort(c(
+        "Cannot erase non-existent macro{ifelse(sum(!idx_exist) > 1, 's', '')}.",
+        "x" = "The following {ifelse(sum(!idx_exist) > 1, 'macros do', 'macro does')} not exist: {.code {missing_macros}}.",
+        "i" = existing_msg
       ))
     }
   } else {
-    # If overwriting name with change_name
+    # Handle renaming with change_name
     if (!is.null(change_name)) {
+      if (!idx_exist) {
+        cli::cli_abort("Cannot rename a macro that does not exist: {.code {name}}")
+      }
+      
+      # Check if new name would cause a duplicate BEFORE cleaning
+      new_name_exists <- change_name %in% sfm[[P[["macro_name"]]]][["name"]]
+      if (new_name_exists && change_name != name) {
+        cli::cli_abort("A macro with this name already exists: {.code {change_name}}")
+      }
+      
       # Ensure new name is syntactically valid
-      chosen_new_name <- change_name
+      change_name_original <- change_name
       change_name <- clean_name(change_name, names_df[["name"]])
-      report_name_change(chosen_new_name, change_name)
-
-      # Overwrite name
-      macro_names <- names(sfm[[P[["macro_name"]]]])
-      macro_names[macro_names == name] <- change_name
-      names(sfm[[P[["macro_name"]]]]) <- macro_names
-      sfm[[P[["macro_name"]]]][[change_name]][["name"]] <- change_name
-
-      # Replace references to name with change_name everywhere
-      sfm[["model"]][["variables"]] <- lapply(sfm[["model"]][["variables"]], function(y) {
-        lapply(y, function(x) {
-          if (is_defined(x[["eqn"]])) {
-            idx_df <- get_range_names(x[["eqn"]], name, names_with_brackets = FALSE)
+      
+      # Report if name was changed for syntactic reasons
+      if (change_name_original != change_name) {
+        cli::cli_inform(c(
+          "i" = "Name changed for syntactic validity: {.val {change_name_original}} -> {.code {change_name}}"
+        ))
+      }
+      
+      # Update the macro name in the data frame
+      old_idx <- which(sfm[[P[["macro_name"]]]][["name"]] == name)
+      sfm[[P[["macro_name"]]]][old_idx, "name"] <- change_name
+      
+      # Replace references to old name with new name everywhere in variables data frame
+      for (i in seq_len(nrow(sfm[["variables"]]))) {
+        if (is_defined(sfm[["variables"]][i, "eqn"])) {
+          idx_df <- get_range_names(sfm[["variables"]][i, "eqn"], name, names_with_brackets = FALSE)
+          if (nrow(idx_df) > 0) {
+            # Reverse indices to replace correctly
+            for (j in rev(seq_len(nrow(idx_df)))) {
+              stringr::str_sub(sfm[["variables"]][i, "eqn"], idx_df[j, "start"], idx_df[j, "end"]) <- change_name
+            }
+            
+            # Update Julia translation
+            idx_df <- get_range_names(sfm[["variables"]][i, "eqn_julia"], name, names_with_brackets = FALSE)
             if (nrow(idx_df) > 0) {
               # Reverse indices to replace correctly
-              for (i in rev(seq_len(nrow(idx_df)))) {
-                stringr::str_sub(x[["eqn"]], idx_df[i, "start"], idx_df[i, "end"]) <- change_name
-              }
-
-              # Update Julia translation
-              idx_df <- get_range_names(x[["eqn_julia"]], name, names_with_brackets = FALSE)
-              if (nrow(idx_df) > 0) {
-                # Reverse indices to replace correctly
-                for (i in rev(seq_len(nrow(idx_df)))) {
-                  stringr::str_sub(x[["eqn_julia"]], idx_df[i, "start"], idx_df[i, "end"]) <- change_name
-                }
+              for (j in rev(seq_len(nrow(idx_df)))) {
+                stringr::str_sub(sfm[["variables"]][i, "eqn_julia"], idx_df[j, "start"], idx_df[j, "end"]) <- change_name
               }
             }
           }
-          return(x)
-        })
-      })
-
-      name <- change_name
-
-      # Redo equation (below)
-      if (!"eqn" %in% passed_arg) {
-        eqn <- sfm[[P[["macro_name"]]]][[name]][["eqn"]]
-        passed_arg <- c(passed_arg, "eqn")
+        }
       }
-
-      # Update
-      var_names <- get_model_var(sfm)
-      idx_exist <- name %in% names(sfm[[P[["macro_name"]]]])
+      
+      # If no equation update requested, exit here
+      if (!"eqn" %in% passed_arg) {
+        sfm <- validate_xmile(sfm)
+        return(sfm)
+      }
+      
+      name <- change_name
+      idx_exist <- TRUE
     }
 
-    # Ensure names are valid of new variables
+    # Handle new macros or equation updates
+    argg <- list()
+    
+    # Ensure names are valid
     if (any(!idx_exist)) {
-      # Create syntactically valid, unique names (this also avoids overlap with previous names, but we stopped the function already if this is the case)
+      # Create syntactically valid, unique names
       new_names <- clean_name(name[!idx_exist], names_df[["name"]])
 
-      # Warning if specified name changed
-      report_name_change(name[!idx_exist], new_names)
+      # Report if name was changed for syntactic reasons
+      for (j in seq_along(name[!idx_exist])) {
+        if (name[!idx_exist][j] != new_names[j]) {
+          cli::cli_inform(c(
+            "i" = "Name changed for syntactic validity: {.val {name[!idx_exist][j]}} -> {.code {new_names[j]}}"
+          ))
+        }
+      }
 
-      # Change name
+      # Change name for new macros only
       name[!idx_exist] <- new_names
     }
 
-
+    # Process equation if provided
     if ("eqn" %in% passed_arg) {
       regex_units <- get_regex_units()
 
+      # Validate equations
       if (any(is.null(eqn))) {
-        warning("Equation cannot be NULL! Setting empty equations to 0...")
-        eqn[is.null(eqn)] <- "0.0"
+        cli::cli_abort("Macro equation cannot be NULL.")
       }
 
       if (any(!nzchar(eqn))) {
-        warning("Equation cannot be empty! Setting empty equations to 0...")
-        eqn[!nzchar(eqn)] <- "0.0"
+        cli::cli_abort("eqn cannot be an empty string.")
       }
 
       # Change all equations to characters
-      if (!is.null(eqn)) {
-        eqn <- as.character(eqn)
-      }
+      eqn <- as.character(eqn)
 
       # Ensure units are cleaned in u() in eqn
       eqn <- clean_unit_in_u(eqn, regex_units)
@@ -1001,12 +914,38 @@ macro <- function(sfm, name, eqn = "0.0", doc = "", change_name = NULL, erase = 
       argg[["doc"]] <- doc
     }
 
-    # new_macros <- purrr::transpose(argg) |> stats::setNames(name)
+    if ("units" %in% passed_arg) {
+      units <- ensure_length(units, name)
+      argg[["units"]] <- units
+    }
+
+    # Add default units if not provided
+    if ("eqn" %in% passed_arg && !"units" %in% names(argg)) {
+      argg[["units"]] <- rep("1", length(name))
+    }
+
+    # Convert to data frame format
     new_macros <- transpose_(argg) |> stats::setNames(name)
 
-    # Add elements to model (in for-loop, as otherwise not all elements are added or overwritten)
+    # Add or update elements in the macro data frame
     for (i in seq_along(name)) {
-      sfm[[P[["macro_name"]]]] <- utils::modifyList(sfm[[P[["macro_name"]]]], new_macros[i])
+      macro_name_i <- name[i]
+      
+      # Check if macro already exists
+      existing_idx <- which(sfm[[P[["macro_name"]]]][["name"]] == macro_name_i)
+      
+      if (length(existing_idx) > 0) {
+        # Update existing macro row (only update provided fields)
+        for (col in names(new_macros[[i]])) {
+          if (!is.null(new_macros[[i]][[col]])) {
+            sfm[[P[["macro_name"]]]][existing_idx, col] <- new_macros[[i]][[col]]
+          }
+        }
+      } else {
+        # Add new macro row
+        new_row <- as.data.frame(new_macros[[i]], stringsAsFactors = FALSE)
+        sfm[[P[["macro_name"]]]] <- bind_rows_(sfm[[P[["macro_name"]]]], new_row)
+      }
     }
   }
 
@@ -1046,7 +985,7 @@ header <- function(sfm, name = "My Model", caption = "My Model Description",
                    created = Sys.time(), author = "Me", version = "1.0", URL = "", doi = "", ...) {
   # Basic check
   if (missing(sfm)) {
-    stop("No model specified!")
+    cli::cli_abort("The {.arg sfm} argument is required.")
   }
 
   check_xmile(sfm)
@@ -1129,10 +1068,13 @@ sim_specs <- function(sfm,
                       # adaptive = FALSE,
                       seed = NULL,
                       time_units = "s",
-                      language = "R") {
+                      language = "R",
+                      keep_nonnegative_flow = TRUE,
+                      keep_nonnegative_stock = FALSE,
+                      keep_unit = TRUE) {
   # Basic check
   if (missing(sfm)) {
-    stop("No model specified!")
+    cli::cli_abort("The {.arg sfm} argument is required.")
   }
 
   check_xmile(sfm)
@@ -1145,26 +1087,39 @@ sim_specs <- function(sfm,
   if (!missing(start)) {
     start <- suppressWarnings(as.numeric(start))
     if (is.na(start)) {
-      stop("Start time must be a number!")
+      cli::cli_abort(c(
+        "Invalid {.arg start} argument.",
+        "x" = "The {.arg start} argument must be {.cls numeric}."
+      ))
     }
   }
 
   if (!missing(stop)) {
     stop <- suppressWarnings(as.numeric(stop))
     if (is.na(stop)) {
-      stop("Stop time must be a number!")
+      cli::cli_abort(c(
+        "Invalid {.arg stop} argument.",
+        "x" = "The {.arg stop} argument must be {.cls numeric}."
+      ))
     }
   }
 
   if (!missing(dt)) {
     dt <- suppressWarnings(as.numeric(dt))
     if (is.na(dt)) {
-      stop("dt must be a number!")
+      cli::cli_abort(c(
+        "Invalid {.arg dt} argument.",
+        "x" = "The {.arg dt} argument must be {.cls numeric}."
+      ))
     }
 
     if (dt != 1) {
       if (dt > .1) {
-        warning(paste0("Detected use of large timestep dt = ", dt, ". This will likely lead to inaccuracies in the simulation. Run sim_specs(sfm, save_at = ", dt, ") to reduce the size of the simulation data frame, and keep dt to a smaller value."))
+        cli::cli_warn(c(
+          "Large timestep detected ({.arg dt} = {.val {dt}}).",
+          "i" = "This may lead to simulation inaccuracies.",
+          ">" = "Consider using smaller timesteps for better accuracy."
+        ))
       }
     }
   }
@@ -1172,41 +1127,56 @@ sim_specs <- function(sfm,
   if (!missing(save_at)) {
     save_at <- suppressWarnings(as.numeric(save_at))
     if (is.na(save_at)) {
-      stop("save_at must be a number!")
+      cli::cli_abort(c(
+        "Invalid {.arg save_at} argument.",
+        "x" = "The {.arg save_at} argument must be {.cls numeric}."
+      ))
     }
   }
 
   if (!missing(save_from)) {
     save_from <- suppressWarnings(as.numeric(save_from))
     if (is.na(save_from)) {
-      stop("save_from must be a vector of two numbers!")
+      cli::cli_abort(c(
+        "Invalid {.arg save_from} argument.",
+        "x" = "The {.arg save_from} argument must be {.cls numeric}."
+      ))
     }
   }
 
   # Ensure time_units are formatted correctly
   if (!missing(time_units)) {
     if (length(time_units) != 1) {
-      stop("time_units must be a single string!")
+      cli::cli_abort(c(
+        "Invalid {.arg time_units} argument.",
+        "x" = "The {.arg time_units} argument must be a single {.cls character} string."
+      ))
     }
 
     # Time units can only contain letters or spaces
     if (any(grepl("[^a-zA-Z _]", time_units))) {
-      stop("time_units can only contain letters, spaces, or underscores!")
+      cli::cli_abort(c(
+        "Invalid {.arg time_units} format.",
+        "x" = "The {.arg time_units} argument can only contain letters, spaces, or underscores."
+      ))
     }
     regex_time_units <- get_regex_time_units()
     time_units <- clean_unit(time_units, regex_time_units) # Units are not used in R, so translate to julia directly
 
     if (!any(time_units == unname(regex_time_units))) {
-      stop(sprintf(
-        "The time unit %s is not one of the time units available in sdbuildR. The available time units are: %s", time_units,
-        paste0(unique(unname(regex_time_units)), collapse = ", ")
+      cli::cli_abort(c(
+        "Invalid time unit {.val {time_units}}.",
+        "i" = "Available time units are: {paste0(unique(unname(regex_time_units)), collapse = ', ')}"
       ))
     }
   }
 
   if ("method" %in% passed_arg) {
     if (is.null(method) || any(is.na(method)) || !inherits(method, "character") || length(method) > 1) {
-      stop("method must be a single string!")
+      cli::cli_abort(c(
+        "Invalid {.arg method} argument.",
+        "x" = "The {.arg method} argument must be a single {.cls character} string."
+      ))
     }
 
     method <- trimws(method)
@@ -1248,7 +1218,10 @@ sim_specs <- function(sfm,
       stop <- as.numeric(sfm[["sim_specs"]][["stop"]])
     }
     if (start >= stop) {
-      stop("Start time must be smaller than stop time!")
+      cli::cli_abort(c(
+        "Invalid time interval.",
+        "x" = "The {.arg start} ({.val {start}}) must be smaller than {.arg stop} ({.val {stop}})."
+      ))
     }
   }
 
@@ -1257,7 +1230,10 @@ sim_specs <- function(sfm,
       start <- as.numeric(sfm[["sim_specs"]][["start"]])
     }
     if (start >= stop) {
-      stop("Start time must be smaller than stop time!")
+      cli::cli_abort(c(
+        "Invalid time interval.",
+        "x" = "The {.arg start} ({.val {start}}) must be smaller than {.arg stop} ({.val {stop}})."
+      ))
     }
   }
 
@@ -1270,7 +1246,10 @@ sim_specs <- function(sfm,
       start <- as.numeric(sfm[["sim_specs"]][["start"]])
     }
     if (dt > (stop - start)) {
-      stop("dt must be smaller than the difference between start and stop!")
+      cli::cli_abort(c(
+        "Invalid {.arg dt} argument.",
+        "x" = "The {.arg dt} ({.val {dt}}) must be smaller than the time interval ({.arg stop} - {.arg start} = {.val {stop - start}})."
+      ))
     }
   }
 
@@ -1286,10 +1265,16 @@ sim_specs <- function(sfm,
       save_from <- as.numeric(sfm[["sim_specs"]][["save_from"]])
     }
     if (save_at > (stop - start)) {
-      stop("save_at must be smaller than the difference between start and stop!")
+      cli::cli_abort(c(
+        "Invalid {.arg save_at} argument.",
+        "x" = "The {.arg save_at} ({.val {save_at}}) must be smaller than the time interval ({.arg stop} - {.arg start} = {.val {stop - start}})."
+      ))
     }
     if (save_at > (stop - save_from)) {
-      stop("save_at must be smaller than the difference between save_from and stop!")
+      cli::cli_abort(c(
+        "Invalid {.arg save_at} argument.",
+        "x" = "The {.arg save_at} ({.val {save_at}}) must be smaller than the interval from {.arg save_from} ({.val {save_from}}) to {.arg stop} ({.val {stop}})."
+      ))
     }
   }
 
@@ -1297,14 +1282,17 @@ sim_specs <- function(sfm,
   if ("dt" %in% passed_arg) {
     if ("save_at" %in% passed_arg) {
       if (dt > save_at) {
-        warning("dt must be smaller or equal to save_at! Setting save_at equal to dt...")
+        cli::cli_warn(c(
+          "Invalid {.arg dt} and {.arg save_at} relationship.",
+          "x" = "{.arg dt} ({.val {dt}}) must be <= {.arg save_at} ({.val {save_at}}).",
+          "i" = "Automatically setting {.arg save_at} equal to {.arg dt}."
+        ))
         save_at <- dt
         passed_arg <- c(passed_arg, "save_at")
       }
     } else if (!"save_at" %in% passed_arg) {
       if (is_defined(sfm[["sim_specs"]][["save_at"]])) {
         if (dt > as.numeric(sfm[["sim_specs"]][["save_at"]])) {
-          # warning("dt must be smaller or equal to save_at! Setting save_at equal to dt...")
           save_at <- dt
           passed_arg <- c(passed_arg, "save_at")
         }
@@ -1317,7 +1305,11 @@ sim_specs <- function(sfm,
     # The above ifelse takes care of when save_at and dt are both not NULL; now only save_at can be not NULL
     if (is_defined(sfm[["sim_specs"]][["dt"]])) {
       if (save_at < as.numeric(sfm[["sim_specs"]][["dt"]])) {
-        warning("dt must be smaller or equal to save_at! Setting save_at equal to dt...")
+        cli::cli_warn(c(
+          "Invalid {.arg dt} and {.arg save_at} relationship.",
+          "x" = "{.arg dt} must be smaller than or equal to {.arg save_at}.",
+          "i" = "Automatically setting {.arg save_at} equal to {.arg dt}."
+        ))
         save_at <- dt
         passed_arg <- c(passed_arg, "save_at")
       }
@@ -1334,7 +1326,11 @@ sim_specs <- function(sfm,
     }
 
     if (save_from < start || save_from > stop) {
-      stop(paste0("save_from must be within the start (", start, ") and stop (", stop, ") time of the simulation!"))
+      cli::cli_abort(c(
+        "Invalid {.arg save_from} argument.",
+        "x" = "The {.arg save_from} ({.val {save_from}}) must be within the simulation time interval.",
+        "i" = "Must satisfy: {.val {start}} <= {.arg save_from} <= {.val {stop}}"
+      ))
     }
   } else {
     # Ensure that save_from stays within start and stop, also when save_from is not specified
@@ -1352,7 +1348,10 @@ sim_specs <- function(sfm,
         seed <- strtoi(seed)
 
         if (is.na(seed)) {
-          stop("seed must be an integer!")
+          cli::cli_abort(c(
+            "Invalid {.arg seed} argument.",
+            "x" = "The {.arg seed} argument must be an {.cls integer}."
+          ))
         }
         seed <- as.character(seed)
       } else {
@@ -1401,28 +1400,15 @@ sim_specs <- function(sfm,
 #' @noRd
 #'
 erase_var <- function(sfm, name) {
-  # Erase specified variables
-  sfm[["model"]][["variables"]] <- lapply(
-    sfm[["model"]][["variables"]],
-    function(x) {
-      # Remove variable from model
-      x <- x[!names(x) %in% name]
-
-      # Remove variable from to, from, source
-      lapply(x, function(y) {
-        if (is_defined(y[["to"]])) {
-          if (y[["to"]] %in% name) y[["to"]] <- NULL
-        }
-        if (is_defined(y[["from"]])) {
-          if (y[["from"]] %in% name) y[["from"]] <- NULL
-        }
-        if (is_defined(y[["source"]])) {
-          if (y[["source"]] %in% name) y[["source"]] <- NULL
-        }
-        return(y)
-      })
-    }
-  )
+  # Remove variables from the data frame
+  sfm[["variables"]] <- sfm[["variables"]][!sfm[["variables"]][["name"]] %in% name, ]
+  
+  # Remove references to these variables in 'to', 'from', 'source' columns
+  if (nrow(sfm[["variables"]]) > 0) {
+    sfm[["variables"]][sfm[["variables"]][["to"]] %in% name, "to"] <- ""
+    sfm[["variables"]][sfm[["variables"]][["from"]] %in% name, "from"] <- ""
+    sfm[["variables"]][sfm[["variables"]][["source"]] %in% name, "source"] <- ""
+  }
 
   sfm <- validate_xmile(sfm)
 
@@ -1441,10 +1427,9 @@ report_name_change <- function(old_names, new_names) {
   # Warning if specified name changed
   idx <- old_names != new_names
   if (any(idx)) {
-    warning(paste0(
-      ifelse(sum(idx) > 1, "Name was", "Names were"),
-      " changed to be syntactically valid and/or avoid overlap: ",
-      paste0(paste0(old_names[idx], " -> ", new_names[idx]), collapse = ", ")
+    cli::cli_warn(c(
+      "Name{ifelse(sum(idx) > 1, 's', '')} changed for syntactic validity or to avoid conflicts:",
+      "i" = paste0(paste0("{.val {", old_names[idx], "}} -> {.code ", new_names[idx], "}"), collapse = ", ")
     ))
   }
 
@@ -1595,617 +1580,6 @@ report_name_change <- function(old_names, new_names) {
 #' # Check for errors in the model
 #' debugger(sfm)
 #'
-build <- function(sfm, name, type,
-                  eqn = "0.0",
-                  units = "1",
-                  label = name,
-                  doc = "",
-                  change_name = NULL,
-                  change_type = NULL,
-                  erase = FALSE,
-                  to = NULL, from = NULL,
-                  non_negative = FALSE,
-                  xpts = NULL, ypts = NULL,
-                  source = NULL,
-                  interpolation = "linear",
-                  extrapolation = "nearest",
-                  df = NULL) {
-  # Basic check
-  if (missing(sfm)) {
-    stop("No model specified!")
-  }
-  check_xmile(sfm)
-
-  if (!is.null(df)) {
-    sfm <- add_from_df(sfm, df)
-    return(sfm)
-  }
-
-  if (missing(name)) {
-    stop("name must be specified!")
-  }
-
-  if (!(all(is.character(name)))) {
-    stop("name must be a character!")
-  }
-
-  name <- trimws(name)
-  if (!(all(nzchar(name)))) {
-    stop("name cannot be empty!")
-  }
-
-  label <- trimws(label)
-  if (!(all(nzchar(label)))) {
-    stop("label cannot be empty!")
-  }
-
-  # Remove variable from model
-  if (!is.null(erase)) {
-    if (length(erase) != 1) {
-      stop("erase must be a single logical value!")
-    }
-
-    if (!is.logical(erase)) {
-      stop("erase must be TRUE or FALSE!")
-    }
-  }
-
-  # Get names data.frame
-  names_df <- get_names(sfm)
-  var_names <- names_df[["name"]]
-
-  # Get names of passed arguments
-  passed_arg <- names(as.list(match.call())[-1]) |> # Remove function name with -1
-    # Remove some arguments
-    setdiff(c("sfm", "erase", "change_name", "change_type"))
-
-  # Find variables which already exist
-  idx_exist <- name %in% var_names
-
-  # Check if name does not exists and type is missing
-  if (missing(type)) {
-    # If type is not specified, all names have to exist
-    if (any(!idx_exist)) {
-      stop(sprintf(
-        "The variable%s %s %s not exist in your model! If you're trying to add a new variable, specify type (one of 'stock', 'flow', 'constant', 'aux', 'gf').",
-        ifelse(length(name[!idx_exist]) > 1, "s", ""),
-        paste0(name[!idx_exist], collapse = ", "),
-        ifelse(length(name[!idx_exist]) > 1, "do", "does")
-      ))
-    }
-
-    # Find corresponding building block
-    type <- names_df[match(name, names_df[["name"]]), "type"]
-  } else if (!missing(type)) {
-    type <- clean_type(type)
-
-    if (!all(type %in% c("stock", "flow", "constant", "aux", "gf"))) {
-      stop("type needs to be one of 'stock', 'flow', 'constant', 'aux', or 'gf'!")
-    }
-    type <- ensure_length(type, name)
-
-    # If type is specified, and name already exists, but it doesn't match that type, stop
-    match_type <- names_df[match(name, names_df[["name"]]), "type"]
-
-    nonmatching_type <- idx_exist & type != match_type
-
-    if (any(nonmatching_type)) {
-      if (erase) {
-        stop(paste0(
-          "These variables exist in your model but not as the type specified:\n- ",
-          paste0(paste0(name[nonmatching_type], " (type: ", match_type[nonmatching_type], ")"), collapse = ", ")
-        ))
-      } else {
-        stop(paste0(
-          "These variables already exist in your model, but not as the type specified. Either omit the type to modify the variable, or specify a unique variable name to add a new variable of that type:\n- ",
-          paste0(paste0(name[nonmatching_type], " (type: ", match_type[nonmatching_type], ")"), collapse = ", ")
-        ))
-      }
-    }
-
-    # Ensure names are valid of new variables
-    if (any(!idx_exist)) {
-      # Create syntactically valid, unique names (this also avoids overlap with previous names, but we stopped the function already if this is the case)
-      new_names <- clean_name(name[!idx_exist], names_df[["name"]])
-
-      # Warning if specified name changed
-      report_name_change(name[!idx_exist], new_names)
-
-      # Change name
-      name[!idx_exist] <- new_names
-    }
-  }
-
-  # Remove variable
-  if (erase) {
-    # For erase, all names have to exist
-    if (any(!idx_exist)) {
-      stop(sprintf(
-        "The variable%s %s %s not exist in your model!",
-        ifelse(length(name[!idx_exist]) > 1, "s", ""),
-        paste0(name[!idx_exist], collapse = ", "),
-        ifelse(length(name[!idx_exist]) > 1, "do", "does")
-      ))
-    }
-
-    sfm <- erase_var(sfm, name)
-    return(sfm)
-  }
-
-  # Check change name of variable
-  if (!is.null(change_name)) {
-    if (length(change_name) > 1 || length(name) > 1) {
-      stop("You can only change the name of one variable at a time!")
-    }
-
-    if (!nzchar(trimws(change_name))) {
-      stop("change_name cannot be empty!")
-    }
-  }
-
-  # Check change type of variable
-  if (!is.null(change_type)) {
-    if (length(change_type) > 1 || length(name) > 1) {
-      stop("You can only change the type of one variable at a time!")
-    }
-
-    change_type <- clean_type(change_type)
-    if (!change_type %in% c("stock", "flow", "constant", "aux", "gf")) {
-      stop("change_type needs to be one of 'stock', 'flow', 'constant', 'aux', or 'gf'!")
-    }
-  }
-
-
-  # Get properties per building block
-  keep_prop <- get_building_block_prop()
-
-  # Check whether appropriate properties were passed for this variable type; issue warning if not
-  if (is.null(change_type)) {
-    type_ <- type
-  } else {
-    type_ <- change_type
-  }
-
-  appr_prop <- Reduce(intersect, keep_prop[type_])
-  idx_inappr <- !(passed_arg %in% appr_prop)
-  if (any(idx_inappr)) {
-    warning(sprintf(
-      "These properties are not appropriate for %s specified type%s (%s):\n- %s\nThese will be ignored.",
-      ifelse(length(unique(type_)) > 1, "all", "the"),
-      ifelse(length(unique(type_)) > 1, "s", ""),
-      paste0(unique(type_), collapse = ", "), paste0(passed_arg[idx_inappr], collapse = ", ")
-    ))
-  }
-
-  # Flow properties
-  if ("to" %in% passed_arg) {
-    if (is.null(to)) {
-      to <- ""
-    }
-
-    to[is.na(to)] <- ""
-
-    if (!inherits(to, "character")) {
-      stop("to must be a character!")
-    }
-
-    if (length(name) == 1 && length(to) > 1) {
-      stop("A flow may only have one target!")
-    }
-
-    to <- ensure_length(to, name)
-
-    if (any(to == name)) {
-      stop("A flow cannot flow to itself!")
-    }
-  }
-
-  if ("from" %in% passed_arg) {
-    if (is.null(from)) {
-      from <- ""
-    }
-
-    from[is.na(from)] <- ""
-
-    if (!inherits(from, "character")) {
-      stop("from must be a character!")
-    }
-
-    if (length(name) == 1 && length(from) > 1) {
-      stop("A flow may only have one source!")
-    }
-
-    from <- ensure_length(from, name)
-
-    if (any(from == name)) {
-      stop("A flow cannot flow from itself!")
-    }
-  }
-
-  # Ensure to and from are not the same
-  if (!is.null(to) && !is.null(from)) {
-    if (any(to == from)) {
-      stop("A flow cannot flow to and from the same stock!")
-    }
-  }
-
-
-  # Graphical functions
-  if (any(type == "gf")) {
-    if (length(name) != 1) {
-      stop("Vectorized building is not supported for graphical functions.\nPlease build one graphical function at a time.")
-    }
-
-    if (!idx_exist && is.null(xpts) && is.null(ypts)) {
-      stop("xpts and ypts must be specified for graphical functions!")
-    } else if (!idx_exist && is.null(xpts) && !is.null(ypts)) {
-      stop("xpts must be specified for graphical functions!")
-    } else if (!idx_exist && is.null(ypts) && !is.null(xpts)) {
-      stop("ypts must be specified for graphical functions!")
-    } else if (idx_exist) {
-      # xpts and ypts are obligatory arguments for gf
-      # If variable already exists, find xpts and ypts to ensure later
-      # modifications still create valid gf
-
-      if (is.null(xpts) && !is.null(ypts)) {
-        xpts <- sfm[["model"]][["variables"]][["gf"]][[name]][["xpts"]]
-      } else if (is.null(ypts) && !is.null(xpts)) {
-        ypts <- sfm[["model"]][["variables"]][["gf"]][[name]][["ypts"]]
-      }
-    }
-
-    if (!is.null(xpts) && !is.null(ypts)) {
-      # Split xpts and ypts temporarily to check length
-      if (inherits(xpts, "character")) {
-        xpts <- trimws(xpts)
-        xpts <- gsub("^c\\(", "", xpts)
-        xpts <- gsub("\\)$", "", xpts)
-        xpts <- strsplit(xpts, ",")[[1]]
-        xpts <- trimws(xpts)
-      }
-
-      if (inherits(ypts, "character")) {
-        ypts <- trimws(ypts)
-        ypts <- gsub("^c\\(", "", ypts)
-        ypts <- gsub("\\)$", "", ypts)
-        ypts <- strsplit(ypts, ",")[[1]]
-        ypts <- trimws(ypts)
-      }
-
-      if (length(xpts) != length(ypts)) {
-        # Ensure length of xpts and ypts for graphical functions is the same
-        stop(paste0(
-          "For graphical functions, the length of xpts must match that of ypts.\n",
-          paste0("The length of xpts is ", length(xpts),
-            "; the length of ypts is ", length(ypts), ".",
-            collapse = "\n"
-          )
-        ))
-      }
-
-      if (length(xpts) > 1) {
-        xpts <- paste0("c(", paste0(xpts, collapse = ", "), ")")
-      }
-
-      if (length(ypts) > 1) {
-        ypts <- paste0("c(", paste0(ypts, collapse = ", "), ")")
-      }
-    }
-
-    interpolation <- tolower(interpolation)
-
-    if (length(interpolation) > 1) {
-      stop("interpolation must be a single value!")
-    }
-
-    if (!interpolation %in% c("linear", "constant")) {
-      stop(sprintf("interpolation must be 'linear' or 'constant'!"))
-    }
-
-    if (length(extrapolation) > 1) {
-      stop("extrapolation must be a single value!")
-    }
-
-    if (!extrapolation %in% c("nearest", "NA")) {
-      stop(sprintf("extrapolation must be either 'nearest' or 'NA'!"))
-    }
-
-    if (!is.null(source)) {
-      if (!inherits(source, "character")) {
-        stop("source must be a character!")
-      }
-
-      # Ensure source is a single value
-      if (length(source) > 1) {
-        stop("source must be a single value!")
-      }
-    }
-  }
-
-  # If overwriting name with change_name
-  if (!is.null(change_name)) {
-    # Ensure new name is syntactically valid
-    chosen_new_name <- change_name
-    change_name <- clean_name(change_name, names_df[["name"]])
-    report_name_change(chosen_new_name, change_name)
-
-    # Overwrite name
-    variable_names <- names(sfm[["model"]][["variables"]][[type]])
-    variable_names[variable_names == name] <- change_name
-    names(sfm[["model"]][["variables"]][[type]]) <- variable_names
-    sfm[["model"]][["variables"]][[type]][[change_name]][["name"]] <- change_name
-
-    # Overwrite label in case it was the same as the old name
-    if ("label" %in% passed_arg) {
-      sfm[["model"]][["variables"]][[type]][[change_name]][["label"]] <- label
-    } else {
-      if (sfm[["model"]][["variables"]][[type]][[change_name]][["label"]] == name) {
-        sfm[["model"]][["variables"]][[type]][[change_name]][["label"]] <- change_name
-      }
-    }
-
-    # Replace references to name with change_name everywhere (eqn, from, to, source)
-    sfm[["model"]][["variables"]] <- lapply(sfm[["model"]][["variables"]], function(y) {
-      lapply(y, function(x) {
-        if (is_defined(x[["eqn"]])) {
-          idx_df <- get_range_names(x[["eqn"]], name,
-            names_with_brackets = FALSE
-          )
-          if (nrow(idx_df) > 0) {
-            # Reverse indices to replace correctly
-            for (i in rev(seq_len(nrow(idx_df)))) {
-              stringr::str_sub(x[["eqn"]], idx_df[i, "start"], idx_df[i, "end"]) <- change_name
-            }
-
-            # Update julia translation
-            idx_df <- get_range_names(x[["eqn_julia"]], name,
-              names_with_brackets = FALSE
-            )
-            if (nrow(idx_df) > 0) {
-              # Reverse indices to replace correctly
-              for (i in rev(seq_len(nrow(idx_df)))) {
-                stringr::str_sub(x[["eqn_julia"]], idx_df[i, "start"], idx_df[i, "end"]) <- change_name
-              }
-            }
-          }
-        }
-        if (is_defined(x[["from"]])) {
-          if (x[["from"]] == name) x[["from"]] <- change_name
-        }
-        if (is_defined(x[["to"]])) {
-          if (x[["to"]] == name) x[["to"]] <- change_name
-        }
-        if (is_defined(x[["source"]])) {
-          if (x[["source"]] == name) x[["source"]] <- change_name
-        }
-        return(x)
-      })
-    })
-
-    name <- change_name
-
-    # Update
-    var_names <- get_model_var(sfm)
-    idx_exist <- name %in% var_names
-
-    # Redo equation (in case of delay variables, the names need to be updated to get the correct suffix, e.g. "a" -> "b" needs new delay names "b_delay1_acc1", etc.; in addition, some types can't have delays)
-
-    if (!"eqn" %in% passed_arg) {
-      eqn <- sfm[["model"]][["variables"]][[type]][[name]][["eqn"]]
-      passed_arg <- c(passed_arg, "eqn")
-    }
-  }
-
-  # Change type of building block
-  if (!is.null(change_type)) {
-    if (type != change_type) {
-      old_prop <- sfm[["model"]][["variables"]][[type]][[name]]
-
-      updated_defaults <- utils::modifyList(formals(build), old_prop)
-      updated_defaults <- updated_defaults[names(updated_defaults) %in% keep_prop[[change_type]]]
-      updated_defaults <- updated_defaults[!lengths(updated_defaults) == 0]
-
-      # Remove old part
-      sfm[["model"]][["variables"]][[type]][name] <- NULL
-
-      # Add new part
-      sfm[["model"]][["variables"]][[change_type]][[name]] <- updated_defaults
-
-      type <- change_type
-
-      # Redo equation (in case of delay variables, the names need to be updated to get the correct suffix, e.g. "a" -> "b" needs new delay names "b_delay1_acc1", etc.; in addition, some types can't have delays)
-      if (!"eqn" %in% passed_arg) {
-        eqn <- sfm[["model"]][["variables"]][[type]][[name]][["eqn"]]
-        passed_arg <- c(passed_arg, "eqn")
-      }
-    }
-  }
-
-
-  # Only need regex_units if any of the following are passed
-  if (any(c("eqn", "units") %in% passed_arg)) {
-    regex_units <- get_regex_units()
-  }
-
-
-  if ("eqn" %in% passed_arg) {
-    if (is.null(eqn)) {
-      warning("eqn cannot be NULL! Setting empty equation to 0...")
-      eqn <- "0.0"
-    }
-
-    if (any(is.na(eqn))) {
-      warning("eqn cannot be NA! Setting equations to 0...")
-      eqn[is.na(eqn)] <- "0.0"
-    }
-
-    if (any(!nzchar(eqn))) {
-      warning("eqn cannot be empty! Setting empty equations to 0...")
-      eqn[!nzchar(eqn)] <- "0.0"
-    }
-
-    # Change all equations to characters
-    eqn <- as.character(eqn)
-
-    if (any(grepl("^[ ]*function[ ]*\\(", eqn))) {
-      stop("Model variables cannot be functions! To add a custom function, use macro().")
-    }
-
-
-    # Ensure units are cleaned in u() in eqn
-    eqn <- clean_unit_in_u(eqn, regex_units)
-    eqn <- ensure_length(eqn, name)
-
-    # Convert to julia - note that with delay() and past(), an intermediary property is added; with delayN() and smoothN(), a func property (nested list) is added
-    eqn_julia <- lapply(seq_along(name), function(i) {
-      convert_equations_julia(type[i], name[i], eqn[i], var_names,
-        regex_units = regex_units
-      )
-    }) |> unname()
-
-    # Remove old func list
-    for (i in length(name)) {
-      sfm[["model"]][["variables"]][[type[i]]][[name[i]]][["func"]] <- NULL
-    }
-  }
-
-  # Units
-  if (!is.null(units)) {
-    if (!inherits(units, "character")) {
-      units <- as.character(units)
-    }
-
-    # Set empty unit to 1
-    if (any(!nzchar(units))) {
-      units[!nzchar(units)] <- "1"
-    }
-
-    # Units are not supported well in R, so translate to Julia directly
-    units <- vapply(units, function(x) {
-      clean_unit(x, regex_units)
-    }, character(1), USE.NAMES = FALSE)
-    units <- ensure_length(units, name)
-  }
-
-  if ("non_negative" %in% passed_arg) {
-    if (!all(is.logical(non_negative))) {
-      stop("non_negative must be either TRUE or FALSE!")
-    }
-    non_negative <- ensure_length(non_negative, name)
-  }
-
-  if ("label" %in% passed_arg) {
-    if (!inherits(label, "character")) {
-      stop("label must be a character!")
-    }
-    label <- ensure_length(label, name)
-  }
-
-  if ("doc" %in% passed_arg) {
-    if (!inherits(doc, "character")) {
-      stop("doc must be a character!")
-    }
-    doc <- ensure_length(doc, name)
-  }
-
-
-  # Collect all arguments in environment but only keep those that were passed
-  argg <- c(as.list(environment()))[unique(passed_arg)]
-  argg[["type"]] <- type # Keep type for ease
-
-  # Create nested 3-level list with all model entries
-  # new_element <- purrr::transpose(argg) |> lapply(list)
-  new_element <- transpose_(argg) |> lapply(list)
-
-  new_element <- lapply(seq_along(new_element), function(y) {
-    # Create three named levels: type, name, properties
-
-    # Make sure each model element only has appropriate entries
-    x <- new_element[[y]]
-
-    keep_prop_y <- keep_prop[[type[y]]]
-    keep_x <- x[[1]][names(x[[1]]) %in% keep_prop_y]
-
-    # Add converted Julia equation
-    if ("eqn" %in% passed_arg) {
-      keep_x <- utils::modifyList(keep_x, eqn_julia[[y]])
-    }
-
-    stats::setNames(list(keep_x), name[y])
-  }) |> stats::setNames(type)
-
-  # Add elements to model (in for-loop, as otherwise not all elements are added)
-  for (i in seq_along(name)) {
-    sfm[["model"]][["variables"]] <- utils::modifyList(
-      sfm[["model"]][["variables"]],
-      new_element[i]
-    )
-  }
-
-  sfm <- validate_xmile(sfm)
-
-  return(sfm)
-}
-
-
-#' Add and/or modify model from data frame
-#'
-#' @inheritParams build
-#'
-#' @returns A stock-and-flow model object of class [`sdbuildR_xmile`][xmile]
-#' @noRd
-#'
-add_from_df <- function(sfm, df) {
-  if (!inherits(df, "data.frame")) {
-    stop("df must be a data.frame!")
-  }
-
-  # Get all properties
-  prop <- get_building_block_prop()
-
-  # Check whether dataframe has necessary columns
-  nec_prop <- c("type", "name")
-
-  if (!all(nec_prop %in% colnames(df))) {
-    stop("Please specify ", paste0(nec_prop, collapse = ", "), call. = FALSE)
-  }
-
-  # Check whether dataframe has columns only in prop
-  idx <- !colnames(df) %in% unique(unlist(prop))
-  if (any(idx)) {
-    stop(
-      paste0(
-        "The following column names are not valid properties: ",
-        paste0(colnames(df)[idx], collapse = ", ")
-      ),
-      call. = FALSE
-    )
-  }
-
-  # Add each row
-  for (i in seq_len(nrow(df))) {
-    arg <- as.list(df[i, ])
-    arg <- arg[!is.na(arg)]
-
-    # Only keep appropriate properties for this type
-    arg <- arg[names(arg) %in% prop[[arg[["type"]]]]]
-
-    arg[["sfm"]] <- sfm
-    # sfm <- do.call(sdbuildR::build, arg)
-    sfm <- do.call(build, arg)
-  }
-
-  sfm <- validate_xmile(sfm)
-
-  return(sfm)
-}
-
-
-#' Get possible variable properties per building block type
-#'
-#' @returns List with default properties per building block type
-#' @noRd
-#'
 get_building_block_prop <- function() {
   return(list(
     "stock" = c(
@@ -2281,18 +1655,19 @@ debugger <- function(sfm, quietly = FALSE) {
   check_xmile(sfm)
 
   if (!is.logical(quietly)) {
-    stop("quietly must be TRUE or FALSE!")
+    cli::cli_abort(c(
+      "Invalid {.arg quietly} argument.",
+      "x" = "Must be {.code TRUE} or {.code FALSE}."
+    ))
   }
 
   problems <- c()
   potential_problems <- c()
 
-  # constant_names <- names(sfm[["model"]][["variables"]][["constant"]])
-  # aux_names <- names(sfm[["model"]][["variables"]][["aux"]])
-  stock_names <- names(sfm[["model"]][["variables"]][["stock"]])
+  # Get stock and flow names
+  stock_names <- sfm[["variables"]][sfm[["variables"]][["type"]] == "stock", "name"]
   flow_df <- get_flow_df(sfm)
   flow_names <- flow_df[["name"]]
-  # names_df <- get_names(sfm)
 
   ### Check whether all Stocks have inflows and/or outflows
   if (length(stock_names) > 0 && nrow(flow_df) > 0) {
@@ -2307,7 +1682,6 @@ debugger <- function(sfm, quietly = FALSE) {
   } else if (length(stock_names) == 0) {
     problems <- c(problems, "* Your model has no stocks.")
   }
-
 
   ### Check whether all flows either have a from or to property
   if (length(flow_names) > 0) {
@@ -2330,37 +1704,36 @@ debugger <- function(sfm, quietly = FALSE) {
         paste0(c(flow_names[idx_to], flow_names[idx_from]), collapse = ", ")
       ))
     }
-
-    ### Find whether both flows and stocks have units
-    # flows_units <- names_df[match(flow_names, names_df[["name"]]), "units"]
-    # stock_units <- names_df[match(stock_names, names_df[["name"]]), "units"]
   } else {
     potential_problems <- c(potential_problems, "* Your model has no flows.")
   }
 
-
   ### Check equations with zero
-  zero_eqn <- lapply(unname(sfm[["model"]][["variables"]]), function(y) {
-    lapply(y, function(x) {
-      if (is_defined(x[["eqn"]])) {
-        if (x[["eqn"]] == "0" | x[["eqn"]] == "0.0") {
-          return(x[["name"]])
-        }
-      }
-      return(NULL)
-    })
-  }) |>
-    unlist() |>
-    compact_()
-
-  if (length(zero_eqn) > 0) {
+  zero_idx <- sfm[["variables"]][["eqn"]] %in% c("0", "0.0")
+  if (any(zero_idx)) {
+    zero_eqn <- sfm[["variables"]][zero_idx, "name"]
     potential_problems <- c(
       potential_problems,
       paste0(
         "* These variables have an equation of 0:\n- ",
-        paste0(unname(zero_eqn), collapse = ", ")
+        paste0(zero_eqn, collapse = ", ")
       )
     )
+  }
+
+  ### Check for missing equations in dynamic variables
+  eqn_vec <- sfm[["variables"]][["eqn"]]
+  eqn_vec[is.na(eqn_vec)] <- ""
+
+  missing_eqn_idx <- sfm[["variables"]][["type"]] %in% c("flow", "aux", "constant", "gf") &
+    (!nzchar(eqn_vec))
+
+  if (any(missing_eqn_idx)) {
+    missing_eqn <- sfm[["variables"]][missing_eqn_idx, "name"]
+    problems <- c(problems, paste0(
+      "* eqn cannot be an empty string. Missing for: ",
+      paste0(missing_eqn, collapse = ", ")
+    ))
   }
 
   ### Detect undefined variable references in equations
@@ -2369,53 +1742,37 @@ debugger <- function(sfm, quietly = FALSE) {
     problems <- c(problems, paste0("* ", out[["msg"]]))
   }
 
-  # ### Detect whether static variables depend on dynamic ones
-  # out = static_depend_on_dyn(sfm)
-  # if (out[["issue"]]){
-  #   potential_problems = c(potential_problems, paste0("* ",  out[["msg"]]))
-  # }
-
   ### Detect circularity in equations
   out <- order_equations(sfm, print_msg = FALSE)
   if (out[["static"]][["issue"]]) {
     problems <- c(
       problems,
-      paste0("* ",
-        # "* Ordering static equations failed. ",
-        out[["static"]][["msg"]],
-        collapse = ""
-      )
+      paste0("* ", out[["static"]][["msg"]], collapse = "")
     )
   }
   if (out[["dynamic"]][["issue"]]) {
     problems <- c(
       problems,
-      paste0("* ",
-        # "* Ordering dynamic equations failed. ",
-        out[["dynamic"]][["msg"]],
-        collapse = ""
-      )
+      paste0("* ", out[["dynamic"]][["msg"]], collapse = "")
     )
   }
-
 
   ### Find missing unit definitions
   regex_units <- get_regex_units()
 
   # Check whether all units are defined
-  add_model_units <- detect_undefined_units(sfm,
-    new_eqns = c(
-      sfm[["model"]][["variables"]] |>
-        lapply(function(x) {
-          lapply(x, `[[`, "eqn_julia")
-        }) |> unlist(),
-      unlist(lapply(sfm[[P[["macro_name"]]]], `[[`, "eqn_julia"))
-    ),
-    new_units = sfm[["model"]][["variables"]] |>
-      lapply(function(x) {
-        lapply(x, `[[`, "units")
-      }) |> unlist(),
-    regex_units = regex_units, R_or_Julia = "Julia"
+  macro_eqns <- if (nrow(sfm[[P[["macro_name"]]]]) > 0 && "eqn_julia" %in% names(sfm[[P[["macro_name"]]]])) {
+    sfm[[P[["macro_name"]]]][["eqn_julia"]]
+  } else {
+    character(0)
+  }
+
+  add_model_units <- detect_undefined_units(
+    sfm,
+    new_eqns = c(sfm[["variables"]][["eqn_julia"]], macro_eqns),
+    new_units = sfm[["variables"]][["units"]],
+    regex_units = regex_units,
+    R_or_Julia = "Julia"
   )
   if (length(add_model_units) > 0) {
     problems <- c(problems, paste0(
@@ -2424,20 +1781,18 @@ debugger <- function(sfm, quietly = FALSE) {
     ))
   }
 
-
   if (!quietly && length(problems) > 0) {
-    message("Problems:")
-    message(paste0(problems, collapse = "\n\n"))
+    cli::cli_inform("Problems:")
+    cli::cli_inform(paste0(problems, collapse = "\n\n"))
   } else if (!quietly) {
-    message("No problems detected!")
+    cli::cli_inform("No problems detected!")
   }
 
   if (!quietly && length(potential_problems) > 0) {
     prefix <- ifelse(!quietly & length(problems) > 0, "\n", "")
-    message(paste0(prefix, "Potentially problematic:"))
-    message(paste0(potential_problems, collapse = "\n\n"))
+    cli::cli_inform(paste0(prefix, "Potentially problematic:"))
+    cli::cli_inform(paste0(potential_problems, collapse = "\n\n"))
   }
-
 
   if (quietly) {
     return(list(
@@ -2457,24 +1812,24 @@ debugger <- function(sfm, quietly = FALSE) {
 #' @noRd
 #' @returns Logical value
 static_depend_on_dyn <- function(sfm) {
-  # Check whether a stock depends on a dynamic variable, give warning
-  dependencies <- sfm[["model"]][["variables"]][c("stock", "constant")] |>
-    unname() |>
-    flatten() |>
-    # purrr::list_flatten() |>
-    lapply(`[[`, "eqn") |>
-    find_dependencies_(sfm, eqns = _, only_model_var = TRUE)
-
-  names_df <- get_names(sfm)
-  dynamic_var <- names_df[names_df[["type"]] %in% c("aux", "flow"), "name"]
-
+  # Get static and dynamic variable names
+  static_idx <- sfm[["variables"]][["type"]] %in% c("stock", "constant")
+  dynamic_idx <- sfm[["variables"]][["type"]] %in% c("aux", "flow")
+  
+  static_vars <- sfm[["variables"]][static_idx, ]
+  dynamic_var <- sfm[["variables"]][dynamic_idx, "name"]
+  
+  # Check dependencies
+  dependencies <- find_dependencies_(sfm, eqns = static_vars[["eqn"]], only_model_var = TRUE)
+  names(dependencies) <- static_vars[["name"]]
+  
   static_with_dyn_dep <- lapply(dependencies, function(x) {
     x[x %in% dynamic_var]
   }) |> compact_()
 
   if (length(static_with_dyn_dep) > 0) {
     static_with_dyn_dep <- vapply(static_with_dyn_dep, paste0, character(1), collapse = ", ")
-    stock_or_constant <- names_df[match(names(static_with_dyn_dep), names_df[["name"]]), "type"]
+    stock_or_constant <- sfm[["variables"]][match(names(static_with_dyn_dep), sfm[["variables"]][["name"]]), "type"]
 
     msg <- paste0(
       c(
@@ -2540,75 +1895,58 @@ as.data.frame.sdbuildR_xmile <- function(x,
     type <- clean_type(type)
 
     if (length(type) == 0) {
-      stop("At least one type must be specified!")
+      cli::cli_abort("At least one {.arg type} must be specified")
     }
 
     if (!all(type %in% c("stock", "flow", "constant", "aux", "gf", "model_units", "macro"))) {
-      stop("type needs to be one or more of 'stock', 'flow', 'constant', 'aux', 'gf', 'macro', or 'model_units'.")
+      cli::cli_abort(c(
+        "Invalid {.arg type} value.",
+        "x" = "Must be one or more of {.code 'stock'}, {.code 'flow'}, {.code 'constant'}, {.code 'aux'}, {.code 'gf'}, {.code 'macro'}, or {.code 'model_units'}."
+      ))
     }
   }
 
   df <- data.frame()
 
-  # Add model variables
-  nr_var <- sum(lengths(sfm[["model"]][["variables"]]))
-  if ((is.null(type) || any(c("stock", "flow", "constant", "aux", "gf") %in% type)) && nr_var > 0) {
+  # Add model variables - already in data frame format!
+  if ((is.null(type) || any(c("stock", "flow", "constant", "aux", "gf") %in% type)) && nrow(sfm[["variables"]]) > 0) {
+    var_df <- sfm[["variables"]]
+    
+    # Filter by type if specified
     if (!is.null(type)) {
-      sfm[["model"]][["variables"]] <- sfm[["model"]][["variables"]][type[type %in% c("stock", "flow", "constant", "aux", "gf")]]
+      var_types <- type[type %in% c("stock", "flow", "constant", "aux", "gf")]
+      var_df <- var_df[var_df[["type"]] %in% var_types, , drop = FALSE]
     }
-
-    # Remove func
-    sfm[["model"]][["variables"]] <- lapply(
-      sfm[["model"]][["variables"]],
-      function(y) {
-        lapply(y, function(x) {
-          x["translated_func"] <- NULL
-          x["func"] <- NULL
-
-          if (x[["type"]] == "gf") {
-            x[["xpts"]] <- paste0(x[["xpts"]], collapse = ", ")
-            x[["ypts"]] <- paste0(x[["ypts"]], collapse = ", ")
-          }
-
-          return(x)
+    
+    # Convert list-columns to character strings for display
+    if (nrow(var_df) > 0) {
+      gf_idx <- var_df[["type"]] == "gf"
+      if (any(gf_idx)) {
+        var_df[gf_idx, "xpts"] <- lapply(var_df[gf_idx, "xpts"], function(x) {
+          paste0(x, collapse = ", ")
+        })
+        var_df[gf_idx, "ypts"] <- lapply(var_df[gf_idx, "ypts"], function(x) {
+          paste0(x, collapse = ", ")
         })
       }
-    )
-
-    # Create dataframe with model variable properties
-    # model_df <- lapply(compact_(sfm[["model"]][["variables"]]), function(x) {
-    #     as.data.frame(do.call(dplyr::bind_rows, x))
-    #   }) |> do.call(dplyr::bind_rows, args = _)
-    # df <- dplyr::bind_rows(df, model_df)
-
-    model_df <- bind_rows_(
-      lapply(compact_(sfm[["model"]][["variables"]]), function(x) {
-        bind_rows_(x)
-      })
-    )
-    df <- bind_rows_(df, model_df)
+    }
+    
+    df <- bind_rows_(df, var_df)
   }
 
   # Add model units
-  if ((is.null(type) || "model_units" %in% type) && length(sfm[["model_units"]]) > 0) {
-    units_df <- bind_rows_(sfm[["model_units"]]) # as.data.frame(do.call(dplyr::bind_rows, sfm[["model_units"]]))
+  if ((is.null(type) || "model_units" %in% type) && nrow(sfm[["model_units"]]) > 0) {
+    units_df <- sfm[["model_units"]]
     units_df[["prefix"]] <- NULL
     units_df[["type"]] <- "model_units"
-    # df <- dplyr::bind_rows(df, units_df)
     df <- bind_rows_(df, units_df)
   }
 
   # Add macros
-  if ((is.null(type) || P[["macro_name"]] %in% type) && length(sfm[[P[["macro_name"]]]]) > 0) {
-    sfm[[P[["macro_name"]]]] <- lapply(sfm[[P[["macro_name"]]]], function(x) {
-      # Remove func
-      x["func"] <- NULL
-      return(x)
-    })
-
-    macro_df <- bind_rows_(sfm[[P[["macro_name"]]]])
+  if ((is.null(type) || P[["macro_name"]] %in% type) && nrow(sfm[[P[["macro_name"]]]]) > 0) {
+    macro_df <- sfm[[P[["macro_name"]]]]
     macro_df[["type"]] <- P[["macro_name"]]
-    df <- bind_rows_(df, macro_df) # dplyr::bind_rows(df, macro_df)
+    df <- bind_rows_(df, macro_df)
   }
 
   if (nrow(df) == 0) {
@@ -2617,16 +1955,18 @@ as.data.frame.sdbuildR_xmile <- function(x,
 
   # Only keep specified names
   if (!is.null(name)) {
-    # Check if names exist
+
+    # Clean names
     name <- Filter(nzchar, unique(name))
 
     if (length(name) == 0) {
-      stop("At least one name must be specified!")
+      cli::cli_abort("At least one {.arg name} must be specified")
     }
 
+    # Check if names exist
     idx_exist <- name %in% df[["name"]]
     if (!all(idx_exist)) {
-      stop(sprintf(
+      cli::cli_abort(sprintf(
         "The variable%s %s %s not exist in your model!",
         ifelse(length(name[!idx_exist]) > 1, "s", ""),
         paste0(name[!idx_exist], collapse = ", "),
@@ -2639,20 +1979,27 @@ as.data.frame.sdbuildR_xmile <- function(x,
     }
   }
 
+  # Only keep columns that correspond to build() parameters
+  allowed_props <- names(formals(build)) |>
+    setdiff(c("sfm", "change_name", "change_type", "erase", "df", "..."))
+  df <- df[, intersect(allowed_props, names(df)), drop = FALSE]
+
   # Only keep specified properties
   if (!is.null(properties)) {
     # Check if properties exist
     properties <- Filter(nzchar, unique(tolower(properties)))
     if (length(properties) == 0) {
-      stop("At least one property must be specified!")
+      cli::cli_abort("At least one property must be specified")
     }
 
-    existing_prop <- Reduce(union, get_building_block_prop())
+    # Internal properties that shouldn't be exposed to users
+    internal_props <- c("eqn_julia", "prefix")
+    existing_prop <- setdiff(Reduce(union, get_building_block_prop()), internal_props)
     idx_exist <- properties %in% existing_prop
     # prop_in_df <- properties %in% names(df)
 
     if (!all(idx_exist)) {
-      stop(sprintf(
+      cli::cli_abort(sprintf(
         "%s %s!",
         paste0(properties[!idx_exist], collapse = ", "),
         ifelse(length(properties[!idx_exist]) > 1, "are not existing properties", "is not an existing property")
@@ -2692,7 +2039,10 @@ as.data.frame.sdbuildR_xmile <- function(x,
   # Handle row.names if provided
   if (!is.null(row.names)) {
     if (length(row.names) != nrow(df)) {
-      stop("Length of row.names (", length(row.names), ") does not match number of rows (", nrow(df), ")")
+      cli::cli_abort(sprintf(
+        "Length of row.names (%d) does not match number of rows (%d)",
+        length(row.names), nrow(df)
+      ))
     }
     rownames(df) <- row.names
   }
@@ -2718,16 +2068,16 @@ as.data.frame.sdbuildR_xmile <- function(x,
 #' summary(sfm)
 #'
 summary.sdbuildR_xmile <- function(object, ...) {
-  # Extract model components
-  stocks <- names(object[["model"]][["variables"]][["stock"]])
-  flows <- names(object[["model"]][["variables"]][["flow"]])
-  constants <- names(object[["model"]][["variables"]][["constant"]])
-  auxs <- names(object[["model"]][["variables"]][["aux"]])
-  gfs <- names(object[["model"]][["variables"]][["gf"]])
-  model_units_str <- names(object[["model_units"]])
-  macro_str <- lapply(object[[P[["macro_name"]]]], `[[`, "property") |>
-    unlist() |>
-    Filter(nzchar, x = _)
+  # Extract model components from data frame
+  stocks <- object[["variables"]][object[["variables"]][["type"]] == "stock", "name"]
+  flows <- object[["variables"]][object[["variables"]][["type"]] == "flow", "name"]
+  constants <- object[["variables"]][object[["variables"]][["type"]] == "constant", "name"]
+  auxs <- object[["variables"]][object[["variables"]][["type"]] == "aux", "name"]
+  gfs <- object[["variables"]][object[["variables"]][["type"]] == "gf", "name"]
+  
+  # Handle empty data frames safely
+  model_units_str <- if (nrow(object[["model_units"]]) > 0) object[["model_units"]][["name"]] else character(0)
+  macro_str <- if (nrow(object[[P[["macro_name"]]]]) > 0) object[[P[["macro_name"]]]][["name"]] else character(0)
 
   # Check for delay functions
   delay_past <- get_delay(object, type = "past")
@@ -2737,22 +2087,21 @@ summary.sdbuildR_xmile <- function(object, ...) {
     get_regex_time_units()
   )
 
-  # Create structured summary object
+  # Create structured summary object - flat structure for easier access
+  has_delays <- length(delay_past) > 0 || length(delay_func) > 0
+  
   summary_obj <- list(
-    model_components = list(
-      stocks = stocks,
-      flows = flows,
-      constants = constants,
-      auxiliaries = auxs,
-      graphical_functions = gfs,
-      custom_units = model_units_str,
-      macros = macro_str
-    ),
-    delay_functions = list(
-      delay_past = if (length(delay_past) > 0) unique(names(delay_past)) else character(0),
-      delay_func = if (length(delay_func) > 0) unique(names(delay_func)) else character(0)
-    ),
-    simulation = list(
+    stocks = stocks,
+    flows = flows,
+    constants = constants,
+    aux = auxs,
+    gf = gfs,
+    macros = macro_str,
+    model_units = model_units_str,
+    delay_past = if (length(delay_past) > 0) unique(names(delay_past)) else character(0),
+    delay_func = if (length(delay_func) > 0) unique(names(delay_func)) else character(0),
+    has_delays = has_delays,
+    sim_specs = list(
       start = object[["sim_specs"]][["start"]],
       stop = object[["sim_specs"]][["stop"]],
       dt = object[["sim_specs"]][["dt"]],
@@ -2779,97 +2128,121 @@ summary.sdbuildR_xmile <- function(object, ...) {
 #' @export
 #' @concept build
 print.summary.sdbuildR_xmile <- function(x, ...) {
-  cat("Your model contains:\n")
+  cli::cli_h1("Stock-and-Flow Model Summary")
 
-  # Print model components
-  with(x$model_components, {
-    cat(sprintf(
-      "* %d Stocks%s%s\n",
-      length(stocks),
-      ifelse(length(stocks) > 0, ": ", ""),
-      paste0(stocks, collapse = ", ")
-    ))
-    cat(sprintf(
-      "* %d Flows%s%s\n",
-      length(flows),
-      ifelse(length(flows) > 0, ": ", ""),
-      paste0(flows, collapse = ", ")
-    ))
-    cat(sprintf(
-      "* %d Constants%s%s\n",
-      length(constants),
-      ifelse(length(constants) > 0, ": ", ""),
-      paste0(constants, collapse = ", ")
-    ))
-    cat(sprintf(
-      "* %d Auxiliaries%s%s\n",
-      length(auxiliaries),
-      ifelse(length(auxiliaries) > 0, ": ", ""),
-      paste0(auxiliaries, collapse = ", ")
-    ))
-    cat(sprintf(
-      "* %d Graphical Functions%s%s\n",
-      length(graphical_functions),
-      ifelse(length(graphical_functions) > 0, ": ", ""),
-      paste0(graphical_functions, collapse = ", ")
-    ))
-    cat(sprintf(
-      "* %d Custom model units%s%s\n",
-      length(custom_units),
-      ifelse(length(custom_units) > 0, ": ", ""),
-      paste0(custom_units, collapse = ", ")
-    ))
-    cat(sprintf(
-      "* %d Macro%s\n",
-      length(macros),
-      ifelse(length(macros) == 1, "", "s")
-    ))
-  })
+  # Count and summarize components
+  total_vars <- length(x$stocks) + length(x$flows) + length(x$constants) + 
+                length(x$aux) + length(x$gf)
+  total_macros <- length(x$macros)
+  total_units <- length(x$model_units)
 
-  # Print delay functions if present
-  if (length(x$delay_functions$delay_past) > 0 || length(x$delay_functions$delay_func) > 0) {
-    cat("\nDelay family functions:\n")
+  # Quick summary line
+  if (total_vars == 0 && total_macros == 0 && total_units == 0) {
+    cli::cli_alert_info("Empty model")
+  } else {
+    summary_parts <- c()
+    if (total_vars > 0) summary_parts <- c(summary_parts, "{.emph {total_vars}} variable{?s}")
+    if (total_macros > 0) summary_parts <- c(summary_parts, "{.emph {total_macros}} macro{?s}")
+    if (total_units > 0) summary_parts <- c(summary_parts, "{.emph {total_units}} custom unit{?s}")
+    
+    cli::cli_text(paste0(summary_parts, collapse = " • "))
+  }
 
-    if (length(x$delay_functions$delay_past) > 0) {
-      cat(sprintf(
-        "* %d variable%s uses past() or delay(): %s\n",
-        length(x$delay_functions$delay_past),
-        ifelse(length(x$delay_functions$delay_past) == 1, "", "s"),
-        paste0(x$delay_functions$delay_past, collapse = ", ")
+  # Model elements section - all components in one place
+  if (length(x$stocks) > 0 || length(x$flows) > 0 || length(x$constants) > 0 || 
+      length(x$aux) > 0 || length(x$gf) > 0 || length(x$macros) > 0) {
+    cli::cli_h2("Model Elements")
+    
+    if (length(x$stocks) > 0) {
+      cli::cli_bullets(c(
+        "s" = "{.strong Stocks} ({length(x$stocks)}): {.code {x$stocks}}"
       ))
     }
-
-    if (length(x$delay_functions$delay_func) > 0) {
-      cat(sprintf(
-        "* %d variable%s uses delayN() or smoothN(): %s\n",
-        length(x$delay_functions$delay_func),
-        ifelse(length(x$delay_functions$delay_func) == 1, "", "s"),
-        paste0(x$delay_functions$delay_func, collapse = ", ")
+    
+    if (length(x$flows) > 0) {
+      cli::cli_bullets(c(
+        "s" = "{.strong Flows} ({length(x$flows)}): {.code {x$flows}}"
+      ))
+    }
+    
+    if (length(x$constants) > 0) {
+      cli::cli_bullets(c(
+        "s" = "{.strong Constants} ({length(x$constants)}): {.code {x$constants}}"
+      ))
+    }
+    
+    if (length(x$aux) > 0) {
+      cli::cli_bullets(c(
+        "s" = "{.strong Auxiliaries} ({length(x$aux)}): {.code {x$aux}}"
+      ))
+    }
+    
+    if (length(x$gf) > 0) {
+      cli::cli_bullets(c(
+        "s" = "{.strong Graphical Functions} ({length(x$gf)}): {.code {x$gf}}"
+      ))
+    }
+    
+    if (length(x$macros) > 0) {
+      cli::cli_bullets(c(
+        "s" = "{.strong Macros} ({length(x$macros)}): {.code {x$macros}}"
       ))
     }
   }
 
-  # Print simulation specifications
-  cat(sprintf(
-    "\nSimulation time: %s to %s %s (dt = %s%s%s)\n",
-    x$simulation$start, x$simulation$stop, x$simulation$time_units,
-    x$simulation$dt,
-    ifelse(x$simulation$save_at == x$simulation$dt, "",
-      paste0(", save_at = ", x$simulation$save_at)
-    ),
-    ifelse(x$simulation$save_from == x$simulation$start, "",
-      paste0(", save_from = ", x$simulation$save_from)
-    )
-  ))
+  # Custom units section
+  if (length(x$model_units) > 0) {
+    cli::cli_h2("Custom Units")
+    cli::cli_bullets(c(
+      "s" = "{.code {x$model_units}}"
+    ))
+  }
 
-  cat(sprintf(
-    "Simulation settings: solver %s%s in %s\n",
-    x$simulation$method,
-    ifelse(is_defined(x$simulation$seed),
-      paste0(" and seed ", x$simulation$seed), ""
-    ),
-    x$simulation$language
-  ))
+  # Delay functions section
+  if (length(x$delay_past) > 0 || length(x$delay_func) > 0) {
+    cli::cli_h2("Delay Functions")
+    
+    if (length(x$delay_past) > 0) {
+      cli::cli_bullets(c(
+        "i" = "{length(x$delay_past)} variable{?s} {?uses/use} {.code past()} or {.code delay()}: {.code {x$delay_past}}"
+      ))
+    }
+    
+    if (length(x$delay_func) > 0) {
+      cli::cli_bullets(c(
+        "i" = "{length(x$delay_func)} variable{?s} {?uses/use} {.code delayN()} or {.code smoothN()}: {.code {x$delay_func}}"
+      ))
+    }
+  }
+
+  # Simulation specifications
+  cli::cli_h2("Simulation Settings")
+  
+  # Build simulation specs preserving cli formatting
+  bullets <- c()
+  
+  bullets["i"] <- paste0(
+    "{.strong Time}: ",
+    x$sim_specs$start, " to ", x$sim_specs$stop, " ",
+    x$sim_specs$time_units
+  )
+  
+  stepping_parts <- c(paste0("dt = {.code ", x$sim_specs$dt, "}"))
+  if (x$sim_specs$save_at != x$sim_specs$dt) {
+    stepping_parts <- c(stepping_parts, paste0("save_at = {.code ", x$sim_specs$save_at, "}"))
+  }
+  if (x$sim_specs$save_from != x$sim_specs$start) {
+    stepping_parts <- c(stepping_parts, paste0("save_from = {.code ", x$sim_specs$save_from, "}"))
+  }
+  
+  bullets <- c(bullets, c("i" = paste0("{.strong Stepping}: ", paste0(stepping_parts, collapse = ", "))))
+  bullets <- c(bullets, c("i" = paste0("{.strong Solver}: {.code ", x$sim_specs$method, "} in {.code ", x$sim_specs$language, "}")))
+  
+  if (is_defined(x$sim_specs$seed)) {
+    bullets <- c(bullets, c("i" = paste0("{.strong Seed}: {.code ", x$sim_specs$seed, "}")))
+  }
+  
+  cli::cli_bullets(bullets)
 
   invisible(x)
 }

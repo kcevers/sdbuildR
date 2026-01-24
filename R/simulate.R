@@ -4,7 +4,6 @@
 #'
 #' @inheritParams insightmaker_to_sfm
 #' @inheritParams build
-#' @param keep_unit If TRUE, keeps units of variables. Defaults to TRUE.
 #' @param verbose If TRUE, print duration of simulation. Defaults to FALSE.
 #' @param only_stocks If TRUE, only return stocks in output, discarding flows and auxiliaries. If FALSE, flows and auxiliaries are saved, which slows down the simulation. Defaults to FALSE.
 #' @param ... Optional arguments
@@ -47,9 +46,6 @@
 #' use_julia(stop = TRUE)
 #'
 simulate <- function(sfm,
-                     keep_nonnegative_flow = TRUE,
-                     keep_nonnegative_stock = FALSE,
-                     keep_unit = TRUE,
                      only_stocks = TRUE,
                      verbose = FALSE,
                      ...) {
@@ -59,12 +55,7 @@ simulate <- function(sfm,
   problems <- debugger(sfm, quietly = TRUE)
   if (nzchar(problems[["problems"]])) {
     txt <- problems[["problems"]]
-    warning(paste(txt, collapse = "\n"))
-    return(new_sdbuildR_sim(
-      success = FALSE,
-      error_message = txt,
-      sfm = sfm
-    ))
+    cli::cli_abort(txt)
   }
 
   # Check model for delayN() and smoothN() functions
@@ -75,11 +66,12 @@ simulate <- function(sfm,
 
   if (length(delayN_smoothN) > 0) {
     txt <- "The model contains either delayN() or smoothN(), which are not supported."
-    # stop(paste0(
-    # "The model contains either delayN() or smoothN(), which are not supported for simulations in R.\nSet sfm |> sim_specs(language = 'Julia') or modify the equations of these variables: ",
-    #           paste0(names(delayN_smoothN), collapse = ", ")
-    # ))
-    warning(paste(txt, collapse = "\n"))
+    cli::cli_warn(c(
+      "The model contains unsupported delay functions.",
+      "!" = "Functions {.fn delayN()} and {.fn smoothN()} are not supported for R simulations.",
+      "i" = "Use {.fn sim_specs}(sfm, language = {.code 'Julia'}) for full support.",
+      ">" = "Or modify the equations of these variables: {paste0(names(delayN_smoothN), collapse = ', ')}"
+    ))
     return(new_sdbuildR_sim(
       success = FALSE,
       error_message = txt,
@@ -89,11 +81,12 @@ simulate <- function(sfm,
 
   if (length(delay_past) > 0) {
     txt <- "The model contains either delay() or past(), which are not supported."
-    # stop(paste0(
-    # "The model contains either delay() or past(), which are not supported for simulations in R.\nSet sfm |> sim_specs(language = 'Julia') or modify the equations of these variables: ",
-    #           paste0(names(delay_past), collapse = ", ")
-    # ))
-    warning(paste(txt, collapse = "\n"))
+    cli::cli_warn(c(
+      "The model contains unsupported history functions.",
+      "!" = "Functions {.fn delay()} and {.fn past()} are not supported for R simulations.",
+      "i" = "Use {.fn sim_specs}(sfm, language = {.code 'Julia'}) for full support.",
+      ">" = "Or modify the equations of these variables: {paste0(names(delay_past), collapse = ', ')}"
+    ))
     return(new_sdbuildR_sim(
       success = FALSE,
       error_message = txt,
@@ -103,9 +96,7 @@ simulate <- function(sfm,
 
   if (tolower(sfm[["sim_specs"]][["language"]]) == "julia") {
     return(simulate_julia(sfm,
-      keep_nonnegative_flow = keep_nonnegative_flow,
-      keep_nonnegative_stock = keep_nonnegative_stock,
-      keep_unit = keep_unit, only_stocks = only_stocks,
+      only_stocks = only_stocks,
       verbose = verbose
     ))
   } else if (tolower(sfm[["sim_specs"]][["language"]]) == "r") {
@@ -114,13 +105,16 @@ simulate <- function(sfm,
 
     # Stop if equations contain unit strings
     if (length(eqn_units) > 0) {
-      # stop(paste0("The model contains unit strings u(''), which are not supported for simulations in R.\nSet sim_specs(sfm, language = 'Julia') or modify the equations of these variables:\n\n",
-      #             paste0(names(eqn_units), collapse = ", ")))
       txt <- paste0(
         "The model contains unit strings u(''), which are not supported for simulations in R.\nSet sim_specs(sfm, language = 'Julia') or modify the equations of these variables:\n\n",
         paste0(names(eqn_units), collapse = ", ")
       )
-      warning(paste(txt, collapse = "\n"))
+      cli::cli_warn(c(
+        "The model contains unsupported unit strings.",
+        "!" = "Function {.fn u()} with unit strings is not supported for R simulations.",
+        "i" = "Use {.fn sim_specs}(sfm, language = {.code 'Julia'}) for unit support.",
+        ">" = "Or modify the equations of these variables: {paste0(names(eqn_units), collapse = ', ')}"
+      ))
       return(new_sdbuildR_sim(
         success = FALSE,
         error_message = txt,
@@ -129,14 +123,17 @@ simulate <- function(sfm,
     }
 
     return(simulate_R(sfm,
-      keep_nonnegative_flow = keep_nonnegative_flow,
-      keep_nonnegative_stock = keep_nonnegative_stock,
       only_stocks = only_stocks,
       verbose = verbose
     ))
   } else {
     txt <- "Simulation language not supported.\nPlease run either sim_specs(sfm, language = 'Julia') (recommended) or sim_specs(sfm, language = 'R') (no unit or ensemble support)."
-    warning(txt)
+    cli::cli_warn(c(
+      "Unsupported simulation language.",
+      "!" = "Simulation language must be either {.code 'Julia'} or {.code 'R'}.",
+      "i" = "Recommended: {.fn sim_specs}(sfm, language = {.code 'Julia'})",
+      ">" = "Alternative: {.fn sim_specs}(sfm, language = {.code 'R'}) (limited features)"
+    ))
     return(new_sdbuildR_sim(
       success = FALSE,
       error_message = txt,
@@ -185,31 +182,53 @@ new_sdbuildR_sim <- function(success = FALSE,
 #'
 validate_sdbuildR_sim <- function(x) {
   if (!inherits(x, "sdbuildR_sim")) {
-    stop("Object must be of class 'sdbuildR_sim'")
+    cli::cli_abort(c(
+      "Invalid object type.",
+      "x" = "Expected object of class {.cls sdbuildR_sim}.",
+      "i" = "Use {.fn simulate()} to create a valid simulation object."
+    ))
   }
 
   if (!is.logical(x$success) || length(x$success) != 1) {
-    stop("`success` must be a single logical value")
+    cli::cli_abort(c(
+      "Invalid {.arg success} field.",
+      "x" = "The {.arg success} field must be a single {.cls logical} value.",
+      "i" = "Expected {.val TRUE} or {.val FALSE}."
+    ))
   }
 
   if (x$success) {
     # Successful simulation must have these components
     if (is.null(x$df) || !is.data.frame(x$df)) {
-      stop("Successful simulation must have a data frame in `df`")
+      cli::cli_abort(c(
+        "Missing or invalid simulation data.",
+        "x" = "Successful simulation must have a {.cls data.frame} in {.arg df}.",
+        "i" = "This field is populated by {.fn simulate()} with results."
+      ))
     }
     if (is.null(x$init)) {
-      stop("Successful simulation must have `init`")
+      cli::cli_abort(c(
+        "Missing initial stock values.",
+        "x" = "Successful simulation must preserve initial values in {.arg init}.",
+        "i" = "Initial values of all stocks should be recorded."
+      ))
     }
     # if (is.null(x$constants) || !is.numeric(x$constants)) {
-    #   stop("Successful simulation must have numeric `constants`")
+    #   cli::cli_abort("Successful simulation must have numeric `constants`")
     # }
     if (is.null(x$duration)) {
-      stop("Successful simulation must have `duration`")
+      cli::cli_abort(c(
+        "Missing simulation duration.",
+        "x" = "Successful simulation must have {.arg duration}."
+      ))
     }
   } else {
     # Failed simulation should have error message
     if (is.null(x$error_message)) {
-      warning("Failed simulation should have `error_message`")
+      cli::cli_warn(c(
+        "Failed simulation missing error information.",
+        "!" = "Field {.arg error_message} should be populated for failed simulations."
+      ))
     }
   }
 
@@ -228,9 +247,10 @@ detect_undefined_var <- function(sfm) {
   var_names <- get_model_var(sfm)
 
   # Macros and graphical functions can be functions
+  gf_names <- sfm[["variables"]][sfm[["variables"]][["type"]] == "gf", "name"]
   possible_func_in_model <- c(
     names(sfm[[P[["macro_name"]]]]),
-    names(sfm[["model"]][["variables"]][["gf"]])
+    gf_names
   )
 
   possible_func <- c(
@@ -243,7 +263,7 @@ detect_undefined_var <- function(sfm) {
   )
 
   # Find references to variables which are not in names_df[["name"]]
-  missing_ref <- unlist(sfm[["model"]][["variables"]], recursive = FALSE, use.names = FALSE) |>
+  missing_ref <- split(sfm[["variables"]], seq_len(nrow(sfm[["variables"]]))) |>
     lapply(function(x) {
       y <- x[names(x) %in% c("eqn", "to", "from", "source")]
       y <- y[vapply(y, is_defined, logical(1))]
@@ -355,7 +375,7 @@ topological_sort <- function(dependencies_dict) {
       list(order = igraph::topo_sort(g, mode = "out") |> names(), issue = FALSE, msg = "")
     },
     error = function(msg) {
-      # message("Something went wrong when attempting to order the equations in your ODE, which may be because of circular definition (e.g. x = y, y = x). The correct order is important as e.g. for x = 1/a, a needs to be defined before x. Please check the order manually.")
+      # cli::cli_inform("Something went wrong when attempting to order the equations in your ODE, which may be because of circular definition (e.g. x = y, y = x). The correct order is important as e.g. for x = 1/a, a needs to be defined before x. Please check the order manually.")
       out <- circularity(g)
 
       list(order = eq_names, issue = out[["issue"]], msg = out[["msg"]])
@@ -519,37 +539,29 @@ find_dependencies_ <- function(sfm, eqns = NULL, only_var = TRUE, only_model_var
   var_names <- unique(get_model_var(sfm))
 
   # Macros and graphical functions can be functions
+  gf_names <- sfm[["variables"]][sfm[["variables"]][["type"]] == "gf", "name"]
   possible_func_in_model <- c(
-    names(sfm[[P[["macro_name"]]]]),
-    names(sfm[["model"]][["variables"]][["gf"]]),
+    sfm[[P[["macro_name"]]]][["name"]],
+    gf_names,
     var_names
   ) # Some aux are also functions, such as pulse/step/ramp/seasonal
 
   # If no equations are provided, use all equations in the model
   if (is.null(eqns)) {
-    # eqns <- unlist(
-    #   unname(lapply(
-    #     sfm[["model"]][["variables"]],
-    #     function(x) {
-    #       lapply(x, `[[`, "eqn")
-    #     }
-    #   )),
-    #   recursive = FALSE
-    # )
-
-    eqns <- unlist(
-      unname(lapply(
-        sfm[["model"]][["variables"]][c("stock", "flow", "aux", "constant")],
-        function(x) {
-          lapply(x, `[[`, "eqn")
-        }
-      )),
-      recursive = FALSE
-    )
+    # Get equations from variables data frame
+    eqn_idx <- sfm[["variables"]][["type"]] %in% c("stock", "flow", "aux", "constant")
+    eqns <- sfm[["variables"]][eqn_idx, "eqn"]
+    names(eqns) <- sfm[["variables"]][eqn_idx, "name"]
 
     # Add graphical function dependencies on source
-    gf_source <- unlist(lapply(sfm[["model"]][["variables"]][["gf"]], `[[`, "source"))
-    eqns <- c(eqns, gf_source)
+    gf_idx <- sfm[["variables"]][["type"]] == "gf"
+    if (any(gf_idx)) {
+      gf_source <- sfm[["variables"]][gf_idx, "source"]
+      gf_source <- gf_source[nzchar(gf_source)]
+      gf_names <- sfm[["variables"]][gf_idx, "name"]
+      gf_source <- stats::setNames(gf_source, gf_names[nzchar(gf_source)])
+      eqns <- c(eqns, gf_source)
+    }
   }
 
   # Find dependencies in each equation
@@ -576,8 +588,20 @@ find_dependencies_ <- function(sfm, eqns = NULL, only_var = TRUE, only_model_var
       }
     }
 
+    # Normalize: drop NA and duplicates
+    if (length(d) == 1 && all(is.na(d))) {
+      d <- character(0)
+    } else {
+      d <- unique(d)
+    }
+
     return(d)
   })
+
+  # Preserve names (if eqns were named); helps plotting dependencies
+  if (!is.null(names(eqns))) {
+    names(dependencies) <- names(eqns)
+  }
 
   return(dependencies)
 }
@@ -605,8 +629,8 @@ order_equations <- function(sfm, print_msg = TRUE) {
   )
 
   # Separate auxiliary variables into static parameters and dynamically updated auxiliaries
-  dependencies <- lapply(sfm[["model"]][["variables"]], function(y) {
-    lapply(y, function(x) {
+  dependencies <- split(sfm[["variables"]], seq_len(nrow(sfm[["variables"]]))) |>
+    lapply(function(x) {
       if (is_defined(x[["eqn"]])) {
         d <- unlist(find_dependencies_(sfm, x[["eqn"]],
           only_var = TRUE, only_model_var = TRUE
@@ -621,13 +645,35 @@ order_equations <- function(sfm, print_msg = TRUE) {
         d <- c()
       }
 
-      return(d)
+      return(list(
+        name = x[["name"]],
+        type = x[["type"]],
+        deps = d
+      ))
     })
-  })
+  
+  # Organize dependencies by type
+  deps_by_name <- stats::setNames(lapply(dependencies, function(x) x$deps), sapply(dependencies, function(x) x$name))
+  deps_by_type <- split(deps_by_name, sapply(dependencies, function(x) x$type))
+  
+  # Create type-specific dependency lists
+  dependencies <- list(
+    gf = if ("gf" %in% names(deps_by_type)) deps_by_type[["gf"]] else list(),
+    constant = if ("constant" %in% names(deps_by_type)) deps_by_type[["constant"]] else list(),
+    stock = if ("stock" %in% names(deps_by_type)) deps_by_type[["stock"]] else list(),
+    aux = if ("aux" %in% names(deps_by_type)) deps_by_type[["aux"]] else list(),
+    flow = if ("flow" %in% names(deps_by_type)) deps_by_type[["flow"]] else list()
+  )
 
   # Try to sort static and dynamic equations together
   # in case a static variable depends on a dynamic variable
-  dependencies_dict <- unlist(unname(dependencies), recursive = FALSE)
+  dependencies_dict <- unlist(unname(c(
+    dependencies[["gf"]],
+    dependencies[["constant"]],
+    dependencies[["stock"]],
+    dependencies[["aux"]],
+    dependencies[["flow"]]
+  )), recursive = FALSE)
   static_and_dynamic <- topological_sort(dependencies_dict)
 
   # Topological sort of static equations
@@ -641,13 +687,23 @@ order_equations <- function(sfm, print_msg = TRUE) {
 
   if (static_and_dynamic[["issue"]]) {
     if (any(unname(static_dependencies_dict) %in% c(names(dependencies[["aux"]]), names(dependencies[["flow"]])))) {
-      warning(paste0("Ordering equations failed. ", static_and_dynamic[["msg"]], collapse = ""))
+      cli::cli_warn(c(
+        "Could not resolve equation ordering.",
+        "!" = "Topological sorting of all equations failed.",
+        "i" = static_and_dynamic[["msg"]],
+        ">" = "Check for circular dependencies in your model equations."
+      ))
     }
   }
 
   static <- topological_sort(static_dependencies_dict)
   if (print_msg && static[["issue"]]) {
-    warning(paste0("Ordering static equations failed. ", static[["msg"]], collapse = ""))
+    cli::cli_warn(c(
+      "Could not order static equations.",
+      "!" = "Topological sorting of static equations failed.",
+      "i" = static[["msg"]],
+      ">" = "Check constant and stock definitions for circular dependencies."
+    ))
   }
 
 
@@ -661,7 +717,12 @@ order_equations <- function(sfm, print_msg = TRUE) {
   dynamic <- topological_sort(dependencies_dict)
 
   if (print_msg && dynamic[["issue"]]) {
-    warning(paste0("Ordering dynamic equations failed. ", dynamic[["msg"]], collapse = ""))
+    cli::cli_warn(c(
+      "Could not order dynamic equations.",
+      "!" = "Topological sorting of auxiliary and flow equations failed.",
+      "i" = dynamic[["msg"]],
+      ">" = "Check for circular dependencies in your auxiliary and flow equations."
+    ))
   }
 
   return(list(
@@ -893,9 +954,6 @@ ensemble <- function(sfm,
                      cross = TRUE,
                      quantiles = c(0.025, 0.975),
                      only_stocks = TRUE,
-                     keep_nonnegative_flow = TRUE,
-                     keep_nonnegative_stock = FALSE,
-                     keep_unit = TRUE,
                      verbose = TRUE) {
   check_xmile(sfm)
 
@@ -905,62 +963,132 @@ ensemble <- function(sfm,
   argg <- argg[!lengths(argg) == 0]
 
   if (tolower(sfm[["sim_specs"]][["language"]]) != "julia") {
-    stop("Ensemble simulations are only supported for Julia models. Please set sfm |> sim_specs(language = 'Julia').")
+    cli::cli_abort(c(
+      "Ensemble simulations require Julia.",
+      "x" = "Ensemble simulations are only supported for {.code Julia} models.",
+      "i" = "R backend does not support ensemble functionality.",
+      ">" = "Set language with: {.fn sim_specs}(sfm, language = {.code 'Julia'})"
+    ))
   }
 
   if (!is.numeric(n)) {
-    stop("n should be a numerical value!")
+    cli::cli_abort(c(
+      "Invalid {.arg n} argument.",
+      "x" = "The {.arg n} argument must be {.cls numeric}.",
+      "i" = "Received: {.cls {typeof(n)}}",
+      ">" = "Specify the number of simulations as a number, e.g., {.code n = 100}."
+    ))
   }
 
   if (n <= 0) {
-    stop("The number of simulations must be greater than 0!")
+    cli::cli_abort(c(
+      "Invalid {.arg n} value.",
+      "x" = "The {.arg n} argument must be greater than {.val 0}.",
+      "i" = "Received: {.val {n}}",
+      ">" = "Use a positive integer, e.g., {.code n = 10}."
+    ))
   }
 
   if (!is.numeric(quantiles)) {
-    stop("quantiles should be a numerical vector with quantiles to calculate!")
+    cli::cli_abort(c(
+      "Invalid {.arg quantiles} argument.",
+      "x" = "The {.arg quantiles} argument must be {.cls numeric}.",
+      "i" = "Received: {.cls {typeof(quantiles)}}",
+      ">" = "Use a numeric vector, e.g., {.code quantiles = c(0.025, 0.975)}."
+    ))
   }
 
   if (length(unique(quantiles)) < 2) {
-    stop("quantiles should have a minimum length of two!")
+    cli::cli_abort(c(
+      "Insufficient quantiles specified.",
+      "x" = "The {.arg quantiles} argument must have at least {.val 2} unique values.",
+      "i" = "Received {.val {length(unique(quantiles))}} unique value(s).",
+      ">" = "Provide at least 2 quantiles, e.g., {.code quantiles = c(0.025, 0.975)}."
+    ))
   }
 
   if (any(quantiles < 0 | quantiles > 1)) {
-    stop("quantiles should be between 0 and 1!")
+    cli::cli_abort(c(
+      "Invalid quantile values.",
+      "x" = "All values in {.arg quantiles} must be between {.val 0} and {.val 1}.",
+      "i" = "Quantiles represent probabilities and must be proportions.",
+      ">" = "Use values like {.code c(0.025, 0.5, 0.975)} for 2.5%, 50%, 97.5% quantiles."
+    ))
   }
 
   if (!is.logical(cross)) {
-    stop("cross should be TRUE or FALSE!")
+    cli::cli_abort(c(
+      "Invalid {.arg cross} argument.",
+      "x" = "The {.arg cross} argument must be {.code TRUE} or {.code FALSE}.",
+      "i" = "Received: {.val {cross}}",
+      ">" = "Use {.code cross = TRUE} for all combinations or {.code cross = FALSE} for paired values."
+    ))
   }
 
   if (!is.logical(return_sims)) {
-    stop("return_sims should be TRUE or FALSE!")
+    cli::cli_abort(c(
+      "Invalid {.arg return_sims} argument.",
+      "x" = "The {.arg return_sims} argument must be {.code TRUE} or {.code FALSE}.",
+      "i" = "Received: {.val {return_sims}}",
+      ">" = "Use {.code return_sims = TRUE} to include individual simulations in output."
+    ))
   }
 
   if (!is.logical(only_stocks)) {
-    stop("only_stocks should be TRUE or FALSE!")
+    cli::cli_abort(c(
+      "Invalid {.arg only_stocks} argument.",
+      "x" = "The {.arg only_stocks} argument must be {.code TRUE} or {.code FALSE}.",
+      "i" = "Received: {.val {only_stocks}}",
+      ">" = "Use {.code only_stocks = TRUE} to exclude flows and auxiliaries from output."
+    ))
   }
 
   if (!is.null(range)) {
     if (!is.list(range)) {
-      stop("range must be a named list! Please provide a named list with ranges for the parameters to vary in the ensemble.")
+      cli::cli_abort(c(
+        "Invalid {.arg range} argument structure.",
+        "x" = "The {.arg range} argument must be a {.cls list}.",
+        "i" = "Received: {.cls {typeof(range)}}",
+        ">" = "Use format: {.code range = list(param1 = c(1, 2), param2 = c(10, 20))}."
+      ))
     }
 
     if (length(range) == 0) {
-      stop("range must be a named list with at least one element! Please provide a named list with ranges for the parameters to vary in the ensemble.")
+      cli::cli_abort(c(
+        "Empty {.arg range} specification.",
+        "x" = "The {.arg range} argument must have at least one parameter.",
+        "i" = "At least one parameter must vary across ensemble conditions.",
+        ">" = "Specify like: {.code range = list(param = c(1, 2, 3))}."
+      ))
     }
 
     if (is.null(names(range))) {
-      stop("range must be a named list! Please provide a named list with ranges for the parameters to vary in the ensemble.")
+      cli::cli_abort(c(
+        "Unnamed {.arg range} elements.",
+        "x" = "The {.arg range} list elements must be named.",
+        "i" = "Names correspond to parameter/stock names in your model.",
+        ">" = "Use: {.code range = list(paramname = values, ...)}."
+      ))
     }
 
     # All must be numerical values
     if (!all(vapply(range, is.numeric, logical(1)))) {
-      stop("All elements in range must be numeric vectors!")
+      cli::cli_abort(c(
+        "Non-numeric values in {.arg range}.",
+        "x" = "All {.arg range} elements must be {.cls numeric} vectors.",
+        "i" = "Each parameter must map to a vector of numbers.",
+        ">" = "Example: {.code range = list(param1 = c(1, 2, 3))}."
+      ))
     }
 
     # Test that names are unique
     if (length(unique(names(range))) != length(range)) {
-      stop("All names in range must be unique! Please check the names of the elements in range.")
+      cli::cli_abort(c(
+        "Duplicate names in {.arg range}.",
+        "x" = "All {.arg range} names must be unique.",
+        "i" = "Each parameter should be specified once.",
+        ">" = "Use: {.code range = list(param1 = ..., param2 = ...)}."
+      ))
     }
 
     # All varied elements must exist in the model
@@ -968,18 +1096,24 @@ ensemble <- function(sfm,
     names_range <- names(range)
     idx <- names_range %in% names_df[["name"]]
     if (any(!idx)) {
-      stop(paste0(
-        "The following names in range do not exist in the model: ",
-        paste0(names_range[!idx], collapse = ", ")
+      missing_names <- names_range[!idx]
+      cli::cli_abort(c(
+        "Unknown parameters in {.arg range}.",
+        "x" = "The following parameters do not exist in the model: {paste0('{.code ', missing_names, '}', collapse = ', ')}.",
+        "i" = "Check spelling and ensure parameters are defined in the model.",
+        ">" = "Available variables: {paste0(names_df[['name']][1:min(5, length(names_df[['name']])], collapse = ', ')}"
       ))
     }
 
     # All varied elements must be a stock or constant
     idx <- names_range %in% c(names_df[names_df[["type"]] %in% c("stock", "constant"), "name"])
     if (any(!idx)) {
-      stop(paste0(
-        "Only constants or the initial value of stocks can be varied. Please exclude: ",
-        paste0(names_range[!idx], collapse = ", ")
+      invalid_names <- names_range[!idx]
+      cli::cli_abort(c(
+        "Cannot vary flows or auxiliaries.",
+        "x" = "Only {.cls constant} and {.cls stock} initial values can be varied.",
+        "!" = "Cannot vary: {paste0('{.code ', invalid_names, '}', collapse = ', ')}.",
+        ">" = "Choose parameters from constants or stock initial values in your model."
       ))
     }
 
@@ -987,7 +1121,12 @@ ensemble <- function(sfm,
     range_lengths <- vapply(range, length, numeric(1))
     if (!cross) {
       if (length(unique(range_lengths)) != 1) {
-        stop("All ranges must be of the same length when cross = FALSE! Please check the lengths of the ranges in range.")
+        cli::cli_abort(c(
+          "Mismatched range lengths with {.arg cross = FALSE}.",
+          "x" = "When {.arg cross = FALSE}, all ranges must have equal length.",
+          "i" = "Found lengths: {paste0(unique(range_lengths), collapse = ', ')} for parameters {paste0(names(range), collapse = ', ')}.",
+          ">" = "Either use {.code cross = TRUE} or equalize all range vectors."
+        ))
       }
 
       n_conditions <- unique(range_lengths)
@@ -1003,18 +1142,23 @@ ensemble <- function(sfm,
   }
 
   if (verbose) {
-    message(paste0(
-      "Running a total of ", n * n_conditions,
-      " simulation", ifelse((n * n_conditions) == 1, "", "s"),
-      ifelse(is.null(range), "", paste0(
-        " for ", n_conditions, " condition",
-        ifelse(n_conditions == 1, "", "s"),
-        " (",
-        n, " simulation",
-        ifelse(n == 1, "", "s"),
-        " per condition)"
-      )), "\n"
-    ))
+    total_sims <- n * n_conditions
+    sim_word <- ifelse(total_sims == 1, "simulation", "simulations")
+    if (is.null(range)) {
+      msg <- c(
+        "Starting ensemble simulation.",
+        "i" = "Running {.val {total_sims}} {sim_word}."
+      )
+    } else {
+      cond_word <- ifelse(n_conditions == 1, "condition", "conditions")
+      sim_per_word <- ifelse(n == 1, "simulation", "simulations")
+      msg <- c(
+        "Starting ensemble simulation.",
+        "i" = "Running {.val {total_sims}} {sim_word} total.",
+        "i" = "{.val {n_conditions}} {cond_word} x {.val {n}} {sim_per_word} per condition."
+      )
+    }
+    cli::cli_inform(msg)
   }
 
   # Create ensemble parameters
@@ -1063,10 +1207,7 @@ ensemble <- function(sfm,
   script <- compile_julia(sfm,
     filepath_sim = "",
     ensemble_pars = ensemble_pars,
-    keep_nonnegative_flow = keep_nonnegative_flow,
-    keep_nonnegative_stock = keep_nonnegative_stock,
-    only_stocks = only_stocks,
-    keep_unit = keep_unit
+    only_stocks = only_stocks
   )
   write_script(script, filepath)
   script <- paste0(readLines(filepath), collapse = "\n")
@@ -1088,7 +1229,11 @@ ensemble <- function(sfm,
       end_t <- Sys.time()
 
       if (verbose) {
-        message(paste0("Simulation took ", round(end_t - start_t, 4), " seconds\n"))
+        elapsed <- round(end_t - start_t, 4)
+        cli::cli_inform(c(
+          "Ensemble simulation completed.",
+          "i" = "Elapsed time: {.val {elapsed}} seconds."
+        ))
       }
 
       # Delete file
@@ -1158,7 +1303,11 @@ ensemble <- function(sfm,
         structure(class = "sdbuildR_ensemble")
     },
     error = function(e) {
-      warning("\nAn error occurred while running the Julia script.")
+      cli::cli_warn(c(
+        "Julia execution failed.",
+        "!" = "An error occurred while running the Julia script.",
+        "i" = "Error: {e[['message']]}"
+      ))
       list(
         success = FALSE,
         error_message = e[["message"]],
@@ -1208,15 +1357,30 @@ ensemble <- function(sfm,
 #'
 use_threads <- function(n = parallel::detectCores() - 1, stop = FALSE) {
   if (!is.numeric(n)) {
-    stop("n must be a number!")
+    cli::cli_abort(c(
+      "Invalid {.arg n} argument.",
+      "x" = "The {.arg n} argument must be {.cls numeric}.",
+      "i" = "Received: {.cls {typeof(n)}}",
+      ">" = "Specify number of threads, e.g., {.code n = 4}."
+    ))
   }
 
   if (n < 1) {
-    stop("n must be larger than 1!")
+    cli::cli_abort(c(
+      "Invalid thread count.",
+      "x" = "The {.arg n} argument must be at least {.val 1}.",
+      "i" = "Received: {.val {n}}",
+      ">" = "Use a positive integer, e.g., {.code n = 4}."
+    ))
   }
 
   if (!is.logical(stop)) {
-    stop("stop must be TRUE or FALSE!")
+    cli::cli_abort(c(
+      "Invalid {.arg stop} argument.",
+      "x" = "The {.arg stop} argument must be {.code TRUE} or {.code FALSE}.",
+      "i" = "Received: {.val {stop}}",
+      ">" = "Use {.code stop = TRUE} to disable threading."
+    ))
   }
 
   if (stop) {
@@ -1224,12 +1388,14 @@ use_threads <- function(n = parallel::detectCores() - 1, stop = FALSE) {
   } else {
     # Set number of Julia threads to use
     if (n > (parallel::detectCores() - 1)) {
-      warning(
-        "n is set to ", n,
-        ", which is higher than the number of available cores minus 1. Setting it to ",
-        parallel::detectCores() - 1, "."
-      )
-      n <- parallel::detectCores() - 1
+      max_threads <- parallel::detectCores() - 1
+      cli::cli_warn(c(
+        "Thread count exceeds available cores.",
+        "!" = "Requested {.val {n}} threads but only {.val {max_threads}} cores available.",
+        "i" = "Using maximum safe value: {.val {max_threads}} threads.",
+        "i" = "Note: It's recommended to leave at least 1 core free for the system."
+      ))
+      n <- max_threads
     }
 
     # Save user's old setting
@@ -1268,14 +1434,14 @@ get_build_code <- function(sfm) {
   sim_specs_str <- paste0(" |>\n\t\tsim_specs(", sim_specs_str, ")")
 
   # Model units
-  if (length(sfm[["model_units"]]) > 0) {
-    model_units_str <- lapply(sfm[["model_units"]], function(x) {
-      x <- lapply(x, function(z) if (is.character(z)) paste0("\"", z, "\"") else z)
+  if (nrow(sfm[["model_units"]]) > 0) {
+    model_units_str <- apply(sfm[["model_units"]], 1, function(row) {
+      row_list <- as.list(row)
+      row_list <- lapply(row_list, function(z) if (is.character(z)) paste0("\"", z, "\"") else z)
 
 
-      sprintf("model_units(%s)", paste0(names(x), " = ", unname(x), collapse = ", "))
+      sprintf("model_units(%s)", paste0(names(row_list), " = ", unname(row_list), collapse = ", "))
     }) |>
-      unlist() |>
       paste0(collapse = "|>\n\t\t")
     model_units_str <- paste0(" |>\n\t\t", model_units_str)
   } else {
@@ -1283,16 +1449,18 @@ get_build_code <- function(sfm) {
   }
 
   # Macros
-  if (length(sfm[[P[["macro_name"]]]]) > 0) {
-    macro_str <- lapply(sfm[[P[["macro_name"]]]], function(x) {
-      # Remove properties containing "_julia"
-      x[grepl("_julia", names(x))] <- NULL
+  macro_df <- sfm[[P[["macro_name"]]]]
+  if (nrow(macro_df) > 0) {
+    # Drop columns ending with _julia for readability
+    macro_df <- macro_df[, !grepl("_julia$", names(macro_df)), drop = FALSE]
 
-      x <- lapply(x, function(z) if (is.character(z)) paste0("\"", z, "\"") else z)
-      sprintf("macro(%s)", paste0(names(x), " = ", unname(x), collapse = ", "))
-    }) |>
-      unlist() |>
+    macro_str <- vapply(seq_len(nrow(macro_df)), function(i) {
+      row <- as.list(macro_df[i, , drop = FALSE])
+      row <- lapply(row, function(z) if (is.character(z)) paste0("\"", z, "\"") else z)
+      sprintf("macro(%s)", paste0(names(row), " = ", unname(row), collapse = ", "))
+    }, character(1)) |>
       paste0(collapse = "|>\n\t\t")
+
     macro_str <- paste0(" |>\n\t\t", macro_str)
   } else {
     macro_str <- ""
@@ -1327,18 +1495,16 @@ get_build_code <- function(sfm) {
   )
 
   # Variables
-  if (length(unlist(sfm[["model"]][["variables"]])) > 0) {
+  if (nrow(sfm[["variables"]]) > 0) {
     defaults <- formals(build)
     defaults <- defaults[!names(defaults) %in% c("sfm", "name", "type", "label", "...")]
 
     # Get properties per building block
     keep_prop <- get_building_block_prop()
 
-
-    var_str <- lapply(sfm[["model"]][["variables"]], function(x) {
-      lapply(x, function(y) {
-        z <- y
-        z[["func"]] <- NULL
+    var_str <- split(sfm[["variables"]], seq_len(nrow(sfm[["variables"]]))) |>
+      lapply(function(y) {
+        z <- as.list(y)
 
         # Remove properties containing "_julia"
         z[grepl("_julia", names(z))] <- NULL
@@ -1363,8 +1529,6 @@ get_build_code <- function(sfm) {
           ), ")"
         )
       })
-    })
-    var_str <- var_str[lengths(var_str) > 0]
     var_str <- paste0(" |>\n\t\t", paste0(unlist(var_str), collapse = " |>\n\t\t"))
   } else {
     var_str <- ""
@@ -1403,7 +1567,12 @@ get_build_code <- function(sfm) {
       add = TRUE
     )
   } else {
-    message("The code will not be formatted as styler is not installed. Install styler or wrap the script in cat().")
+    cli::cli_inform(c(
+      "Code formatting skipped.",
+      "i" = "Package {.pkg styler} is not installed.",
+      ">" = "Install with: {.code install.packages('styler')}.",
+      "i" = "For now, wrap the script in {.fn cat()} to view the formatted code."
+    ))
   }
 
   return(script)

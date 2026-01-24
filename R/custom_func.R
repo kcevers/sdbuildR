@@ -211,22 +211,39 @@ contains_IM <- function(haystack, needle) {
 #'
 ramp <- function(times, start, finish, height = 1) {
   if (finish < start) {
-    stop("The finish time of the ramp cannot be before the start time. To specify a decreasing ramp, set the height to a negative value.")
+    cli::cli_abort(c(
+      "Invalid ramp parameters.",
+      "x" = "The {.arg finish} time cannot be before the {.arg start} time.",
+      "i" = "To create a decreasing ramp, set {.arg height} to a negative value.",
+      ">" = "Adjust {.arg finish} to be greater than {.arg start}, or use a negative {.arg height}."
+    ))
   }
 
   if (start < times[1]) {
-    warning("Start of ramp before beginning of simulation time.")
+    cli::cli_warn(c(
+      "Ramp starts before simulation time.",
+      "i" = "The {.arg start} time {.val {start}} is before the simulation start at {.val {times[1]}}.",
+      ">" = "Consider adjusting the {.arg start} parameter to be within the simulation time range."
+    ))
   }
 
   if (start > times[length(times)]) {
-    warning("Start of ramp after end of simulation time.")
+    cli::cli_warn(c(
+      "Ramp starts after simulation time.",
+      "i" = "The {.arg start} time {.val {start}} is after the simulation ends at {.val {times[length(times)]}}.",
+      ">" = "The ramp will have no effect on the simulation."
+    ))
 
     # In this case, no need to compute signal
     signal <- data.frame(times = times[c(1, length(times))], y = c(0, 0))
     input <- stats::approxfun(signal, rule = 2, method = "constant")
     return(input)
   } else if (finish < times[1]) {
-    warning("End of ramp before beginning of simulation time.")
+    cli::cli_warn(c(
+      "Ramp finishes before simulation time.",
+      "i" = "The {.arg finish} time {.val {finish}} is before the simulation start at {.val {times[1]}}.",
+      ">" = "The ramp will be at its final {.arg height} for the entire simulation."
+    ))
 
     # In this case, no need to compute signal
     signal <- data.frame(times = times[c(1, length(times))], y = c(height, height))
@@ -297,15 +314,28 @@ ramp <- function(times, start, finish, height = 1) {
 #'
 pulse <- function(times, start, height = 1, width = 1, repeat_interval = NULL) {
   if (width <= 0) {
-    stop(paste0("The width of the pulse cannot be equal to or less than 0. To indicate an 'instantaneous' pulse, specify the simulation step size (", P[["timestep_name"]], ")."))
+    cli::cli_abort(c(
+      "Invalid {.arg width} parameter.",
+      "x" = "The {.arg width} parameter cannot be equal to or less than {.val 0}.",
+      "i" = "To create an instantaneous pulse, use the simulation step size {.code {P[[\"timestep_name\"]]}}.",
+      ">" = "Set {.arg width} to a positive value."
+    ))
   }
 
   if (start < times[1]) {
-    warning("Start of pulse before beginning of simulation time.")
+    cli::cli_warn(c(
+      "Pulse starts before simulation time.",
+      "i" = "The {.arg start} time {.val {start}} is before the simulation start at {.val {times[1]}}.",
+      ">" = "Consider adjusting the {.arg start} parameter to be within the simulation time range."
+    ))
   }
 
   if (start > times[length(times)]) {
-    warning("Start of pulse after end of simulation time.")
+    cli::cli_warn(c(
+      "Pulse starts after simulation time.",
+      "i" = "The {.arg start} time {.val {start}} is after the simulation ends at {.val {times[length(times)]}}.",
+      ">" = "The pulse will have no effect on the simulation."
+    ))
 
     # In this case, no need to compute signal
     signal <- data.frame(times = times[c(1, length(times))], y = c(0, 0))
@@ -324,7 +354,12 @@ pulse <- function(times, start, height = 1, width = 1, repeat_interval = NULL) {
 
     # When width is equal or greater than repeat interval, it's basically continuously 1
     if (width >= repeat_interval) {
-      warning("width (", width, ") >= repeat_interval (", repeat_interval, ") creates a continuous pulse.")
+      cli::cli_warn(c(
+        "Pulse configuration creates continuous output.",
+        "i" = "The {.arg width} ({.val {width}}) is greater than or equal to {.arg repeat_interval} ({.val {repeat_interval}}).",
+        "!" = "This creates a continuous pulse instead of discrete pulses.",
+        ">" = "Consider reducing {.arg width} or increasing {.arg repeat_interval}."
+      ))
 
       signal <- data.frame(times = start_ts, y = height)
     } else {
@@ -394,11 +429,19 @@ pulse <- function(times, start, height = 1, width = 1, repeat_interval = NULL) {
 #' plot(sim)
 step <- function(times, start, height = 1) {
   if (start < times[1]) {
-    warning("Start of step before beginning of simulation time.")
+    cli::cli_warn(c(
+      "Step starts before simulation time.",
+      "i" = "The {.arg start} time {.val {start}} is before the simulation start at {.val {times[1]}}.",
+      ">" = "Consider adjusting the {.arg start} parameter to be within the simulation time range."
+    ))
   }
 
   if (start > times[length(times)]) {
-    warning("Start of step after end of simulation time.")
+    cli::cli_warn(c(
+      "Step starts after simulation time.",
+      "i" = "The {.arg start} time {.val {start}} is after the simulation ends at {.val {times[length(times)]}}.",
+      ">" = "The step will have no effect on the simulation."
+    ))
 
     # In this case, no need to compute signal
     signal <- data.frame(times = times[c(1, length(times))], y = c(0, 0))
@@ -452,7 +495,11 @@ step <- function(times, start, height = 1) {
 #'
 seasonal <- function(times, period = 1, shift = 0) {
   if (period <= 0) {
-    stop("The period of the seasonal wave must be greater than 0.")
+    cli::cli_abort(c(
+      "Invalid {.arg period} parameter.",
+      "x" = "The {.arg period} must be greater than {.val 0}.",
+      ">" = "Set {.arg period} to a positive value."
+    ))
   }
 
   # Create linear approximation function - define wave in advance so that the period and shift argument do not need to be kept
@@ -581,7 +628,23 @@ logistic <- function(x, slope = 1, midpoint = 0, upper = 1) {
   stopifnot("midpoint must be numeric!" = is.numeric(midpoint))
   stopifnot("upper must be numeric!" = is.numeric(upper))
 
-  return(upper / (1 + exp(-slope * (x - midpoint))))
+  # Use numerically stable computation
+  # For large positive z: result ≈ upper
+  # For large negative z: result ≈ 0  
+  # Avoid underflow by using pmin/pmax to keep result strictly between 0 and upper
+  z <- slope * (x - midpoint)
+  
+  # Compute logistic with numerical stability
+  # When z is very large, exp(-z) underflows to 0, so we use upper directly
+  # When z is very small, exp(z) might overflow, so we handle carefully
+  result <- upper / (1 + exp(-pmin(pmax(z, -500), 500)))
+  
+  # Ensure result is strictly less than upper and greater than 0 (no exact bounds)
+  # Use nextafter equivalent: subtract smallest positive float to ensure strict inequality
+  result <- pmin(result, upper * (1 - .Machine$double.eps))
+  result <- pmax(result, upper * .Machine$double.eps)
+  
+  return(result)
 }
 
 

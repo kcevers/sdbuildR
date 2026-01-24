@@ -546,62 +546,62 @@ test_that("convert_distribution() to Julia", {
   type <- "stock"
 
   # When n = 1, don't add n, otherwise this create a vector
-  result <- convert_builtin_functions_julia(type, name, "runif(1)", var_names)$eqn
+  result <- convert_builtin_functions_julia(type, name, "runif(1)", var_names)$eqn_julia
   expected <- "rand(Distributions.Uniform(0.0, 1.0))"
   expect_equal(result, expected)
 
-  result <- convert_builtin_functions_julia(type, name, "runif(1, min =1, max=3)", var_names)$eqn
+  result <- convert_builtin_functions_julia(type, name, "runif(1, min =1, max=3)", var_names)$eqn_julia
   expected <- "rand(Distributions.Uniform(1.0, 3.0))"
   expect_equal(result, expected)
 
-  result <- convert_builtin_functions_julia(type, name, "runif(10, min =-1, max=3)", var_names)$eqn
+  result <- convert_builtin_functions_julia(type, name, "runif(10, min =-1, max=3)", var_names)$eqn_julia
   expected <- "rand(Distributions.Uniform(-1.0, 3.0), 10)"
   expect_equal(result, expected)
 
-  result <- convert_builtin_functions_julia(type, name, "rnorm(1)", var_names)$eqn
+  result <- convert_builtin_functions_julia(type, name, "rnorm(1)", var_names)$eqn_julia
   expected <- "rand(Distributions.Normal(0.0, 1.0))"
   expect_equal(result, expected)
 
   # Different order of arguments
-  result <- convert_builtin_functions_julia(type, name, "rnorm(10, sd =1, mean=3)", var_names)$eqn
+  result <- convert_builtin_functions_julia(type, name, "rnorm(10, sd =1, mean=3)", var_names)$eqn_julia
   expected <- "rand(Distributions.Normal(3.0, 1.0), 10)"
   expect_equal(result, expected)
 
-  result <- convert_builtin_functions_julia(type, name, "rnorm(10, 1, 3)", var_names)$eqn
+  result <- convert_builtin_functions_julia(type, name, "rnorm(10, 1, 3)", var_names)$eqn_julia
   expected <- "rand(Distributions.Normal(1.0, 3.0), 10)"
   expect_equal(result, expected)
 
-  result <- convert_builtin_functions_julia(type, name, "rexp(10, 3)", var_names)$eqn
+  result <- convert_builtin_functions_julia(type, name, "rexp(10, 3)", var_names)$eqn_julia
   expected <- "rand(Distributions.Exponential(3.0), 10)"
   expect_equal(result, expected)
 
-  result <- convert_builtin_functions_julia(type, name, "rexp(1, rate=30)", var_names)$eqn
+  result <- convert_builtin_functions_julia(type, name, "rexp(1, rate=30)", var_names)$eqn_julia
   expected <- "rand(Distributions.Exponential(30.0))"
   expect_equal(result, expected)
 
 
   # cdf, pdf, quantile
-  result <- convert_builtin_functions_julia(type, name, "pexp(1, rate=30)", var_names)$eqn
+  result <- convert_builtin_functions_julia(type, name, "pexp(1, rate=30)", var_names)$eqn_julia
   expected <- "Distributions.cdf.(Distributions.Exponential(30.0), 1)"
   expect_equal(result, expected)
 
-  result <- convert_builtin_functions_julia(type, name, "qexp(1, rate=30)", var_names)$eqn
+  result <- convert_builtin_functions_julia(type, name, "qexp(1, rate=30)", var_names)$eqn_julia
   expected <- "Distributions.quantile.(Distributions.Exponential(30.0), 1)"
   expect_equal(result, expected)
 
-  result <- convert_builtin_functions_julia(type, name, "dexp(1, rate=30)", var_names)$eqn
+  result <- convert_builtin_functions_julia(type, name, "dexp(1, rate=30)", var_names)$eqn_julia
   expected <- "Distributions.pdf.(Distributions.Exponential(30.0), 1)"
   expect_equal(result, expected)
 
-  result <- convert_builtin_functions_julia(type, name, "pgamma(1, 2, rate=30)", var_names)$eqn
+  result <- convert_builtin_functions_julia(type, name, "pgamma(1, 2, rate=30)", var_names)$eqn_julia
   expected <- "Distributions.cdf.(Distributions.Gamma(2.0, 30.0, 1.0/30.0), 1)"
   expect_equal(result, expected)
 
-  result <- convert_builtin_functions_julia(type, name, "qgamma(1, 2, rate=30)", var_names)$eqn
+  result <- convert_builtin_functions_julia(type, name, "qgamma(1, 2, rate=30)", var_names)$eqn_julia
   expected <- "Distributions.quantile.(Distributions.Gamma(2.0, 30.0, 1.0/30.0), 1)"
   expect_equal(result, expected)
 
-  result <- convert_builtin_functions_julia(type, name, "dgamma(1, 2, rate=30)", var_names)$eqn
+  result <- convert_builtin_functions_julia(type, name, "dgamma(1, 2, rate=30)", var_names)$eqn_julia
   expected <- "Distributions.pdf.(Distributions.Gamma(2.0, 30.0, 1.0/30.0), 1)"
   expect_equal(result, expected)
 })
