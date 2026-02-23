@@ -1,6 +1,6 @@
 test_that("simulate R for templates", {
   for (s in c("SIR", "predator_prey", "logistic_model", "Crielaard2022", "Duffing", "Chua")) {
-    sfm <- xmile(s) |> sim_specs(save_at = 1)
+    sfm <- sdbuildR(s) |> sim_specs(save_at = 1)
 
     if (s == "Crielaard2022") {
       sfm <- sfm |>
@@ -28,11 +28,11 @@ test_that("simulate R for templates", {
 
 test_that("simulate with different components works", {
   # Without stocks throws error
-  sfm <- xmile() |> sim_specs(language = "R")
+  sfm <- sdbuildR() |> sim_specs(language = "R")
   expect_warning(sim <- simulate(sfm), "Your model has no stocks.")
   expect_false(sim$success)
 
-  sfm <- xmile() |>
+  sfm <- sdbuildR() |>
     sim_specs(language = "R") |>
     build("a", "stock") |>
     build("b", "flow")
@@ -40,15 +40,15 @@ test_that("simulate with different components works", {
   expect_false(sim$success)
 
   # With one stock and no flows and no parameters
-  sfm <- xmile() |>
+  sfm <- sdbuildR() |>
     sim_specs(language = "R", start = 0, stop = 10, dt = 0.1) |>
     build("A", "stock", eqn = "100")
   sim <- expect_no_error(simulate(sfm))
   expect_equal(sort(names(sim$df)), c("time", "value", "variable"))
-  expect_no_error(plot(sim))
+  # Basic plot covered in consolidated test-plot-simulate_sdbuildR.R
 
   # One stock with flows, other stock without flows
-  sfm <- xmile() |>
+  sfm <- sdbuildR() |>
     sim_specs(language = "R", start = 0, stop = 10, dt = 0.1) |>
     build(c("A", "B"), "stock", eqn = "100") |>
     build("C", "flow", eqn = "1", to = "A")
@@ -57,7 +57,7 @@ test_that("simulate with different components works", {
   expect_equal(unique(sim$df$variable), c("A", "B", "C"))
 
   # With one intermediary -> error in constructing Dataframe before in Julia
-  sfm <- xmile() |>
+  sfm <- sdbuildR() |>
     sim_specs(language = "R", start = 0, stop = 10, dt = 0.1) |>
     build("A", "stock", eqn = "100") |>
     build("B", "flow", eqn = "1", to = "A") |>
@@ -67,7 +67,7 @@ test_that("simulate with different components works", {
   expect_equal(unique(sim$df$variable), c("A", "B", "C"))
 
   # Stocks without flows
-  sfm <- xmile() |>
+  sfm <- sdbuildR() |>
     sim_specs(language = "R", start = 0, stop = 10, dt = 0.1) |>
     build("A", "stock", eqn = "100") |>
     build("B", "stock", eqn = "1") |>
@@ -77,19 +77,19 @@ test_that("simulate with different components works", {
   expect_equal(unique(sim$df$variable), c("A", "B", "C"))
 
   # # With macros
-  # sfm = xmile(start = 0, stop = 10, dt = 0.1) |>
+  # sfm = sdbuildR(start = 0, stop = 10, dt = 0.1) |>
   #   build("A", "stock", eqn = "100") |>
   #   build("B", "flow", eqn = "1 + C(t)", to = "A") |>
   #   macro("C", eqn = "function(x) x + 1")
   # expect_no_message(simulate(sfm))
   # **solve macros& functions and how to define, maybe don't use (;x) as all arguments have to be named then, but with (x) they have to be in the right order
   # **variables cannot be functions because of the name issue with translating functions to Julia
-  # **sigmoid() errorsfm = xmile() |> header(name = "Maya's Burnout") |>
+  # **sigmoid() errorsfm = sdbuildR() |> meta(name = "Maya's Burnout") |>
   # eqn = "sigmoid((workday - normal_workday), midpoint = health)"
 
 
   # Only keep stocks
-  sfm <- xmile("SIR") |> sim_specs(language = "R", stop = 10, dt = 0.1)
+  sfm <- sdbuildR("SIR") |> sim_specs(language = "R", stop = 10, dt = 0.1)
   sim <- simulate(sfm, only_stocks = TRUE)
   expect_equal(
     length(unique(as.data.frame(sim)$variable)),
@@ -97,7 +97,7 @@ test_that("simulate with different components works", {
   )
 
   # All variables should be kept if only_stocks = FALSE
-  sfm <- xmile("SIR") |> sim_specs(language = "R", stop = 10, dt = 0.1)
+  sfm <- sdbuildR("SIR") |> sim_specs(language = "R", stop = 10, dt = 0.1)
   sim <- simulate(sfm, only_stocks = FALSE)
   df <- as.data.frame(sfm)
   df <- df[df$type != "constant", ]
@@ -106,18 +106,18 @@ test_that("simulate with different components works", {
 
 
 test_that("equations that refer to the variable itself throw error", {
-  sfm <- xmile() %>%
+  sfm <- sdbuildR() %>%
     build("E", "stock", eqn = "E")
   expect_warning(
     sim <- simulate(sfm),
-    "Please define these missing variables or correct any spelling mistakes"
+    "Define these missing variables or correct any spelling mistakes"
   )
   expect_false(sim$success)
 })
 
 
 test_that("output of simulate in R", {
-  sfm <- xmile("SIR") |> sim_specs(language = "R", start = 0, stop = 10, dt = .1)
+  sfm <- sdbuildR("SIR") |> sim_specs(language = "R", start = 0, stop = 10, dt = .1)
   sim <- expect_no_error(simulate(sfm))
   expect_equal(all(c("df", "init", "constants", "sfm", "script", "duration")
   %in% names(sim)), TRUE)
@@ -137,7 +137,7 @@ test_that("output of simulate in R", {
 
 test_that("save_at works", {
   # Cannot set save_at to lower than dt
-  sfm <- xmile("SIR")
+  sfm <- sdbuildR("SIR")
 
   # Check whether dataframe is returned at save_at times
   sfm <- sfm |>
@@ -152,7 +152,7 @@ test_that("save_at works", {
 
 
 test_that("negative times are possible", {
-  sfm <- xmile("logistic_model") |>
+  sfm <- sdbuildR("logistic_model") |>
     sim_specs(start = -1, language = "R", stop = 10, dt = 0.1)
   expect_no_error({
     sim <- simulate(sfm)
@@ -161,21 +161,21 @@ test_that("negative times are possible", {
 
 
 test_that("save_from works", {
-  sfm <- xmile("SIR") |> sim_specs(
+  sfm <- sdbuildR("SIR") |> sim_specs(
     start = 0, stop = 20, save_at = .1,
     save_from = 10, language = "R"
   )
   sim <- expect_no_error(simulate(sfm))
   expect_equal(min(sim$df$time), 10)
   expect_equal(max(sim$df$time), 20)
-  expect_no_error(plot(sim))
+  # Basic plot covered in consolidated test-plot-simulate_sdbuildR.R
   expect_no_error(summary(sfm))
 })
 
 
 test_that("seed works", {
   # Without a seed, simulations shouldn't be the same
-  sfm <- xmile("predator_prey") |>
+  sfm <- sdbuildR("predator_prey") |>
     sim_specs(language = "R", start = 0, stop = 10, dt = 0.1) |>
     sim_specs(seed = NULL) |>
     build(c("predator", "prey"), eqn = "runif(1, 20, 50)")
@@ -193,7 +193,7 @@ test_that("seed works", {
 
 
 test_that("function in aux still works", {
-  sfm <- xmile() |>
+  sfm <- sdbuildR() |>
     sim_specs(language = "R", start = 0, stop = 10, dt = .1) |>
     build("A", "stock") |>
     build("input", "aux", eqn = "ramp(times, 5, 10, -1)")

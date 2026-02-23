@@ -1,4 +1,3 @@
-# Tests for unit specification functions
 
 test_that("u() returns unit string", {
   result <- u("10 seconds")
@@ -27,4 +26,3 @@ test_that("u() works in equations", {
   # Basic unit specification
   expect_true(grepl("u\\(", "u('10kilometers')"))
 })
-

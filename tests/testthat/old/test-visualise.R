@@ -2,7 +2,7 @@ test_that("export_plot works", {
   skip_on_cran() # requires chrome
   skip_if_not_installed(c("DiagrammeRsvg", "rsvg"))
 
-  sfm <- xmile("SIR") |> sim_specs(stop = 10, dt = .1)
+  sfm <- sdbuildR("SIR") |> sim_specs(stop = 10, dt = .1)
 
   # Plot sfm
   pl <- plot(sfm)
@@ -39,7 +39,7 @@ test_that("export_plot works", {
 
 test_that("plot sfm", {
   # Empty models should throw error
-  sfm0 <- xmile()
+  sfm0 <- sdbuildR()
   expect_error(plot(sfm0), "Your model contains no variables")
 
   # A model with one variable should already be plottable
@@ -56,7 +56,7 @@ test_that("plot sfm", {
   expect_no_error(expect_no_message(expect_no_warning(plot(sfm))))
 
   # Test full models
-  sfm <- xmile("SIR")
+  sfm <- sdbuildR("SIR")
 
   # Plot sfm
   expect_no_error(expect_no_message(expect_no_warning(plot(sfm))))
@@ -76,7 +76,7 @@ test_that("plot sfm", {
 
 
 test_that("plot sim", {
-  sfm <- xmile("SIR") |> sim_specs(stop = 10, dt = .1)
+  sfm <- sdbuildR("SIR") |> sim_specs(stop = 10, dt = .1)
 
   # Plot simulation
   sim <- simulate(sfm)

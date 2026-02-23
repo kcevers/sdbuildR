@@ -4,12 +4,14 @@
 \alias{use_julia}
 \title{Start Julia and activate environment}
 \usage{
-use_julia(stop = FALSE, force = FALSE)
+use_julia(stop = FALSE, force = FALSE, nthreads = NULL)
 }
 \arguments{
-\item{stop}{If TRUE, stop active Julia session. Defaults to FALSE.}
+\item{stop}{If \code{TRUE}, stop active Julia session. Defaults to \code{FALSE}.}
 
-\item{force}{If TRUE, force Julia setup to execute again.}
+\item{force}{If \code{TRUE}, force Julia setup to execute again.}
+
+\item{nthreads}{If not \code{NULL}, set the number of threads for Julia to use. This will set the environment variable \code{JULIA_NUM_THREADS} and restart Julia if it is already running to apply the new thread setting. See \href{https://docs.julialang.org/en/v1/manual/parallel-computing/#man-parallel-computing}{this page} for more details on threading in Julia.}
 }
 \value{
 Returns \code{NULL} invisibly, used for side effects
@@ -23,7 +25,7 @@ Julia supports running stock-and-flow models with units as well as ensemble simu
 In every R session, \code{use_julia()} needs to be run once (which is done automatically in \code{simulate()}), which can take around 30-60 seconds.
 }
 \examples{
-\dontshow{if (julia_status()$status == "ready") withAutoprint(\{ # examplesIf}
+\dontshow{if (is_julia_ready()) withAutoprint(\{ # examplesIf}
 # Start a Julia session and activate the Julia environment for sdbuildR
 use_julia()
 
@@ -32,6 +34,6 @@ use_julia(stop = TRUE)
 \dontshow{\}) # examplesIf}
 }
 \seealso{
-\code{\link[=julia_status]{julia_status()}}, \code{\link[=install_julia_env]{install_julia_env()}}
+\code{\link[=install_julia_env]{install_julia_env()}}
 }
 \concept{julia}

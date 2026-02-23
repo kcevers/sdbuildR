@@ -86,7 +86,7 @@ test_that("logistic works", {
   expect_equal(logistic(1, slope = -50), 0)
   expect_equal(logistic(1, slope = 50, upper = 10), 10)
 
-  sfm0 <- xmile() |>
+  sfm0 <- sdbuildR() |>
     sim_specs(start = 0, stop = 1, dt = .1) |>
     build("a", "stock") |>
     build("b", "flow",
@@ -100,7 +100,7 @@ test_that("logistic works", {
     logistic(x, slope = -9, midpoint = 0.5, upper = 10)
   )
 
-  sfm2 <- xmile() |>
+  sfm2 <- sdbuildR() |>
     build("a", "stock") |>
     build("b", "flow", eqn = "logistic(t, 9, upper = 10, midpoint = 0.5)", to = "a")
   sim <- expect_no_error(simulate(sfm2))
@@ -111,8 +111,7 @@ test_that("logistic works", {
     logistic(x, slope = 9, midpoint = 0.5, upper = 10)
   )
 
-  testthat::skip_on_cran()
-  testthat::skip_if_not(julia_status()$status == "ready")
+  skip_if_julia_not_ready()
 
   sim <- expect_no_error(simulate(sfm0 |> sim_specs(language = "Julia")))
   df <- as.data.frame(sim)
@@ -151,7 +150,7 @@ test_that("step works", {
   expect_warning(step(times, 11), "Start of step after end of simulation time")
 
   # Set-up basic sfm
-  sfm0 <- xmile() |>
+  sfm0 <- sdbuildR() |>
     sim_specs(stop = 10, dt = .1) |>
     build("a", "stock") |>
     build("b", "flow", eqn = "input(t)", to = "a")
@@ -186,18 +185,15 @@ test_that("step works", {
   sfm <- sfm0 |> build("input", "constant", eqn = "step(times, start = 5, height = 8)")
   sim <- expect_no_error(simulate(sfm))
 
-  # Ensure plotting works with add_constants as these are functions
-  sim <- expect_no_error(simulate(sfm))
-  expect_no_error(plot(sim, add_constants = TRUE))
+  # Plotting with add_constants covered in consolidated test-plot-simulate_sdbuildR.R
 })
 
 
 test_that("step works (Julia)", {
-  testthat::skip_on_cran()
-  testthat::skip_if_not(julia_status()$status == "ready")
+  skip_if_julia_not_ready()
 
   # Set-up basic sfm
-  sfm0 <- xmile() |>
+  sfm0 <- sdbuildR() |>
     sim_specs(stop = 10, dt = .1) |>
     build("a", "stock") |>
     build("b", "flow", eqn = "input(t)", to = "a")
@@ -232,9 +228,7 @@ test_that("step works (Julia)", {
   sfm <- sfm0 |> build("input", "constant", eqn = "step(times, start = 5, height = 8)")
   sim <- expect_no_error(simulate(sfm |> sim_specs(language = "Julia")))
 
-  # Ensure plotting works with add_constants as these are functions
-  sim <- expect_no_error(simulate(sfm |> sim_specs(language = "Julia")))
-  expect_no_error(plot(sim, add_constants = TRUE))
+  # Plotting with add_constants covered in consolidated test-plot-simulate_sdbuildR.R
 
   # Also works with units
   expect_no_error(sfm0 |> build("input", "constant", eqn = "step(times, start = u('5seconds'))"))
@@ -264,7 +258,7 @@ test_that("pulse works", {
   )
 
   # Set-up basic sfm
-  sfm0 <- xmile() |>
+  sfm0 <- sdbuildR() |>
     sim_specs(stop = 20, dt = .1) |>
     build("a", "stock") |>
     build("b", "flow", eqn = "input(t)", to = "a")
@@ -306,18 +300,15 @@ test_that("pulse works", {
   expect_equal(a[which(df$time > 10)[1]], 0.1 * 1) # dt * height pulse
   expect_equal(a[which(df$time > 15)[1]], 1 + 0.1 * 1) # dt * height pulse
 
-  # Ensure plotting works with add_constants as these are functions
-  sim <- expect_no_error(simulate(sfm))
-  expect_no_error(plot(sim, add_constants = TRUE))
+  # Plotting with add_constants covered in consolidated test-plot-simulate_sdbuildR.R
 })
 
 
 test_that("pulse works (Julia)", {
-  testthat::skip_on_cran()
-  testthat::skip_if_not(julia_status()$status == "ready")
+  skip_if_julia_not_ready()
 
   # Set-up basic sfm
-  sfm0 <- xmile() |>
+  sfm0 <- sdbuildR() |>
     sim_specs(stop = 20, dt = .1) |>
     build("a", "stock") |>
     build("b", "flow", eqn = "input(t)", to = "a")
@@ -353,9 +344,7 @@ test_that("pulse works (Julia)", {
   expect_equal(a[which(df$time > 10)[1]], 0.1 * 1) # dt * height pulse
   expect_equal(a[which(df$time > 15)[1]], 1 + 0.1 * 1) # dt * height pulse
 
-  # Ensure plotting works with add_constants as these are functions
-  sim <- expect_no_error(simulate(sfm |> sim_specs(language = "Julia")))
-  expect_no_error(plot(sim, add_constants = TRUE))
+  # Plotting with add_constants covered in consolidated test-plot-simulate_sdbuildR.R
 })
 
 test_that("ramp works", {
@@ -368,7 +357,7 @@ test_that("ramp works", {
   expect_error(ramp(times, 5, 2), "The finish time of the ramp cannot be before the start time\\. To specify a decreasing ramp, set the height to a negative value")
 
   # Set-up basic sfm
-  sfm0 <- xmile() |>
+  sfm0 <- sdbuildR() |>
     sim_specs(stop = 10, dt = .1) |>
     build("a", "stock") |>
     build("b", "flow", eqn = "input(t)", to = "a")
@@ -383,18 +372,15 @@ test_that("ramp works", {
   expect_equal(a[which(df$time > 2)[1]], 0) # first value is still zero
   expect_equal(a[which(df$time > 2)[2]] > 0, TRUE)
 
-  # Ensure plotting works with add_constants as these are functions
-  sim <- expect_no_error(simulate(sfm))
-  expect_no_error(plot(sim, add_constants = TRUE))
+  # Plotting with add_constants covered in consolidated test-plot-simulate_sdbuildR.R
 })
 
 
 test_that("ramp works (Julia)", {
-  testthat::skip_on_cran()
-  testthat::skip_if_not(julia_status()$status == "ready")
+  skip_if_julia_not_ready()
 
   # Set-up basic sfm
-  sfm0 <- xmile() |>
+  sfm0 <- sdbuildR() |>
     sim_specs(stop = 10, dt = .1) |>
     build("a", "stock") |>
     build("b", "flow", eqn = "input(t)", to = "a")
@@ -408,9 +394,7 @@ test_that("ramp works (Julia)", {
   expect_equal(a[which(df$time > 2)[1]], 0) # first value is still zero
   expect_equal(a[which(df$time > 2)[2]] > 0, TRUE)
 
-  # Ensure plotting works with add_constants as these are functions
-  sim <- expect_no_error(simulate(sfm |> sim_specs(language = "Julia")))
-  expect_no_error(plot(sim, add_constants = TRUE))
+  # Plotting with add_constants covered in consolidated test-plot-simulate_sdbuildR.R
 })
 
 
@@ -421,7 +405,7 @@ test_that("seasonal works", {
   expect_error(seasonal(times, -10), "The period of the seasonal wave must be greater than 0")
 
   # Set-up basic sfm
-  sfm0 <- xmile() |>
+  sfm0 <- sdbuildR() |>
     sim_specs(stop = 10, dt = .1) |>
     build("a", "stock") |>
     build("b", "flow", eqn = "input(t)", to = "a")
@@ -449,11 +433,10 @@ test_that("seasonal works", {
 })
 
 test_that("seasonal works (Julia)", {
-  testthat::skip_on_cran()
-  testthat::skip_if_not(julia_status()$status == "ready")
+  skip_if_julia_not_ready()
 
   # Set-up basic sfm
-  sfm0 <- xmile() |>
+  sfm0 <- sdbuildR() |>
     sim_specs(stop = 10, dt = .1) |>
     build("a", "stock") |>
     build("b", "flow", eqn = "input(t)", to = "a")

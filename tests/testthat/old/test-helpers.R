@@ -30,7 +30,7 @@ test_that("compact_() works", {
 
 
 test_that("clean_name() works", {
-  sfm <- xmile()
+  sfm <- sdbuildR()
   names_df <- get_names(sfm)
 
   # Check for syntactically correct names
@@ -58,10 +58,10 @@ test_that("clean_language works", {
 
 test_that("get_names() works", {
   # Check no variables
-  expect_equal(get_names(xmile()), data.frame(type = character(), name = character(), label = character(), units = character()))
+  expect_equal(get_names(sdbuildR()), data.frame(type = character(), name = character(), label = character(), units = character()))
 
   # Check with variables
-  sfm <- xmile() |>
+  sfm <- sdbuildR() |>
     build("a", "aux") |>
     build("b", "aux")
   result <- get_names(sfm)
@@ -74,7 +74,7 @@ test_that("get_names() works", {
   expect_equal(result, expected)
 
   # Check with units
-  sfm <- xmile() |>
+  sfm <- sdbuildR() |>
     build("a", "stock", units = "1/s") |>
     build("b", "aux", units = "m")
   result <- get_names(sfm)
@@ -87,7 +87,7 @@ test_that("get_names() works", {
   expect_equal(result, expected)
 
   # Check with label
-  sfm <- xmile() |>
+  sfm <- sdbuildR() |>
     build("a", "stock", label = "A") |>
     build("b", "aux", label = "B")
   result <- get_names(sfm)

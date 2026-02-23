@@ -7,53 +7,51 @@
 u(unit_str)
 }
 \arguments{
-\item{unit_str}{Unit string; e.g. '3 seconds'}
+\item{unit_str}{Unit string; e.g., \code{'3 seconds'}.}
 }
 \value{
 Specified unit (only in Julia)
 }
 \description{
-Flexibly use units in equations by enclosing them in \code{\link[=u]{u()}}. Note that units are only supported in Julia, not in R.
+Use units in equations by enclosing them in \code{\link[=u]{u()}}. Note that units are only supported in Julia, not in R.
 }
 \details{
-Unit strings are converted to their standard symbols using regular expressions. This means that you can easily specify units without knowing their standard symbols. For example, u('kilograms per meters squared') will become 'kg/m^2'. You can use title-case for unit names, but letters cannot all be uppercase if this is not the standard symbol. For example, 'kilogram' works, but 'KILOGRAM' does not. This is to ensure that the right unit is detected.
+Unit strings are converted to their standard symbols using regular expressions. This means that you can easily specify units without knowing their standard symbols. For example, \code{u('kilograms per meters squared')} will become \code{u('kg/m^2')}. You can use title-case for unit names, but units cannot all be uppercase if this is not the standard symbol. For example, \code{u('Kilogram')} works, but \code{u('KILOGRAM')} does not. This is to ensure that the right unit is detected.
 }
 \examples{
 # Use units in equations
-sfm <- xmile() |>
-  build("a", "constant",
-    eqn = "u('10kilometers') - u('3meters')",
+sfm <- sdbuildR() |>
+  constant(a, 
+    eqn = u('10kilometers') - u('3meters'),
     units = "centimeters"
   )
 
 # Units can also be set by multiplying a number with a unit
-sfm <- xmile() |>
-  build("a", "constant", eqn = "10 * u('kilometers') - u('3meters')")
+sfm <- sdbuildR() |>
+  constant(a, eqn = 10 * u('kilometers') - u('3meters'))
 
 # Addition and subtraction is only allowed between matching units
-sfm <- xmile() |>
-  build("a", "constant", eqn = "u('3seconds') + u('1hour')")
+sfm <- sdbuildR() |>
+  constant(a, eqn = u('3seconds') + u('1hour'))
 
 # Division, multiplication, and exponentiation are allowed between different units
-sfm <- xmile() |>
-  build("a", "constant", eqn = "u('10grams') / u('1minute')")
+sfm <- sdbuildR() |>
+  constant(a, eqn = u('10grams') / u('1minute'))
 
 # Use custom units in equations
-sfm <- xmile() |>
-  model_units("BMI", eqn = "kilograms/meters^2", doc = "Body Mass Index") |>
-  build("weight_gain", "flow", eqn = "u('2 BMI / year')", units = "BMI/year")
+sfm <- sdbuildR() |>
+  custom_unit(BMI, eqn = kg/meters^2, doc = "Body Mass Index") |>
+  flow(weight_gain, eqn = u('2 BMI / year'), units = "BMI/year")
 
 # Unit strings are often needed in flows to ensure dimensional consistency
-sfm <- xmile() |>
+sfm <- sdbuildR() |>
   sim_specs(stop = 1, time_units = "days") |>
-  build("consumed_food", "stock", eqn = "1", units = "kilocalories") |>
-  build("eating", "flow",
-    eqn = "u('750kilocalories') / u('6hours')",
-    units = "kilocalories/day", to = "consumed_food"
-  )
+  stock(consumed_food, eqn = 1, units = "kilocalories") |>
+  flow(eating, eqn = u('750kilocalories') / u('6hours'), 
+       units = "kilocalories/day", to = consumed_food)
 
 }
 \seealso{
-\code{\link[=model_units]{model_units()}}, \code{\link[=unit_prefixes]{unit_prefixes()}}, \code{\link[=convert_u]{convert_u()}}, \code{\link[=drop_u]{drop_u()}}
+\code{\link[=custom_unit]{custom_unit()}}, \code{\link[=unit_prefixes]{unit_prefixes()}}, \code{\link[=convert_u]{convert_u()}}, \code{\link[=drop_u]{drop_u()}}
 }
 \concept{units}

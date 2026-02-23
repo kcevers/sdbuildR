@@ -13,7 +13,7 @@ install_julia_env(remove = FALSE)
 Invisibly returns NULL after instantiating the Julia environment.
 }
 \description{
-Instantiate the Julia environment for sdbuildR to run stock-and-flow models using Julia. For more guidance, please see \href{https://kcevers.github.io/sdbuildR/articles/julia-setup.html}{this vignette}.
+Instantiate the Julia environment for sdbuildR to run stock-and-flow models using Julia. For more guidance, see \href{https://kcevers.github.io/sdbuildR/articles/julia-setup.html}{this vignette}.
 }
 \details{
 \code{install_julia_env()} will:
@@ -30,7 +30,7 @@ Instantiate the Julia environment for sdbuildR to run stock-and-flow models usin
 Note that this may take 10-25 minutes the first time as Julia downloads and compiles packages.
 }
 \examples{
-\dontshow{if (julia_status()$julia_found && Sys.getenv("NOT_CRAN") == "true") withAutoprint(\{ # examplesIf}
+\dontshow{if (Sys.getenv("NOT_CRAN") == "true") withAutoprint(\{ # examplesIf}
 \dontrun{
 install_julia_env()
 
@@ -40,6 +40,6 @@ install_julia_env(remove = TRUE)
 \dontshow{\}) # examplesIf}
 }
 \seealso{
-\code{\link[=use_julia]{use_julia()}}, \code{\link[=julia_status]{julia_status()}}
+\code{\link[=use_julia]{use_julia()}}
 }
 \concept{julia}

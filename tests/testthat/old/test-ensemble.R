@@ -1,9 +1,8 @@
 test_that("ensemble works", {
-  testthat::skip_on_cran()
-  testthat::skip_if_not(julia_status()$status == "ready")
+  skip_if_julia_not_ready()
 
   # If you already have random elements in the model, no need to specify what to vary
-  sfm <- xmile("Crielaard2022") |> sim_specs(
+  sfm <- sdbuildR("Crielaard2022") |> sim_specs(
     language = "Julia",
     start = 0, stop = 10,
     dt = .1,
@@ -141,12 +140,11 @@ test_that("ensemble works", {
 
 
 test_that("ensemble reproducibility with seed", {
-  testthat::skip_on_cran()
-  testthat::skip_if_not(julia_status()$status == "ready")
+  skip_if_julia_not_ready()
   seed <- 123
 
   # If you already have random elements in the model, no need to specify what to vary
-  sfm <- xmile("predator_prey") |>
+  sfm <- sdbuildR("predator_prey") |>
     sim_specs(
       language = "Julia",
       start = 0, stop = 5,
@@ -163,11 +161,10 @@ test_that("ensemble reproducibility with seed", {
 
 
 test_that("plotting ensemble also works with singular time point", {
-  testthat::skip_on_cran()
-  testthat::skip_if_not(julia_status()$status == "ready")
+  skip_if_julia_not_ready()
 
   # If you already have random elements in the model, no need to specify what to vary
-  sfm <- xmile("predator_prey") |>
+  sfm <- sdbuildR("predator_prey") |>
     sim_specs(
       language = "Julia",
       start = 0, stop = 5,
@@ -190,11 +187,10 @@ test_that("plotting ensemble also works with singular time point", {
 
 
 test_that("ensemble works with specified range", {
-  testthat::skip_on_cran()
-  testthat::skip_if_not(julia_status()$status == "ready")
+  skip_if_julia_not_ready()
 
   # If you already have random elements in the model, no need to specify what to vary
-  sfm <- xmile("Crielaard2022") |> sim_specs(
+  sfm <- sdbuildR("Crielaard2022") |> sim_specs(
     language = "Julia",
     start = 0, stop = 10,
     dt = .1,
@@ -300,11 +296,10 @@ test_that("ensemble works with specified range", {
 
 
 test_that("ensemble works with units", {
-  testthat::skip_on_cran()
-  testthat::skip_if_not(julia_status()$status == "ready")
+  skip_if_julia_not_ready()
 
   # Test ensemble with model with units
-  sfm <- xmile("coffee_cup") |>
+  sfm <- sdbuildR("coffee_cup") |>
     sim_specs(language = "Julia", stop = 10, dt = 0.1) |>
     build("coffee_temperature", eqn = "runif(1, 20, 150)")
   sims <- expect_no_error(ensemble(sfm))
@@ -325,11 +320,10 @@ test_that("ensemble works with units", {
 
 
 test_that("ensemble works with NA", {
-  testthat::skip_on_cran()
-  testthat::skip_if_not(julia_status()$status == "ready")
+  skip_if_julia_not_ready()
 
   # Combine varying initial condition and parameters
-  sfm <- xmile("predator_prey") |>
+  sfm <- sdbuildR("predator_prey") |>
     build(c("predator", "prey"), eqn = "runif(1, 30, 50)") |>
     sim_specs(
       language = "Julia",
@@ -364,14 +358,13 @@ test_that("ensemble works with NA", {
 
 
 test_that("ensemble: order of range parameters", {
-  testthat::skip_on_cran()
-  testthat::skip_if_not(julia_status()$status == "ready")
+  skip_if_julia_not_ready()
 
   # In an earlier version, the order of the range parameters was not preserved
-  sfm <- xmile() |>
+  sfm <- sdbuildR() |>
     sim_specs(language = "Julia") |>
     sim_specs(stop = 12, dt = 0.1, save_at = 1, time_units = "month") |>
-    header(name = "Maya's Burnout") |>
+    meta(name = "Maya's Burnout") |>
     build("workload", "stock",
       eqn = 4
     ) |>
@@ -410,10 +403,9 @@ test_that("ensemble: order of range parameters", {
 
 
 test_that("ensemble works with interpolation function", {
-  testthat::skip_on_cran()
-  testthat::skip_if_not(julia_status()$status == "ready")
+  skip_if_julia_not_ready()
 
-  sfm <- xmile("logistic_model") |>
+  sfm <- sdbuildR("logistic_model") |>
     sim_specs(
       language = "Julia",
       start = 0, stop = 50,

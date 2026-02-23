@@ -1,41 +1,15 @@
 # Test Helper Functions
 # These functions reduce code duplication in tests
 
-
-#' Skip test if Julia is not ready
+#' Helper to skip test if Julia is not ready
 #'
-#' Combines skip_on_cran() and skip_if_not(julia_status()$status == "ready")
-#' for tests that require Julia
 skip_if_julia_not_ready <- function() {
   testthat::skip_on_cran()
-  testthat::skip_if_not(julia_status()$status == "ready")
+  if (!is_julia_ready()) {
+    testthat::skip()
+  }
 }
 
-#' Get variable attribute from new flat data frame structure
-#'
-#' Helper to access variable attributes in the new flat data frame structure.
-#' Replaces old nested access like sfm[["model"]][["variables"]][["flow"]][["name"]][["to"]]
-#' with get_var_attr(sfm, "name", "flow", "to")
-#'
-#' @param sfm A stock-and-flow model
-#' @param name Name of the variable
-#' @param type Type of variable (optional, can be NULL to search all types)
-#' @param attr Attribute to extract (e.g., "to", "from", "eqn", "units")
-#' @returns Value of the attribute, or NULL if not found
-get_var_attr <- function(sfm, name, type = NULL, attr) {
-  if (is.null(type)) {
-    row <- sfm[["variables"]][sfm[["variables"]][["name"]] == name, ]
-  } else {
-    row <- sfm[["variables"]][sfm[["variables"]][["name"]] == name & 
-                              sfm[["variables"]][["type"]] == type, ]
-  }
-  
-  if (nrow(row) == 0) return(NULL)
-  
-  value <- row[[attr]]
-  if (length(value) == 1) return(value[[1]])
-  return(value)
-}
 
 #' Expect successful simulation
 #'
@@ -48,17 +22,75 @@ expect_successful_simulation <- function(sfm, ...) {
   sim <- expect_no_error(simulate(sfm, ...))
   expect_true(sim$success)
   expect_true(nrow(sim$df) > 0)
+  expect_true("time" %in% colnames(sim$df))
+
+  # Time range should be correct
+  expect_equal(min(sim$df$time), as.numeric(sfm$sim_specs$save_from))
+  expect_equal(max(sim$df$time), as.numeric(sfm$sim_specs$stop))
+  expect_equal(mean(diff(unique(sim$df$time))), as.numeric(sfm$sim_specs$save_at))
+
   invisible(sim)
+}
+
+
+silence <- function(expr) {
+  suppressMessages(suppressWarnings(expr))
+}
+
+#' Build a standard SIR model
+#'
+#' Helper to create the canonical SIR model used across plot tests.
+sir_model <- function() {
+  sdbuildR("SIR")
+}
+
+
+#' Simulate the SIR model
+#'
+#' Creates and simulates the SIR model, allowing overrides such as only_stocks.
+sir_sim <- function(..., only_stocks = TRUE) {
+  simulate(sir_model(), only_stocks = only_stocks, ...)
+}
+
+
+#' Expect a plotly object
+#'
+#' Small helper to assert an object is a plotly visualization.
+expect_plotly <- function(x) {
+  testthat::expect_s3_class(x, "plotly")
 }
 
 
 #' Create a basic stock-and-flow model for tests
 #'
-#' Returns an xmile model with one stock S (eqn=1) and one flow Flow1 (eqn=S, to=S)
-#' to reduce duplication across tests. Note: uses "Flow1" instead of "F" to avoid 
+#' Returns an sdbuildR model with one stock S (eqn=1) and one flow Flow1 (eqn=S, to=S)
+#' to reduce duplication across tests. Note: uses "Flow1" instead of "F" to avoid
 #' name conflict with R's FALSE constant.
 make_basic_sfm <- function() {
-  xmile() |>
+  sdbuildR() |>
     build("S", type = "stock", eqn = "1") |>
     build("Flow1", type = "flow", eqn = "S", to = "S")
 }
+
+
+# Skip tests if internet not available or on CRAN
+skip_if_no_internet <- function() {
+  if (!has_internet()) {
+    testthat::skip("No internet connection")
+  }
+  if (Sys.getenv("NOT_CRAN") != "true") {
+    testthat::skip("Not run on CRAN")
+  }
+}
+
+
+# Local helper: model with stock, flow, constant, language = Julia
+# Validation in ensemble() fails before Julia execution, so no Julia needed
+make_ensemble_sfm <- function() {
+  sdbuildR() |>
+    build("S", type = "stock", eqn = "1") |>
+    build("Flow1", type = "flow", eqn = "S", to = "S") |>
+    build("k", type = "constant", eqn = "0.5") |>
+    sim_specs(language = "Julia")
+}
+

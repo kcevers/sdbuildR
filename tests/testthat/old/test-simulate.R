@@ -1,26 +1,23 @@
-test_that("find_dependencies works", {
-  sfm <- xmile() |>
+test_that("dependencies works", {
+  sfm <- sdbuildR() |>
     build("a", "stock", eqn = "b + c") |>
     build(c("b", "c"), "flow")
 
-  dep <- expect_no_error(expect_no_warning(expect_no_message(find_dependencies(sfm))))
+  dep <- expect_no_error(expect_no_warning(expect_no_message(dependencies(sfm))))
   expect_equal(sort(names(dep)), letters[1:3])
   expect_equal(dep[["a"]], c("b", "c"))
   expect_equal(dep[["b"]], character(0))
   expect_equal(dep[["c"]], character(0))
 
   # Reverse dependencies
-  dep <- expect_silent(find_dependencies(sfm, reverse = TRUE))
+  dep <- expect_silent(dependencies(sfm, reverse = TRUE))
   expect_equal(sort(names(dep)), letters[1:3])
   expect_equal(dep[["a"]], character(0))
   expect_equal(dep[["b"]], "a")
   expect_equal(dep[["c"]], "a")
-})
 
-
-test_that("find_dependencies works", {
-  sfm <- xmile("SIR")
-  dep <- expect_silent(find_dependencies(sfm))
+  sfm <- sdbuildR("SIR")
+  dep <- expect_silent(dependencies(sfm))
   expect_equal(dep[["Infected"]], character(0))
   expect_equal(dep[["Beta"]], c("Effective_Contact_Rate", "Total_Population"))
 
@@ -29,7 +26,7 @@ test_that("find_dependencies works", {
     sort(as.data.frame(sfm)[["name"]])
   )
 
-  dep_rev <- find_dependencies(sfm, reverse = TRUE)
+  dep_rev <- dependencies(sfm, reverse = TRUE)
   expect_setequal(dep_rev[["Infected"]], c("Lambda", "Recovery_Rate"))
   expect_equal(dep_rev[["Beta"]], "Lambda")
 
@@ -41,11 +38,11 @@ test_that("find_dependencies works", {
 
 
 test_that("get_build_code() works", {
-  expect_no_error(get_build_code(xmile()))
+  expect_no_error(get_build_code(sdbuildR()))
 
   for (s in c("SIR", "Crielaard2022")) {
     # Replicate with get_build_code
-    sfm <- xmile(s) |> sim_specs(save_at = 1, start = 0, stop = 10)
+    sfm <- sdbuildR(s) |> sim_specs(save_at = 1, start = 0, stop = 10)
 
     if (s == "Crielaard2022") {
       sfm <- sfm |>
@@ -68,13 +65,12 @@ test_that("get_build_code() works", {
 
 
 test_that("save_at works", {
-  sfm <- xmile("SIR") |> sim_specs(language = "R", stop = 10, save_at = 1)
+  sfm <- sdbuildR("SIR") |> sim_specs(language = "R", stop = 10, save_at = 1)
   sim <- simulate(sfm)
   df <- as.data.frame(sim)
   expect_equal(unique(round(diff(sort(unique(df[["time"]]))), 4)), 1)
 
-  testthat::skip_on_cran()
-  testthat::skip_if_not(julia_status()$status == "ready")
+  skip_if_julia_not_ready()
   sfm <- sfm |> sim_specs(language = "Julia")
   sim <- simulate(sfm)
   df <- as.data.frame(sim)

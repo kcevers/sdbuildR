@@ -36,7 +36,7 @@ After having built a stock-and-flow model, you may want to explore how different
 For this example, we will use Crielaard et al.'s (2022) model of eating behaviour, including the stocks hunger, eating, and compensatory behaviour (i.e. disordered eating behaviour such as purging and overexercising). For more details, see Crielaard et al. (2022). We can load this example from the model library and look what is inside:
 
 ```{r}
-sfm <- xmile("Crielaard2022")
+sfm <- sdbuildR("Crielaard2022")
 summary(sfm)
 ```
 
@@ -131,10 +131,10 @@ plot(sims)
 To run simulations in parallel, set the number of threads you would like to use:
 
 ```{r}
-use_threads(n = 4)
+use_julia(nthreads = 4)
 ```
 
-To stop using parallel simulations, run `use_threads(stop = TRUE)`.
+To stop using parallel simulations, run `use_julia(nthreads = 1)`.
 
 ## Specifying ranges
 

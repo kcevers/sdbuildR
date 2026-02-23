@@ -103,7 +103,7 @@ use_julia()
 For guidance on installing and setting up the Julia environment, see [this vignette](https://kcevers.github.io/sdbuildR/articles/julia-setup.html). For all models, the simulation engine has to be changed to Julia:
 
 ```{r}
-sfm <- xmile() |>
+sfm <- sdbuildR() |>
   sim_specs(language = "Julia")
 ```
 
@@ -180,7 +180,7 @@ sfm <- build(sfm, "coffee_amount", units = "cubed centimeters")
 We leave out the coffee amount for now, as it is not relevant for the example.
 
 ```{r}
-sfm <- build(sfm, "coffee_amount", erase = TRUE)
+sfm <- build(sfm, "coffee_amount", discard = TRUE)
 ```
 
 ### Units in equations
@@ -229,8 +229,8 @@ In other rare cases, it may be necessary to drop units in a part of the equation
 We have now fully specified all units in the model, and are ready to simulate! We repeat the full model here for clarity:
 
 ```{r}
-sfm <- xmile() |>
-  header(name = "Coffee cup") |>
+sfm <- sdbuildR() |>
+  meta(name = "Coffee cup") |>
   sim_specs(time_units = "minute", language = "Julia") |>
   build("coffee_temperature", "stock",
     eqn = "100",
@@ -252,20 +252,20 @@ plot(sim)
 
 ### Custom units
 
-For convenience, you may want to define custom units. Custom units can be added to your model with `model_units()`. Some examples:
+For convenience, you may want to define custom units. Custom units can be added to your model with `custom_unit()`. Some examples:
 
 ```{r}
-sfm <- xmile() |>
-  model_units("BMI",
+sfm <- sdbuildR() |>
+  custom_unit("BMI",
     eqn = "kilograms/meters^2",
     doc = "Body Mass Index"
   ) |>
-  model_units("BAC",
+  custom_unit("BAC",
     eqn = "grams/deciliter",
     doc = "Blood Alcohol Concentration"
   ) |>
-  model_units("bottle", eqn = "2liters") |>
-  model_units("meal", eqn = "700kcal")
+  custom_unit("bottle", eqn = "2liters") |>
+  custom_unit("meal", eqn = "700kcal")
 ```
 
 To keep track of the meaning of your units, document them with the `doc` property. 
@@ -273,57 +273,57 @@ To keep track of the meaning of your units, document them with the `doc` propert
 However, you may not have a definition for your custom unit in terms of other units. For example, the definition of employee morale, motivation, or self-efficacy is not straight-forward. In this case, simply leave out the `eqn` argument or specify `eqn = 1`:
 
 ```{r}
-sfm <- model_units(sfm, "BDI", doc = "Beck Depression Inventory")
+sfm <- custom_unit(sfm, "BDI", doc = "Beck Depression Inventory")
 ```
 
 Custom units may also be defined in terms of each other. 
 
 ```{r}
-sfm <- model_units(sfm, "quality",
+sfm <- custom_unit(sfm, "quality",
   doc = "Quality of life; also known as utility"
 ) |>
-  model_units("QALY", eqn = "years*quality", doc = "Quality-adjusted life year")
+  custom_unit("QALY", eqn = "years*quality", doc = "Quality-adjusted life year")
 ```
 
 Note that custom units are case-sensitive, and may be modified to create syntactically valid names. For example, special characters such as ^, &, - are not allowed in unit names:
 
 ```{r}
-sfm <- model_units(sfm, "CO^2")
+sfm <- custom_unit(sfm, "CO^2")
 ```
 
 Similarly, custom unit names cannot be the same as existing units in *Unitful*:
 
 ```{r, error = TRUE}
-sfm <- model_units(sfm, "kg")
+sfm <- custom_unit(sfm, "kg")
 ```
 
 ```{r, error = TRUE}
-sfm <- model_units(sfm, "kilograms")
+sfm <- custom_unit(sfm, "kilograms")
 ```
 
-Changing the name of a custom unit is also possible with `model_units()`, which will ensure that any uses of the unit in the model are updated:
+Changing the name of a custom unit is also possible with `custom_unit()`, which will ensure that any uses of the unit in the model are updated:
 
 ```{r}
-sfm <- model_units(sfm, "CO_2", change_name = "CO2")
+sfm <- custom_unit(sfm, "CO_2", change_name = "CO2")
 ```
 
-Previously added model units can be removed by setting `erase = TRUE`:
+Previously added model units can be removed by setting `discard = TRUE`:
 
 ```{r}
-sfm <- model_units(sfm, "BDI", erase = TRUE)
+sfm <- custom_unit(sfm, "BDI", discard = TRUE)
 ```
 
 For an overview of all custom units in the model, use `as.data.frame()`:
 
 ```{r}
-as.data.frame(sfm, type = "model_units")
+as.data.frame(sfm, type = "custom_unit")
 ```
 
-The simulation will not run in case any units are undefined. Find undefined units with `debugger()`:
+The simulation will not run in case any units are undefined. Find undefined units with `diagnose()`:
 
 ```{r}
-sfm <- xmile() |> build("health", "stock", units = "BMI")
-debugger(sfm)
+sfm <- sdbuildR() |> build("health", "stock", units = "BMI")
+diagnose(sfm)
 ```
 
 

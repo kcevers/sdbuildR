@@ -1,0 +1,103 @@
+test_that("change_name updates dependencies correctly", {
+  sfm <- sdbuildR() |>
+    build("a", "constant", eqn = 1) |>
+    build("b", "aux", eqn = "a * 2") |>
+    sim_specs()
+
+  # Check initial dependencies
+
+  deps <- sfm[["assemble"]][["ordering"]][["deps_by_name"]]
+  expect_equal(deps[["b"]], "a")
+
+  # Rename 'a' to 'alpha'
+  sfm <- change_name(sfm, "a", "alpha")
+  sfm <- sim_specs(sfm) # Re-trigger pre-assembly
+
+  # Dependencies should now reference 'alpha' not 'a'
+  deps <- sfm[["assemble"]][["ordering"]][["deps_by_name"]]
+  expect_null(deps[["a"]]) # Old name gone
+  expect_equal(deps[["alpha"]], character(0)) # alpha has no deps
+  expect_equal(deps[["b"]], "alpha") # b now depends on alpha
+
+  # Equation should also be updated
+  expect_equal(
+    sfm[["variables"]][sfm[["variables"]][["name"]] == "b", "eqn"],
+    "alpha * 2"
+  )
+})
+
+test_that("change_name clears and rebuilds cache", {
+  sfm <- sdbuildR() |>
+    build("x", "stock", eqn = 10) |>
+    build("flow_in", "flow", eqn = "rate", to = "x") |>
+    build("rate", "constant", eqn = 0.5) |>
+    sim_specs()
+
+  # Cache should be populated
+  expect_false(is.null(sfm[["assemble"]][["ordering"]]))
+
+  # Rename variable
+  sfm <- change_name(sfm, "rate", "growth_rate")
+
+  # Cache should be cleared after build
+  expect_null(sfm[["assemble"]][["ordering"]])
+
+  # After sim_specs, cache should be repopulated with new name
+  sfm <- sim_specs(sfm)
+  deps <- sfm[["assemble"]][["ordering"]][["deps_by_name"]]
+  expect_true("growth_rate" %in% names(deps))
+  expect_false("rate" %in% names(deps))
+})
+
+test_that("change_name updates flow to/from references in dependencies", {
+  sfm <- sdbuildR() |>
+    build("population", "stock", eqn = 100) |>
+    build("births", "flow", eqn = "birth_rate * population", to = "population") |>
+    build("birth_rate", "constant", eqn = 0.1) |>
+    sim_specs()
+
+  # Rename the stock
+
+  sfm <- change_name(sfm, "population", "pop")
+  sfm <- sim_specs(sfm)
+
+  # Flow should now reference 'pop' in its equation
+  flow_row <- sfm[["variables"]][sfm[["variables"]][["name"]] == "births", ]
+  expect_equal(flow_row[["to"]], "pop")
+  expect_true(grepl("pop", flow_row[["eqn"]]))
+
+  # Dependencies should reflect the rename
+  deps <- sfm[["assemble"]][["ordering"]][["deps_by_name"]]
+  expect_true("pop" %in% names(deps))
+  expect_false("population" %in% names(deps))
+  expect_true("pop" %in% deps[["births"]])
+})
+
+test_that("change_name updates graphical function source", {
+  sfm <- sdbuildR() |>
+    build("input_var", "aux", eqn = "Time") |>
+    build("lookup1", "lookup",
+      xpts = c(0, 1, 2),
+      ypts = c(0, 0.5, 1),
+      source = "input_var"
+    ) |>
+    sim_specs()
+
+  # Rename the source variable
+  sfm <- change_name(sfm, "input_var", "x_input")
+  sfm <- sim_specs(sfm)
+
+  # Graphical function source should be updated
+  gf_row <- sfm[["variables"]][sfm[["variables"]][["name"]] == "lookup1", ]
+  expect_equal(gf_row[["source"]], "x_input")
+
+  # Dependencies should reflect this
+  deps <- sfm[["assemble"]][["ordering"]][["deps_by_name"]]
+  expect_false("input_var" %in% names(deps))
+  expect_true("x_input" %in% names(deps))
+})
+
+test_that("change_name() errors when model object passed as name", {
+  sfm <- sdbuildR() |> build("A", type = "constant")
+  expect_error(change_name(sfm, sfm, new_name = "B"), "passed where a variable name")
+})

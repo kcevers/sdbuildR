@@ -7,7 +7,7 @@
 get_build_code(sfm)
 }
 \arguments{
-\item{sfm}{Stock-and-flow model, object of class \code{\link[=xmile]{sdbuildR_xmile}}.}
+\item{sfm}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
 }
 \value{
 String with code to build stock-and-flow model from scratch.
@@ -16,8 +16,8 @@ String with code to build stock-and-flow model from scratch.
 Create R code to rebuild an existing stock-and-flow model. This may help to understand how a model is built, or to modify an existing one.
 }
 \examples{
-sfm <- xmile("SIR")
-get_build_code(sfm)
+sfm <- sdbuildR("SIR")
+cat(get_build_code(sfm))
 
 }
 \concept{build}

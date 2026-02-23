@@ -31,14 +31,14 @@ test_that("downloading and simulating Insight Maker models works", {
 
   sfm_list <- list()
 
-  testthat::skip_if_not(julia_status()$status == "ready")
+  skip_if_julia_not_ready()
 
   URL <- "https://insightmaker.com/insight/3xgsvC7QKgPktHWZuXyGAl/Clone-of-Global-Climate-Change"
   sfm_list[[1]] <- sfm <- expect_no_error(insightmaker_to_sfm(URL = URL))
   df <- expect_no_error(as.data.frame(sfm))
   expect_true(nrow(df) > 0)
   expect_true("macro" %in% df$type)
-  expect_true("model_units" %in% df$type)
+  expect_true("custom_unit" %in% df$type)
 
   # Contains graphical functions; check whether xpts and ypts were concatenated
   expect_true("xpts" %in% names(df))
@@ -53,7 +53,7 @@ test_that("downloading and simulating Insight Maker models works", {
   URL <- "https://insightmaker.com/insight/5LxQr0waZGgBcPJcNTC029/Crielaard-et-al-2022"
   sfm_list[[2]] <- sfm <- expect_no_error(insightmaker_to_sfm(URL = URL))
   df <- expect_no_error(as.data.frame(sfm))
-  expect_equal(sfm[["model_units"]], list())
+  expect_equal(sfm[["custom_unit"]], list())
   expect_true(nrow(df) > 0)
   expect_true("macro" %in% df$type)
 
@@ -96,6 +96,8 @@ test_that("downloading and simulating Insight Maker models works", {
 
 
 test_that("empty model issues error", {
+  skip_if_no_internet()
+
   URL <- "https://insightmaker.com/insight/1S1MxCz4fvs2JvCmo6tEQo/empty"
 
   sfm <- expect_error(
@@ -153,7 +155,6 @@ test_that("ABM model issues error", {
 test_that("translating .InsightMaker models works (cran)", {
   keep_nonnegative_flow <- TRUE
   keep_nonnegative_stock <- TRUE
-  keep_solver <- TRUE
   only_stocks <- TRUE
   dt <- .1
   save_at <- 1
@@ -186,8 +187,7 @@ test_that("translating .InsightMaker models works (cran)", {
         insightmaker_to_sfm(
           file = model_files_IM[i],
           keep_nonnegative_flow = keep_nonnegative_flow,
-          keep_nonnegative_stock = keep_nonnegative_stock,
-          keep_solver = keep_solver
+          keep_nonnegative_stock = keep_nonnegative_stock
         )
       })
     })
@@ -198,7 +198,6 @@ test_that("translating .InsightMaker models works (cran)", {
       c(
         "eqn",
         "eqn_insightmaker",
-        "eqn_julia",
         "name_insightmaker",
         "units_insightmaker",
         "id_insightmaker"
@@ -209,12 +208,10 @@ test_that("translating .InsightMaker models works (cran)", {
     contains_stocks <- any(df[["type"]] == "stock")
 
     if (contains_stocks) {
-      sfm <- sim_specs(sfm, seed = seed)
-      sim_IM <- sim <- expect_no_error(simulate(sfm |> sim_specs(dt = dt, save_at = save_at),
+      sfm <- sim_specs(sfm, seed = seed, dt = dt, save_at = save_at)
+      sim_IM <- sim <- expect_successful_simulation(sfm,
         only_stocks = only_stocks
-      ))
-      expect_true(sim$success)
-      expect_true(nrow(sim$df) > 0)
+      )
       expect_silent(plot(sim))
     }
 
@@ -225,8 +222,7 @@ test_that("translating .InsightMaker models works (cran)", {
         insightmaker_to_sfm(
           file = model_files_json[i],
           keep_nonnegative_flow = keep_nonnegative_flow,
-          keep_nonnegative_stock = keep_nonnegative_stock,
-          keep_solver = keep_solver
+          keep_nonnegative_stock = keep_nonnegative_stock
         )
       })
     })
@@ -237,7 +233,6 @@ test_that("translating .InsightMaker models works (cran)", {
       c(
         "eqn",
         "eqn_insightmaker",
-        "eqn_julia",
         "name_insightmaker",
         "units_insightmaker",
         "id_insightmaker"
@@ -247,11 +242,9 @@ test_that("translating .InsightMaker models works (cran)", {
 
     if (contains_stocks) {
       sfm <- sim_specs(sfm, seed = seed)
-      sim_json <- sim <- expect_no_error(simulate(sfm |> sim_specs(dt = dt, save_at = save_at),
+      sim_json <- sim <- expect_successful_simulation(sfm |> sim_specs(dt = dt, save_at = save_at),
         only_stocks = only_stocks
-      ))
-      expect_true(sim$success)
-      expect_true(nrow(sim$df) > 0)
+      )
       expect_silent(plot(sim))
 
       # Compare simulations
@@ -263,12 +256,10 @@ test_that("translating .InsightMaker models works (cran)", {
 
 
 test_that("translating Insight Maker models works (validation)", {
-  skip_on_cran()
-  testthat::skip_if_not(julia_status()$status == "ready")
+  skip_if_julia_not_ready()
 
   keep_nonnegative_flow <- TRUE
   keep_nonnegative_stock <- TRUE
-  keep_solver <- TRUE
   only_stocks <- TRUE
   dt <- .1
   save_at <- 1
@@ -308,8 +299,7 @@ test_that("translating Insight Maker models works (validation)", {
         insightmaker_to_sfm(
           file = model_files_IM[i],
           keep_nonnegative_flow = keep_nonnegative_flow,
-          keep_nonnegative_stock = keep_nonnegative_stock,
-          keep_solver = keep_solver
+          keep_nonnegative_stock = keep_nonnegative_stock
         )
       })
     })
@@ -320,7 +310,7 @@ test_that("translating Insight Maker models works (validation)", {
       c(
         "eqn",
         "eqn_insightmaker",
-        "eqn_julia",
+        "eqn",
         "name_insightmaker",
         "units_insightmaker",
         "id_insightmaker"
@@ -329,11 +319,9 @@ test_that("translating Insight Maker models works (validation)", {
     expect_no_error(expect_no_warning(expect_no_message(plot(sfm))))
 
     sfm <- sim_specs(sfm, seed = seed)
-    sim <- sim_IM <- expect_no_error(simulate(sfm |> sim_specs(dt = dt, save_at = save_at),
+    sim <- sim_IM <- expect_successful_simulation(sfm |> sim_specs(dt = dt, save_at = save_at),
       only_stocks = only_stocks
-    ))
-    expect_true(sim$success)
-    expect_true(nrow(sim$df) > 0)
+    )
     expect_silent(plot(sim))
 
 
@@ -344,8 +332,7 @@ test_that("translating Insight Maker models works (validation)", {
         insightmaker_to_sfm(
           file = model_files_json[i],
           keep_nonnegative_flow = keep_nonnegative_flow,
-          keep_nonnegative_stock = keep_nonnegative_stock,
-          keep_solver = keep_solver
+          keep_nonnegative_stock = keep_nonnegative_stock
         )
       })
     })
@@ -356,7 +343,7 @@ test_that("translating Insight Maker models works (validation)", {
       c(
         "eqn",
         "eqn_insightmaker",
-        "eqn_julia",
+        "eqn",
         "name_insightmaker",
         "units_insightmaker",
         "id_insightmaker"
@@ -365,11 +352,9 @@ test_that("translating Insight Maker models works (validation)", {
     expect_no_error(expect_no_warning(expect_no_message(plot(sfm))))
 
     sfm <- sim_specs(sfm, seed = seed)
-    sim <- sim_json <- expect_no_error(simulate(sfm |> sim_specs(dt = dt, save_at = save_at),
+    sim <- sim_json <- expect_successful_simulation(sfm |> sim_specs(dt = dt, save_at = save_at),
       only_stocks = only_stocks
-    ))
-    expect_true(sim$success)
-    expect_true(nrow(sim$df) > 0)
+    )
     expect_silent(plot(sim))
 
     # Compare simulations

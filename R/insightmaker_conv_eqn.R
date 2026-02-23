@@ -1,5 +1,3 @@
-# Replacement functions for Insight Maker to R
-
 #' Transform Insight Maker eqn to R code
 #'
 #' @param eqn String with Insight Maker eqn, but translated R names
@@ -11,8 +9,7 @@
 #' @returns List with flat structure:
 #'   - eqn: Converted equation string
 #'   - translated_func: Functions used in equation translation
-#'   - add_vars_aux: Auxiliary variables to add to model
-#'   - add_vars_gf: Ghost functions to add to model
+#'   - add_vars: data.frame with variables that need to be added to the model
 #'   - doc: Documentation extracted from comments
 #' @noRd
 #' @importFrom rlang .data
@@ -32,10 +29,9 @@ convert_equations_IM <- function(type,
   # Check whether eqn is empty or NULL
   if (is.null(eqn) || !nzchar(eqn)) {
     return(list(
-      eqn = eqn,
+      eqn = "",
       translated_func = c(),
-      add_vars_aux = list(),
-      add_vars_gf = list(),
+      add_vars = data.frame(),
       doc = ""
     ))
   }
@@ -44,8 +40,7 @@ convert_equations_IM <- function(type,
   if (!nzchar(eqn)) {
     eqn <- "0.0"
     translated_func <- c()
-    add_vars_aux <- list()
-    add_vars_gf <- list()
+    add_vars <- data.frame()
   } else {
     # Step 2. Syntax (bracket types, destructuring assignment, time units {1 Month})
     # Replace curly brackets {} with c()
@@ -66,8 +61,7 @@ convert_equations_IM <- function(type,
     # Step 5. Replace built-in functions
     conv_list <- convert_builtin_functions_IM(type, name, eqn, var_names)
     eqn <- conv_list[["eqn"]]
-    add_vars_aux <- conv_list[["add_vars_aux"]]
-    add_vars_gf <- conv_list[["add_vars_gf"]]
+    add_vars <- conv_list[["add_vars"]]
     translated_func <- conv_list[["translated_func"]]
 
     # Ensure units which need scientific notation have it
@@ -78,7 +72,7 @@ convert_equations_IM <- function(type,
 
     # If it is a multi-line statement, surround by brackets in case they aren't macros
     eqn <- trimws(eqn)
-    if (stringr::str_detect(eqn, stringr::fixed("\n")) && !(name %in% P[["macro_name"]])) {
+    if (stringr::str_detect(eqn, stringr::fixed("\n")) && !(name %in% P[["func_name"]])) {
       eqn <- paste0("{\n", eqn, "\n}")
     }
 
@@ -87,13 +81,12 @@ convert_equations_IM <- function(type,
     }
   }
 
-  return(list(
+  list(
     eqn = eqn,
     translated_func = translated_func,
-    add_vars_aux = add_vars_aux,
-    add_vars_gf = add_vars_gf,
+    add_vars = add_vars,
     doc = ""
-  ))
+  )
 }
 
 
@@ -135,7 +128,6 @@ replace_comments <- function(eqn) {
   }
   return(eqn)
 }
-
 
 
 #' Clean equation and extract comments
@@ -605,6 +597,7 @@ convert_statement <- function(line, var_names) {
 
 
 #' Convert all statement syntax from Insight Maker to R
+#'
 #' Wrapper around convert_statement()
 #'
 #' @inheritParams convert_equations_IM
@@ -686,20 +679,6 @@ convert_all_statements <- function(eqn, var_names) {
 }
 
 
-#' Find indices of enclosures such as (), c(), {}
-#'
-#' @param eqn Character string containing the equation.
-#' @param var_names Character vector of variable names to exclude.
-#' @param opening String with opening character, e.g., "c(".
-#' @param closing String with closing character, e.g., ")".
-#' @param names_with_brackets Logical, whether variable names include brackets.
-#'
-#' @returns Data frame with indices of enclosures and nesting properties.
-#' @noRd
-#' @importFrom stringr str_locate_all str_sub
-
-
-
 #' Get regular expressions for built-in Insight Maker functions
 #'
 #' @returns data.frame
@@ -778,15 +757,15 @@ get_syntax_IM <- function() {
 
       # String Functions (10)
       "Range", "", "syntax5", FALSE, TRUE, "",
-      "Split", "strsplit", "syntax2", FALSE, TRUE, "",
-      "UpperCase", "toupper", "syntax2", FALSE, TRUE, "",
-      "LowerCase", "tolower", "syntax2", FALSE, TRUE, "",
-      "Join", "stringr::str_flatten", "syntax2", FALSE, TRUE, "",
-      "Trim", "trimws", "syntax2", FALSE, TRUE, "",
-      "Parse", "as.numeric", "syntax2", FALSE, TRUE, "",
+      "Split", "strsplit", "syntax1", FALSE, TRUE, "",
+      "UpperCase", "toupper", "syntax1", FALSE, TRUE, "",
+      "LowerCase", "tolower", "syntax1", FALSE, TRUE, "",
+      "Join", "stringr::str_flatten", "syntax1", FALSE, TRUE, "",
+      "Trim", "trimws", "syntax1", FALSE, TRUE, "",
+      "Parse", "as.numeric", "syntax1", FALSE, TRUE, "",
 
       # Vector Functions (20)
-      "Length", "length_IM", "syntax2", FALSE, TRUE, "",
+      "Length", "length_IM", "syntax1", FALSE, TRUE, "",
       # "Join", "c", "syntax1", ),
       # "Flatten", "purrr::flatten", "syntax2", ),
       "Unique", "unique", "syntax2", FALSE, TRUE, "",
@@ -956,7 +935,7 @@ get_syntax_IM <- function() {
 convert_builtin_functions_IM <- function(type, name, eqn, var_names) {
   # If there are no letters in the eqn, don't run function
   translated_func <- c()
-  add_Rcode_list <- list()  # Will accumulate all add_Rcode structures
+  add_vars <- data.frame() # Will accumulate all add_vars
 
   if (grepl("[[:alpha:]]", eqn)) {
     # data.frame with regular expressions for each built-in Insight Maker function
@@ -971,26 +950,6 @@ convert_builtin_functions_IM <- function(type, name, eqn, var_names) {
     )
 
     while (!done) {
-      # idx_df <- lapply(seq_along(IM_regex), function(i) {
-      #   matches <- gregexpr(IM_regex[i], eqn, ignore.case = ignore_case_arg)[[1]]
-      #
-      #   if (matches[1] == -1) {
-      #     return(NULL)
-      #   } else {
-      #     dplyr::bind_cols(
-      #       syntax_df[i, ],
-      #       data.frame(
-      #         start = as.integer(matches),
-      #         end = as.integer(matches + attr(matches, "match.length") - 1)
-      #       )
-      #     )
-      #   }
-      # })
-      #
-      #
-      # # Remove NULL entries
-      # idx_keep <- !vapply(idx_df, is.null, logical(1))
-      # idx_df <- idx_df[idx_keep]
 
       idx_df <- stringr::str_locate_all(eqn, IM_regex)
 
@@ -1198,12 +1157,15 @@ convert_builtin_functions_IM <- function(type, name, eqn, var_names) {
           start_idx <- idx_func[["start"]]
           end_idx <- idx_func[["end"]]
           replacement <- out[["replacement"]]
-          add_Rcode <- out[["add_Rcode"]]
-          add_Rcode_list <- append(add_Rcode_list, add_Rcode)
+          add_var <- out[["add_var"]]
 
-          # Add newly created variables to names_df so that they are safe from replacement, e.g. if a variable contains the word "Time"
-          add_names <- vapply(add_Rcode, names, character(1), USE.NAMES = FALSE)
-          var_names <- c(var_names, add_names)
+          if (nrow(add_var)){
+            add_vars <- rbind(add_vars, add_var)
+
+            # Add newly created variables to names_df so that they are safe from replacement, e.g. if a variable contains the word "Time"
+            # add_names <- vapply(add_code, names, character(1), USE.NAMES = FALSE)
+            var_names <- c(var_names, add_var[["name"]])
+          }
         }
 
         if (P[["debug"]]) {
@@ -1218,7 +1180,7 @@ convert_builtin_functions_IM <- function(type, name, eqn, var_names) {
         translated_func <- c(translated_func, idx_func[["insightmaker"]])
       }
     }
-    add_Rcode <- add_Rcode_list
+    # add_code <- add_code_list
 
     # Check for unsupported functions
     eqn_split <- strsplit(eqn, "")[[1]]
@@ -1262,16 +1224,12 @@ convert_builtin_functions_IM <- function(type, name, eqn, var_names) {
     }
   }
 
-  # Flatten nested add_Rcode to flat structure
-  flat_vars <- flatten_add_vars(add_Rcode_list)
-
-  return(list(
+  list(
     eqn = eqn,
     translated_func = translated_func,
-    add_vars_aux = flat_vars[["add_vars_aux"]],
-    add_vars_gf = flat_vars[["add_vars_gf"]],
+    add_vars = add_vars,
     doc = ""
-  ))
+  )
 }
 
 
@@ -1334,19 +1292,25 @@ extract_prefunc_args <- function(eqn, var_names, start_func, names_with_brackets
 conv_lookup <- function(func, arg, name) {
   func_name_str <- sprintf("%s_lookup", name)
   arg[1] <- stringr::str_replace_all(arg[1], c("^\\[" = "", "\\]$" = ""))
-  add_Rcode <- list(gf = list(list(
-    xpts = arg[2], ypts = arg[3],
+  # add_code <- list(gf = list(list(
+  #   xpts = arg[2], ypts = arg[3],
+  #   source = arg[1],
+  #   interpolation = "linear",
+  #   extrapolation = "nearest"
+  # )) |>
+  #   stats::setNames(func_name_str))
+  add_var <- do.call(get_variable_row, 
+                    list(name = func_name_str, type = "lookup",
+                    xpts = arg[2], ypts = arg[3],
     source = arg[1],
     interpolation = "linear",
-    extrapolation = "nearest"
-  )) |>
-    stats::setNames(func_name_str))
+    extrapolation = "nearest"))
 
   replacement <- sprintf("[%s]([%s])", func_name_str, arg[1])
 
   return(list(
     replacement = replacement,
-    add_Rcode = add_Rcode
+    add_var = add_var
   ))
 }
 
@@ -1364,7 +1328,7 @@ check_only_primitive <- function(eqn) {
 
   return(
     length(opening) == 1 &
-      length(closing == 1) &
+      length(closing) == 1 &
       opening[1] == 1 & closing[1] == stringr::str_length(eqn)
   )
 }
@@ -1387,7 +1351,7 @@ conv_delay <- function(func, arg, name) {
   return(
     list(
       replacement = replacement,
-      add_Rcode = list()
+      add_var = data.frame()
     )
   )
 }
@@ -1444,7 +1408,7 @@ conv_past_values <- function(func, arg, name) {
   return(
     list(
       replacement = replacement,
-      add_Rcode = list()
+      add_var = data.frame()
     )
   )
 }
@@ -1485,7 +1449,7 @@ conv_delayN <- function(func, arg) {
   return(
     list(
       replacement = replacement,
-      add_Rcode = list()
+      add_var = data.frame()
     )
   )
 }
@@ -1524,11 +1488,12 @@ conv_step <- function(func, arg, match_idx, name, # Default settings of Insight 
     start_t_step,
     h_step
   )
-  add_Rcode <- list(aux = list(list(eqn = func_def_str)) |> stats::setNames(func_name_str))
+  # add_code <- list(aux = list(list(eqn = func_def_str)) |> stats::setNames(func_name_str))
+  add_var <- get_variable_row(name = func_name_str, type = "aux", eqn = func_def_str)
 
   return(list(
     replacement = replacement,
-    add_Rcode = add_Rcode
+    add_var = add_var
   ))
 }
 
@@ -1586,11 +1551,12 @@ conv_pulse <- function(func,
     w_pulse,
     repeat_interval
   )
-  add_Rcode <- list(aux = list(list(eqn = func_def_str)) |> stats::setNames(func_name_str))
+  # add_code <- list(aux = list(list(eqn = func_def_str)) |> stats::setNames(func_name_str))
+  add_var <- get_variable_row(name = func_name_str, type = "aux", eqn = func_def_str)
 
   return(list(
     replacement = replacement,
-    add_Rcode = add_Rcode
+    add_var = add_var
   ))
 }
 
@@ -1632,13 +1598,14 @@ conv_ramp <- function(func, arg, match_idx, name, # Default settings of Insight 
     end_t_ramp, P[["time_units_name"]],
     h_ramp
   )
-  add_Rcode <- list(aux = list(list(
-    eqn = func_def_str
-  )) |> stats::setNames(func_name_str))
+  # add_code <- list(aux = list(list(
+  #   eqn = func_def_str
+  # )) |> stats::setNames(func_name_str))
+  add_var <- get_variable_row(name = func_name_str, type = "aux", eqn = func_def_str)
 
   return(list(
     replacement = replacement,
-    add_Rcode = add_Rcode
+    add_var = add_var
   ))
 }
 
@@ -1678,13 +1645,13 @@ conv_seasonal <- function(func, arg, match_idx, name,
     P[["times_name"]],
     period, shift
   )
-  add_Rcode <- list(aux = list(list(
-    eqn = func_def_str
-  )) |> stats::setNames(func_name_str))
-
+  # add_code <- list(aux = list(list(
+  #   eqn = func_def_str
+  # )) |> stats::setNames(func_name_str))
+  add_var <- get_variable_row(name = func_name_str, type = "aux", eqn = func_def_str)
 
   return(list(
     replacement = replacement,
-    add_Rcode = add_Rcode
+    add_var = add_var
   ))
 }

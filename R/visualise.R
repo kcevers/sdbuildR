@@ -18,7 +18,7 @@
 #' # Only if dependencies are installed
 #' if (require("DiagrammeRsvg", quietly = TRUE) &
 #'   require("rsvg", quietly = TRUE)) {
-#'   sfm <- xmile("SIR")
+#'   sfm <- sdbuildR("SIR")
 #'   file <- tempfile(fileext = ".png")
 #'   export_plot(plot(sfm), file)
 #'
@@ -215,7 +215,7 @@ export_plotly <- function(pl, file, format, width, height) {
 #'
 #' Visualize a stock-and-flow diagram using the R package DiagrammeR. Stocks are represented as boxes. Flows are represented as arrows between stocks and/or double circles, where the latter represent what it outside of the model boundary. Thin grey edges indicate dependencies between variables. By default, constants (indicated by italic labels) are not shown. Hover over the variables to see their equations.
 #'
-#' @param x A stock-and-flow model object of class [`sdbuildR_xmile`][xmile].
+#' @param x A stock-and-flow model object of class [`sdbuildR`][sdbuildR].
 #' @param vars Variables to plot. Defaults to NULL to plot all variables.
 #' @param format_label If TRUE, apply default formatting (removing periods and underscores) to labels if labels are the same as variable names.
 #' @param wrap_width Width of text wrapping for labels. Must be an integer. Defaults to 20.
@@ -233,11 +233,11 @@ export_plotly <- function(pl, file, format, width, height) {
 #' @returns Stock-and-flow diagram
 #' @export
 #' @concept build
-#' @method plot sdbuildR_xmile
-#' @seealso [insightmaker_to_sfm()], [xmile()], [plot.sdbuildR_sim()]
+#' @method plot sdbuildR
+#' @seealso [insightmaker_to_sfm()], [sdbuildR()], [plot.simulate_sdbuildR()]
 #'
 #' @examples
-#' sfm <- xmile("SIR")
+#' sfm <- sdbuildR("SIR")
 #' plot(sfm)
 #'
 #' # Don't show constants or auxiliaries
@@ -246,7 +246,7 @@ export_plotly <- function(pl, file, format, width, height) {
 #' # Only show specific variables
 #' plot(sfm, vars = "Susceptible")
 #'
-plot.sdbuildR_xmile <- function(x,
+plot.sdbuildR <- function(x,
                                 vars = NULL,
                                 format_label = TRUE,
                                 wrap_width = 20,
@@ -262,7 +262,7 @@ plot.sdbuildR_xmile <- function(x,
                                 ...) {
   sfm <- x
   rm(x)
-  check_xmile(sfm)
+  check_sdbuildR(sfm)
 
   # Get property dataframe
   df <- as.data.frame(sfm, properties = c("type", "name", "label", "eqn"))
@@ -277,7 +277,7 @@ plot.sdbuildR_xmile <- function(x,
   }
 
   # Get dependencies
-  dep <- find_dependencies(sfm)
+  dep <- dependencies(sfm)
   flow_df <- get_flow_df(sfm)
 
   if (!is.null(vars)) {
@@ -301,15 +301,7 @@ plot.sdbuildR_xmile <- function(x,
     }
 
     # Check whether specified variables are in the model
-    idx <- !(vars %in% df[["name"]])
-    if (any(idx)) {
-      cli::cli_abort(paste0(
-        paste0(vars[idx], collapse = ", "),
-        ifelse(sum(idx) == 1, " is not a variable", " are not variables"),
-        " in the model! Model variables: ",
-        paste0(df[["name"]], collapse = ", ")
-      ))
-    }
+    validate_vars_in_model(vars, df, context = "model")
 
     # # Add dependencies of vars
     # vars <- c(vars, unname(unlist(dep[vars])))
@@ -353,10 +345,8 @@ plot.sdbuildR_xmile <- function(x,
     )
   }
 
-  # Text wrap to prevent long names
-  df[["label"]] <- gsub("'", "\\\\'", df[["label"]])
-  # df[["label"]] <- stringr::str_wrap(df[["label"]], width = wrap_width)
-  df[["label"]] <- str_wrap_(df[["label"]], width = wrap_width)
+  # Prepare and format labels using centralized helper
+  df <- prepare_labels(df, wrap_width = wrap_width, format_label = FALSE, deduplicate = FALSE)
   dict <- stats::setNames(df[["label"]], df[["name"]])
 
   # Get equations and remove quotation marks from unit strings
@@ -539,7 +529,7 @@ plot.sdbuildR_xmile <- function(x,
     flow_edges <- c()
     # Recycle flow_col if needed
     flow_cols <- rep_len(flow_col, nrow(flow_df))
-    
+
     for (i in seq_len(nrow(flow_df))) {
       flow_name <- flow_df[i, "name"]
       flow_node <- flow_name
@@ -653,7 +643,7 @@ plot.sdbuildR_xmile <- function(x,
 #' @param type_sim Either "sim" or "ensemble"
 #' @param df data.frame to plot
 #' @param constants Constants to plot
-#' @inheritParams plot.sdbuildR_sim
+#' @inheritParams plot.simulate_sdbuildR
 #' @inheritParams build
 #'
 #' @returns List
@@ -663,46 +653,31 @@ prep_plot <- function(sfm, type_sim, df, constants, add_constants, vars, palette
   # Get names of stocks and non-stock variables
   names_df <- get_names(sfm)
 
+  # Validate variable parameters
+  validate_plot_params(vars = vars)
+
   if (!is.null(vars)) {
-    if (!is.character(vars)) {
-      cli::cli_abort(c(
-        "Invalid {.arg vars} argument.",
-        "x" = "The {.arg vars} argument must be {.cls character}.",
-        "i" = "Received: {.cls {typeof(vars)}}.",
-        ">" = "Provide a character vector of variable names."
-      ))
-    }
-
     vars <- unique(vars)
-
-    if (length(vars) == 0) {
-      cli::cli_abort(c(
-        "Empty {.arg vars} vector.",
-        "x" = "The {.arg vars} argument cannot be of length zero.",
-        ">" = "Provide at least one variable name."
-      ))
-    }
   }
 
-  # If vars is specified and it contains a constant, set add_constants = TRUE
+  # If vars is specified and contains constants, enable add_constants
   if (!is.null(vars)) {
     constant_names <- names_df[
-      names_df[["type"]] %in% c("constant", "gf"),
+      names_df[["type"]] %in% c("constant", "lookup"),
       "name"
     ]
     vars_constants <- intersect(constant_names, vars)
     constants_not_in_vars <- setdiff(constant_names, vars_constants)
 
-    # Overwrite
     add_constants <- length(vars_constants) > 0
 
-    # If not all constants should be added, only select those in vars
     if (add_constants) {
-      # Remove constants not in vars
+      # Remove non-selected constants from names_df
       names_df <- names_df[!(names_df[["name"]] %in% constants_not_in_vars), ,
         drop = FALSE
       ]
 
+      # Filter constants to only those in vars
       if (type_sim == "sim") {
         constants <- constants[vars_constants]
       } else if (type_sim == "ensemble") {
@@ -713,98 +688,22 @@ prep_plot <- function(sfm, type_sim, df, constants, add_constants, vars, palette
     }
   }
 
-  # Add constants
-  if (add_constants) {
-    if (length(constants) > 0) {
-      if (type_sim == "sim") {
-        # Ensure functions are not added
-        idx_func <- vapply(constants, is.function, logical(1), USE.NAMES = FALSE)
-        constants <- constants[!idx_func]
-
-        # Remove from names
-        names_df <- names_df[!names_df[["name"]] %in% names(idx_func[idx_func]), ,
-          drop = FALSE
-        ]
-
-        # Duplicate long format for each constant
-        if (length(constants) > 0) {
-          # Find time vector from first variable
-          times <- df[df[["variable"]] == df[["variable"]][1], "time"]
-          temp <- lapply(names(constants), function(y) {
-            data.frame(
-              time = times, variable = y,
-              value = constants[[y]]
-            )
-          }) |>
-            do.call(rbind, args = _) |>
-            as.data.frame()
-          # df <- dplyr::bind_rows(df, temp)
-          df <- bind_rows_(df, temp)
-          rm(temp)
-        }
-      } else if (type_sim == "ensemble") {
-        # Find time vector from first variable
-        times <- df[df[["variable"]] == df[["variable"]][1], "time"]
-
-        # Duplicate each row length(times) times
-        temp <- constants[rep(seq_len(nrow(constants)), each = length(times)), ]
-
-        # Add the times column
-        temp$time <- rep(times, nrow(constants))
-
-        # Clean up row names
-        rownames(temp) <- NULL
-
-        # df <- dplyr::bind_rows(df, temp)
-        df <- bind_rows_(df, temp)
-        rm(temp)
-      }
-    }
+  # Add constants to dataframe if requested
+  if (add_constants && length(constants) > 0) {
+    result <- prep_constants(df, constants, names_df, type_sim = type_sim)
+    df <- result$df
+    names_df <- result$names_df
   }
 
-
-  # Keep only specified variables
+  # Filter to specified variables if provided
   if (!is.null(vars)) {
-    # Check whether specified variables are in the model
-    idx <- !(vars %in% names_df[["name"]])
-    if (any(idx)) {
-      cli::cli_abort(paste0(
-        paste0(vars[idx], collapse = ", "),
-        ifelse(sum(idx) == 1, " is not a variable", " are not variables"),
-        " in the model! Model variables: ",
-        paste0(names_df[["name"]], collapse = ", ")
-      ))
-    }
-
-    # Check if variables are in the model but not in the dataframe
-    idx <- !(vars %in% df[["variable"]])
-    if (any(idx)) {
-      cli::cli_abort(paste0(
-        paste0(vars[idx], collapse = ", "),
-        ifelse(sum(idx) == 1, " is", " are"),
-        " in the model, but not in the simulated data frame. Run simulate() with only_stocks = FALSE."
-      ))
-    }
-
-    names_df <- names_df[match(vars, names_df[["name"]]), , drop = FALSE]
-    df <- df[df[["variable"]] %in% vars, , drop = FALSE]
+    result <- filter_variables(vars, names_df, df, type_sim = type_sim)
+    names_df <- result$names_df
+    df <- result$df
     highlight_these_names <- vars
   } else {
-    # If no vars were specified, highlight stocks
-    highlight_these_names <- names_df[names_df[["type"]] == "stock", "name"]
-  }
-
-  # Check labels are unique
-  if (nrow(names_df) != length(unique(names_df[["label"]]))) {
-    labels <- names_df[["label"]]
-    dup_indices <- which(labels %in% labels[duplicated(labels) |
-      duplicated(labels, fromLast = TRUE)])
-
-    # Relabel, otherwise plotting will go wrong with recoded variables
-    names_df[dup_indices, "label"] <- paste0(
-      names_df[dup_indices, "label"], "(",
-      names_df[dup_indices, "name"], ")"
-    )
+    # Default: highlight stocks
+    highlight_these_names <- determine_highlight_vars(names_df, highlight_strategy = "auto")
   }
 
   # Ensure only variables which are in the dataframe are included
@@ -812,23 +711,19 @@ prep_plot <- function(sfm, type_sim, df, constants, add_constants, vars, palette
     drop = FALSE
   ]
 
-  # Create dictionary with stock and non-stock names and labels
+  # Prepare and standardize labels (handle duplicates, wrapping, special characters)
+  names_df <- prepare_labels(names_df, wrap_width = wrap_width, format_label = FALSE)
+
+  # Create dictionaries: name -> label (for visible and hidden variables)
   highlight_names <- names_df[match(highlight_these_names, names_df[["name"]]), , drop = FALSE]
   highlight_names <- stats::setNames(highlight_names[["name"]], highlight_names[["label"]])
   nonhighlight_names <- names_df[!names_df[["name"]] %in% highlight_these_names, , drop = FALSE]
   nonhighlight_names <- stats::setNames(nonhighlight_names[["name"]], nonhighlight_names[["label"]])
 
-  # Wrap names to prevent long names from squishing the plot
-  # names(highlight_names) <- stringr::str_wrap(names(highlight_names), width = wrap_width)
-  # names(nonhighlight_names) <- stringr::str_wrap(names(nonhighlight_names), width = wrap_width)
-  names(highlight_names) <- str_wrap_(names(highlight_names), width = wrap_width)
-  names(nonhighlight_names) <- str_wrap_(names(nonhighlight_names), width = wrap_width)
-
-  # Split dataframe into stocks and non-stocks
+  # Split dataframe and recode labels
   df_highlight <- df[df[["variable"]] %in% unname(highlight_names), , drop = FALSE]
   df_nonhighlight <- df[df[["variable"]] %in% unname(nonhighlight_names), , drop = FALSE]
 
-  # Change labels of variables
   df_highlight[["variable"]] <- factor(
     df_highlight[["variable"]],
     levels = unname(highlight_names),
@@ -840,36 +735,9 @@ prep_plot <- function(sfm, type_sim, df, constants, add_constants, vars, palette
     labels = names(nonhighlight_names)
   )
 
-  # Create colours
+  # Generate colors
   nr_var <- length(unique(df[["variable"]]))
-
-  gen_colors <- FALSE
-  if (!is.null(colors)) {
-    if (length(colors) < nr_var) {
-      cli::cli_abort(c(
-        "Insufficient colors provided.",
-        "x" = "The {.arg colors} vector has length {.val {length(colors)}}, but {.val {nr_var}} variables need colors.",
-        ">" = "Provide at least {.val {nr_var}} colors or use {.arg palette} instead."
-      ))
-      gen_colors <- TRUE
-    }
-  } else {
-    gen_colors <- TRUE
-  }
-
-  if (gen_colors) {
-    # Minimum number of variables needed for color palette generation
-    if (nr_var < 3) {
-      nr_var_c <- 3
-    } else {
-      nr_var_c <- nr_var
-    }
-
-    colors <- grDevices::hcl.colors(n = nr_var_c, palette = palette)
-  }
-
-  # Cut number of colors to number of variables
-  colors <- colors[seq_len(nr_var)]
+  colors <- generate_colors(nr_var, colors = colors, palette = palette)
 
   return(list(
     highlight_names = highlight_names,
@@ -899,11 +767,11 @@ prep_plot <- function(sfm, type_sim, df, constants, add_constants, vars, palette
 #' @returns Plotly object
 #' @export
 #' @concept simulate
-#' @seealso [simulate()], [as.data.frame.sdbuildR_sim()], [plot.sdbuildR_xmile()]
-#' @method plot sdbuildR_sim
+#' @seealso [simulate()], [as.data.frame.simulate_sdbuildR()], [plot.simulate_sdbuildR()]
+#' @method plot simulate_sdbuildR
 #'
 #' @examples
-#' sfm <- xmile("SIR")
+#' sfm <- sdbuildR("SIR")
 #' sim <- simulate(sfm)
 #' plot(sim)
 #'
@@ -913,35 +781,28 @@ prep_plot <- function(sfm, type_sim, df, constants, add_constants, vars, palette
 #' # Add constants to the plot
 #' plot(sim, add_constants = TRUE)
 #'
-plot.sdbuildR_sim <- function(x,
-                              add_constants = FALSE,
-                              vars = NULL,
-                              palette = "Dark 2",
-                              colors = NULL,
-                              font_family = "Times New Roman",
-                              font_size = 16,
+plot.simulate_sdbuildR <- function(x,
+                                  add_constants = FALSE,
+                                  vars = NULL,
+                                  palette = "Dark 2",
+                                  colors = NULL,
+                                  font_family = "Times New Roman",
+                                  font_size = 16,
                               wrap_width = 25,
                               showlegend = TRUE,
                               ...) {
   if (missing(x)) {
     cli::cli_abort(c(
       "No simulation data available.",
-      "x" = "The simulation object is missing.",
-      ">" = "Run a simulation first with {.fn simulate()}."
+      ">" = "Run a simulation first with {.fn simulate}."
     ))
   }
 
-  # # Check whether it is an sdbuildR_sim object
-  # if (!inherits(x, "sdbuildR_sim")) {
-  #   stop("This is not an object of class sdbuildR_sim! Simulate a stock-and-flow model with simulate().")
-  # }
-
-  validate_sdbuildR_sim(x)
+  check_simulate_sdbuildR(x)
 
   if (!x[["success"]]) {
     cli::cli_abort(c(
       "Simulation failed.",
-      "x" = "The simulation did not complete successfully.",
       ">" = "Check your model specification and try again."
     ))
   }
@@ -950,33 +811,29 @@ plot.sdbuildR_sim <- function(x,
     cli::cli_abort("Simulation data frame has no rows")
   }
 
-  if (!is.logical(showlegend)) {
-    cli::cli_abort(c(
-      "Invalid {.arg showlegend} argument.",
-      "x" = "The {.arg showlegend} argument must be {.cls logical}.",
-      ">" = "Use {.code TRUE} or {.code FALSE}."
-    ))
-  }
+  # Validate common plot parameters
+  validate_plot_params(
+    showlegend = showlegend,
+    vars = vars,
+    palette = palette,
+    colors = colors,
+    font_family = font_family,
+    font_size = font_size,
+    wrap_width = wrap_width
+  )
 
   dots <- list(...)
-  main <- if (!"main" %in% names(dots)) {
-    x[["sfm"]][["header"]][["name"]]
-  } else {
-    dots[["main"]]
-  }
 
-  xlab <- if (!"xlab" %in% names(dots)) {
-    matched_time_unit <- find_matching_regex(x[["sfm"]][["sim_specs"]][["time_units"]], get_regex_time_units())
-    paste0("Time (", matched_time_unit, ")")
-  } else {
-    dots[["xlab"]]
-  }
-
-  ylab <- if (!"ylab" %in% names(dots)) {
-    ""
-  } else {
-    dots[["ylab"]]
-  }
+  # Extract optional parameters with defaults
+  matched_time_unit <- find_matching_regex(x[["sfm"]][["sim_specs"]][["time_units"]], get_regex_time_units())
+  params <- extract_plot_params(dots, defaults = list(
+    main = x[["sfm"]][["meta"]][["name"]],
+    xlab = paste0("Time (", matched_time_unit, ")"),
+    ylab = ""
+  ))
+  main <- params$main
+  xlab <- params$xlab
+  ylab <- params$ylab
 
   out <- prep_plot(
     x[["sfm"]], "sim", x[["df"]], x[["constants"]], add_constants,
@@ -992,50 +849,31 @@ plot.sdbuildR_sim <- function(x,
   # Initialize plotly object
   pl <- plotly::plot_ly()
 
-  # Add traces for non-stock variables (visible = "legendonly")
-  if (length(nonhighlight_names) > 0) {
-    pl <- plotly::add_trace(pl,
-      data = df_nonhighlight,
-      x = ~ get(x_col),
-      y = ~value,
-      color = ~variable,
-      legendgroup = ~variable,
-      showlegend = showlegend,
-      colors = colors,
-      type = "scatter",
-      mode = "lines",
-      visible = "legendonly"
-    )
-  }
+  # Add traces for highlight and nonhighlight variables
+  pl <- add_trace_pair(pl,
+    df_highlight = df_highlight,
+    df_nonhighlight = df_nonhighlight,
+    colors = colors,
+    x_col = "time",
+    y_col = "value",
+    showlegend = showlegend,
+    mode = "lines",
+    type = "scatter"
+  )
 
-  # Add traces for stock variables (visible = TRUE)
-  if (length(highlight_names) > 0) {
-    pl <- plotly::add_trace(pl,
-      data = df_highlight,
-      x = ~ get(x_col),
-      y = ~value,
-      color = ~variable,
-      legendgroup = ~variable,
-      showlegend = showlegend,
-      type = "scatter",
-      mode = "lines",
-      colors = colors,
-      visible = TRUE
-    )
-  }
+  # Customize layout using theme
+  theme <- plotly_theme(
+    font_family = font_family,
+    font_size = font_size
+  )
 
-  # Customize layout
   pl <- plotly::layout(pl,
-    # As the most important things are at the top, reverse the trace order
-    legend = list(
-      traceorder = "reversed",
-      font = list(size = ceiling(font_size * .85))
-    ),
+    legend = theme$legend,
     title = main,
     xaxis = list(title = xlab, font = list(size = font_size)),
     yaxis = list(title = ylab, font = list(size = font_size)),
-    font = list(family = font_family, size = font_size),
-    margin = list(t = 50, b = 50, l = 50, r = 50) # Increase top margin to 100 pixels
+    font = theme$font,
+    margin = theme$margin
   )
 
   # If there is only one trace, legend doesn't show
@@ -1082,15 +920,15 @@ plot.sdbuildR_sim <- function(x,
 #' @param central_tendency Central tendency to use for the mean line. Either "mean", "median", or FALSE to not plot the central tendency. Defaults to "mean".
 #' @param central_tendency_width Line width of central tendency. Defaults to 3.
 #' @param ... Optional parameters
-#' @inheritParams plot.sdbuildR_sim
+#' @inheritParams plot.simulate_sdbuildR
 #'
 #' @returns Plotly object
 #' @export
 #' @concept simulate
 #' @seealso [ensemble()]
-#' @method plot sdbuildR_ensemble
+#' @method plot ensemble_sdbuildR
 #'
-plot.sdbuildR_ensemble <- function(x,
+plot.ensemble_sdbuildR <- function(x,
                                    type = c("summary", "sims")[1],
                                    i = seq(1, min(c(x[["n"]], 10))),
                                    j = seq(1, min(c(x[["n_conditions"]], 9))),
@@ -1112,41 +950,41 @@ plot.sdbuildR_ensemble <- function(x,
   if (missing(x)) {
     cli::cli_abort(c(
       "No simulation data available.",
-      "x" = "The ensemble simulation object is missing.",
-      ">" = "Generate an ensemble first with {.fn ensemble()}."
+      ">" = "Generate an ensemble first with {.fn ensemble}."
     ))
   }
 
-  # Check whether it is an xmile object
-  if (!inherits(x, "sdbuildR_ensemble")) {
+  # Check whether it is an sdbuildR object
+  if (!inherits(x, "ensemble_sdbuildR")) {
     cli::cli_abort(c(
       "Invalid object class.",
-      "x" = "This is not an object of class {.cls sdbuildR_ensemble}.",
-      ">" = "Generate an ensemble of simulations with {.fn ensemble()}."
+      "x" = "This is not an object of class {.cls ensemble_sdbuildR}.",
+      ">" = "Generate an ensemble simulation with {.fn ensemble}."
     ))
   }
 
   if (x[["success"]] == FALSE) {
     cli::cli_abort(c(
       "Ensemble simulation failed.",
-      "x" = "The ensemble simulation did not complete successfully.",
       ">" = "Check your model specification and try again."
     ))
   }
 
-  if (!is.logical(showlegend)) {
-    cli::cli_abort(c(
-      "Invalid {.arg showlegend} argument.",
-      "x" = "The {.arg showlegend} argument must be {.cls logical}.",
-      ">" = "Use {.code TRUE} or {.code FALSE}."
-    ))
-  }
+  # Validate common plot parameters
+  validate_plot_params(
+    showlegend = showlegend,
+    vars = vars,
+    palette = palette,
+    colors = colors,
+    font_family = font_family,
+    font_size = font_size,
+    wrap_width = wrap_width
+  )
 
   if (!is.logical(j_labels)) {
     cli::cli_abort(c(
       "Invalid {.arg j_labels} argument.",
-      "x" = "The {.arg j_labels} argument must be {.cls logical}.",
-      ">" = "Use {.code TRUE} or {.code FALSE}."
+      "x" = "The {.arg j_labels} argument must be {.cls logical}."
     ))
   }
 
@@ -1156,8 +994,7 @@ plot.sdbuildR_ensemble <- function(x,
   if (!type %in% c("summary", "sims")) {
     cli::cli_abort(c(
       "Invalid {.arg type} value.",
-      "x" = "The {.arg type} argument must be {.code 'summary'} or {.code 'sims'}.",
-      ">" = "Specify one of these valid plot types: {.code c('summary', 'sims')}."
+      "x" = "The {.arg type} argument must be {.code 'summary'} or {.code 'sims'}."
     ))
   }
 
@@ -1167,8 +1004,7 @@ plot.sdbuildR_ensemble <- function(x,
     if (!central_tendency %in% c("mean", "median")) {
       cli::cli_abort(c(
         "Invalid {.arg central_tendency} value.",
-        "x" = "The {.arg central_tendency} argument must be {.code 'mean'}, {.code 'median'}, or {.code FALSE}.",
-        ">" = "Specify one of the valid options."
+        "x" = "The {.arg central_tendency} argument must be {.code 'mean'}, {.code 'median'}, or {.code FALSE}."
       ))
     }
   }
@@ -1178,61 +1014,49 @@ plot.sdbuildR_ensemble <- function(x,
 
   dots <- list(...)
 
-  sub <- if (!"sub" %in% names(dots)) {
-    if (type == "summary") {
-      sub <- paste0(
-        ifelse(isFALSE(central_tendency), "",
-          stringr::str_to_title(central_tendency)
-        ), " with [",
-        min(x[["quantiles"]]), ", ", max(x[["quantiles"]]),
-        "] confidence interval of ", x[["n"]], " simulation",
-        ifelse(x[["n"]] == 1, "", "s")
-      )
-    } else if (type == "sims") {
-      sub <- paste0(
-        ifelse(isFALSE(central_tendency), "",
-          stringr::str_to_title(central_tendency)
-        ),
-        " with ", length(i), "/", x[["n"]], " simulation",
-        ifelse(x[["n"]] == 1, "", "s")
-      )
-    }
+  # Build default subtitle based on plot type and central tendency
+  default_sub <- if (type == "summary") {
+    paste0(
+      ifelse(isFALSE(central_tendency), "",
+        stringr::str_to_title(central_tendency)
+      ), " with [",
+      min(x[["quantiles"]]), ", ", max(x[["quantiles"]]),
+      "] confidence interval of ", x[["n"]], " simulation",
+      ifelse(x[["n"]] == 1, "", "s")
+    )
+  } else if (type == "sims") {
+    paste0(
+      ifelse(isFALSE(central_tendency), "",
+        stringr::str_to_title(central_tendency)
+      ),
+      " with ", length(i), "/", x[["n"]], " simulation",
+      ifelse(x[["n"]] == 1, "", "s")
+    )
   }
 
+  # Extract optional parameters with defaults
+  matched_time_unit <- find_matching_regex(x[["sfm"]][["sim_specs"]][["time_units"]], get_regex_time_units())
+  params <- extract_plot_params(dots, defaults = list(
+    main = paste0("Ensemble of ", x[["sfm"]][["meta"]][["name"]]),
+    xlab = paste0("Time (", matched_time_unit, ")"),
+    ylab = "",
+    sub = default_sub,
+    alpha = 0.3
+  ))
+  main <- params$main
+  xlab <- params$xlab
+  ylab <- params$ylab
+  sub <- params$sub
+  alpha <- params$alpha
 
-  main <- if (!"main" %in% names(dots)) {
-    paste0("Ensemble of ", x[["sfm"]][["header"]][["name"]])
-  } else {
-    dots[["main"]]
-  }
+  # Append subtitle to main title
   main <- paste0(main, "\n<span style='font-size:", font_size, "px;'>", sub, "</span>")
-
-  xlab <- if (!"xlab" %in% names(dots)) {
-    matched_time_unit <- find_matching_regex(x[["sfm"]][["sim_specs"]][["time_units"]], get_regex_time_units())
-    paste0("Time (", matched_time_unit, ")")
-  } else {
-    dots[["xlab"]]
-  }
-
-  ylab <- if (!"ylab" %in% names(dots)) {
-    ""
-  } else {
-    dots[["ylab"]]
-  }
-
-  alpha <- if (!"alpha" %in% names(dots)) {
-    0.3
-  } else {
-    dots[["alpha"]]
-  }
 
   if (!is.null(x[["summary"]])) {
     summary_df <- x[["summary"]]
   } else {
     cli::cli_abort(c(
-      "No summary data available.",
-      "x" = "The ensemble object does not contain summary statistics.",
-      ">" = "Regenerate the ensemble with {.fn ensemble()}."
+      "x" = "The ensemble object does not contain summary statistics."
     ))
   }
 
@@ -1241,7 +1065,6 @@ plot.sdbuildR_ensemble <- function(x,
     if (length(j) == 0) {
       cli::cli_abort(c(
         "Empty {.arg j} vector.",
-        "x" = "The {.arg j} argument must be a non-empty vector of indices.",
         ">" = "Provide at least one condition index."
       ))
     }
@@ -1257,8 +1080,7 @@ plot.sdbuildR_ensemble <- function(x,
         } else {
           cli::cli_abort(c(
             "Invalid {.arg j} indices.",
-            "x" = "The {.arg j} argument must contain integers between {.val 1} and {.val {x[[\"n_conditions\"]]}}.",
-            ">" = "Provide valid condition indices."
+            "x" = "The {.arg j} argument must contain integers between {.val 1} and {.val {x[[\"n_conditions\"]]}}."
           ))
         }
       }
@@ -1304,8 +1126,7 @@ plot.sdbuildR_ensemble <- function(x,
             } else {
               cli::cli_abort(c(
                 "Invalid {.arg i} indices.",
-                "x" = "The {.arg i} argument must contain integers between {.val 1} and {.val {x[[\"n\"]]}}.",
-                ">" = "Provide valid simulation indices."
+                "x" = "The {.arg i} argument must contain integers between {.val 1} and {.val {x[[\"n\"]]}}."
               ))
             }
           }
@@ -1428,25 +1249,28 @@ plot.sdbuildR_ensemble <- function(x,
       )
     }
 
+    theme <- plotly_theme(
+      font_family = font_family,
+      font_size = font_size,
+      margin_t = 100 # Extra space for ensemble title
+    )
+
     pl <- plotly::subplot(pl_list,
       nrows = nrows,
       shareX = shareX,
       shareY = shareY,
       titleY = FALSE,
       titleX = FALSE
-      # margin sets vertical spacing between subplots
-      # margin = 0.05
     ) |>
       plotly::layout(
-        title = list(text = main), # , font = list(size = font_size)),
-        # xaxis = list(title = list(text=xlab, standoff = 15), position = 0.5),
+        title = list(text = main),
         yaxis = list(title = list(text = ylab)),
-        font = list(family = font_family, size = font_size),
-        margin = list(t = 100, b = 50, l = 50, r = 50), # Increase top margin to 100 pixels
+        font = theme$font,
+        margin = theme$margin,
         legend = list(
-          orientation = "h", # orientation
-          x = 0.5, # Center horizontally
-          y = -0.2, # Below the plot
+          orientation = "h",
+          x = 0.5,
+          y = -0.2,
           xanchor = "center",
           yanchor = "top"
         )
@@ -1497,7 +1321,7 @@ plot.sdbuildR_ensemble <- function(x,
 #' @param xlab Label on x-axis.
 #' @param ylab Label on y-axis.
 #' @param alpha Opacity of the confidence bands or individual trajectories. Defaults to 0.3.
-#' @inheritParams plot.sdbuildR_ensemble
+#' @inheritParams plot.ensemble_sdbuildR
 #'
 #' @returns Plotly object
 #' @noRd
@@ -1735,15 +1559,14 @@ plot_ensemble_helper <- function(j_idx, j_name, j, j_labels,
 
 
   # Customize layout
+  theme <- plotly_theme(
+    font_family = font_family,
+    font_size = font_size
+  )
+
   pl <- plotly::layout(pl,
-    margin = list(t = 50, b = 50, l = 50, r = 50),
-    # xaxis = list(tickfont = list(size = ceiling(font_size *.75))),
-    # yaxis = list(tickfont = list(size = ceiling(font_size *.75))),
-    # As the most important things are at the top, reverse the trace order
-    legend = list(
-      traceorder = "reversed",
-      font = list(size = ceiling(font_size * .85))
-    )
+    margin = theme$margin,
+    legend = theme$legend
   )
 
   # If there is only one trace, legend doesn't show

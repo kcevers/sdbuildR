@@ -8,8 +8,7 @@ test_that("use_julia() works", {
     ignore.order = TRUE
   )
 
-  testthat::skip_on_cran()
-  testthat::skip_if_not(julia_status()$status == "ready")
+  skip_if_julia_not_ready()
 
   # Test installation
   expect_no_error(install_julia_env())

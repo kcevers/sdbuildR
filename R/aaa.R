@@ -5,9 +5,7 @@ if (!exists(".sdbuildR_env")) {
   .sdbuildR_env <- new.env(parent = emptyenv())
 
   .sdbuildR_env[["jl"]] <- list(
-    init = FALSE,
-    required_version = "1.10",
-    pkg_version = "0.2.5" # required version
+    JULIA_NUM_THREADS = NULL,
+    prev_JULIA_NUM_THREADS = NULL
   )
-
 }

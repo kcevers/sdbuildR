@@ -20,10 +20,10 @@ library(sdbuildR)
 
 ### Get started with a template
 
-Stock-and-flow models can be created in three ways in sdbuildR. Firstly, dozens of example models can be loaded using `xmile()`. Plot the stock-and-flow diagram to get an overview of the model:
+Stock-and-flow models can be created in three ways in sdbuildR. Firstly, dozens of example models can be loaded using `sdbuildR()`. Plot the stock-and-flow diagram to get an overview of the model:
 
 ```{r SIR_diagram, fig.width=8, fig.height=2}
-sfm <- xmile("SIR")
+sfm <- sdbuildR("SIR")
 plot(sfm)
 ```
 
@@ -53,18 +53,18 @@ plot(sim)
 
 ### Build a model from scratch
 
-Lastly, a stock-and-flow model can be created from scratch. We first initialize an empty stock and flow model with `xmile()`, and then use `build()` to create a logistic model of population growth. The simulation specifications, such as the start time, stop time, simulation time step (`dt`), and time units, are set with `sim_specs()`. Below, we make use of the convenient pipe operator `|>`, which simply passes the result of an expression to the next expression as a first argument. 
+Lastly, a stock-and-flow model can be created from scratch. We first initialize an empty stock and flow model with `sdbuildR()`, and then use `build()` to create a logistic model of population growth. The simulation specifications, such as the start time, stop time, simulation time step (`dt`), and time units, are set with `sim_specs()`. Below, we make use of the convenient pipe operator `|>`, which simply passes the result of an expression to the next expression as a first argument. 
 
 ```{r}
-sfm <- xmile() |>
-  header(name = "Population growth") |>
-  build("X", "stock", eqn = "100", label = "Population size") |>
-  build("change", "flow",
-    eqn = "r * (1 - X/K)", to = "X",
+sfm <- sdbuildR() |>
+  meta(name = "Population growth") |>
+  stock(X, eqn = 100, label = "Population size") |>
+  flow(change, 
+    eqn = r * (1 - X/K), to = X,
     label = "Births and Deaths"
   ) |>
-  build("r", "constant", eqn = "5", label = "Growth rate") |>
-  build("K", "constant", eqn = "10000", label = "Carrying capacity") |>
+  constant(r, eqn = 5, label = "Growth rate") |>
+  constant(K, eqn = 10000, label = "Carrying capacity") |>
   sim_specs(stop = 10000, time_units = "days")
 ```
 
@@ -92,7 +92,7 @@ as.data.frame(sfm)
 
 See the vignettes to learn more about all features of sdbuildR:
 
-* [Build](https://kcevers.github.io/sdbuildR/articles/build.html): Learn how to build, modify, and debug stock-and-flow models.
+* [Build](https://kcevers.github.io/sdbuildR/articles/build.html): Learn how to build, modify, and simulate stock-and-flow models.
 * [Julia setup](https://kcevers.github.io/sdbuildR/articles/julia-setup.html): Install and set up the Julia environment for running ensemble simulations and using units.
 * [Ensemble](https://kcevers.github.io/sdbuildR/articles/ensemble.html): Learn how to assess a model's sensitivity, uncertainty and robustness with ensemble simulations.
 * [Units](https://kcevers.github.io/sdbuildR/articles/units.html): Learn why and how to use (custom) units.

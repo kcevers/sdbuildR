@@ -58,16 +58,11 @@ Alternatively, you can download a standalone Julia installer from [https://julia
 
 ## Step 2: Check if Julia is accessible
 
-After installing Julia, check if JuliaConnectoR can find it:
+After installing Julia, try to start a Julia session:
 
 ```{r}
 juliaSetupOk()
-```
-
-If the Julia installation can be found, try to start a Julia session:
-
-```{r}
-startJuliaServer()
+juliaEval("1+1")
 stopJulia()
 ```
 
@@ -171,16 +166,11 @@ This allows juliaup to manage which Julia version is used.
 
 ## Step 5: Verify the setup
 
-After restarting R, verify that Julia is accessible:
+After restarting R, repeat Step 2:
 
 ```{r}
 juliaSetupOk()
-```
-
-Check whether a Julia session can be started from R:
-
-```{r}
-startJuliaServer()
+juliaEval("1+1")
 stopJulia()
 ```
 
@@ -195,12 +185,6 @@ install_julia_env()
 Note that this may take 10-25 minutes the first time as Julia downloads and compiles packages.
 
 ## Step 7: Verify Julia environment setup
-
-Check whether the Julia environment setup was successful:
-
-```{r}
-julia_status()
-```
 
 To start a Julia session and activate the Julia environment for sdbuildR: 
 

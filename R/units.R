@@ -1,53 +1,51 @@
 #' Specify unit in equations
 #'
-#' Flexibly use units in equations by enclosing them in [u()]. Note that units are only supported in Julia, not in R.
+#' Use units in equations by enclosing them in [u()]. Note that units are only supported in Julia, not in R.
 #'
-#' Unit strings are converted to their standard symbols using regular expressions. This means that you can easily specify units without knowing their standard symbols. For example, u('kilograms per meters squared') will become 'kg/m^2'. You can use title-case for unit names, but letters cannot all be uppercase if this is not the standard symbol. For example, 'kilogram' works, but 'KILOGRAM' does not. This is to ensure that the right unit is detected.
+#' Unit strings are converted to their standard symbols using regular expressions. This means that you can easily specify units without knowing their standard symbols. For example, `u('kilograms per meters squared')` will become `u('kg/m^2')`. You can use title-case for unit names, but units cannot all be uppercase if this is not the standard symbol. For example, `u('Kilogram')` works, but `u('KILOGRAM')` does not. This is to ensure that the right unit is detected.
 #'
-#' @param unit_str Unit string; e.g. '3 seconds'
+#' @param unit_str Unit string; e.g., `'3 seconds'`.
 #'
 #' @returns Specified unit (only in Julia)
 #'
-#' @seealso [model_units()], [unit_prefixes()], [convert_u()], [drop_u()]
+#' @seealso [custom_unit()], [unit_prefixes()], [convert_u()], [drop_u()]
 #' @concept units
 #' @export
 #'
 #' @examples
 #' # Use units in equations
-#' sfm <- xmile() |>
-#'   build("a", "constant",
-#'     eqn = "u('10kilometers') - u('3meters')",
+#' sfm <- sdbuildR() |>
+#'   constant(a, 
+#'     eqn = u('10kilometers') - u('3meters'),
 #'     units = "centimeters"
 #'   )
 #'
 #' # Units can also be set by multiplying a number with a unit
-#' sfm <- xmile() |>
-#'   build("a", "constant", eqn = "10 * u('kilometers') - u('3meters')")
+#' sfm <- sdbuildR() |>
+#'   constant(a, eqn = 10 * u('kilometers') - u('3meters'))
 #'
 #' # Addition and subtraction is only allowed between matching units
-#' sfm <- xmile() |>
-#'   build("a", "constant", eqn = "u('3seconds') + u('1hour')")
+#' sfm <- sdbuildR() |>
+#'   constant(a, eqn = u('3seconds') + u('1hour'))
 #'
 #' # Division, multiplication, and exponentiation are allowed between different units
-#' sfm <- xmile() |>
-#'   build("a", "constant", eqn = "u('10grams') / u('1minute')")
+#' sfm <- sdbuildR() |>
+#'   constant(a, eqn = u('10grams') / u('1minute'))
 #'
 #' # Use custom units in equations
-#' sfm <- xmile() |>
-#'   model_units("BMI", eqn = "kilograms/meters^2", doc = "Body Mass Index") |>
-#'   build("weight_gain", "flow", eqn = "u('2 BMI / year')", units = "BMI/year")
+#' sfm <- sdbuildR() |>
+#'   custom_unit(BMI, eqn = kg/meters^2, doc = "Body Mass Index") |>
+#'   flow(weight_gain, eqn = u('2 BMI / year'), units = "BMI/year")
 #'
 #' # Unit strings are often needed in flows to ensure dimensional consistency
-#' sfm <- xmile() |>
+#' sfm <- sdbuildR() |>
 #'   sim_specs(stop = 1, time_units = "days") |>
-#'   build("consumed_food", "stock", eqn = "1", units = "kilocalories") |>
-#'   build("eating", "flow",
-#'     eqn = "u('750kilocalories') / u('6hours')",
-#'     units = "kilocalories/day", to = "consumed_food"
-#'   )
+#'   stock(consumed_food, eqn = 1, units = "kilocalories") |>
+#'   flow(eating, eqn = u('750kilocalories') / u('6hours'), 
+#'        units = "kilocalories/day", to = consumed_food)
 #'
 u <- function(unit_str) {
-  return(unit_str)
+  unit_str
 }
 
 
@@ -58,18 +56,18 @@ u <- function(unit_str) {
 #' @param x Variable with unit
 #'
 #' @returns Unitless variable (only in Julia)
-#' @seealso [model_units()], [unit_prefixes()], [u()], [convert_u()]
+#' @seealso [custom_unit()], [unit_prefixes()], [u()], [convert_u()]
 #' @concept units
 #' @export
 #'
 #' @examples
 #' # For example, the cosine function only accepts unitless arguments or
 #' # arguments with units in radians or degrees
-#' sfm <- xmile() |>
+#' sfm <- sdbuildR() |>
 #'   build("a", "constant", eqn = "10", units = "minutes") |>
 #'   build("b", "constant", eqn = "cos(drop_u(a))")
 drop_u <- function(x) {
-  return(x)
+  x
 }
 
 
@@ -81,20 +79,20 @@ drop_u <- function(x) {
 #' @param unit_def Unit definition, e.g. u('seconds')
 #'
 #' @returns Variable with new unit (only in Julia)
-#' @seealso [model_units()], [unit_prefixes()], [u()], [drop_u()]
+#' @seealso [custom_unit()], [unit_prefixes()], [u()], [drop_u()]
 #' @concept units
 #' @export
 #'
 #' @examples
 #' # Change the unit of rate from minutes to hours
-#' sfm <- xmile() |>
+#' sfm <- sdbuildR() |>
 #'   build("rate", "constant", eqn = "10", units = "minutes") |>
 #'   build("change", "flow",
 #'     eqn = "(room_temperature - coffee_temperature) / convert_u(rate, u('hour'))"
 #'   )
 #'
 convert_u <- function(x, unit_def) {
-  return(x)
+  x
 }
 
 
@@ -139,7 +137,7 @@ split_units <- function(x) {
     })
   }
 
-  return(x_split)
+  x_split
 }
 
 
@@ -226,7 +224,8 @@ replace_written_powers <- function(x) {
 #' )
 clean_unit_in_u <- function(x, regex_units) {
   # Extract all u('...') patterns
-  matches <- stringr::str_extract_all(x, "\\bu\\([\"|'](.*?)[\"|']\\)")[[1]]
+  # matches <- stringr::str_extract_all(x, "\\bu\\([\"|'](.*?)[\"|']\\)")[[1]]
+  matches <- extract_units(x, R_or_Julia = "R")
 
   if (length(matches) == 0) {
     return(x)
@@ -237,24 +236,22 @@ clean_unit_in_u <- function(x, regex_units) {
     stringr::str_sub(y, 4, nchar(y) - 2)
   }, character(1), USE.NAMES = FALSE)
 
-  # Throw error if a match includes u(''): units cannot be nested
+  # # Throw error if a match includes u(''): units cannot be nested
+  # matches_nested <- extract_units(matches_no_u, R_or_Julia = "R")
+
   if (any(stringr::str_detect(matches_no_u, "u\\([\"|']"))) {
+  # if (length(matches_nested) > 0) {
     cli::cli_abort(c(
-      "Nested unit specification detected.",
-      "x" = "Nested units like {.code u('u(\"meter\")')} are not allowed.",
-      "i" = "Units cannot be nested within {.fn u} function calls.",
-      ">" = "Remove the inner {.fn u} call from the unit string."
+      "x" = "Nested unit specification detected.",
+      "i" = "Nested units like {.code u('u(\"meter\")')} are not allowed."
     ), call. = FALSE)
   }
 
-
   # Clean all matches at once
-  cleaned <- paste0(
-    "u(\"", vapply(matches_no_u, clean_unit, character(1),
-      regex_units = regex_units, USE.NAMES = FALSE
-    ),
-    "\")"
+  cleaned <- vapply(matches_no_u, clean_unit, character(1),
+    regex_units = regex_units, USE.NAMES = FALSE
   )
+  cleaned <- paste0("u(\"", cleaned, "\")")
 
   # Replace back
   result <- x
@@ -263,7 +260,7 @@ clean_unit_in_u <- function(x, regex_units) {
     result <- stringr::str_replace_all(result, stringr::fixed(matches[i]), cleaned[i])
   }
 
-  return(result)
+  result
 }
 
 
@@ -354,6 +351,25 @@ clean_unit <- function(x, regex_units, ignore_case = FALSE,
 }
 
 
+extract_units <- function(x, R_or_Julia, left_boundary = FALSE) {
+  if (length(x) == 0) {
+    return(character(0))
+  }
+
+  if (R_or_Julia == "Julia") {
+    pattern <- "\\bu[\"|'](.*?)[\"|']"
+  } else {
+    pattern <- "\\bu\\([\"|'](.*?)[\"|']\\)"
+  }
+
+  if (left_boundary) {
+    pattern <- paste0("(?:^|(?<=\\W))", pattern)
+  }
+
+  stringr::str_extract_all(x, pattern)[[1]]
+}
+
+
 #' Find missing unit definitions
 #'
 #' @inheritParams build
@@ -365,17 +381,14 @@ clean_unit <- function(x, regex_units, ignore_case = FALSE,
 #' @noRd
 #' @returns List with models units to add to sfm
 #'
-detect_undefined_units <- function(sfm, new_eqns, new_units, regex_units, R_or_Julia = "Julia") {
+detect_undefined_units <- function(sfm, new_eqns, new_units, regex_units,
+                                   R_or_Julia = "Julia") {
   # Add undefined units to custom units
   units_in_model <- c(
     sfm[["sim_specs"]][["time_units"]],
     new_units,
     # Extract units from equations
-    new_eqns |>
-      stringr::str_extract_all(ifelse(R_or_Julia == "Julia",
-        "\\bu[\"|'](.*?)[\"|']",
-        "\\bu\\([\"|'](.*?)[\"|']\\)"
-      ))
+    extract_units(new_eqns, R_or_Julia)
   ) |>
     unlist() |>
     lapply(split_units) |>
@@ -388,7 +401,7 @@ detect_undefined_units <- function(sfm, new_eqns, new_units, regex_units, R_or_J
     }, x = _)
 
   # Find units to define: ones not already included in Julia
-  existing_units <- if (nrow(sfm[["model_units"]]) > 0) sfm[["model_units"]][["name"]] else character(0)
+  existing_units <- if (nrow(sfm[["custom_unit"]]) > 0) sfm[["custom_unit"]][["name"]] else character(0)
   units_to_define <- setdiff(
     units_in_model,
     c(
@@ -397,15 +410,19 @@ detect_undefined_units <- function(sfm, new_eqns, new_units, regex_units, R_or_J
     )
   )
 
+  add_custom_unit <- empty_custom_unit()
   if (length(units_to_define) > 0) {
-    add_model_units <- lapply(units_to_define, function(u) {
-      list(name = u, eqn = "1", doc = "", prefix = FALSE)
-    }) |> stats::setNames(units_to_define)
-  } else {
-    add_model_units <- list()
+    add_custom_unit <- data.frame(
+      name = unlist(units_to_define),
+      eqn = rep("1", length(units_to_define)),
+      doc = rep("", length(units_to_define)),
+      prefix = rep(FALSE, length(units_to_define)),
+      stringsAsFactors = FALSE
+    )
+
   }
 
-  return(add_model_units)
+  add_custom_unit
 }
 
 
@@ -416,25 +433,27 @@ detect_undefined_units <- function(sfm, new_eqns, new_units, regex_units, R_or_J
 #' @returns List with unit strings
 #' @noRd
 find_unit_strings <- function(sfm) {
-  # Extract all unit strings from equations
-  var_units <- sfm[["variables"]][["eqn"]] |>
-    lapply(function(x) {
-      if (is_defined(x)) {
-        return(stringr::str_extract_all(x, "(?:^|(?<=\\W))u\\([\"|'](.*?)[\"|']\\)"))
-      }
-    }) |>
-    unlist()
+  # pattern <- "(?:^|(?<=\\W))u\\([\"|'](.*?)[\"|']\\)"
 
-  # Extract all unit strings from macros (data frame structure)
-  macro_units <- sfm[[P[["macro_name"]]]][["eqn"]]
-  macro_units <- lapply(macro_units, function(eqn) {
-    if (is_defined(eqn)) {
-      return(stringr::str_extract_all(eqn, "(?:^|(?<=\\W))u\\([\"|'](.*?)[\"|']\\)"))
-    }
-    return(NULL)
-  }) |> unlist()
+  # # Extract all unit strings from equations
+  # var_units <- sfm[["variables"]][["eqn"]] |>
+  #   lapply(function(x) {
+  #     if (is_defined(x)) {
+  #       return(stringr::str_extract_all(x, pattern))
+  #     }
+  #   }) |>
+  #   unlist()
 
-  eqn_units <- c(var_units, macro_units)
+  # # Extract all unit strings from macros (data frame structure)
+  # macro_units <- sfm[[P[["macro_name"]]]][["eqn"]]
+  # macro_units <- lapply(macro_units, function(eqn) {
+  #   if (is_defined(eqn)) {
+  #     return(stringr::str_extract_all(eqn, pattern))
+  #   }
+  #   return(NULL)
+  # }) |> unlist()
+
+  eqn_units <- extract_units(sfm[["variables"]][["eqn"]], "R", left_boundary = TRUE)
 
   return(eqn_units)
 }
@@ -853,11 +872,11 @@ get_regex_units <- function(sfm = NULL) {
 
   # If there are custom units added with power of ten prefixes enabled, add regular expressions
   if (!is.null(sfm)) {
-    if (nrow(sfm[["model_units"]]) > 0) {
+    if (nrow(sfm[["custom_unit"]]) > 0) {
       # Only if there are any units with power-of-ten
-      prefix <- sfm[["model_units"]][["prefix"]]
+      prefix <- sfm[["custom_unit"]][["prefix"]]
       if (any(prefix)) {
-        unit_names <- sfm[["model_units"]][["name"]]
+        unit_names <- sfm[["custom_unit"]][["name"]]
         add_custom_regex <- lapply(unit_names[prefix], function(unit_name) {
           stats::setNames(
             paste0(unname(si_prefixes), unit_name),

@@ -1,5 +1,5 @@
 test_that("converting equations to Julia", {
-  sfm <- xmile("predator_prey")
+  sfm <- sdbuildR("predator_prey")
   var_names <- get_model_var(sfm)
   regex_units <- get_regex_units()
   name <- var_names[1]
@@ -10,28 +10,28 @@ test_that("converting equations to Julia", {
     regex_units
   )
   expected <- "min(predator_births)"
-  expect_equal(result$eqn_julia, expected)
+  expect_equal(result$eqn, expected)
 
   result <- convert_equations_julia(
     type, name, "max(predator_births)", var_names,
     regex_units
   )
   expected <- "max(predator_births)"
-  expect_equal(result$eqn_julia, expected)
+  expect_equal(result$eqn, expected)
 
   result <- convert_equations_julia(
     type, name, "c(0, predator_births, 1)", var_names,
     regex_units
   )
   expected <- "[0.0, predator_births, 1.0]"
-  expect_equal(result$eqn_julia, expected)
+  expect_equal(result$eqn, expected)
 
   result <- convert_equations_julia(
     type, name, "range(predator_births, predator_deaths) * 10", var_names,
     regex_units
   )
   expected <- "extrema(predator_births, predator_deaths) .* 10.0"
-  expect_equal(result$eqn_julia, expected)
+  expect_equal(result$eqn, expected)
 
   result <- convert_equations_julia(
     type, name, "test = function(a, b){
@@ -40,35 +40,35 @@ test_that("converting equations to Julia", {
     regex_units
   )
   expected <- "function test(a, b) a .+ b end"
-  expect_equal(stringr::str_squish(result$eqn_julia), expected)
+  expect_equal(stringr::str_squish(result$eqn), expected)
 
   result <- convert_equations_julia(
     type, name, "c(9 + 8 - 0, c('1 + 2 + 3'))", var_names,
     regex_units
   )
   expected <- "[9.0 .+ 8.0 .- 0.0, [\"1 + 2 + 3\"]]"
-  expect_equal(result$eqn_julia, expected)
+  expect_equal(result$eqn, expected)
 
   result <- convert_equations_julia(
     type, name, "1E08", var_names,
     regex_units
   )
   expected <- "100000000.0"
-  expect_equal(result$eqn_julia, expected)
+  expect_equal(result$eqn, expected)
 
   result <- convert_equations_julia(
     type, name, "c(T, TRUE, 'F', F+T, NULL, NA)", var_names,
     regex_units
   )
   expected <- "[true, true, \"F\", false .+ true, nothing, missing]"
-  expect_equal(result$eqn_julia, expected)
+  expect_equal(result$eqn, expected)
 
   result <- convert_equations_julia(
     type, name, "for (i in 1:9){\n\tprint(i)\n}", var_names,
     regex_units
   )
   expected <- "for  i in 1.0:9.0\n\tprintln(i)\nend"
-  expect_equal(result$eqn_julia, expected)
+  expect_equal(result$eqn, expected)
 
   result <- convert_equations_julia(
     type, name, "if(t<2020){\n\tgf<-0.07\n} else if (t<2025){\n\tgf<-0.03\n} else {\n\tgf<-0.02\n}", var_names,
@@ -81,7 +81,7 @@ elseif t .< 2025.0
  else
 	gf = 0.02
 end"
-  expect_equal(result$eqn_julia, expected)
+  expect_equal(result$eqn, expected)
 
   # while
   result <- convert_equations_julia(
@@ -89,14 +89,14 @@ end"
     regex_units
   )
   expected <- "while a .< 0.0\n\tif prey .> 0.0\n\t\ta = 0.0\n\t else\n\ta = 1.0\n\tend\nend"
-  expect_equal(result$eqn_julia, expected)
+  expect_equal(result$eqn, expected)
 
   # oneliner if ***
 })
 
 
 test_that("converting functions to Julia with named arguments", {
-  sfm <- xmile("predator_prey")
+  sfm <- sdbuildR("predator_prey")
   var_names <- get_model_var(sfm)
   regex_units <- get_regex_units()
   name <- var_names[1]
@@ -108,39 +108,39 @@ test_that("converting functions to Julia with named arguments", {
     regex_units
   )
   expected <- "min(predator_births)"
-  expect_equal(result$eqn_julia, expected)
+  expect_equal(result$eqn, expected)
 
   result <- convert_equations_julia(
     type, name, "min(x = max(y = predator_births))", var_names,
     regex_units
   )
   expected <- "min(max(predator_births))"
-  expect_equal(result$eqn_julia, expected)
+  expect_equal(result$eqn, expected)
 
   result <- convert_equations_julia(
     type, name, "range(x = 10, y= 8)", var_names,
     regex_units
   )
   expected <- "extrema(10.0, 8.0)"
-  expect_equal(result$eqn_julia, expected)
+  expect_equal(result$eqn, expected)
 
   result <- convert_equations_julia(
     type, name, "logistic(x, midpoint = 8)", var_names,
     regex_units
   )
   expected <- "logistic.(x, 1.0, 8.0, 1.0)"
-  expect_equal(result$eqn_julia, expected)
+  expect_equal(result$eqn, expected)
 
   result <- convert_equations_julia(
     type, name, "logistic(x, upper = 8)", var_names,
     regex_units
   )
   expected <- "logistic.(x, 1.0, 0.0, 8.0)"
-  expect_equal(result$eqn_julia, expected)
+  expect_equal(result$eqn, expected)
 
 
   # Error for na.rm
-  expect_error(xmile() |> build("a", "stock", eqn = "sd(x = test, na.rm = T)"), "na\\.rm is not supported as an argument in sdbuildR. Please use na\\.omit\\(x\\) instead")
+  expect_error(sdbuildR() |> build("a", "stock", eqn = "sd(x = test, na.rm = T)"), "na\\.rm is not supported as an argument in sdbuildR. Please use na\\.omit\\(x\\) instead")
 
   # Check that wrong arguments throw error
   expect_error(convert_equations_julia(
@@ -191,66 +191,65 @@ test_that("converting functions to Julia with named arguments", {
 
 
   # Error when not all default arguments are at the end
-  expect_error(xmile() |> macro("Function", "function(x, y = 1, z) x + y"), "Please change the function definition of Function. All arguments with defaults have to be placed at the end of the function arguments.")
+  expect_error(sdbuildR() |> macro("Function", "function(x, y = 1, z) x + y"), "Please change the function definition of Function. All arguments with defaults have to be placed at the end of the function arguments.")
 
-  expect_error(xmile() |> macro("Function", "function(x, y = 1, z){\nx + y\n}"), "Please change the function definition of Function. All arguments with defaults have to be placed at the end of the function arguments.")
+  expect_error(sdbuildR() |> macro("Function", "function(x, y = 1, z){\nx + y\n}"), "Please change the function definition of Function. All arguments with defaults have to be placed at the end of the function arguments.")
 
-  expect_error(xmile() |> macro("Function", "function(x, y = 1, z, a = 1) x + y"), "Please change the function definition of Function. All arguments with defaults have to be placed at the end of the function arguments")
+  expect_error(sdbuildR() |> macro("Function", "function(x, y = 1, z, a = 1) x + y"), "Please change the function definition of Function. All arguments with defaults have to be placed at the end of the function arguments")
 
-  expect_error(xmile() |> macro("Function", "function(x, y = 1, z, a = 1){\nx + y\n}"), "Please change the function definition of Function. All arguments with defaults have to be placed at the end of the function arguments")
+  expect_error(sdbuildR() |> macro("Function", "function(x, y = 1, z, a = 1){\nx + y\n}"), "Please change the function definition of Function. All arguments with defaults have to be placed at the end of the function arguments")
 
-  expect_no_error(xmile() |> macro("Function", "function(x, y = 1, a = 1){\nx + y\n}"))
-  expect_no_error(xmile() |> macro("Function", "function(x){\nx + y\n}"))
-  expect_no_error(xmile() |> macro("Function", "function(y = 1){\nx + y\n}"))
+  expect_no_error(sdbuildR() |> macro("Function", "function(x, y = 1, a = 1){\nx + y\n}"))
+  expect_no_error(sdbuildR() |> macro("Function", "function(x){\nx + y\n}"))
+  expect_no_error(sdbuildR() |> macro("Function", "function(y = 1){\nx + y\n}"))
 })
 
 
 test_that("custom function definitons work", {
-  sfm <- xmile() |>
+  sfm <- sdbuildR() |>
     macro("func", "function(x, y = 1, z = 2) x + y") |>
     sim_specs(dt = 0.1, stop = 10)
-  expect_equal(sfm$macro$func$eqn_julia, "function func(x, y = 1.0, z = 2.0)\n x .+ y\nend")
+  expect_equal(sfm$macro$func$eqn, "function custom_func(x, y = 1.0, z = 2.0)\n x .+ y\nend")
 
   # Is the function now usable?
   sfm <- sfm |>
     sim_specs(language = "R", stop = 1, dt = .1) |>
-    build("a", "stock", eqn = "func(1, 2)")
+    build("a", "stock", eqn = "custom_func(1, 2)")
   sim <- expect_no_error(simulate(sfm))
   expect_equal(sim$df[1, "value"], 1 + 2)
 
   # Name argument
-  sfm <- sfm |> build("a", eqn = "func(1, y = 2)")
-  expect_equal(sfm$model$variables$stock$a$eqn_julia, "func(1.0, y = 2.0)")
+  sfm <- sfm |> build("a", eqn = "custom_func(1, y = 2)")
+  expect_equal(sfm$model$variables$stock$a$eqn, "custom_func(1.0, y = 2.0)")
   sim <- expect_no_error(simulate(sfm))
   expect_equal(sim$df[1, "value"], 1 + 2)
 
   # Switch order of arguments
-  sfm <- sfm |> build("a", eqn = "func(1, z = 3, y = 2)")
-  expect_equal(sfm$model$variables$stock$a$eqn_julia, "func(1.0, z = 3.0, y = 2.0)")
+  sfm <- sfm |> build("a", eqn = "custom_func(1, z = 3, y = 2)")
+  expect_equal(sfm$model$variables$stock$a$eqn, "custom_func(1.0, z = 3.0, y = 2.0)")
   sim <- expect_no_error(simulate(sfm))
   expect_equal(sim$df[1, "value"], 1 + 2)
 
   # # Named argument throws error when translating to Julia
-  # sfm = sfm |> build("a", eqn = "func(1, y = 2)")
-  # expect_equal(sfm$model$variables$stock$a$eqn_julia, "func(1.0, y = 2.0)")
+  # sfm = sfm |> build("a", eqn = "custom_func(1, y = 2)")
+  # expect_equal(sfm$model$variables$stock$a$eqn, "custom_func(1.0, y = 2.0)")
   # expect_error(simulate(sfm), "The following variables were used as functions with named arguments in the Julia translated equation")
   #
   # # Switch order of arguments
   # sfm = sfm |>
-  #   build("a",eqn = "func(1, z = 3, y = 2)")
-  # expect_equal(sfm$model$variables$stock$a$eqn_julia, "func(1.0, z = 3.0, y = 2.0)")
+  #   build("a",eqn = "custom_func(1, z = 3, y = 2)")
+  # expect_equal(sfm$model$variables$stock$a$eqn, "custom_func(1.0, z = 3.0, y = 2.0)")
   # expect_error(simulate(sfm), "The following variables were used as functions with named arguments in the Julia translated equation")
 
   # Repeat in Julia
-  testthat::skip_on_cran()
-  testthat::skip_if_not(julia_status()$status == "ready")
-  sfm <- xmile() |> macro("func", "function(x, y = 1, z = 2) x + y")
-  expect_equal(sfm$macro$func$eqn_julia, "function func(x, y = 1.0, z = 2.0)\n x .+ y\nend")
+  skip_if_julia_not_ready()
+  sfm <- sdbuildR() |> macro("func", "function(x, y = 1, z = 2) x + y")
+  expect_equal(sfm$macro$func$eqn, "function custom_func(x, y = 1.0, z = 2.0)\n x .+ y\nend")
 
   # Is the function now usable?
   sfm <- sfm |>
     sim_specs(language = "Julia", stop = 1, dt = .1) |>
-    build("a", "stock", eqn = "func(1, 2)")
+    build("a", "stock", eqn = "custom_func(1, 2)")
   sim <- expect_no_error(simulate(sfm))
   expect_equal(sim$df[1, "value"], 1 + 2)
 })
@@ -469,7 +468,7 @@ test_that("clean_unit_in_u() works", {
 
 
 test_that("converting statements", {
-  sfm <- xmile("predator_prey")
+  sfm <- sdbuildR("predator_prey")
   var_names <- get_model_var(sfm)
 
   eqn <- "if(a > b){\n\t a + b\n} # test () {}"
@@ -539,128 +538,128 @@ test_that("replace_written_powers() works", {
 
 
 test_that("convert_distribution() to Julia", {
-  sfm <- xmile("predator_prey")
+  sfm <- sdbuildR("predator_prey")
   # names_df = get_names(sfm)
   var_names <- get_model_var(sfm)
   name <- var_names[1]
   type <- "stock"
 
   # When n = 1, don't add n, otherwise this create a vector
-  result <- convert_builtin_functions_julia(type, name, "runif(1)", var_names)$eqn_julia
+  result <- convert_builtin_functions_julia(type, name, "runif(1)", var_names)$eqn
   expected <- "rand(Distributions.Uniform(0.0, 1.0))"
   expect_equal(result, expected)
 
-  result <- convert_builtin_functions_julia(type, name, "runif(1, min =1, max=3)", var_names)$eqn_julia
+  result <- convert_builtin_functions_julia(type, name, "runif(1, min =1, max=3)", var_names)$eqn
   expected <- "rand(Distributions.Uniform(1.0, 3.0))"
   expect_equal(result, expected)
 
-  result <- convert_builtin_functions_julia(type, name, "runif(10, min =-1, max=3)", var_names)$eqn_julia
+  result <- convert_builtin_functions_julia(type, name, "runif(10, min =-1, max=3)", var_names)$eqn
   expected <- "rand(Distributions.Uniform(-1.0, 3.0), 10)"
   expect_equal(result, expected)
 
-  result <- convert_builtin_functions_julia(type, name, "rnorm(1)", var_names)$eqn_julia
+  result <- convert_builtin_functions_julia(type, name, "rnorm(1)", var_names)$eqn
   expected <- "rand(Distributions.Normal(0.0, 1.0))"
   expect_equal(result, expected)
 
   # Different order of arguments
-  result <- convert_builtin_functions_julia(type, name, "rnorm(10, sd =1, mean=3)", var_names)$eqn_julia
+  result <- convert_builtin_functions_julia(type, name, "rnorm(10, sd =1, mean=3)", var_names)$eqn
   expected <- "rand(Distributions.Normal(3.0, 1.0), 10)"
   expect_equal(result, expected)
 
-  result <- convert_builtin_functions_julia(type, name, "rnorm(10, 1, 3)", var_names)$eqn_julia
+  result <- convert_builtin_functions_julia(type, name, "rnorm(10, 1, 3)", var_names)$eqn
   expected <- "rand(Distributions.Normal(1.0, 3.0), 10)"
   expect_equal(result, expected)
 
-  result <- convert_builtin_functions_julia(type, name, "rexp(10, 3)", var_names)$eqn_julia
+  result <- convert_builtin_functions_julia(type, name, "rexp(10, 3)", var_names)$eqn
   expected <- "rand(Distributions.Exponential(3.0), 10)"
   expect_equal(result, expected)
 
-  result <- convert_builtin_functions_julia(type, name, "rexp(1, rate=30)", var_names)$eqn_julia
+  result <- convert_builtin_functions_julia(type, name, "rexp(1, rate=30)", var_names)$eqn
   expected <- "rand(Distributions.Exponential(30.0))"
   expect_equal(result, expected)
 
 
   # cdf, pdf, quantile
-  result <- convert_builtin_functions_julia(type, name, "pexp(1, rate=30)", var_names)$eqn_julia
+  result <- convert_builtin_functions_julia(type, name, "pexp(1, rate=30)", var_names)$eqn
   expected <- "Distributions.cdf.(Distributions.Exponential(30.0), 1)"
   expect_equal(result, expected)
 
-  result <- convert_builtin_functions_julia(type, name, "qexp(1, rate=30)", var_names)$eqn_julia
+  result <- convert_builtin_functions_julia(type, name, "qexp(1, rate=30)", var_names)$eqn
   expected <- "Distributions.quantile.(Distributions.Exponential(30.0), 1)"
   expect_equal(result, expected)
 
-  result <- convert_builtin_functions_julia(type, name, "dexp(1, rate=30)", var_names)$eqn_julia
+  result <- convert_builtin_functions_julia(type, name, "dexp(1, rate=30)", var_names)$eqn
   expected <- "Distributions.pdf.(Distributions.Exponential(30.0), 1)"
   expect_equal(result, expected)
 
-  result <- convert_builtin_functions_julia(type, name, "pgamma(1, 2, rate=30)", var_names)$eqn_julia
+  result <- convert_builtin_functions_julia(type, name, "pgamma(1, 2, rate=30)", var_names)$eqn
   expected <- "Distributions.cdf.(Distributions.Gamma(2.0, 30.0, 1.0/30.0), 1)"
   expect_equal(result, expected)
 
-  result <- convert_builtin_functions_julia(type, name, "qgamma(1, 2, rate=30)", var_names)$eqn_julia
+  result <- convert_builtin_functions_julia(type, name, "qgamma(1, 2, rate=30)", var_names)$eqn
   expected <- "Distributions.quantile.(Distributions.Gamma(2.0, 30.0, 1.0/30.0), 1)"
   expect_equal(result, expected)
 
-  result <- convert_builtin_functions_julia(type, name, "dgamma(1, 2, rate=30)", var_names)$eqn_julia
+  result <- convert_builtin_functions_julia(type, name, "dgamma(1, 2, rate=30)", var_names)$eqn
   expected <- "Distributions.pdf.(Distributions.Gamma(2.0, 30.0, 1.0/30.0), 1)"
   expect_equal(result, expected)
 })
 
 
 test_that("convert sequence works", {
-  sfm <- xmile("predator_prey")
+  sfm <- sdbuildR("predator_prey")
   var_names <- get_model_var(sfm)
   name <- var_names[1]
   type <- "aux"
 
-  result <- convert_equations_julia(type, name, "seq()", var_names)[["eqn_julia"]]
+  result <- convert_equations_julia(type, name, "seq()", var_names)[["eqn"]]
   expected <- "range(1.0, 1.0, step=1.0)"
   expect_equal(result, expected)
 
-  result <- convert_equations_julia(type, name, "seq(by = 1)", var_names)[["eqn_julia"]]
+  result <- convert_equations_julia(type, name, "seq(by = 1)", var_names)[["eqn"]]
   expected <- "range(1.0, 1.0, step=1.0)"
   expect_equal(result, expected)
 
-  result <- convert_equations_julia(type, name, "seq(1, 10)", var_names)[["eqn_julia"]]
+  result <- convert_equations_julia(type, name, "seq(1, 10)", var_names)[["eqn"]]
   expected <- "range(1.0, 10.0, step=1.0)"
   expect_equal(result, expected)
 
-  result <- convert_equations_julia(type, name, "seq(1, 10, 2)", var_names)[["eqn_julia"]]
+  result <- convert_equations_julia(type, name, "seq(1, 10, 2)", var_names)[["eqn"]]
   expected <- "range(1.0, 10.0, step=2.0)"
   expect_equal(result, expected)
 
-  result <- convert_equations_julia(type, name, "seq(1, 10, by=2)", var_names)[["eqn_julia"]]
+  result <- convert_equations_julia(type, name, "seq(1, 10, by=2)", var_names)[["eqn"]]
   expected <- "range(1.0, 10.0, step=2.0)"
   expect_equal(result, expected)
 
-  result <- convert_equations_julia(type, name, "seq(1, 10, length.out=5)", var_names)[["eqn_julia"]]
+  result <- convert_equations_julia(type, name, "seq(1, 10, length.out=5)", var_names)[["eqn"]]
   expected <- "range(1.0, 10.0, round_(5.0))"
   expect_equal(result, expected)
 })
 
 
 test_that("convert sample works", {
-  sfm <- xmile("predator_prey")
+  sfm <- sdbuildR("predator_prey")
   var_names <- get_model_var(sfm)
   name <- var_names[1]
   type <- "aux"
 
-  result <- convert_equations_julia(type, name, "sample(1:10, 5)", var_names)[["eqn_julia"]]
+  result <- convert_equations_julia(type, name, "sample(1:10, 5)", var_names)[["eqn"]]
   expected <- "StatsBase.sample(1.0:10.0, round_(5.0), replace=false)"
   expect_equal(result, expected)
 
-  result <- convert_equations_julia(type, name, "sample(1:10, 5, replace = TRUE)", var_names)[["eqn_julia"]]
+  result <- convert_equations_julia(type, name, "sample(1:10, 5, replace = TRUE)", var_names)[["eqn"]]
   expected <- "StatsBase.sample(1.0:10.0, round_(5.0), replace=true)"
   expect_equal(result, expected)
 
-  result <- convert_equations_julia(type, name, "sample(1:10, 5, replace = FALSE)", var_names)[["eqn_julia"]]
+  result <- convert_equations_julia(type, name, "sample(1:10, 5, replace = FALSE)", var_names)[["eqn"]]
   expected <- "StatsBase.sample(1.0:10.0, round_(5.0), replace=false)"
   expect_equal(result, expected)
 
   result <- convert_equations_julia(
     type, name, "sample(1:10, 5, prob = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1))",
     var_names
-  )[["eqn_julia"]]
+  )[["eqn"]]
   expected <- "StatsBase.sample(1.0:10.0, StatsBase.pweights([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]), round_(5.0), replace=false)"
   expect_equal(result, expected)
 })

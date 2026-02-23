@@ -1,161 +1,79 @@
-# Test summary() function for sdbuildR_xmile objects
+# Tests for summary.sdbuildR and print.summary_sdbuildR
 
-test_that("summary() returns summary.sdbuildR_xmile object", {
-  sfm <- xmile()
-  
-  result <- summary(sfm)
-  expect_s3_class(result, "summary.sdbuildR_xmile")
+test_that("summary() returns summary_sdbuildR class", {
+  sfm <- sdbuildR()
+  expect_s3_class(summary(sfm), "summary_sdbuildR")
 })
 
-test_that("summary() counts empty model correctly", {
-  sfm <- xmile()
-  
+test_that("summary() has dependencies, n_errors, n_warnings fields", {
+  summ <- summary(sdbuildR("SIR"))
+  expect_true(all(c("dependencies", "n_errors", "n_warnings") %in% names(summ)))
+})
+
+test_that("summary() dependencies is a named list", {
+  summ <- summary(sdbuildR("SIR"))
+  expect_type(summ$dependencies, "list")
+  expect_true(length(names(summ$dependencies)) > 0)
+})
+
+test_that("summary() only includes variables that have at least one dependency", {
+  sfm <- sdbuildR() |>
+    build("S", type = "stock", eqn = "100") |>
+    build("k", type = "constant", eqn = "0.1") |>
+    build("Flow1", type = "flow", from = "S", eqn = "k * S")
   summ <- summary(sfm)
-  expect_equal(length(summ$stocks), 0)
-  expect_equal(length(summ$flows), 0)
-  expect_equal(length(summ$constants), 0)
-  expect_equal(length(summ$aux), 0)
-  expect_equal(length(summ$gf), 0)
+  expect_false("k"    %in% names(summ$dependencies)) # constant — no deps
+  expect_false("S"    %in% names(summ$dependencies)) # stock — no deps
+  expect_true("Flow1" %in% names(summ$dependencies)) # flow — depends on k and S
+  expect_true("k" %in% summ$dependencies[["Flow1"]])
+  expect_true("S" %in% summ$dependencies[["Flow1"]])
 })
 
-test_that("summary() counts variables correctly", {
-  sfm <- xmile()
-  
-  sfm1 <- build(sfm, "Stock1", type = "stock")
-  sfm2 <- build(sfm1, "Flow1", type = "flow")
-  sfm3 <- build(sfm2, "Const1", type = "constant")
-  sfm4 <- build(sfm3, "Aux1", type = "aux")
-  
-  summ <- summary(sfm4)
-  expect_equal(length(summ$stocks), 1)
-  expect_equal(length(summ$flows), 1)
-  expect_equal(length(summ$constants), 1)
-  expect_equal(length(summ$aux), 1)
-})
-
-test_that("summary() counts template variables", {
-  sfm <- xmile("SIR")
-  
+test_that("summary() n_errors and n_warnings are zero for valid model", {
+  sfm <- sdbuildR() |>
+    build("S", type = "stock", eqn = "100") |>
+    build("Flow1", type = "flow", from = "S", eqn = "0.1 * S")
   summ <- summary(sfm)
-  expect_gt(length(summ$stocks), 0)
-  expect_gt(length(summ$flows), 0)
-  # SIR model should have stocks and flows
-  expect_true("Susceptible" %in% summ$stocks)
-  expect_true("Infected" %in% summ$stocks)
-  expect_true("Recovered" %in% summ$stocks)
+  expect_equal(summ$n_errors,   0L)
+  expect_equal(summ$n_warnings, 0L)
 })
 
-test_that("summary() reports macros", {
-  sfm <- xmile()
-  
-  sfm1 <- macro(sfm, "param1", eqn = "5")
-  sfm2 <- macro(sfm1, "param2", eqn = "10")
-  
-  summ <- summary(sfm2)
-  expect_equal(length(summ$macros), 2)
-  expect_true("param1" %in% summ$macros)
-  expect_true("param2" %in% summ$macros)
-})
-
-test_that("summary() reports custom units", {
-  sfm <- xmile()
-  
-  sfm1 <- model_units(sfm, "unit1", "eqn1")
-  sfm2 <- model_units(sfm1, "unit2", "eqn2")
-  
-  summ <- summary(sfm2)
-  expect_equal(length(summ$model_units), 2)
-  expect_true("unit1" %in% summ$model_units)
-  expect_true("unit2" %in% summ$model_units)
-})
-
-test_that("summary() displays simulation specs", {
-  sfm <- xmile()
-  
-  sfm1 <- sim_specs(sfm, start = 0, stop = 100, dt = 0.1)
-  
-  summ <- summary(sfm1)
-  expect_true("sim_specs" %in% names(summ))
-  expect_equal(as.numeric(summ$sim_specs$start), 0)
-  expect_equal(as.numeric(summ$sim_specs$stop), 100)
-  expect_equal(as.numeric(summ$sim_specs$dt), 0.1)
-})
-
-test_that("summary() reports language setting", {
-  sfm <- xmile()
-  
-  sfm1 <- sim_specs(sfm, language = "R")
-  
-  summ <- summary(sfm1)
-  expect_equal(summ$sim_specs$language, "R")
-})
-
-test_that("summary() detects delay functions", {
-  sfm <- xmile()
-  sfm1 <- build(sfm, "Stock1", type = "stock")
-  sfm2 <- build(sfm1, "DelayedVar", type = "aux", eqn = "delay(Stock1, 5)")
-  
-  summ <- summary(sfm2)
-  expect_true(summ$has_delays)
-})
-
-test_that("summary() lists all components", {
-  sfm <- xmile("SIR")
-  
+test_that("summary() n_errors > 0 for model with errors", {
+  sfm <- sdbuildR() # empty model — no stocks (error)
   summ <- summary(sfm)
-  
-  # Should have these fields
-  expected_fields <- c("stocks", "flows", "constants", "aux", "gf", "macros", "model_units", "sim_specs")
-  for (field in expected_fields) {
-    expect_true(field %in% names(summ))
-  }
+  expect_gt(summ$n_errors, 0)
 })
 
-test_that("summary() print method produces output", {
-  sfm <- xmile("SIR")
-  
+test_that("summary() n_warnings > 0 for model with warnings", {
+  sfm <- sdbuildR() |>
+    build("S", type = "stock") # disconnected stock — warning
   summ <- summary(sfm)
-  
-  # Should be able to print without error
-  expect_no_error(print(summ))
+  expect_gt(summ$n_warnings, 0)
 })
 
-test_that("summary() with graphical functions", {
-  sfm <- xmile()
-  
-  sfm1 <- build(sfm, "GF1", type = "gf", 
-                xpts = c(0, 1, 2), ypts = c(0, 1, 0))
-  
-  summ <- summary(sfm1)
-  expect_equal(length(summ$gf), 1)
-  expect_true("GF1" %in% summ$gf)
+test_that("print(summary(sfm)) produces output without error", {
+  sfm <- sdbuildR("SIR")
+  expect_no_error(print(summary(sfm)))
 })
 
-test_that("summary() preserves variable names correctly", {
-  sfm <- xmile()
-  
-  names_to_add <- c("MyStock", "MyFlow", "MyAux", "MyConstant")
-  sfm1 <- build(sfm, names_to_add[1], type = "stock")
-  sfm2 <- build(sfm1, names_to_add[2], type = "flow")
-  sfm3 <- build(sfm2, names_to_add[3], type = "aux")
-  sfm4 <- build(sfm3, names_to_add[4], type = "constant")
-  
-  summ <- summary(sfm4)
-  
-  expect_equal(summ$stocks, names_to_add[1])
-  expect_equal(summ$flows, names_to_add[2])
-  expect_equal(summ$aux, names_to_add[3])
-  expect_equal(summ$constants, names_to_add[4])
+test_that("print(summary(sfm)) shows Dependencies section", {
+  sfm <- sdbuildR("SIR")
+  expect_snapshot(print(summary(sfm)))
 })
 
-test_that("summary() with multiple items of same type", {
-  sfm <- xmile()
-  
-  sfm1 <- build(sfm, "Stock1", type = "stock")
-  sfm2 <- build(sfm1, "Stock2", type = "stock")
-  sfm3 <- build(sfm2, "Stock3", type = "stock")
-  
-  summ <- summary(sfm3)
-  expect_equal(length(summ$stocks), 3)
-  expect_equal(sort(summ$stocks), c("Stock1", "Stock2", "Stock3"))
+test_that("print(summary(sfm)) shows Diagnostics section", {
+  sfm <- sdbuildR("SIR")
+  expect_snapshot(print(summary(sfm)))
+})
+
+test_that("print(summary(sfm)) reports no issues for valid model", {
+  sfm <- sdbuildR() |>
+    build("S", type = "stock", eqn = "100") |>
+    build("Flow1", type = "flow", from = "S", eqn = "0.1 * S")
+  expect_snapshot(print(summary(sfm)))
+})
+
+test_that("print(summary(sfm)) reports errors for invalid model", {
+  sfm <- sdbuildR() # empty — no stocks
+  expect_snapshot(print(summary(sfm)))
 })

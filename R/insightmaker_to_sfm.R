@@ -7,13 +7,12 @@
 #' @param URL URL to Insight Maker model. Character.
 #' @param file File path to Insight Maker model. Only used if URL is not specified. Needs to be a character with suffix .InsightMaker or .json.
 #' @param keep_nonnegative_flow If TRUE, keeps original non-negativity setting of flows. Defaults to TRUE.
-#' @param keep_nonnegative_stock If TRUE, keeps original non-negativity setting of stocks Defaults to FALSE.
-#' @param keep_solver If TRUE, keep the ODE solver as it is. If FALSE, switch to Euler integration in case of non-negative stocks to reproduce the Insight Maker data exactly. Defaults to FALSE.
+#' @param keep_nonnegative_stock If TRUE, keeps original non-negativity setting of stocks. Defaults to FALSE.
 #'
-#' @returns A stock-and-flow model object of class [`sdbuildR_xmile`][xmile]
+#' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR]
 #' @export
 #' @concept insightmaker
-#' @seealso [build()], [xmile()]
+#' @seealso [build()], [sdbuildR()]
 #'
 #' @examplesIf has_internet() && Sys.getenv("NOT_CRAN") == "true"
 #' # Load a model from Insight Maker
@@ -34,8 +33,7 @@
 insightmaker_to_sfm <- function(URL,
                                 file,
                                 keep_nonnegative_flow = TRUE,
-                                keep_nonnegative_stock = FALSE,
-                                keep_solver = FALSE) {
+                                keep_nonnegative_stock = FALSE) {
   if (P[["debug"]]) {
     cli::cli_inform("URL: {URL}")
     cli::cli_inform("file: {file}")
@@ -46,26 +44,40 @@ insightmaker_to_sfm <- function(URL,
   read_file <- out[["read_file"]]
   ext <- out[["ext"]]
 
-  # Create model structure
-  sfm <- tryCatch(
+  # Parse model into import context
+  # file_to_sdbuildR() returns a context with:
+  # - ctx$sfm: sfm with sim_specs, meta, and variables added (no Julia conversion yet)
+  # - ctx$variables: original variable list (for reference)
+  # - ctx$original_variables: data frame for import_metadata
+  # - ctx$original_macros: data frame for import_metadata
+  # - ctx$vendor_meta: meta info for import_metadata
+  ctx <- tryCatch(
     {
-      # IM_to_xmile(xml_file)
-      file_to_xmile(read_file, ext)
+      file_to_sdbuildR(read_file, ext)
     },
     error = function(e) {
       cli::cli_abort(
         c("Failed to convert Insight Maker model structure to XMILE format.",
           "x" = "Check for unsupported Insight Maker syntax or model structure.",
-          "i" = "Original error: {conditionMessage(e)}"),
+          "i" = "Original error: {conditionMessage(e)}"
+        ),
         call = NULL
       )
     }
   )
 
-  # Add URL to header
+  # Store raw model and source info in context for import_metadata
+  ctx$raw_model <- read_file
+  ctx$file_path <- if (!missing(file) && !is.null(file)) file else NULL
+  ctx$url <- if (!missing(URL) && !is.null(URL)) URL else NULL
+
+  # Add URL to meta
   if (!missing(URL)) {
-    sfm[["header"]][["URL"]] <- URL
+    ctx$sfm[["meta"]][["URL"]] <- URL
   }
+
+  # Extract sfm for convenience (conversion functions work on sfm)
+  sfm <- ctx$sfm
 
   # Clean up units
   if (P[["debug"]]) {
@@ -82,7 +94,8 @@ insightmaker_to_sfm <- function(URL,
       cli::cli_abort(
         c("Failed to clean units in the model.",
           "x" = "Check for invalid unit syntax or unsupported unit types.",
-          "i" = "Original error: {conditionMessage(e)}"),
+          "i" = "Original error: {conditionMessage(e)}"
+        ),
         call = NULL
       )
     }
@@ -91,13 +104,14 @@ insightmaker_to_sfm <- function(URL,
   # Check non-negativity for flows and stocks
   sfm <- tryCatch(
     {
-      check_nonnegativity(sfm, keep_nonnegative_flow, keep_nonnegative_stock, keep_solver)
+      check_nonnegativity(sfm, keep_nonnegative_flow, keep_nonnegative_stock)
     },
     error = function(e) {
       cli::cli_abort(
         c("Failed to check non-negativity constraints.",
           "x" = "Review your keep_nonnegative_flow and keep_nonnegative_stock settings.",
-          "i" = "Original error: {conditionMessage(e)}"),
+          "i" = "Original error: {conditionMessage(e)}"
+        ),
         call = NULL
       )
     }
@@ -116,13 +130,14 @@ insightmaker_to_sfm <- function(URL,
       cli::cli_abort(
         c("Failed to convert macros from Insight Maker format.",
           "x" = "Check for unsupported macro syntax or functions.",
-          "i" = "Original error: {conditionMessage(e)}"),
+          "i" = "Original error: {conditionMessage(e)}"
+        ),
         call = NULL
       )
     }
   )
 
-  # Convert equations in model variables
+  # Convert equations in model variables (IM format -> R format)
   if (P[["debug"]]) {
     cli::cli_inform("Converting equations")
   }
@@ -135,7 +150,8 @@ insightmaker_to_sfm <- function(URL,
       cli::cli_abort(
         c("Failed to convert equations from Insight Maker format.",
           "x" = "Check for unsupported functions or syntax in your model equations.",
-          "i" = "Original error: {conditionMessage(e)}"),
+          "i" = "Original error: {conditionMessage(e)}"
+        ),
         call = NULL
       )
     }
@@ -149,21 +165,8 @@ insightmaker_to_sfm <- function(URL,
     error = function(e) {
       cli::cli_abort(
         c("Failed to clean variable names.",
-          "i" = "Original error: {conditionMessage(e)}"),
-        call = NULL
-      )
-    }
-  )
-
-  # Convert equations and macros to Julia
-  sfm <- tryCatch(
-    {
-      convert_equations_julia_wrapper(sfm, regex_units = regex_units)
-    },
-    error = function(e) {
-      cli::cli_abort(
-        c("Failed to convert equations to Julia format.",
-          "i" = "Original error: {conditionMessage(e)}"),
+          "i" = "Original error: {conditionMessage(e)}"
+        ),
         call = NULL
       )
     }
@@ -177,24 +180,59 @@ insightmaker_to_sfm <- function(URL,
     error = function(e) {
       cli::cli_abort(
         c("Failed to split auxiliary variables into constants and auxiliaries.",
-          "i" = "Original error: {conditionMessage(e)}"),
+          "i" = "Original error: {conditionMessage(e)}"
+        ),
         call = NULL
       )
     }
   )
 
-  # Determine simulation language: if using units, set to Julia
+  # Prepare equation strings for the target language
+  # This must happen before sim_specs() to ensure eqn_str and sum_eqn are populated
+  # Determine which language will be used (check for units first)
   unit_strings <- find_unit_strings(sfm)
-  df <- as.data.frame(sfm, type = c("stock", "aux", "constant", "gf"), properties = "units")
+  df_units <- as.data.frame(sfm, type = c("stock", "aux", "constant", "lookup"), properties = "units")
 
-  if (length(unit_strings) > 0 || nrow(sfm[["model_units"]]) > 0 ||
-    any(df[["units"]] != "1")) {
-    cli::cli_inform("Units detected. Setting language to {.code Julia}")
-    sfm <- sim_specs(sfm, language = "Julia", keep_nonnegative_flow = keep_nonnegative_flow, keep_nonnegative_stock = keep_nonnegative_stock)
-  } else {
-    sfm <- sim_specs(sfm, keep_nonnegative_flow = keep_nonnegative_flow, keep_nonnegative_stock = keep_nonnegative_stock)
+  will_use_julia <- length(unit_strings) > 0 ||
+    nrow(sfm[["custom_unit"]]) > 0 ||
+    any(df_units[["units"]] != "1")
+
+  # Prepare equations (adapter handles R vs Julia based on sim_specs)
+  if (will_use_julia) {
+    sfm[["sim_specs"]][["language"]] <- "Julia"
   }
+  sfm <- prep_equations_variables(sfm)
+  sfm <- prep_stock_change(sfm)
 
-  sfm <- validate_xmile(sfm)
-  return(sfm)
+  # Determine simulation language: if using units, set to Julia
+  # Reuse variables computed above for prep functions
+  if (will_use_julia) {
+    cli::cli_inform("Units detected. Setting language to {.code Julia}")
+    sfm <- sim_specs(sfm, language = "Julia")
+  }
+  sfm <- sim_specs(sfm, keep_nonnegative_flow = keep_nonnegative_flow, keep_nonnegative_stock = keep_nonnegative_stock)
+
+  # Clean up temporary columns used during conversion
+  # These columns are no longer needed and should not appear in the final sdbuildR object
+  # temp_cols <- c("eqn_insightmaker", "units_insightmaker",
+  #                "name_insightmaker", "id_insightmaker",
+  #                "conveyor", "len")
+  # for (col in temp_cols) {
+  #   if (col %in% colnames(sfm[["variables"]])) {
+  #     sfm[["variables"]][[col]] <- NULL
+  #   }
+  # }
+  allowed_cols <- colnames(empty_variables())
+  sfm[["variables"]] <- sfm[["variables"]][, colnames(sfm[["variables"]]) %in% allowed_cols]
+
+  # Update context with converted sfm
+  ctx$sfm <- sfm
+
+  # Build import_metadata from context and attach to sfm
+  sfm[["import_metadata"]] <- ctx_build_import_metadata(ctx)
+
+  sfm <- sanitize_sdbuildR(sfm)
+  validate_sdbuildR(sfm)
+  
+  sfm
 }

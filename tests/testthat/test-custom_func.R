@@ -1,199 +1,176 @@
-# Tests for custom functions
+# Test custom_func() function for creating and modifying func-type variables
 
-# Mathematical functions ----
+test_that("custom_func() creates custom functions", {
+  sfm <- sdbuildR()
 
-test_that("round_IM() rounds .5 correctly", {
-  expect_equal(round_IM(0.5), 1)
-  expect_equal(round_IM(-0.5), 0)
-  expect_equal(round_IM(1.5), 2)
-  expect_equal(round_IM(2.5), 3)
+  sfm1 <- custom_func(sfm, "parameter1", eqn = "5")
+  df <- as.data.frame(sfm1, type = "func", properties = c("name", "eqn"))
+  expect_equal(nrow(df), 1)
+  expect_equal(df[["name"]], "parameter1")
+  expect_equal(df[["eqn"]], "5")
 })
 
-test_that("round_IM() handles digits parameter", {
-  # Note: round_IM only handles .5 for integer rounding (digits=0)
-  # For other digits, it uses standard round()
-  expect_equal(round_IM(1.234, digits = 2), 1.23)
-  expect_equal(round_IM(2.567, digits = 1), 2.6)
+test_that("custom_func() adds multiple funcs", {
+  sfm <- sdbuildR()
+
+  sfm1 <- custom_func(sfm, "param1", eqn = "5")
+  sfm2 <- custom_func(sfm1, "param2", eqn = "10")
+  sfm3 <- custom_func(sfm2, "param3", eqn = "param1 + param2")
+
+  df <- as.data.frame(sfm3, type = "func")
+  expect_equal(nrow(df), 3)
+  expect_true("param1" %in% df[["name"]])
+  expect_true("param2" %in% df[["name"]])
+  expect_true("param3" %in% df[["name"]])
 })
 
-test_that("round_IM() handles integers", {
-  expect_equal(round_IM(1), 1)
-  expect_equal(round_IM(0), 0)
+test_that("custom_func() modifies existing func equations", {
+  sfm <- sdbuildR()
+
+  sfm1 <- custom_func(sfm, "param1", eqn = "5")
+  sfm2 <- custom_func(sfm1, "param1", eqn = "10")
+
+  df <- as.data.frame(sfm2, type = "func", properties = c("name", "eqn"))
+  expect_equal(df[["eqn"]], "10")
 })
 
-test_that("logit() computes correctly", {
-  expect_equal(logit(0.5), 0)
-  expect_true(logit(0.9) > 0)
-  expect_true(logit(0.1) < 0)
+test_that("custom_func() validates function definitions (defaults at end)", {
+  sfm <- sdbuildR()
+
+  # Invalid: default arg not at end
+  expect_error(
+    custom_func(sfm, "bad_func", eqn = "function(x = 1, y) x + y"),
+    "defaults have to be placed at the end"
+  )
+
+  # Valid: default arg at end
+  sfm1 <- custom_func(sfm, "good_func", eqn = "function(x, y = 1) x + y")
+  df <- as.data.frame(sfm1, type = "func")
+  expect_equal(nrow(df), 1)
 })
 
-test_that("expit() computes correctly", {
-  expect_equal(expit(0), 0.5)
-  expect_true(expit(10) > 0.9)
-  expect_true(expit(-10) < 0.1)
+test_that("custom_func() sets units", {
+  sfm <- sdbuildR()
+
+  sfm1 <- custom_func(sfm, "rate", eqn = "0.05", units = "1/yr")
+  df <- as.data.frame(sfm1, type = "func", properties = c("name", "units"))
+  expect_equal(df[["units"]], "1/yr")
 })
 
-test_that("expit() is inverse of logit()", {
-  expect_equal(expit(logit(0.5)), 0.5)
-  expect_equal(expit(logit(0.3)), 0.3, tolerance = 1e-10)
-  expect_equal(expit(logit(0.7)), 0.7, tolerance = 1e-10)
+test_that("custom_func() sets documentation", {
+  sfm <- sdbuildR()
+
+  sfm1 <- custom_func(sfm, "birth_rate",
+    eqn = "0.02",
+    doc = "Annual birth rate per individual"
+  )
+  df <- as.data.frame(sfm1, type = "func", properties = c("name", "doc"))
+  expect_equal(df[["doc"]], "Annual birth rate per individual")
 })
 
-# Random functions ----
+test_that("discard() removes funcs", {
+  sfm <- sdbuildR()
 
-test_that("rbool() returns logical", {
-  set.seed(123)
-  result <- rbool(0.5)
-  expect_type(result, "logical")
-  expect_length(result, 1)
+  sfm1 <- custom_func(sfm, "param1", eqn = "5")
+  sfm2 <- custom_func(sfm1, "param2", eqn = "10")
+
+  # Remove one func
+  sfm3 <- discard(sfm2, "param1")
+  df <- as.data.frame(sfm3, type = "func")
+  expect_equal(nrow(df), 1)
+  expect_equal(df[["name"]], "param2")
 })
 
-test_that("rbool() respects extreme probabilities", {
-  set.seed(123)
-  expect_true(rbool(1))
-  expect_false(rbool(0))
+test_that("discard() removes multiple funcs", {
+  sfm <- sdbuildR()
+
+  sfm1 <- custom_func(sfm, "p1", eqn = "1")
+  sfm2 <- custom_func(sfm1, "p2", eqn = "2")
+  sfm3 <- custom_func(sfm2, "p3", eqn = "3")
+
+  # Remove multiple
+  sfm4 <- discard(sfm3, c("p1", "p3"))
+  df <- as.data.frame(sfm4, type = "func")
+  expect_equal(nrow(df), 1)
+  expect_equal(df[["name"]], "p2")
 })
 
-test_that("rdist() returns single sample", {
-  set.seed(123)
-  result <- rdist(c(1, 2, 3), c(0.5, 0.25, 0.25))
-  expect_length(result, 1)
-  expect_true(result %in% c(1, 2, 3))
+test_that("discard() validates func existence", {
+  sfm <- sdbuildR()
+
+  sfm1 <- custom_func(sfm, "param1", eqn = "5")
+
+  expect_error(
+    discard(sfm1, "nonexistent"),
+    "not exist"
+  )
 })
 
-test_that("rdist() respects probabilities", {
-  set.seed(123)
-  result <- rdist(c("a", "b"), c(1, 0))
-  expect_equal(result, "a")
+test_that("change_name() renames funcs", {
+  sfm <- sdbuildR()
+
+  sfm1 <- custom_func(sfm, "old_name", eqn = "5")
+  sfm2 <- change_name(sfm1, "old_name", new_name = "new_name")
+
+  df <- as.data.frame(sfm2, type = "func", properties = "name")
+  expect_equal(df[["name"]], "new_name")
+  expect_false("old_name" %in% df[["name"]])
 })
 
-# Vector/string functions ----
+test_that("custom_func() preserves variables", {
+  sfm <- sdbuildR()
 
-test_that("indexof() finds value in vector", {
-  expect_equal(indexof(c("a", "b", "c"), "b"), 2)
-  expect_equal(indexof(c(1, 2, 3), 1), 1)
-  expect_equal(indexof(c("x", "y", "z"), "z"), 3)
+  sfm1 <- build(sfm, "Stock1", type = "stock")
+  sfm2 <- custom_func(sfm1, "param1", eqn = "5")
+
+  # Check both exist
+  var_df <- as.data.frame(sfm2, type = "stock")
+  func_df <- as.data.frame(sfm2, type = "func")
+
+  expect_equal(nrow(var_df), 1)
+  expect_equal(var_df[["name"]], "Stock1")
+  expect_equal(nrow(func_df), 1)
+  expect_equal(func_df[["name"]], "param1")
 })
 
-test_that("indexof() returns 0 when not found in vector", {
-  expect_equal(indexof(c("a", "b", "c"), "d"), 0)
-  expect_equal(indexof(c(1, 2, 3), 4), 0)
+test_that("custom_func() can be used in variable equations", {
+  sfm <- sdbuildR()
+
+  sfm1 <- custom_func(sfm, "rate", eqn = "0.05")
+  sfm2 <- build(sfm1, "Stock1", type = "stock")
+  sfm3 <- build(sfm2, "Flow1",
+    type = "flow",
+    eqn = "Stock1 * rate", from = "Stock1"
+  )
+
+  df <- as.data.frame(sfm3, type = "flow", properties = c("name", "eqn"))
+  expect_match(df[["eqn"]], "rate")
 })
 
-test_that("indexof() finds substring in string", {
-  expect_equal(indexof("haystack", "hay"), 1)
-  expect_equal(indexof("haystack", "stack"), 4)
-  expect_equal(indexof("haystack", "a"), 2)
+test_that("custom_func() with empty model works", {
+  sfm <- sdbuildR()
+
+  # Should be able to add func to empty model
+  sfm1 <- custom_func(sfm, "f1", eqn = "10")
+  df <- as.data.frame(sfm1, type = "func")
+  expect_equal(nrow(df), 1)
 })
 
-test_that("indexof() returns 0 when substring not found", {
-  expect_equal(indexof("haystack", "needle"), 0)
-  expect_equal(indexof("test", "z"), 0)
+test_that("custom_func() returns the modified model", {
+  sfm <- sdbuildR()
+
+  result <- custom_func(sfm, "param1", eqn = "5")
+  expect_s3_class(result, "sdbuildR")
+  expect_true(is.list(result))
 })
 
-test_that("length_IM() counts vector elements", {
-  expect_equal(length_IM(c("a", "b", "c")), 3)
-  expect_equal(length_IM(c(1, 2, 3, 4)), 4)
-  expect_equal(length_IM(numeric(0)), 0)
+test_that("build() with type = 'func' works directly", {
+  sfm <- sdbuildR()
+
+  sfm1 <- build(sfm, "f", "func", eqn = "function(x) x * 2")
+  df <- as.data.frame(sfm1, type = "func", properties = c("name", "eqn"))
+  expect_equal(nrow(df), 1)
+  expect_equal(df[["name"]], "f")
+  expect_match(df[["eqn"]], "function")
 })
-
-test_that("length_IM() counts string characters", {
-  expect_equal(length_IM("abcdef"), 6)
-  expect_equal(length_IM("test"), 4)
-  expect_equal(length_IM(""), 0)
-})
-
-test_that("contains_IM() checks vector membership", {
-  expect_true(contains_IM(c("a", "b", "c"), "b"))
-  expect_false(contains_IM(c("a", "b", "c"), "d"))
-  expect_true(contains_IM(c(1, 2, 3), 2))
-})
-
-test_that("contains_IM() checks substring in string", {
-  expect_true(contains_IM("haystack", "hay"))
-  expect_true(contains_IM("abcdef", "bc"))
-  expect_false(contains_IM("haystack", "needle"))
-})
-
-# Modulus and remainder functions ----
-
-test_that("rem() computes remainder correctly", {
-  expect_equal(rem(7, 3), 1)
-  expect_equal(rem(10, 5), 0)
-  expect_equal(rem(8, 3), 2)
-})
-
-test_that("rem() handles negative values differently than mod()", {
-  # When a is negative
-  expect_equal(rem(-7, 3), -1)
-  expect_equal(mod(-7, 3), 2)
-  
-  # When b is negative
-  expect_equal(rem(7, -3), 1)
-  expect_equal(mod(7, -3), -2)
-})
-
-test_that("rem() and mod() agree for positive values", {
-  expect_equal(rem(7, 3), mod(7, 3))
-  expect_equal(rem(10, 4), mod(10, 4))
-})
-
-test_that("%REM% operator works", {
-  expect_equal(7 %REM% 3, rem(7, 3))
-  expect_equal(-7 %REM% 3, rem(-7, 3))
-})
-
-# Logistic functions ----
-
-test_that("logistic() computes at midpoint", {
-  # At midpoint, output should be upper/2
-  expect_equal(logistic(0, midpoint = 0, upper = 1), 0.5)
-  expect_equal(logistic(5, midpoint = 5, upper = 10), 5)
-})
-
-test_that("logistic() respects upper asymptote", {
-  # Values should be bounded by upper
-  expect_true(logistic(100, upper = 1) < 1)
-  expect_true(logistic(100, upper = 10) < 10)
-})
-
-test_that("logistic() handles slope parameter", {
-  # Higher slope means steeper transition, so at a given x-midpoint distance,
-  # higher slope gets closer to the upper asymptote (farther from midpoint)
-  expect_true(abs(logistic(1, slope = 1) - 0.5) < abs(logistic(1, slope = 10) - 0.5))
-})
-
-test_that("sigmoid() is alias for logistic()", {
-  expect_equal(sigmoid(0), logistic(0))
-  expect_equal(sigmoid(1, slope = 2, midpoint = 1, upper = 5), 
-               logistic(1, slope = 2, midpoint = 1, upper = 5))
-})
-
-test_that("logistic() returns numeric", {
-  expect_type(logistic(0), "double")
-  expect_length(logistic(0), 1)
-})
-
-# Non-negative function ----
-
-test_that("nonnegative() clamps negative values to zero", {
-  expect_equal(nonnegative(-5), 0)
-  expect_equal(nonnegative(-0.1), 0)
-  expect_equal(nonnegative(0), 0)
-})
-
-test_that("nonnegative() preserves positive values", {
-  expect_equal(nonnegative(5), 5)
-  expect_equal(nonnegative(0.1), 0.1)
-  expect_equal(nonnegative(100), 100)
-})
-
-# Error message tests ----
-
-cli::test_that_cli(configs = c("plain", "ansi"), "logistic() validates parameters", {
-  expect_snapshot(logistic(0, slope = "a"), error = TRUE)
-  expect_snapshot(logistic(0, midpoint = "b"), error = TRUE)
-  expect_snapshot(logistic(0, upper = "c"), error = TRUE)
-})
-
 

@@ -3,8 +3,10 @@ P <- list(
   debug = FALSE,
   insightmaker_version = 38, # version sdbuildR was made with
   jl_pkg_name = "SystemDynamicsBuildR",
+  jl_pkg_version = "0.2.5", # required version SystemDynamicsBuildR
+  jl_required_version = "1.10", # required minimum version of Julia
   model_setup_name = "model_setup",
-  macro_name = "macro",
+  func_name = "func",
   initial_value_name = "init",
   initial_value_names = "init_names",
   parameter_name = "constants",

@@ -80,4 +80,4 @@ sdbuildR is heavily based on common system dynamics software such as [Vensim](ht
 
 ## Troubleshooting
 
-sdbuildR is under active development. While thoroughly tested, the package may have bugs, particularly in complex model translations. We encourage users to report [issues on GitHub](https://github.com/KCEvers/sdbuildR/issues) - your input helps the package improve! Use `debugger()` to diagnose model errors, and use the vignettes for guidance.
+sdbuildR is under active development. While thoroughly tested, the package may have bugs, particularly in complex model translations. We encourage users to report [issues on GitHub](https://github.com/KCEvers/sdbuildR/issues) - your input helps the package improve! Use `diagnose()` to diagnose model errors, and use the vignettes for guidance.

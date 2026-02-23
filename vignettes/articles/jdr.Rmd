@@ -74,7 +74,7 @@ if (recreate_figs) {
 <!-- Figure 1  -->
 ```{r include=FALSE}
 if (recreate_figs) {
-  sfm <- xmile() |>
+  sfm <- sdbuildR() |>
     build("Stock", "stock", label = "Stock A", eqn = "Constant") |>
     build("Constant", "constant") |>
     build("Auxiliary", "aux") |>
@@ -194,8 +194,8 @@ if (recreate_figs) {
 ## Simulating Stock-and-Flow Models in R
 
 ```{r}
-sfm <- xmile() |>
-  header(name = "Job Resources and Demands Theory") |>
+sfm <- sdbuildR() |>
+  meta(name = "Job Resources and Demands Theory") |>
   # Add a seed for reproducibility:
   sim_specs(seed = 123) |>
   sim_specs(time_units = "day", stop = 365 / 2) |>
@@ -247,7 +247,7 @@ if (recreate_figs) {
 ```
 
 ```{r}
-debugger(sfm)
+diagnose(sfm)
 ```
 
 ```{r build-jdr-b}
@@ -619,10 +619,10 @@ We save this version of the stock-and-flow model for later use:
 sfm0 <- sfm |> sim_specs(save_at = .1)
 ```
 
-Note that this is identical to the version stored in the model library, which can be loaded using `xmile()`:
+Note that this is identical to the version stored in the model library, which can be loaded using `sdbuildR()`:
 
 ```{r}
-sfm0 <- xmile("JDR") |> sim_specs(save_at = .1)
+sfm0 <- sdbuildR("JDR") |> sim_specs(save_at = .1)
 ```
 
 ## Interrogating Your Model
@@ -740,20 +740,20 @@ sfm <- sim_specs(sfm0, language = "Julia")
 ```
 
 ```{r}
-sfm <- model_units(sfm, "UWES", doc = "Utrecht Work Engagement Scale") |>
+sfm <- custom_unit(sfm, "UWES", doc = "Utrecht Work Engagement Scale") |>
   build("E", units = "UWES")
 ```
 
 ```{r}
-sfm <- model_units(sfm, "UWES", erase = TRUE) |>
-  model_units("uE") |>
+sfm <- custom_unit(sfm, "UWES", discard = TRUE) |>
+  custom_unit("uE") |>
   build("E", units = "uE")
 ```
 
 We can add similar placeholder units for all other stocks, as well as for performance:
 
 ```{r}
-sfm <- model_units(sfm, c("uE", "uR", "uX", "uD", "uP"),
+sfm <- custom_unit(sfm, c("uE", "uR", "uX", "uD", "uP"),
   doc = c(
     "Engagement", "Job Resources", "Energy",
     "Job Demands", "Job Performance"
@@ -1117,7 +1117,7 @@ if (recreate_figs) {
 sim1 <- simulate(sfm0)
 pl1 <- plot(sim1)
 
-sfm2 <- build(sfm0, "U", erase = TRUE)
+sfm2 <- build(sfm0, "U", discard = TRUE)
 sim2 <- simulate(sfm2)
 pl2 <- plot(sim2, showlegend = FALSE)
 
@@ -1325,7 +1325,7 @@ if (recreate_figs) {
 Set up threaded simulation:
 
 ```{r}
-use_threads(n = 4)
+use_julia(nthreads = 4)
 ```
 
 ### Establishing Boundary Conditions of Phenomena

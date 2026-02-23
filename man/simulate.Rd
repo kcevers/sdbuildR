@@ -7,18 +7,18 @@
 simulate(sfm, only_stocks = TRUE, verbose = FALSE, ...)
 }
 \arguments{
-\item{sfm}{Stock-and-flow model, object of class \code{\link[=xmile]{sdbuildR_xmile}}.}
+\item{sfm}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
 
 \item{only_stocks}{If TRUE, only return stocks in output, discarding flows and auxiliaries. If FALSE, flows and auxiliaries are saved, which slows down the simulation. Defaults to FALSE.}
 
 \item{verbose}{If TRUE, print duration of simulation. Defaults to FALSE.}
 
-\item{...}{Optional arguments}
+\item{...}{Optional arguments passed to \code{\link[=sim_specs]{sim_specs()}}; these can be used to override the simulation specifications set in the model object.}
 }
 \value{
-Object of class \code{\link[=simulate]{sdbuildR_sim}}, a list containing:
+Object of class \code{\link[=simulate]{simulate_sdbuildR}}, a list containing:
 \describe{
-\item{sfm}{Stock-and-flow model object of class \code{\link[=xmile]{sdbuildR_xmile}}}
+\item{sfm}{Stock-and-flow model object of class \code{\link{sdbuildR}}}
 \item{df}{Data frame: simulation results (time, variable, value)}
 \item{init}{Named vector: initial stock values}
 \item{constants}{Named vector: constant parameters}
@@ -28,13 +28,13 @@ Object of class \code{\link[=simulate]{sdbuildR_sim}}, a list containing:
 \item{error_message}{NULL if completed without errors}
 }
 
-Use \code{\link[=as.data.frame]{as.data.frame()}} to extract results, \code{\link[=plot]{plot()}} to visualize.
+Use \link[=as.data.frame.simulate_sdbuildR]{as.data.frame()} to extract results, \link[=plot.simulate_sdbuildR]{plot()} to visualize.
 }
 \description{
-Simulate a stock-and-flow model with simulation specifications defined by \code{\link[=sim_specs]{sim_specs()}}. If \code{sim_specs(language = "julia")}, the Julia environment will first be set up with \code{\link[=use_julia]{use_julia()}}. If any problems are detected by \code{\link[=debugger]{debugger()}}, the model cannot be simulated.
+Simulate a stock-and-flow model with simulation specifications defined by \code{\link[=sim_specs]{sim_specs()}}. If \code{sim_specs(language = "julia")}, the Julia environment will first be set up with \code{\link[=use_julia]{use_julia()}}. If any problems are detected by \code{\link[=diagnose]{diagnose()}}, the model cannot be simulated.
 }
 \examples{
-sfm <- xmile("SIR")
+sfm <- sdbuildR("SIR")
 sim <- simulate(sfm)
 plot(sim)
 
@@ -42,9 +42,9 @@ plot(sim)
 sim <- simulate(sfm, only_stocks = FALSE)
 plot(sim, add_constants = TRUE)
 
-\dontshow{if (julia_status()$status == "ready") withAutoprint(\{ # examplesIf}
+\dontshow{if (is_julia_ready()) withAutoprint(\{ # examplesIf}
 # Use Julia for models with units
-sfm <- sim_specs(xmile("coffee_cup"), language = "Julia")
+sfm <- sim_specs(sdbuildR("coffee_cup"), language = "Julia")
 sim <- simulate(sfm)
 plot(sim)
 
@@ -53,6 +53,6 @@ use_julia(stop = TRUE)
 \dontshow{\}) # examplesIf}
 }
 \seealso{
-\code{\link[=build]{build()}}, \code{\link[=xmile]{xmile()}}, \code{\link[=debugger]{debugger()}}, \code{\link[=sim_specs]{sim_specs()}}, \code{\link[=use_julia]{use_julia()}}
+\code{\link[=build]{build()}}, \code{\link[=sdbuildR]{sdbuildR()}}, \code{\link[=diagnose]{diagnose()}}, \code{\link[=sim_specs]{sim_specs()}}, \code{\link[=use_julia]{use_julia()}}
 }
 \concept{simulate}

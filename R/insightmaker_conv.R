@@ -76,23 +76,23 @@ url_to_IM <- function(URL, file = NULL) {
   xml_str <- gsub("\\\\n", "\\n", xml_str, fixed = TRUE)
 
   # Extract meta-data - this is embedded in the webpage, but not saved in the .InsightMaker file. Add to .InsightMaker file to preserve the original author of the model.
-  header_names <- c("model_id", "model_title", "model_author_id", "model_author_name")
-  header_info <- vapply(header_names, function(x) {
+  meta_names <- c("model_id", "model_title", "model_author_id", "model_author_name")
+  meta_info <- vapply(meta_names, function(x) {
     stringr::str_match(
       script_model,
       sprintf("\"%s\":\"(.*?)\"", x)
     )[, 2]
   }, character(1)) |> as.list()
-  header_str <- sprintf("<header> %s </header>", paste0(names(header_info),
+  meta_str <- sprintf("<header> %s </header>", paste0(names(meta_info),
     "=\"",
-    unname(textutils::HTMLencode(header_info, encode.only = c("&", "<", ">"))),
+    unname(textutils::HTMLencode(meta_info, encode.only = c("&", "<", ">"))),
     "\"",
     collapse = ", "
   ))
 
-  # Insert header in xml_str
+  # Insert meta in xml_str
   idx_root <- stringr::str_locate(xml_str, "<root>")
-  stringr::str_sub(xml_str, idx_root[, "start"], idx_root[, "end"]) <- paste0("<root> \\n", header_str)
+  stringr::str_sub(xml_str, idx_root[, "start"], idx_root[, "end"]) <- paste0("<root> \\n", meta_str)
 
   # Save and read .InsightMaker file to ensure it is the correct format
   if (is.null(file)) {
@@ -110,7 +110,7 @@ url_to_IM <- function(URL, file = NULL) {
     file <- NULL
   }
 
-  return(read_file)
+  read_file
 }
 
 
@@ -233,6 +233,118 @@ get_IM_model <- function(URL, file, fileext = c("InsightMaker", "json")) {
 }
 
 
+#' Create import metadata structure
+#'
+#' Creates a standardized metadata structure for imported models. This structure
+#' preserves the original model information and is immutable after import.
+#'
+#' @param vendor Character. The source vendor (e.g., "insightmaker", "stella", "vensim").
+#' @param file_path Character or NULL. The file path used for import.
+#' @param url Character or NULL. The URL used for import.
+#' @param raw_model The complete original model (parsed XML/JSON) before any transformations.
+#' @param vendor_meta List. Vendor-specific meta information.
+#' @param original_variables Data frame with columns: name (current), original_id,
+#'   original_name, original_eqn, original_units.
+#' @param original_macros Data frame with columns: name (current), original_name,
+#'   original_eqn. Can be NULL if no macros.
+#'
+#' @returns A list structure containing all import metadata.
+#' @noRd
+create_import_metadata <- function(vendor,
+                                   file_path = NULL,
+                                   url = NULL,
+                                   raw_model = NULL,
+                                   vendor_meta = list(),
+                                   original_variables = NULL,
+                                   original_macros = NULL) {
+  # Create empty data frames if not provided
+  if (is.null(original_variables)) {
+    original_variables <- data.frame(
+      name = character(0),
+      original_id = character(0),
+      original_name = character(0),
+      original_eqn = character(0),
+      original_units = character(0),
+      stringsAsFactors = FALSE
+    )
+  }
+
+  if (is.null(original_macros)) {
+    original_macros <- data.frame(
+      name = character(0),
+      original_name = character(0),
+      original_eqn = character(0),
+      stringsAsFactors = FALSE
+    )
+  }
+
+  list(
+    vendor = vendor,
+    file_path = file_path,
+    url = url,
+    import_time = Sys.time(),
+    raw_model = raw_model,
+    vendor_meta = vendor_meta,
+    original_variables = original_variables,
+    original_macros = original_macros
+  )
+}
+
+
+# #' Convert custom_unit list to data frame
+# #'
+# #' Helper function to convert detect_undefined_units() output (a named list of lists)
+# #' to the data frame format used by sfm[["custom_unit"]].
+# #'
+# #' @param units_list A named list where each element is a list with 'eqn', 'doc', 'prefix'.
+# #' @returns A data frame with columns: name, eqn, doc, prefix.
+# #' @noRd
+# custom_unit_list_to_df <- function(units_list) {
+#   if (length(units_list) == 0) {
+#     return(data.frame(
+#       name = character(0),
+#       eqn = character(0),
+#       doc = character(0),
+#       prefix = logical(0),
+#       stringsAsFactors = FALSE
+#     ))
+#   }
+
+#   data.frame(
+#     name = names(units_list),
+#     eqn = vapply(units_list, function(x) x[["eqn"]] %||% "", character(1)),
+#     doc = vapply(units_list, function(x) x[["doc"]] %||% "", character(1)),
+#     prefix = vapply(units_list, function(x) x[["prefix"]] %||% FALSE, logical(1)),
+#     stringsAsFactors = FALSE
+#   )
+# }
+
+# #' Convert custom_unit data frame to list
+# #'
+# #' Helper function to convert sfm[["custom_unit"]] data frame to the list format
+# #' expected by utils::modifyList() operations.
+# #'
+# #' @param units_df A data frame with columns: name, eqn, doc, prefix.
+# #' @returns A named list where each element is a list with 'eqn', 'doc', 'prefix'.
+# #' @noRd
+# custom_unit_df_to_list <- function(units_df) {
+#   if (nrow(units_df) == 0) {
+#     return(list())
+#   }
+
+#   stats::setNames(
+#     lapply(seq_len(nrow(units_df)), function(i) {
+#       list(
+#         eqn = units_df$eqn[i],
+#         doc = units_df$doc[i],
+#         prefix = units_df$prefix[i]
+#       )
+#     }),
+#     units_df$name
+#   )
+# }
+
+
 validate_json_path <- function(path, add_fileext = TRUE) {
   # Check it's a character string
   if (!is.character(path) || length(path) != 1) {
@@ -315,7 +427,7 @@ insightmaker_to_json <- function(URL, file, destfile = NULL) {
 
   # Unpack
   settings <- out[["settings"]]
-  header <- out[["header"]]
+  meta <- out[["meta"]]
   model_elements <- out[["model_elements"]]
   macros <- out[["macros"]]
   units <- out[["units"]]
@@ -390,8 +502,8 @@ insightmaker_to_json <- function(URL, file, destfile = NULL) {
   names(json_elements) <- NULL
 
   # Find dependencies
-  dep <- lapply(json_elements, function(x) {
-    dependencies <- c()
+  deps <- lapply(json_elements, function(x) {
+    d <- c()
 
     eqn_name <- switch(tolower(x[["type"]]),
       "stock" = "initial_value",
@@ -407,29 +519,29 @@ insightmaker_to_json <- function(URL, file, destfile = NULL) {
         var_names = new_names,
         names_with_brackets = TRUE
       )
-      dependencies <- c(dependencies, idx_df[["name"]])
+      d <- c(d, idx_df[["name"]])
     }
 
     if (is_defined(x[["from"]])) {
-      dependencies <- c(dependencies, x[["from"]])
+      d <- c(d, x[["from"]])
     }
     if (is_defined(x[["to"]])) {
-      dependencies <- c(dependencies, x[["to"]])
+      d <- c(d, x[["to"]])
     }
     if (is_defined(x[["input_element"]])) {
-      dependencies <- c(dependencies, x[["input_element"]])
+      d <- c(d, x[["input_element"]])
     }
 
-    return(dependencies)
+    return(d)
   })
-  names(dep) <- new_names
-  dep <- compact_(dep)
+  names(deps) <- new_names
+  deps <- compact_(deps)
 
   # Create links list from dependencies
-  if (length(dep) > 0) {
-    l <- lapply(dep, length)
-    to_vec <- rep(names(dep), l)
-    from_vec <- unlist(unname(dep))
+  if (length(deps) > 0) {
+    l <- lapply(deps, length)
+    to_vec <- rep(names(deps), l)
+    from_vec <- unlist(unname(deps))
     n <- length(to_vec)
     links <- lapply(seq_len(n), function(i) {
       list(
@@ -447,8 +559,8 @@ insightmaker_to_json <- function(URL, file, destfile = NULL) {
   # Compile json file
   json <- list()
   json[["engine"]] <- "SIMULATION_PACKAGE"
-  json[["name"]] <- header[["name"]]
-  json[["description"]] <- header[["caption"]]
+  json[["name"]] <- meta[["name"]]
+  json[["description"]] <- meta[["caption"]]
 
   if (!is.null(settings)) {
     # Prepare settings with canonical names for ModelJSON
@@ -528,7 +640,7 @@ prep_IM <- function(read_file) {
   tags <- c("Setting", "Variable", "Converter", "Stock", "Flow", "Link", "Ghost")
   node_types <- xml2::xml_name(children)
 
-  header_str <- xml2::xml_text(children[match("header",
+  meta_str <- xml2::xml_text(children[match("header",
     node_types,
     nomatch = 0
   )[[1]]], trim = TRUE)
@@ -560,7 +672,7 @@ prep_IM <- function(read_file) {
 
   # Prepare settings with canonical names
   settings <- prep_settings_IM(settings, type = type)
-  header <- prep_header_IM(header_str, settings, type = type)
+  meta <- prep_meta_IM(meta_str, settings, type = type)
 
   # In an .InsightMaker file, custom units are saved as a string in order name, factor, base
   # Create data.frame with custom units, splitting by <> to separate name, factor, and base
@@ -579,7 +691,7 @@ prep_IM <- function(read_file) {
   return(
     list(
       settings = settings,
-      header = header,
+      meta = meta,
       model_elements = model_elements,
       macros = macros,
       units = units
@@ -588,49 +700,49 @@ prep_IM <- function(read_file) {
 }
 
 
-prep_header_IM <- function(header_str, settings, name, caption,
+prep_meta_IM <- function(meta_str, settings, name, caption,
                            type = c("InsightMaker", "json")) {
   if (type == "InsightMaker") {
-    if (length(header_str) > 0) {
+    if (length(meta_str) > 0) {
       # Step 1: Split by comma and trim spaces
-      pairs <- strsplit(header_str, ",\\s*")[[1]]
+      pairs <- strsplit(meta_str, ",\\s*")[[1]]
 
       # Step 2: Split each pair into name and value, then clean up extra quotes
-      header <- vapply(pairs, function(pair) {
+      meta <- vapply(pairs, function(pair) {
         key_value <- strsplit(pair, "=\\s*")[[1]]
         return(gsub('\"', "", key_value[2])) # Remove extra quotes
       }, character(1))
 
       # Convert to named list
-      names(header) <- vapply(pairs, function(pair) {
+      names(meta) <- vapply(pairs, function(pair) {
         strsplit(pair, "=\\s*")[[1]][1]
       }, character(1))
-      header <- as.list(header)
+      meta <- as.list(meta)
 
-      # Rename elements in header
-      new_names <- names(header)
+      # Rename elements in meta
+      new_names <- names(meta)
       new_names[new_names == "model_author_name"] <- "author"
       new_names[new_names == "model_author_id"] <- "insightmaker_author_id"
       new_names[new_names == "model_title"] <- "name"
       new_names[new_names == "model_id"] <- "insightmaker_model_id"
-      names(header) <- new_names
+      names(meta) <- new_names
     } else {
-      header <- list()
+      meta <- list()
     }
 
 
-    # Add version to header
-    header[["insightmaker_version"]] <- settings[["version"]]
-    header[["insightmaker_method"]] <- settings[["method"]]
+    # Add version to meta
+    meta[["insightmaker_version"]] <- settings[["version"]]
+    meta[["insightmaker_method"]] <- settings[["method"]]
   } else if (type == "json") {
-    header <- list()
-    header[["name"]] <- name
-    header[["caption"]] <- caption
+    meta <- list()
+    meta[["name"]] <- name
+    meta[["caption"]] <- caption
   }
 
-  header <- compact_(header)
+  meta <- compact_(meta)
 
-  return(header)
+  return(meta)
 }
 
 prep_units_IM <- function(units, type = c("InsightMaker", "json")) {
@@ -794,13 +906,26 @@ prep_model_elements_IM <- function(children_attrs, node_types, type = c("Insight
         }
       }
 
+      # Older Insight Maker version uses "onlypositive" instead of "non_negative";
+      # Newer Insight Maker version uses "allownegatives" instead of "non_negative"
+      x[["non_negative"]] <- FALSE
       if (is_defined(x[["onlypositive"]])) {
         # Insight Maker both uses "true" and "false", as well as "-1" -> FALSE
         x[["non_negative"]] <- as.logical(x[["onlypositive"]])
-        if (is.na(x[["non_negative"]])) {
+      }
+
+      if (is_defined(x[["nonnegative"]])) {
+        # Insight Maker both uses "true" and "false", as well as "-1" -> FALSE
+        x[["non_negative"]] <- as.logical(x[["nonnegative"]])
+      }
+
+      # Newer Insight Maker version uses "allownegatives" instead of "non_negative"
+      if (is_defined(x[["allownegatives"]])) {
+        x[["non_negative"]] <- !as.logical(x[["allownegatives"]])
+      }
+
+      if (is.na(x[["non_negative"]])) {
           x[["non_negative"]] <- FALSE
-        }
-        x[["onlypositive"]] <- NULL
       }
 
       # Get x and y data for interpolation function
@@ -881,7 +1006,7 @@ prep_json <- function(read_file) {
   # Read JSON file; get components
   model_df <- read_file[["elements"]]
   settings <- read_file[["simulation"]]
-  header <- prep_header_IM(
+  meta <- prep_meta_IM(
     name = read_file[["name"]],
     caption = read_file[["description"]], type = "json"
   )
@@ -942,7 +1067,7 @@ prep_json <- function(read_file) {
   return(
     list(
       settings = settings,
-      header = header,
+      meta = meta,
       model_elements = model_elements,
       macros = macros,
       units = units
@@ -951,15 +1076,22 @@ prep_json <- function(read_file) {
 }
 
 
-#' Convert .InsightMaker or .json file to stock-and-flow model
+#' Convert .InsightMaker or .json file to import context
+#'
+#' Parses the file and populates an import context with the intermediate
+#' representation. Does NOT call build() - the caller is responsible for
+#' running conversions and then finalizing.
 #'
 #' @param read_file XML or json structured model
 #' @param ext File extension
 #'
-#' @returns Stock-and-flow model of class sdbuildR_xmile with some extras (e.g., units, macros)
+#' @returns Import context with parsed model data
 #' @noRd
 #'
-file_to_xmile <- function(read_file, ext) {
+file_to_sdbuildR <- function(read_file, ext) {
+  # Create import context
+  ctx <- create_import_context(vendor = "insightmaker")
+
   # Prepare .InsightMaker or .json file into more common intermediate format
   if (ext == "InsightMaker") {
     out <- prep_IM(read_file)
@@ -969,13 +1101,50 @@ file_to_xmile <- function(read_file, ext) {
 
   # Unpack
   settings <- out[["settings"]]
-  header <- out[["header"]]
+  meta <- out[["meta"]]
   model_elements <- out[["model_elements"]]
   macros <- out[["macros"]]
   units <- out[["units"]]
 
+  # Store settings and meta in context
+  ctx$settings <- settings
+  ctx$meta <- meta
+  ctx$units <- units
+  ctx$macros_raw <- macros %||% ""
+
+  # Add sim_specs to sfm (ready immediately)
+  if (!is.null(settings)) {
+    ctx$sfm <- sim_specs_IM(ctx$sfm,
+      method = settings[["method"]],
+      time_units = settings[["time_units"]],
+      start = settings[["start"]],
+      length = settings[["length"]],
+      dt = settings[["dt"]]
+    )
+  }
+
+  # Add meta to sfm (ready immediately)
+  if (!is.null(meta)) {
+    ctx$sfm[["meta"]] <- utils::modifyList(ctx$sfm[["meta"]], meta)
+  }
+
+  # Extract vendor meta info for import_metadata
+  if (!is.null(meta)) {
+    vendor_fields <- c(
+      "insightmaker_version", "insightmaker_method",
+      "insightmaker_author_id", "insightmaker_model_id"
+    )
+    for (field in vendor_fields) {
+      if (field %in% names(meta)) {
+        ctx$vendor_meta[[field]] <- meta[[field]]
+      }
+    }
+  }
+
+  # Get types from within each element (not from list names)
+  model_element_types <- vapply(model_elements, function(x) x[["type"]] %||% "", character(1))
+
   # Remove comments from equations
-  model_element_types <- names(model_elements)
   model_elements <- lapply(model_elements, function(x) {
     # Graphical functions won't have an equation
     if (is_defined(x[["eqn_insightmaker"]])) {
@@ -983,19 +1152,14 @@ file_to_xmile <- function(read_file, ext) {
       x[["eqn_insightmaker"]] <- out[["eqn"]]
       x[["doc"]] <- paste0(x[["doc"]], out[["doc"]])
     }
-
-    # if (is_defined(x[["units"]])){
-    #   x[["units_insightmaker"]] <- x[["units"]]
-    # }
-
     return(x)
   })
 
-  # Converters
+  # Converters -> graphical functions (gf)
   idx <- model_element_types == "converter"
   model_elements[idx] <-
     lapply(model_elements[idx], function(x) {
-      x[["type"]] <- "gf"
+      x[["type"]] <- "lookup"
 
       x[["interpolation"]] <- tolower(x[["interpolation"]])
       if (x[["interpolation"]] == "none") {
@@ -1009,7 +1173,6 @@ file_to_xmile <- function(read_file, ext) {
       return(x)
     })
 
-
   # Variables -> Auxiliaries
   idx <- model_element_types == "variable"
   model_elements[idx] <- lapply(model_elements[idx], function(x) {
@@ -1017,30 +1180,18 @@ file_to_xmile <- function(read_file, ext) {
     return(x)
   })
 
-
   # Stocks
   idx <- "stock" == model_element_types
   model_elements[idx] <-
     lapply(model_elements[idx], function(x) {
-      # x[["type"]] <- "stock"
-
       if (is_defined(x[["stockmode"]])) {
         if (tolower(x[["stockmode"]]) == "conveyor") {
           x[["conveyor"]] <- TRUE
           x[["len"]] <- x[["delay"]] # ** check name delay in .json
         }
       }
-
       return(x)
     })
-
-  # # Flows
-  # idx <- "flow" == model_element_types
-  # model_elements[idx] <- lapply(model_elements[idx], function(x) {
-  #   # x[["type"]] <- "flow"
-  #
-  #   return(x)
-  # })
 
   # Only keep selected properties
   keep_prop <- get_building_block_prop()
@@ -1048,72 +1199,67 @@ file_to_xmile <- function(read_file, ext) {
   all_prop <- c(
     unique(unlist(keep_prop)),
     "eqn_insightmaker", "units_insightmaker", "name_insightmaker", "id_insightmaker",
-    # "type", "name", "non_negative","doc",
-    # "from", "to", # flow
-    # "xpts", "ypts", "interpolation", "source", "extrapolation", # gf
     "conveyor", "len" # keep for prep_conveyor_IM()
-    # stock
-    # "access", "access_ids",
   )
 
   model_elements <- lapply(model_elements, function(x) {
     return(x[names(x) %in% all_prop])
   })
 
-
-  # Name elements
+  # Name elements by variable name
   model_elements <- stats::setNames(
     model_elements,
     unname(get_map(model_elements, "name"))
   )
 
-
-  # Set-up basic structure
-  sfm <- new_sdbuildR_xmile()
-  if (!is.null(settings)) {
-    sfm <- sim_specs_IM(sfm,
-      method = settings[["method"]],
-      time_units = settings[["time_units"]],
-      start = settings[["start"]],
-      length = settings[["length"]],
-      dt = settings[["dt"]]
-    )
-  }
-
-
-  if (!is.null(header)) {
-    sfm[["header"]] <- utils::modifyList(sfm[["header"]], header)
-  }
-
-  # Variables - convert from nested lists to data frame rows
-  # Combine all model elements into a single list
+  # Combine all model elements into a single list (ordered by type)
+  # Use the types we extracted earlier (before type transformations)
+  # But account for the type changes: converter -> gf, variable -> aux
+  final_types <- vapply(model_elements, function(x) x[["type"]] %||% "", character(1))
   all_elements <- c(
-    model_elements["stock" == model_element_types],
-    model_elements["variable" == model_element_types],
-    model_elements["flow" == model_element_types],
-    model_elements["converter" == model_element_types]
+    model_elements[final_types == "stock"],
+    model_elements[final_types == "aux"],
+    model_elements[final_types == "flow"],
+    model_elements[final_types == "lookup"]
   )
-  
-  # Create data frame from model elements
-  if (length(all_elements) > 0) {
-    for (elem in all_elements) {
-      # Add each element as a row using build()
-      sfm <- do.call(build, c(list(sfm = sfm), elem))
-    }
+
+  # Store variables in context
+  ctx$variables <- all_elements
+
+  # Initialize temporary columns that will be used during conversion
+  # These columns will be preserved by add_variable_row() and removed at the end
+  cols <- c(
+    "eqn_insightmaker", "units_insightmaker",
+    "name_insightmaker", "id_insightmaker",
+    "conveyor", "len"
+  )
+  # Add each temporary column to the empty variables data frame
+  for (col in cols) {
+    ctx$sfm[["variables"]][[col]] <- character(0)
   }
+
+  # Capture original variable info for import_metadata BEFORE any conversions
+  ctx <- ctx_capture_original_variables(ctx)
+
+  # Capture original macro info
+  ctx <- ctx_capture_original_macros(ctx)
+
+  # Add variables to sfm using add_variable_row() 
+  # The conversion functions work on sfm[["variables"]], so we need to populate it
+  ctx <- ctx_add_variables(ctx)
 
   # Prepare globals/macros, conveyors, converters
-  sfm <- prep_globals_IM(sfm, macros, units)
-  sfm <- prep_conveyors_IM(sfm)
-  sfm <- prep_converters_IM(sfm)
-
+  # These work on sfm[["variables"]] and sfm temporary fields
+  ctx$sfm <- prep_globals_IM(ctx$sfm, macros, units)
+  ctx$sfm <- prep_conveyors_IM(ctx$sfm)
+  ctx$sfm <- prep_converters_IM(ctx$sfm)
 
   if (P[["debug"]]) {
-    n_stocks <- sum(sfm[["variables"]][["type"]] == "stock")
-    n_flows <- sum(sfm[["variables"]][["type"]] == "flow")
-    n_auxs <- sum(sfm[["variables"]][["type"]] == "aux")
-    n_gfs <- sum(sfm[["variables"]][["type"]] == "gf")
-    
+    n_stocks <- sum(ctx$sfm[["variables"]][["type"]] == "stock")
+    n_flows <- sum(ctx$sfm[["variables"]][["type"]] == "flow")
+    n_auxs <- sum(ctx$sfm[["variables"]][["type"]] == "aux")
+    n_gfs <- sum(ctx$sfm[["variables"]][["type"]] == "lookup")
+
     cli::cli_inform(c(
       "Model elements detected:",
       "i" = "Stocks: {.val {n_stocks}}",
@@ -1122,7 +1268,7 @@ file_to_xmile <- function(read_file, ext) {
       "i" = "Graphical Functions: {.val {n_gfs}}"
     ))
 
-    if (nzchar(sfm[["macros_temp"]][["eqn"]])) {
+    if (!is.null(ctx$sfm[["macros_temp"]]) && nzchar(ctx$sfm[["macros_temp"]][["eqn"]])) {
       cli::cli_inform(c(
         "i" = "User-defined macros and globals detected in model."
       ))
@@ -1133,23 +1279,7 @@ file_to_xmile <- function(read_file, ext) {
     }
   }
 
-  # Already add eqn and units - update in data frame
-  for (i in seq_len(nrow(sfm[["variables"]]))) {
-    if (sfm[["variables"]][i, "type"] != "gf") {
-      if ("eqn_insightmaker" %in% colnames(sfm[["variables"]])) {
-        sfm[["variables"]][i, "eqn"] <- sfm[["variables"]][i, "eqn_insightmaker"]
-      }
-    }
-    
-    if ("units_insightmaker" %in% colnames(sfm[["variables"]])) {
-      # Store original InsightMaker units for reference
-      # The units column is already set from the initial creation
-    }
-  }
-
-  sfm <- validate_xmile(sfm)
-
-  return(sfm)
+  ctx
 }
 
 
@@ -1204,16 +1334,6 @@ sim_specs_IM <- function(sfm, method, time_units, start, length, dt) {
     args[["stop"]] <- as.numeric(start) + as.numeric(args[["length"]])
     args[["length"]] <- NULL
   }
-
-  # sim_specs(sfm,
-  #           method = method,
-  #           time_units = time_units,
-  #           start = start,
-  #           stop = as.numeric(start) + as.numeric(length),
-  #           dt = dt,
-  #           save_at = dt,
-  #           save_from = start
-  # )
 
   sfm <- do.call(sim_specs, args)
 
@@ -1403,7 +1523,7 @@ change_names_IM <- function(model_elements, source_target_dict,
     if (length(name) == 0 || is.na(name)) {
       name <- ""
     }
-    return(name)
+    name
   }
 
 
@@ -1462,111 +1582,6 @@ change_names_IM <- function(model_elements, source_target_dict,
 }
 
 
-# change_names_json <- function(model_elements){
-#
-#   with_brackets = TRUE
-#   ignore_case = TRUE # json is case insensitive, but does not allow duplicate names
-#
-#   old_names <- unname(get_map(model_elements, "name"))
-#   new_names <- new_names_IM(old_names)
-#
-#   # Rename to eqn_insightmaker
-#   model_element_types <- names(model_elements)
-#
-#   model_elements <- lapply(seq_along(model_elements), function(y) {
-#
-#     x <- model_elements[[y]]
-#
-#     eqn_name <- switch(model_element_types[y],
-#                        "variable" = "value",
-#                        "stock" = "initial_value",
-#                        "flow" = "value",
-#                        "none"
-#                        )
-#
-#     if (eqn_name != "none") {
-#       x[["eqn_insightmaker"]] <- x[[eqn_name]]
-#
-#       # Default is zero
-#       if (!is_defined(x[["eqn_insightmaker"]])) {
-#         x[["eqn_insightmaker"]] <- "0.0"
-#       }
-#
-#       # Remove the element # don't to make IM_to_json() work
-#       # x <- x[names(x) != eqn_name]
-#       # x[eqn_name] <- NULL
-#
-#     } else if (model_element_types[y] %in% c("variable", "stock", "flow")) {
-#       # The default value of a stock/flow/variable is 0 - add in case left unspecified
-#       x[["eqn_insightmaker"]] <- "0.0"
-#     }
-#
-#     # Rename description to doc
-#     if ("description" %in% names(x)) {
-#       x[["doc"]] <- clean_doc(x[["description"]])
-#
-#       x[["description"]] <- NULL
-#     } else {
-#       x[["description"]] <- ""
-#     }
-#
-#     return(x)
-#   })
-#
-#   temp <- function(name, surround_with_brackets = TRUE){
-#
-#     if (surround_with_brackets){
-#       name <- paste0("[", name, "]")
-#     }
-#
-#     new_name <- replace_names_IM(name,
-#                      original = old_names,
-#                      replacement = new_names,
-#                      with_brackets = with_brackets,
-#                      ignore_case = ignore_case
-#     )
-#
-#     if (surround_with_brackets){
-#       new_name <- gsub("^\\[", "", x = new_name) |> gsub("\\]$", "", x = _)
-#     }
-#
-#     return(new_name)
-#   }
-#
-#   # Replace old names with new names
-#   model_elements <- lapply(model_elements, function(x) {
-#
-#     if (is_defined(x[["eqn_insightmaker"]])){
-#
-#       x[["eqn_insightmaker"]] <- gsub("\\n", "\n", x[["eqn_insightmaker"]], fixed = TRUE)
-#       x[["eqn_insightmaker"]] <- temp(x[["eqn_insightmaker"]],
-#                                                   surround_with_brackets = FALSE
-#       )
-#     }
-#
-#     x[["name_insightmaker"]] <- x[["name"]]
-#     x[["name"]] <- temp(x[["name_insightmaker"]])
-#
-#     if (is_defined(x[["to"]])){
-#       x[["to"]] <- temp(x[["to"]])
-#     }
-#
-#     if (is_defined(x[["from"]])){
-#       x[["from"]] <- temp(x[["from"]])
-#     }
-#
-#     if (is_defined(x[["source"]])){
-#       x[["source"]] <- temp(x[["source"]])
-#     }
-#
-#     return(x)
-#   })
-#
-#   names(model_elements) <- model_element_types
-#
-#   return(model_elements)
-# }
-
 
 clean_doc <- function(x) {
   # Some notes still have HTML? tags
@@ -1584,14 +1599,18 @@ clean_doc <- function(x) {
 
 prep_globals_IM <- function(sfm, macros, units) {
   # Add globals to define at top of script
-  out_global <- prep_eqn_IM(macros |>
-    # Remove leading and last \" before replacing \" with "
-    stringr::str_replace("^\\\"", "") |>
-    stringr::str_replace("\\\"$", "") |> trimws())
-
+  # Handle NULL or empty macros
+  if (is.null(macros) || !nzchar(macros)) {
+    out_global <- list(eqn = "", doc = "")
+  } else {
+    out_global <- prep_eqn_IM(macros |>
+      # Remove leading and last \" before replacing \" with "
+      stringr::str_replace("^\\\"", "") |>
+      stringr::str_replace("\\\"$", "") |> trimws())
+  }
 
   # Temporary entries in sfm
-  sfm[["model_units_temp"]] <- units
+  sfm[["custom_unit_temp"]] <- units
   sfm[["macros_temp"]] <- list(
     eqn = out_global[["eqn"]],
     eqn_insightmaker = out_global[["eqn"]],
@@ -1608,13 +1627,13 @@ prep_conveyors_IM <- function(sfm) {
   # for a stock A which is a conveyor,
   # [A] refers to A_conveyor
   # [[A]] refers to A
-  
+
   # Find conveyor stocks - check if conveyor column exists
   conveyor_stocks <- character(0)
   if ("conveyor" %in% colnames(sfm[["variables"]])) {
-    conveyor_idx <- !is.na(sfm[["variables"]][["conveyor"]]) & 
-                    sfm[["variables"]][["conveyor"]] != "" &
-                    sfm[["variables"]][["type"]] == "stock"
+    conveyor_idx <- !is.na(sfm[["variables"]][["conveyor"]]) &
+      sfm[["variables"]][["conveyor"]] != "" &
+      sfm[["variables"]][["type"]] == "stock"
     if (any(conveyor_idx)) {
       conveyor_stocks <- sfm[["variables"]][conveyor_idx, "name"]
     }
@@ -1650,10 +1669,10 @@ prep_conveyors_IM <- function(sfm) {
 
 prep_converters_IM <- function(sfm) {
   # Get graphical function names and sources
-  gf_idx <- sfm[["variables"]][["type"]] == "gf"
+  gf_idx <- sfm[["variables"]][["type"]] == "lookup"
   converters <- character(0)
   converters_sources <- character(0)
-  
+
   if (any(gf_idx)) {
     converters <- sfm[["variables"]][gf_idx, "name"]
     converters_sources <- sfm[["variables"]][gf_idx, "source"]
@@ -1707,7 +1726,7 @@ prep_converters_IM <- function(sfm) {
     }
   }
 
-  return(sfm)
+  sfm
 }
 
 
@@ -1802,8 +1821,8 @@ clean_units_IM <- function(sfm, regex_units) {
 
 
   # Define custom units
-  if (!is.null(sfm[["model_units_temp"]])) {
-    custom_units_df <- sfm[["model_units_temp"]]
+  if (!is.null(sfm[["custom_unit_temp"]])) {
+    custom_units_df <- sfm[["custom_unit_temp"]]
 
     # Create new equation if base is defined; base can now be discarded
     custom_units_df[["eqn"]] <- ifelse(nzchar(custom_units_df[["base"]]),
@@ -1814,25 +1833,24 @@ clean_units_IM <- function(sfm, regex_units) {
     # Clean units and keep mapping between old and new unit
     name_translation <- lapply(custom_units_df[["name"]], function(y) {
       clean_unit(y, regex_units,
-        ignore_case = TRUE, include_translation = TRUE,
-        unit_name = TRUE
+        ignore_case = TRUE, include_translation = TRUE, unit_name = TRUE
       )
     })
     eqn_translation <- lapply(custom_units_df[["eqn"]], function(y) {
       clean_unit(y, regex_units, ignore_case = TRUE, include_translation = TRUE)
     })
 
-    # Add translated units
-    custom_units_df[["new_name"]] <- unlist(lapply(name_translation, `[[`, "x_new"))
-    custom_units_df[["new_eqn"]] <- unlist(lapply(eqn_translation, `[[`, "x_new"))
+    # Add translated units; overwrite
+    custom_units_df[["name"]] <- unlist(lapply(name_translation, `[[`, "x_new"))
+    custom_units_df[["eqn"]] <- unlist(lapply(eqn_translation, `[[`, "x_new"))
 
     # Remove custom units of which all parts already exist
     idx_keep <- lapply(seq_along(name_translation), function(i) {
       x <- name_translation[i]
       # Check whether all parts already exist; only check for parts with letters in them
-      not_all_parts_exist <- !all(x[["x_parts"]][grepl("[a-zA-Z]", x[["x_parts"]])] %in% c(custom_units_df[["new_name"]][-i], unname(regex_units)))
+      not_all_parts_exist <- !all(x[["x_parts"]][grepl("[a-zA-Z]", x[["x_parts"]])] %in% c(custom_units_df[["name"]][-i], unname(regex_units)))
       # If the equation isn't zero, the existing unit is otherwise defined
-      not_all_parts_exist | custom_units_df[["new_eqn"]][i] != "1"
+      not_all_parts_exist | custom_units_df[["eqn"]][i] != "1"
     }) |> unlist()
 
     if (any(idx_keep)) {
@@ -1840,28 +1858,31 @@ clean_units_IM <- function(sfm, regex_units) {
 
       # Create list of model units to add
       # Both name and eqn now need to be cleaned and split into parts; we cannot define units with a name such as "whales^2"; instead we should define "whale"
-      add_model_units <- detect_undefined_units(sfm,
+      add_custom_unit <- detect_undefined_units(sfm,
         new_eqns = "",
         new_units = c(
-          custom_units_df[["new_name"]],
-          custom_units_df[["new_eqn"]]
+          custom_units_df[["name"]],
+          custom_units_df[["eqn"]]
         ),
         regex_units = regex_units, R_or_Julia = "R"
       )
 
       # Create list with custom unit definitions
-      custom_units_list <- lapply(seq_len(nrow(custom_units_df)), function(i) {
-        custom_unit <- custom_units_df[i, ][["new_name"]]
+      # custom_units_list <- lapply(seq_len(nrow(custom_units_df)), function(i) {
+      #   custom_unit <- custom_units_df[i, ][["new_name"]]
 
-        list(name = custom_unit, eqn = custom_units_df[i, ][["new_eqn"]], prefix = FALSE)
-      }) |> stats::setNames(custom_units_df[["new_name"]])
+      #   list(name = custom_unit, eqn = custom_units_df[i, ][["new_eqn"]], prefix = FALSE)
+      # }) |> stats::setNames(custom_units_df[["new_name"]])
+      custom_units_df <- custom_units_df[, c("name", "eqn")]
+      custom_units_df[["doc"]] <- ""
+      custom_units_df[["prefix"]] <- FALSE
 
       # Add to regex dictionary
       custom_dict <- c(
         unlist(lapply(name_translation, `[[`, "x_parts")),
         unlist(lapply(eqn_translation, `[[`, "x_parts"))
       )
-      custom_dict <- custom_dict[unname(custom_dict) %in% names(add_model_units)]
+      custom_dict <- custom_dict[unname(custom_dict) %in% add_custom_unit[["name"]]]
       custom_dict <- custom_dict[!duplicated(custom_dict)] # Remove duplicate entries
 
       if (length(custom_dict)) {
@@ -1870,13 +1891,21 @@ clean_units_IM <- function(sfm, regex_units) {
       }
 
       # Create custom model units
-      sfm[["model_units"]] <- add_model_units |>
-        # Overwrite units which already have a definition in custom_units
-        utils::modifyList(custom_units_list[names(custom_units_list) %in% names(add_model_units)])
+
+      # Overwrite units which already have a definition in custom_units
+      merged_units <- rbind(
+        add_custom_unit[!add_custom_unit[["name"]] %in% custom_units_df[["name"]], ],
+        custom_units_df
+      )
+      # Merge add_custom_unit with custom_units, then convert to data frame
+      # merged_units <- add_custom_unit |>
+      #   # Overwrite units which already have a definition in custom_units
+      #   utils::modifyList(custom_units_list[names(custom_units_list) %in% add_custom_unit[["name"]]])
+      sfm[["custom_unit"]] <- merged_units
     }
   }
 
-  sfm[["model_units_temp"]] <- NULL
+  sfm[["custom_unit_temp"]] <- NULL
 
   # Define function to clean units contained in curly brackets
   clean_units_curly <- function(x, regex_units) {
@@ -1922,7 +1951,9 @@ clean_units_IM <- function(sfm, regex_units) {
 
 
   # Replace units in macros - only one macro in case of Insight Maker model
-  sfm[["macros_temp"]][["eqn"]] <- clean_units_curly(sfm[["macros_temp"]][["eqn"]], regex_units)
+  if (!is.null(sfm[["macros_temp"]]) && nzchar(sfm[["macros_temp"]][["eqn"]] %||% "")) {
+    sfm[["macros_temp"]][["eqn"]] <- clean_units_curly(sfm[["macros_temp"]][["eqn"]], regex_units)
+  }
 
   # Replace units in equations and unit definition in data frame
   for (i in seq_len(nrow(sfm[["variables"]]))) {
@@ -1930,13 +1961,15 @@ clean_units_IM <- function(sfm, regex_units) {
       sfm[["variables"]][i, "eqn"] <- clean_units_curly(sfm[["variables"]][i, "eqn"], regex_units)
     }
     if (!is.na(sfm[["variables"]][i, "units"])) {
-      sfm[["variables"]][i, "units"] <- clean_unit(tolower(sfm[["variables"]][i, "units"]), 
-                                                      regex_units, ignore_case = TRUE)
+      sfm[["variables"]][i, "units"] <- clean_unit(tolower(sfm[["variables"]][i, "units"]),
+        regex_units,
+        ignore_case = TRUE
+      )
     }
   }
 
   # Ensure all units are defined
-  add_model_units <- detect_undefined_units(sfm,
+  add_custom_unit <- detect_undefined_units(sfm,
     new_eqns = c(
       sfm[["variables"]][["eqn"]],
       sfm[["macros_temp"]][["eqn"]]
@@ -1944,12 +1977,16 @@ clean_units_IM <- function(sfm, regex_units) {
     new_units = sfm[["variables"]][["units"]],
     regex_units = regex_units, R_or_Julia = "R"
   )
-  sfm[["model_units"]] <- utils::modifyList(add_model_units, sfm[["model_units"]])
 
+  if (NROW(add_custom_unit) > 0) {
+    merged_units <- rbind(
+      sfm[["custom_unit"]],
+      add_custom_unit[!add_custom_unit[["name"]] %in% sfm[["custom_unit"]][["name"]], ]
+    )
+    sfm[["custom_unit"]] <- merged_units
+  }
 
-  sfm <- validate_xmile(sfm)
-
-  return(sfm)
+  sfm
 }
 
 
@@ -1962,7 +1999,7 @@ clean_units_IM <- function(sfm, regex_units) {
 #' @noRd
 #'
 check_nonnegativity <- function(sfm, keep_nonnegative_flow,
-                                keep_nonnegative_stock, keep_solver) {
+                                keep_nonnegative_stock) {
   # Non-negative Stocks and Flows
   stock_idx <- sfm[["variables"]][["type"]] == "stock"
   if (!any(stock_idx)) {
@@ -1978,19 +2015,17 @@ check_nonnegativity <- function(sfm, keep_nonnegative_flow,
   }
 
   if (keep_nonnegative_stock && length(nonneg_stock) > 0) {
-    if (!keep_solver && sfm[["sim_specs"]][["method"]] == "rk4") {
       cli::cli_inform(c(
         "Adjusting solver for non-negative stocks.",
         "i" = "Non-negative stocks detected in the model.",
-        ">" = "Switching ODE solver from {.fn rk4} to {.fn euler} for consistency with {.pkg InsightMaker}.",
-        "i" = "Disable this by setting {.arg keep_solver = TRUE}."
+        ">" = "Switching ODE solver to {.fn lsoda} for consistency with {.pkg InsightMaker}.",
+        "i" = "Disable this by setting {.arg keep_nonnegative_stock = FALSE}."
       ))
       sfm[["sim_specs"]][["insightmaker_method"]] <- sfm[["sim_specs"]][["method"]]
-      sfm[["sim_specs"]][["method"]] <- "euler"
-    }
+      sfm[["sim_specs"]][["method"]] <- "lsoda"
   }
 
-  return(sfm)
+  sfm
 }
 
 
@@ -2002,6 +2037,12 @@ check_nonnegativity <- function(sfm, keep_nonnegative_flow,
 #' @returns Updated stock-and-flow model with macros
 #' @noRd
 convert_macros_IM_wrapper <- function(sfm, regex_units) {
+  # Early return if no macros
+  if (is.null(sfm[["macros_temp"]]) || !nzchar(sfm[["macros_temp"]][["eqn"]] %||% "")) {
+    sfm[["macros_temp"]] <- NULL
+    return(sfm)
+  }
+
   if (nzchar(sfm[["macros_temp"]][["eqn"]])) {
     # Convert each equation and create list of model elements to add
     var_names <- get_model_var(sfm)
@@ -2010,8 +2051,8 @@ convert_macros_IM_wrapper <- function(sfm, regex_units) {
 
     # Convert equations in macro
     out <- convert_equations_IM(
-      type = P[["macro_name"]],
-      name = P[["macro_name"]],
+      type = P[["func_name"]],
+      name = P[["func_name"]],
       eqn = sfm[["macros_temp"]][["eqn"]],
       var_names = var_names,
       regex_units = regex_units
@@ -2309,11 +2350,28 @@ split_macros_IM <- function(sfm) {
 
     new_macros <- stats::setNames(split_macros, vapply(split_macros, `[[`, character(1), "name"))
 
-    # Add original equation and documentation to first macro - it will be deleted afer
+    # Add original equation and documentation to first macro - it will be deleted after
     new_macros[[1]][["eqn_insightmaker"]] <- sfm[["macros_temp"]][["eqn_insightmaker"]]
     new_macros[[1]][["doc"]] <- sfm[["macros_temp"]][["doc"]]
 
-    sfm[[P[["macro_name"]]]] <- new_macros
+    # Add each macro as a func-type variable row
+    for (m in new_macros) {
+      func_name <- m[["name"]]
+      func_eqn <- m[["eqn"]]
+      func_doc <- m[["doc"]] %||% ""
+      # Use placeholder name for unnamed macros
+      if (!nzchar(func_name)) {
+        func_name <- paste0(".im_script_", sum(sfm[["variables"]][["type"]] == "func") + 1)
+      }
+      sfm <- add_variable_row(sfm,
+        name = func_name,
+        type = "func",
+        eqn = func_eqn,
+        units = "1",
+        label = func_name,
+        doc = func_doc
+      )
+    }
   }
 
   return(sfm)
@@ -2334,24 +2392,20 @@ convert_equations_IM_wrapper <- function(sfm, regex_units) {
 
   # Get variables to convert (stock, aux, flow)
   convert_idx <- sfm[["variables"]][["type"]] %in% c("stock", "aux", "flow")
-  
+
   if (!any(convert_idx)) {
     return(sfm)
   }
-  
-  # Initialize transformation tracking if debug mode is on
-  tracker <- if (P[["debug"]]) create_transformation_tracker() else NULL
-  
+
   # Accumulate variables to add to the model
-  accumulated_add_vars_aux <- list()
-  accumulated_add_vars_gf <- list()
-  
+  accumulated_add_vars <- data.frame()
+
   # Convert equations for each variable using flat list structure
   for (i in which(convert_idx)) {
     var_name <- sfm[["variables"]][i, "name"]
     var_type <- sfm[["variables"]][i, "type"]
     eqn_before <- sfm[["variables"]][i, "eqn"]
-    
+
     # Convert equation
     out <- convert_equations_IM(
       type = var_type,
@@ -2360,66 +2414,28 @@ convert_equations_IM_wrapper <- function(sfm, regex_units) {
       var_names = var_names,
       regex_units = regex_units
     )
-    
-    # Track transformation
-    if (!is.null(tracker)) {
-      eqn_after <- out[["eqn"]]
-      n_aux_created <- length(out[["add_vars_aux"]])
-      n_gf_created <- length(out[["add_vars_gf"]])
-      
-      if (eqn_before != eqn_after || n_aux_created > 0 || n_gf_created > 0) {
-        log_transformation(tracker, var_name, "equation_conversion", list(
-          variable_type = var_type,
-          functions_used = paste(out[["translated_func"]], collapse = ", "),
-          auxiliary_vars = n_aux_created,
-          graphical_functions = n_gf_created,
-          equation_changed = eqn_before != eqn_after
-        ))
-      }
-    }
-    
+
     # Update the variables data frame with converted equation
     sfm[["variables"]][i, "eqn"] <- out[["eqn"]]
-    
+
     # Accumulate auxiliary and graphical function variables
-    if (length(out[["add_vars_aux"]]) > 0) {
-      accumulated_add_vars_aux <- append(accumulated_add_vars_aux, out[["add_vars_aux"]])
-      if (!is.null(tracker)) {
-        for (aux_var_name in names(out[["add_vars_aux"]])) {
-          log_transformation(tracker, aux_var_name, "create_auxiliary", list(
-            created_by = var_name,
-            equation = out[["add_vars_aux"]][[aux_var_name]]
-          ))
-        }
-      }
-    }
-    if (length(out[["add_vars_gf"]]) > 0) {
-      accumulated_add_vars_gf <- append(accumulated_add_vars_gf, out[["add_vars_gf"]])
-      if (!is.null(tracker)) {
-        for (gf_var_name in names(out[["add_vars_gf"]])) {
-          log_transformation(tracker, gf_var_name, "create_graphical_function", list(
-            created_by = var_name,
-            interpolation = out[["add_vars_gf"]][[gf_var_name]][["interpolation"]]
-          ))
-        }
-      }
+    if (nrow(out[["add_vars"]])) {
+      accumulated_add_vars <- rbind(accumulated_add_vars, out[["add_vars"]])
     }
   }
 
   # Add accumulated auxiliary and graphical function variables to the model
-  sfm <- add_accumulated_variables(sfm, accumulated_add_vars_aux, accumulated_add_vars_gf)
-
-  # Print transformation summary if debug mode is on
-  if (!is.null(tracker) && P[["debug"]]) {
-    cli::cli_h2("IM\u2192R Conversion Summary")
-    for (line in summarize_transformations(tracker)) {
-      cli::cli_text(line)
+  if (nrow(accumulated_add_vars)) {
+    # Some Insight Maker columns may be missing, e.g. eqn_insightmaker
+    missing_cols <- setdiff(colnames(sfm[["variables"]]), colnames(accumulated_add_vars))
+    for (col in missing_cols) {
+      accumulated_add_vars[[col]] <- NA
     }
+
+    sfm[["variables"]] <- rbind(sfm[["variables"]], accumulated_add_vars)
   }
 
-  sfm <- validate_xmile(sfm)
-
-  return(sfm)
+  sfm
 }
 
 
@@ -2464,17 +2480,17 @@ split_aux_wrapper <- function(sfm) {
   # Get auxiliary variables
   aux_idx <- sfm[["variables"]][["type"]] == "aux"
   if (!any(aux_idx)) {
-    return(character(0))
+    return(sfm)
   }
-  
+
   aux_eqns <- sfm[["variables"]][aux_idx, "eqn"]
   names(aux_eqns) <- sfm[["variables"]][aux_idx, "name"]
-  
+
   # Separate auxiliary variables into static parameters and dynamically updated auxiliaries
-  dependencies <- find_dependencies_(sfm, eqns = aux_eqns, only_model_var = FALSE)
+  deps <- dependencies_(sfm, eqns = aux_eqns, only_model_var = FALSE)
 
   # Constants are not dependent on time, have no dependencies in names, or are only dependent on constants
-  temp <- dependencies
+  temp <- deps
   temp <- temp[vapply(temp, function(x) {
     (!P[["time_name"]] %in% x) & (length(intersect(x, var_names)) == 0)
   }, logical(1))]
@@ -2492,7 +2508,7 @@ split_aux_wrapper <- function(sfm) {
     if (length(remaining_aux) == 0) {
       done <- TRUE
     } else {
-      new_constants <- dependencies[remaining_aux]
+      new_constants <- deps[remaining_aux]
       idx <- unlist(lapply(new_constants, function(x) {
         (!P[["time_name"]] %in% x) & all(intersect(x, var_names) %in% constants)
       }))
@@ -2511,8 +2527,6 @@ split_aux_wrapper <- function(sfm) {
     idx <- sfm[["variables"]][["name"]] == const_name
     sfm[["variables"]][idx, "type"] <- "constant"
   }
-
-  sfm <- validate_xmile(sfm)
 
   return(sfm)
 }

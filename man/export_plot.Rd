@@ -30,7 +30,7 @@ Save a plot of a stock-and-flow diagram or a simulation to a specified file path
 # Only if dependencies are installed
 if (require("DiagrammeRsvg", quietly = TRUE) &
   require("rsvg", quietly = TRUE)) {
-  sfm <- xmile("SIR")
+  sfm <- sdbuildR("SIR")
   file <- tempfile(fileext = ".png")
   export_plot(plot(sfm), file)
 
