@@ -61,7 +61,8 @@
       "behavior": {
         "initial_value": "1",
         "description": "The desired state we wish to achieve.",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -82,7 +83,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "The current state that is to be migrated in the direction of the desired state.",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {

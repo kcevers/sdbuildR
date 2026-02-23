@@ -1,15 +1,16 @@
-# #' Check Julia setup
-# #'
-# #' @returns Logical value
-# #' @noRd
-# julia_setup_ok <- function() {
-#   JuliaConnectoR::juliaSetupOk() &&
-#     isTRUE(.sdbuildR_env[["jl"]][["init"]]) # &&
-#   # !is.null(.sdbuildR_env[["JULIA_BINDIR"]])
-# }
 
+
+#' Check if Julia is ready to be used with sdbuildR
+#' 
+#' Check if Julia can be started and if the Julia environment for sdbuildR has been instantiated. 
+#' 
+#' @return Logical value. `TRUE` if Julia is ready to be used with sdbuildR, `FALSE` otherwise.
+#' @export 
+#' @seealso [install_julia_env()], [use_julia()]
+#' @examples
+#' is_julia_ready()
 is_julia_ready <- function(){
-  if (Sys.getenv("NOT_CRAN") != "true"){
+  if (Sys.getenv("NOT_CRAN") == "true"){
     return(FALSE)
   }
 
@@ -44,33 +45,6 @@ is_julia_init <- function() {
 }
 
 
-
-#' Check Julia environment was initialized
-#'
-#' This should only be run if a Julia session was already initialized with JuliaConnectoR.
-#'
-#' @returns Logical value
-#' @noRd
-# is_julia_init <- function() {
-#   # Check if Unitful was loaded (as an example package that needs to be loaded)
-#   julia_cmd <- "isdefined(Main, :Unitful)"
-#   unitful_loaded <- JuliaConnectoR::juliaEval(julia_cmd)
-
-#   # Get project name
-#   julia_cmd <- "using Pkg; Pkg.Types.read_project(Pkg.project().path).name"
-#   project_name <- JuliaConnectoR::juliaEval(julia_cmd)
-
-#   # Check init variable exists
-#   julia_cmd <- paste0(
-#     "isdefined(Main, :",
-#     P[["init_sdbuildR"]], ")"
-#   )
-#   init_sdbuildR <- JuliaConnectoR::juliaEval(julia_cmd)
-
-#   isTRUE(unitful_loaded) && 
-#   project_name == "sdbuildR" && 
-#   isTRUE(init_sdbuildR)
-# }
 
 
 is_julia_ok <- function(){
@@ -134,116 +108,6 @@ is_julia_env_installed <- function(){
 
   invisible(TRUE)
 }
-
-
-#' Check status of Julia installation and environment
-#'
-#' Check if Julia can be found and if the Julia environment for sdbuildR has been instantiated. Note that this does not mean a Julia session has been started, merely whether it *could* be. For more guidance, see [this vignette](https://kcevers.github.io/sdbuildR/articles/julia-setup.html).
-#'
-#'
-#' @param verbose If `TRUE`, print detailed status information. Defaults to `TRUE`.
-#'
-#' @returns A list with components:
-#'   \item{julia_found}{Logical. TRUE if Julia installation found.}
-#'   \item{julia_version}{Character. Julia version string, or "" if not found.}
-#'   \item{env_exists}{Logical. TRUE if Project.toml exists in sdbuildR package, which specifies the Julia packages and versions needed to instantiate the Julia environment for sdbuildR.}
-#'   \item{env_instantiated}{Logical. TRUE if Manifest.toml exists (i.e., Julia environment was instantiated).}
-#'   \item{status}{Character. Overall status: "julia_not_installed", "julia_needs_update", "sdbuildR_needs_reinstall", "install_julia_env", "ready", or "unknown".}
-#'
-#' @section What to Do Next:
-#' Based on the 'status' value:
-#' \describe{
-#'   \item{"julia_not_installed"}{Install Julia from [https://julialang.org/install/](https://julialang.org/install/)}
-#'   \item{"julia_needs_update"}{Update Julia to >= version 1.10}
-#'   \item{"install_julia_env"}{Run \code{install_julia_env()}}
-#'   \item{"ready"}{Run \code{use_julia()} to start a session}
-#' }
-#'
-#' @export
-#' @concept julia
-#' @examples
-#' status <- julia_status()
-#' print(status)
-#'
-# julia_status <- function(verbose = TRUE) {
-#   result <- list(
-#     julia_found = FALSE,
-#     julia_version = "",
-#     env_exists = FALSE,
-#     env_instantiated = FALSE,
-#     status = "unknown"
-#   )
-
-#   # Find Julia installation
-#   julia_version <- tryCatch(
-#     {
-#       getJuliaVersionViaCmd(getJuliaExecutablePath())
-#     },
-#     error = function(e) {
-#       return(list(version = NULL))
-#     }
-#   )
-#   result[["julia_found"]] <- !is.null(julia_version) && nzchar(julia_version)
-
-#   if (!result[["julia_found"]]) {
-#     result$status <- "julia_not_installed"
-#     if (verbose) {
-#       cli::cli_inform("Julia not found. Install from {.url https://julialang.org/install/}.")
-#     }
-#     return(result)
-#   }
-
-#   result[["julia_version"]] <- julia_version
-
-#   # Required Julia version for sdbuildR
-#   required_jl_version <- P[["jl_required_version"]]
-
-#   # Check if version is sufficient
-#   if (package_version(result[["julia_version"]]) < package_version(required_jl_version)) {
-#     result$status <- "julia_needs_update"
-#     if (verbose) {
-#       cli::cli_inform(c(
-#         "Julia version {.val {result[[\"julia_version\"]]}} is too old.",
-#         "i" = "Requires version {.val {required_jl_version}} or higher.",
-#         ">" = "Update at {.url https://julialang.org/install/}."
-#       ))
-#     }
-#     return(result)
-#   }
-
-#   # Check sdbuildR environment files
-#   env_path <- system.file(package = "sdbuildR")
-#   project_file <- file.path(env_path, "Project.toml")
-#   manifest_file <- file.path(env_path, "Manifest.toml")
-
-#   result$env_exists <- file.exists(project_file)
-#   result$env_instantiated <- file.exists(manifest_file)
-
-#   if (!result$env_exists) {
-#     result$status <- "sdbuildR_needs_reinstall"
-#     if (verbose) {
-#       cli::cli_inform("sdbuildR {.file Project.toml} not found. Try reinstalling {.pkg sdbuildR}.")
-#     }
-#     return(result)
-#   }
-
-#   if (!result$env_instantiated) {
-#     result$status <- "install_julia_env"
-#     if (verbose) {
-#       cli::cli_inform("Julia environment not instantiated. Run {.fn install_julia_env}.")
-#     }
-#     return(result)
-#   }
-
-#   # Everything looks good
-#   result$status <- "ready"
-
-#   if (verbose) {
-#     cli::cli_inform("Julia environment ready.")
-#   }
-
-#   result
-# }
 
 
 #' Check Manifest.toml for a package
@@ -475,11 +339,11 @@ install_julia_env <- function(remove = FALSE) {
 
 #' Start Julia and activate environment
 #'
-#' Start Julia session and activate Julia environment to simulate stock-and-flow models. To do so, Julia needs to be installed and findable from within R. See [this vignette](https://kcevers.github.io/sdbuildR/articles/julia-setup.html) for guidance. In addition, the Julia environment specifically for sdbuildR needs to have been instantiated. This can be set up with `install_julia_env()`.
+#' Start Julia session and activate Julia environment to simulate stock-and-flow models. To do so, Julia needs to be installed (see [https://julialang.org/install/](https://julialang.org/install/)) and findable from within R. See [this vignette](https://kcevers.github.io/sdbuildR/articles/julia-setup.html) for guidance. In addition, the Julia environment specifically for sdbuildR needs to have been instantiated. This can be set up with [install_julia_env()].
 #'
-#' Julia supports running stock-and-flow models with units as well as ensemble simulations (see `ensemble()`).
+#' Julia supports running stock-and-flow models with units as well as [ensemble simulations][ensemble()].
 #'
-#' In every R session, `use_julia()` needs to be run once (which is done automatically in `simulate()`), which can take around 30-60 seconds.
+#' In every R session, [use_julia()] needs to be run once (which is done automatically in [simulate()]), which can take around 30-60 seconds.
 #'
 #' @param stop If `TRUE`, stop active Julia session. Defaults to `FALSE`.
 #' @param force If `TRUE`, force Julia setup to execute again.
@@ -494,45 +358,46 @@ install_julia_env <- function(remove = FALSE) {
 #' # Start a Julia session and activate the Julia environment for sdbuildR
 #' use_julia()
 #'
+#' # Start Julia with 4 threads (if your Julia installation supports threading)
+#' use_julia(nthreads = 4)
+#' 
 #' # Stop Julia session
 #' use_julia(stop = TRUE)
-#'
+#' 
 use_julia <- function(
   stop = FALSE,
   force = FALSE, 
   nthreads = NULL
 ) {
   if (stop) {
-    # # Check whether a session is active
-    # if (!julia_setup_ok()) {
-    #   cli::cli_inform("No active Julia session")
-    # } else {
-    #   .sdbuildR_env[["jl"]][["init"]] <- FALSE
-      JuliaConnectoR::stopJulia()
+    JuliaConnectoR::stopJulia()
 
-      cli::cli_inform("Julia session closed")
-    # }
+    cli::cli_inform("Julia session closed")
     return(invisible())
   }
 
   # If use_julia() was already run, no need to do anything, unless force or nthreads is specified
-  
   if (!is.null(nthreads)) {
     if (!is.numeric(nthreads) || length(nthreads) != 1 || nthreads < 1) {
       cli::cli_abort("nthreads must be a single positive integer.")
     }
     nthreads <- as.integer(nthreads)
-    Sys.setenv(JULIA_NUM_THREADS = nthreads)
+
+    if (nthreads == 1){
+      nthreads <- NULL
+      .sdbuildR_env[["jl"]][["use_threads"]] <- FALSE
+    } else {
+
+      # If nthreads was set, need to restart Julia to apply new thread setting (regardless of whether environment was already initialized, since thread setting applies to Julia session, not environment)
+      JuliaConnectoR::stopJulia()
+      .sdbuildR_env[["jl"]][["use_threads"]] <- TRUE
+      Sys.setenv(JULIA_NUM_THREADS = nthreads)
+    }
   }
 
   status <- is_julia_init()
   if (!force && is.null(nthreads) && status) {
     return(invisible())
-  }
-
-  # If nthreads was set and Julia was already initialized, need to restart Julia to apply new thread setting
-  if (!is.null(nthreads) && status) {
-    JuliaConnectoR::stopJulia()
   }
 
  
@@ -561,58 +426,6 @@ use_julia <- function(
 
   invisible()
 
-  # status <- julia_status(verbose = FALSE)
-
-  # if (status[["status"]] != "ready") {
-  #   status <- julia_status()
-  #   cli::cli_abort()
-  # }
-
-  # if (!JuliaConnectoR::juliaSetupOk()) {
-  #   cli::cli_abort("JuliaConnectoR setup failed")
-  # }
-
-  # tryCatch(
-  #   {
-  #     JuliaConnectoR::startJuliaServer()
-
-  #     # Run initialization
-  #     init_julia_env()
-  #   },
-  #   warning = function(w) {
-  #     if (grepl(
-  #       "There is already a connection to Julia established",
-  #       conditionMessage(w)
-  #     )) {
-  #       # Ensure Julia environment was correctly initialized for sdbuildR
-  #       if (!is_julia_init()) {
-  #         use_julia(stop = TRUE)
-  #         JuliaConnectoR::startJuliaServer()
-
-  #         # Run initialization
-  #         run_init_julia_env()
-  #       }
-  #     }
-  #   }
-  # )
-
-  # # Try one more time
-  # if (!is_julia_init()) {
-  #   use_julia(stop = TRUE)
-  #   JuliaConnectoR::startJuliaServer()
-
-  #   # Run initialization
-  #   run_init_julia_env()
-  # }
-
-  # if (!is_julia_init()) {
-  #   cli::cli_abort("Julia environment setup failed.")
-  # }
-
-  # # Set global option of initialization
-  # .sdbuildR_env[["jl"]][["init"]] <- TRUE
-
-  # invisible()
 }
 
 
@@ -674,64 +487,6 @@ run_init_julia_env <- function() {
   invisible(NULL)
 }
 
-
-# getJuliaExecutablePath <- function() {
-#   juliaBindir <- Sys.getenv("JULIA_BINDIR")
-#   if (juliaBindir == "") {
-#     if (Sys.which("julia") == "") {
-#       juliaCmd <- fallbackOnDefaultJuliaupPath()
-#     } else { # Julia is on the PATH, simply use the command "julia"
-#       juliaCmd <- "julia"
-#     }
-#   } else { # use the JULIA_BINDIR variable, as it is specified
-#     juliaExe <- list.files(path = juliaBindir, pattern = "^julia.*")
-#     if (length(juliaExe) == 0) {
-#       cli::cli_abort(paste0(
-#         "No Julia executable file found in supposed bin directory \"",
-#         juliaBindir, "\""
-#       ))
-#     }
-#     juliaCmd <- file.path(juliaBindir, "julia")
-#   }
-#   return(juliaCmd)
-# }
-
-# fallbackOnDefaultJuliaupPath <- function() {
-#   # If Julia is not found on the PATH, check the default Juliaup installation location
-#   # on Linux and Mac and use the Julia command there if it exists.
-#   # (On Mac, Julia might not be on the PATH in the R session even though
-#   # Julia has been installed in the default way via Juliaup.)
-#   juliaCmd <- file.path(Sys.getenv("HOME"), ".juliaup", "bin", "julia")
-#   if (!file.exists(juliaCmd) || Sys.info()["sysname"] == "Windows") {
-#     cli::cli_abort(c(
-#       "Julia could not be found.",
-#       "x" = "Julia needs to be installed and findable by {.pkg JuliaConnectoR}.",
-#       "i" = "After installing, add the Julia executable to the {.envvar PATH} environment variable.",
-#       ">" = "See {.help Julia-Setup} for more information."
-#     ), call = NULL)
-#   } else {
-#     return(juliaCmd)
-#   }
-# }
-
-
-# getJuliaVersionViaCmd <- function(juliaCmd = getJuliaExecutablePath()) {
-#   juliaVersion <- NULL
-#   try({
-#     juliaVersion <- system2(juliaCmd, "--version",
-#       stdout = TRUE
-#       # env = getJuliaEnv()
-#     )
-#     juliaVersion <- regmatches(
-#       juliaVersion,
-#       regexpr(
-#         "[0-9]+\\.[0-9]+\\.[0-9]+",
-#         juliaVersion
-#       )
-#     )
-#   })
-#   juliaVersion
-# }
 
 
 #' Internal function to create initialization file for Julia

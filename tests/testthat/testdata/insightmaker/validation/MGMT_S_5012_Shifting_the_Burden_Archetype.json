@@ -16,7 +16,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "This is the problem symptom that needs to be removed.",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {
@@ -58,7 +59,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "This is the longer term solution that will actually remove the cause of the problem.",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {
@@ -106,7 +108,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {

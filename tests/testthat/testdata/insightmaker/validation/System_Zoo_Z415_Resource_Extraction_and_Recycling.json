@@ -16,7 +16,8 @@
       "behavior": {
         "initial_value": "[INITIAL_CUMULATED_CONSUMPTION]",
         "description": "",
-        "units": "Mt"
+        "units": "Mt",
+        "non_negative": false
       }
     },
     {
@@ -25,7 +26,8 @@
       "behavior": {
         "initial_value": "[INITIAL_RESOURCE_DEMAND]*[PRODUCT_LIFE_time]",
         "description": "",
-        "units": "Mt"
+        "units": "Mt",
+        "non_negative": false
       }
     },
     {
@@ -34,7 +36,8 @@
       "behavior": {
         "initial_value": "[INITIAL_RESOURCE_DEMAND]",
         "description": "",
-        "units": "Mt/Year"
+        "units": "Mt/Year",
+        "non_negative": false
       }
     },
     {

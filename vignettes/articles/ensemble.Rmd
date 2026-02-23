@@ -83,10 +83,10 @@ sfm <- build(sfm, c("Food_intake", "Hunger", "Compensatory_behaviour"),
 )
 ```
 
-With random initial conditions, multiple runs of the same model will be different. As running ensemble simulations can be quite memory intensive, it is highly recommended to reduce the size of the returned timeseries. This will save memory and speed up the simulation. For example, we can only save the timeseries every 1 time units, and only save from time 10:
+With random initial conditions, multiple runs of the same model will be different. As running ensemble simulations can be quite memory intensive, it is highly recommended to reduce the size of the returned timeseries. This will save memory and speed up the simulation. For example, we can only save the timeseries every 1 time units:
 
 ```{r}
-sfm <- sim_specs(sfm, save_at = 1, save_from = 10)
+sfm <- sim_specs(sfm, save_at = 1)
 ```
 
 The model is now ready for running ensemble simulations. We complete 100 runs using the `ensemble()` function:

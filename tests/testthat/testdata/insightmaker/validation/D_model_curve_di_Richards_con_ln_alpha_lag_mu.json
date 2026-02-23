@@ -16,7 +16,8 @@
       "behavior": {
         "initial_value": "[N0]",
         "description": "Questa Ã¨ la popolazione batterica la cui dimensione (in unitÃ  di cellule vitali) cambierÃ  nel corso del tempo. Per rendere realistica la simulazione considera che la massa (umida) tipica di una cellula di <i>Escherichia coli<\/i> Ã¨ circa un femtogrammo (cioÃ¨ 10^-12 g,  anche se puÃ² variare ) e che lâ umiditÃ  tipica di una cellula batterica Ã¨ intorno  al 70%. Quindi, 1 kg di cellule umide contiene 10^12*10^3 = 10^15 cellule. Se tutta lâacqua presente sulla terra (1,4x10^9 km^3, equivalenti a 1,4*10^18 kg) fosse trasformata in batteri sarebbe possibile avere al massimo 2x10^18*10^15 =2x10^33 cellule. Il numero iniziale Ã¨ 100 batteri, ma puoi cambiarlo con uno slider.",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {
@@ -136,7 +137,8 @@
       "behavior": {
         "initial_value": "[q0]",
         "description": "La quantitÃ  q(t) che rappresenta la variazione nel tempo di P(t)/Kp dove P(t) Ã¨ la concentrazione del generico composto essenziale P (potrebbe essere un enzima indicibile, il numero di ribosomi, etc.) e Kp Ã¨ la costante di Michaelis e Menten per l'equazione che regola l'accumulo di P",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {

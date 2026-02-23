@@ -88,7 +88,8 @@
       "behavior": {
         "initial_value": "[initial_velocity]",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -109,7 +110,8 @@
       "behavior": {
         "initial_value": "[initial_height]",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -193,7 +195,8 @@
       "behavior": {
         "initial_value": "0.01",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -223,7 +226,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -388,7 +392,8 @@
       "behavior": {
         "initial_value": "500000*[mass]",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {

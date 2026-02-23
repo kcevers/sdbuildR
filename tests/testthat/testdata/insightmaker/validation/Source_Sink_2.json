@@ -25,7 +25,8 @@
       "behavior": {
         "initial_value": "100",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {
@@ -34,7 +35,8 @@
       "behavior": {
         "initial_value": "10",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {
@@ -43,7 +45,8 @@
       "behavior": {
         "initial_value": "10",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {
@@ -52,7 +55,8 @@
       "behavior": {
         "initial_value": "10",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {

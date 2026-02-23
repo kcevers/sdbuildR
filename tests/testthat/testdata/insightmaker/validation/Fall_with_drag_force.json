@@ -16,7 +16,8 @@
       "behavior": {
         "initial_value": "4000",
         "description": "",
-        "units": "1"
+        "units": "1",
+        "non_negative": false
       }
     },
     {
@@ -37,7 +38,8 @@
       "behavior": {
         "initial_value": "10",
         "description": "",
-        "units": "1"
+        "units": "1",
+        "non_negative": false
       }
     },
     {

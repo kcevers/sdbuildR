@@ -16,7 +16,8 @@
       "behavior": {
         "initial_value": "[INITIAL_PREDATOR_A]",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {
@@ -25,7 +26,8 @@
       "behavior": {
         "initial_value": "[INITIAL_PREDATOR_B]",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {
@@ -34,7 +36,8 @@
       "behavior": {
         "initial_value": "[INITIAL_PREY]",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {

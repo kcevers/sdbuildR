@@ -16,7 +16,8 @@
       "behavior": {
         "initial_value": "100000",
         "description": "",
-        "units": "Unit/Year"
+        "units": "Unit/Year",
+        "non_negative": false
       }
     },
     {
@@ -25,7 +26,8 @@
       "behavior": {
         "initial_value": "100",
         "description": "",
-        "units": "Dollar/Unit"
+        "units": "Dollar/Unit",
+        "non_negative": false
       }
     },
     {

@@ -34,7 +34,8 @@
       "behavior": {
         "initial_value": "1",
         "description": "Default initial value is 1",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -55,7 +56,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "Initial default value is 0 , describes symptoms",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {

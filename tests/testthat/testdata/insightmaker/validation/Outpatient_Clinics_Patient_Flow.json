@@ -16,7 +16,8 @@
       "behavior": {
         "initial_value": "1400",
         "description": "There are 1400 patients on current waiting list.",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {
@@ -43,7 +44,8 @@
       "behavior": {
         "initial_value": "49",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {
@@ -148,7 +150,8 @@
       "behavior": {
         "initial_value": "27",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {

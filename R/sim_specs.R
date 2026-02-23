@@ -1,197 +1,41 @@
-#' @noRd
-.validate_sim_numeric <- function(x, arg_name) {
-  x <- suppressWarnings(as.numeric(x))
-  if (is.na(x)) {
-    cli::cli_abort(c(
-      "Invalid {.arg {arg_name}} argument.",
-      "x" = "The {.arg {arg_name}} argument must be {.cls numeric}."
-    ))
-  }
-  x
-}
-
-
-#' Validate and cross-check time-related simulation arguments
-#'
-#' Receives only the arguments the user explicitly supplied (as a named list),
-#' coerces them to numeric, applies cross-argument checks, performs
-#' auto-corrections, and strips scientific notation. Falls back to the values
-#' currently stored in `sfm` when a counterpart argument was not supplied.
-#'
-#' @param sfm An `sdbuildR` model object (used for fallback values only).
-#' @param args Named list of time args supplied by the caller.  Only keys
-#'   present in the list are treated as user-supplied; absent keys are not
-#'   validated and their current sfm values are used purely as fallbacks.
-#' @return The validated, possibly auto-corrected named list.
-#' @noRd
-.validate_sim_time_args <- function(sfm, args) {
-  time_args <- c("start", "stop", "dt", "save_at", "save_from")
-
-  # Record which args the user explicitly supplied before any auto-corrections.
-  # Range checks for auto-set args (e.g. save_at synced from dt) are skipped
-  # to allow edge cases like save_from == stop (single time-point output).
-  user_supplied <- names(args)
-
-  # Step 1: coerce each provided arg to numeric
-  for (nm in intersect(names(args), time_args)) {
-    args[[nm]] <- .validate_sim_numeric(args[[nm]], nm)
-  }
-
-  # Positive-value checks (must come after coercion)
-  if ("dt" %in% names(args) && args$dt <= 0) {
-    cli::cli_abort(c(
-      "Invalid {.arg dt} argument.",
-      "x" = "{.arg dt} argument must be positive."
-    ))
-  }
-  if ("save_at" %in% names(args) && args$save_at <= 0) {
-    cli::cli_abort(c(
-      "Invalid {.arg save_at} argument.",
-      "x" = "{.arg save_at} argument must be positive."
-    ))
-  }
-
-  # Effective values: user-provided, or fall back to current sfm value
-  eff <- function(nm) args[[nm]] %||% as.numeric(sfm[["sim_specs"]][[nm]])
-
-  # Step 2: warn when dt is large (> 0.1, excluding exactly 1)
-  if ("dt" %in% names(args) && args$dt != 1 && args$dt > 0.1) {
-    cli::cli_warn(c(
-      "Large timestep detected ({.arg dt} = {.val {args$dt}}).",
-      "i" = "This may lead to simulation inaccuracies.",
-      ">" = "Consider using smaller timesteps for better accuracy."
-    ))
-  }
-
-  # Step 3: start < stop
-  if ("start" %in% names(args) || "stop" %in% names(args)) {
-    eff_start <- eff("start")
-    eff_stop  <- eff("stop")
-    if (eff_start >= eff_stop) {
-      cli::cli_abort(c(
-        "Invalid time interval.",
-        "x" = "{.arg start} ({.val {eff_start}}) must be smaller than {.arg stop} ({.val {eff_stop}})."
-      ))
-    }
-  }
-
-  # Step 4: dt must fit within the simulation window
-  if ("dt" %in% names(args)) {
-    eff_start <- eff("start")
-    eff_stop  <- eff("stop")
-    if (args$dt > (eff_stop - eff_start)) {
-      cli::cli_abort(c(
-        "Invalid {.arg dt} argument.",
-        "x" = "{.arg dt} ({.val {args$dt}}) must be smaller than the time interval ({.arg stop} - {.arg start} = {.val {eff_stop - eff_start}})."
-      ))
-    }
-  }
-
-  # Step 5: dt vs save_at auto-correction
-  if ("dt" %in% names(args)) {
-    if ("save_at" %in% names(args)) {
-      # Both passed: warn and auto-correct if dt > save_at
-      if (args$dt > args$save_at) {
-        cli::cli_warn(c(
-          "Invalid {.arg dt} and {.arg save_at} relationship.",
-          "x" = "{.arg dt} ({.val {args$dt}}) must be <= {.arg save_at} ({.val {args$save_at}}).",
-          "i" = "Automatically setting {.arg save_at} equal to {.arg dt}."
-        ))
-        args$save_at <- args$dt
-      }
-    } else {
-      # Only dt passed: sync save_at to dt when existing save_at < new dt,
-      # or when save_at has not been set yet
-      eff_save_at <- as.numeric(sfm[["sim_specs"]][["save_at"]])
-      if (!is_defined(sfm[["sim_specs"]][["save_at"]]) || args$dt > eff_save_at) {
-        args$save_at <- args$dt
-      }
-      # else: existing save_at is already >= new dt — leave it unchanged
-    }
-  } else if ("save_at" %in% names(args)) {
-    # Only save_at passed: auto-correct if save_at < current sfm dt (bug fix:
-    # use the sfm's stored dt, not the function's default parameter value)
-    eff_dt <- as.numeric(sfm[["sim_specs"]][["dt"]])
-    if (is_defined(sfm[["sim_specs"]][["dt"]]) && args$save_at < eff_dt) {
-      cli::cli_warn(c(
-        "Invalid {.arg dt} and {.arg save_at} relationship.",
-        "x" = "{.arg dt} must be smaller than or equal to {.arg save_at}.",
-        "i" = "Automatically setting {.arg save_at} equal to {.arg dt}."
-      ))
-      args$save_at <- eff_dt
-    }
-  }
-
-  # Step 6: save_at range validation — only when save_at was explicitly supplied.
-  # Auto-set values (synced from dt) are not range-checked here to allow edge
-  # cases such as save_from == stop (single-point output at final time).
-  if ("save_at" %in% user_supplied) {
-    eff_start     <- eff("start")
-    eff_stop      <- eff("stop")
-    eff_save_from <- args$save_from %||% as.numeric(sfm[["sim_specs"]][["save_from"]])
-    if (args$save_at > (eff_stop - eff_start)) {
-      cli::cli_abort(c(
-        "Invalid {.arg save_at} argument.",
-        "x" = "{.arg save_at} ({.val {args$save_at}}) must be smaller than the time interval ({.arg stop} - {.arg start} = {.val {eff_stop - eff_start}})."
-      ))
-    }
-    if (args$save_at > (eff_stop - eff_save_from)) {
-      cli::cli_abort(c(
-        "Invalid {.arg save_at} argument.",
-        "x" = "{.arg save_at} ({.val {args$save_at}}) must be smaller than the interval from {.arg save_from} ({.val {eff_save_from}}) to {.arg stop} ({.val {eff_stop}})."
-      ))
-    }
-  }
-
-  # Step 7: save_from auto-follows start when start changes but save_from does not
-  if ("start" %in% names(args) && !"save_from" %in% names(args)) {
-    args$save_from <- args$start
-  }
-
-  # Step 8: save_from must lie within [start, stop]
-  if ("save_from" %in% names(args)) {
-    eff_start <- eff("start")
-    eff_stop  <- eff("stop")
-    if (args$save_from < eff_start || args$save_from > eff_stop) {
-      cli::cli_abort(c(
-        "Invalid {.arg save_from} argument.",
-        "x" = "{.arg save_from} ({.val {args$save_from}}) must be within the simulation time interval.",
-        "i" = "Must satisfy: {.val {eff_start}} <= {.arg save_from} <= {.val {eff_stop}}"
-      ))
-    }
-  }
-
-  # Step 9: strip scientific notation from all numeric time args
-  for (nm in intersect(names(args), time_args)) {
-    args[[nm]] <- replace_digits_with_floats(scientific_notation(args[[nm]]), NULL)
-  }
-
-  args
-}
-
 
 #' Modify simulation specifications
 #'
-#' Simulation specifications are the settings that determine how the model is simulated, such as the integration method (i.e. solver), start and stop time, and timestep. Modify these specifications for an existing stock-and-flow model.
+#' Simulation specifications are the settings that determine how the model is
+#' simulated, such as the integration method (i.e. solver), start and stop time,
+#' and timestep. Modify these specifications for an existing stock-and-flow model.
 #'
 #' @inheritParams build
-#' @param method Integration method. Defaults to "euler".
-#' @param start Start time of simulation. Defaults to 0.
-#' @param stop End time of simulation. Defaults to 100.
+#' @param method Integration method. Defaults to `"euler"`.
+#' @param start Start time of simulation. Defaults to `0`.
+#' @param stop End time of simulation. Defaults to `100`.
 #' @param dt Timestep of solver; controls simulation accuracy. Smaller = more
-#'   accurate but slower. Defaults to 0.01.
-#' @param save_at Timestep at which to save computed values; controls output size.
-#'   Must be >= dt. Use larger than dt to reduce memory without sacrificing accuracy.
-#'   Example: dt = 0.01, save_at = 1 gives accurate simulation but only saves
-#'   every 100th point. Defaults to `dt` (i.e., save everything).
-#' @param save_from Time at which to start saving values. Use to discard initial
-#'   transient behavior. Must be >= start. Defaults to `start`.
-#' @param seed Seed number to ensure reproducibility across runs in case of random elements. Must be an integer. Defaults to NULL (no seed).
-#' @param time_units Simulation time unit, e.g. 's' (second). Defaults to "s".
-#' @param language Coding language in which to simulate model. Either "R" or "Julia". Julia is necessary for using units or delay functions. Defaults to "R".
-#' @param keep_nonnegative_stock If TRUE, keeps original non-negativity setting of stocks. Defaults to FALSE.
-#' @param keep_nonnegative_flow If TRUE, keeps original non-negativity setting of flows. Defaults to TRUE.
-#' @param keep_unit If TRUE, keeps units of variables. Defaults to TRUE.
+#'   accurate but slower. Defaults to `0.01`.
+#' @param save_at Controls which time points are saved in the output. Either:
+#'   \itemize{
+#'     \item A single number: save every N time units (interval). Must be >= `dt`.
+#'       Use larger than `dt` to reduce output size without sacrificing accuracy.
+#'       Example: `dt = 0.01`, `save_at = 1` saves every 100th computed point.
+#'     \item A numeric vector: explicit time points to include in output.
+#'       Values must lie within `[start, stop]`.
+#'   }
+#'   Pass `NA`, `NULL`, or `""` to reset to saving all dt steps.
+#'   Mutually exclusive with `save_n`. Defaults to `NULL` (save all).
+#' @param save_n Save exactly N evenly-spaced time points from `start` to `stop`.
+#'   `save_n = 1` saves only the final time point (stop).
+#'   Pass `NA`, `NULL`, or `""` to reset to saving all dt steps.
+#'   Mutually exclusive with `save_at`. Defaults to `NULL` (save all).
+#' @param seed Seed number to ensure reproducibility across runs in case of
+#'   random elements. Must be an integer. Defaults to `NULL` (no seed).
+#' @param time_units Simulation time unit, e.g. `"s"` (second). Defaults to `"s"`.
+#' @param language Coding language in which to simulate model. Either `"R"` or
+#'   `"Julia"`. Julia is necessary for using units or running ensemble simulations.
+#'   Defaults to `"R"`.
+#' @param keep_nonnegative_stock If `TRUE`, keeps original non-negativity setting
+#'   of stocks. Defaults to `FALSE`.
+#' @param keep_nonnegative_flow If `TRUE`, keeps original non-negativity setting
+#'   of flows. Defaults to `TRUE`.
+#' @param keep_unit If `TRUE`, keeps units of variables. Defaults to `TRUE`.
 #'
 #' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR]
 #' @concept simulate
@@ -210,26 +54,28 @@
 #' # Change the time units to "years", such that one time unit is one year
 #' sfm <- sim_specs(sfm, time_units = years)
 #'
-#' # To save storage but not affect accuracy, use save_at and save_from
-#' sfm <- sim_specs(sfm, save_at = 1, save_from = 10)
+#' # Save at an interval to reduce output size without affecting accuracy
+#' sfm <- sim_specs(sfm, save_at = 1)
 #' sim <- simulate(sfm)
 #' head(as.data.frame(sim))
 #'
+#' # Save exactly 11 evenly-spaced time points (t=0, 5, 10, ..., 50)
+#' sfm <- sim_specs(sfm, save_n = 11)
+#'
 #' # Add stochastic initial condition but specify seed to obtain same result
 #' sfm <- sim_specs(sfm, seed = 1) |>
-#'   build(c("predator", "prey"), eqn = "runif(1, 20, 50)")
+#'   build(c(predator, prey), eqn = runif(1, 20, 50))
 #'
 #' # Change the simulation language to Julia to use units
 #' sfm <- sim_specs(sfm, language = Julia)
 #'
 sim_specs <- function(sfm,
                       method = "euler",
-                      start = "0.0",
-                      stop = "100.0",
-                      dt = "0.01",
-                      save_at = dt,
-                      save_from = start,
-                      # adaptive = FALSE,
+                      start = 0,
+                      stop = 100,
+                      dt = 0.01,
+                      save_at = NULL,
+                      save_n  = NULL,
                       seed = NULL,
                       time_units = "s",
                       language = "R",
@@ -247,14 +93,61 @@ sim_specs <- function(sfm,
   if (!missing(method))     method     <- .expr_to_char(rlang::enexpr(method))
   if (!missing(language))   language   <- .expr_to_char(rlang::enexpr(language))
 
-  # Collect and validate all time-related numeric args
-  time_vals <- list()
-  if (!missing(start))     time_vals$start     <- start
-  if (!missing(stop))      time_vals$stop      <- stop
-  if (!missing(dt))        time_vals$dt        <- dt
-  if (!missing(save_at))   time_vals$save_at   <- save_at
-  if (!missing(save_from)) time_vals$save_from <- save_from
-  time_vals <- .validate_sim_time_args(sfm, time_vals)
+  # --- Time argument validation ---
+  user_time <- list()
+  if (!missing(start)) user_time$start <- start
+  if (!missing(stop))  user_time$stop  <- stop
+  if (!missing(dt))    user_time$dt    <- dt
+
+  if (length(user_time) > 0) {
+    # Merge sfm defaults with user values, then validate the combined state
+    eff_time <- list(
+      start = sfm[["sim_specs"]][["start"]],
+      stop  = sfm[["sim_specs"]][["stop"]],
+      dt    = sfm[["sim_specs"]][["dt"]]
+    )
+    eff_time[names(user_time)] <- user_time
+    time_vals <- .validate_sim_time_args(eff_time)
+  } else {
+    time_vals <- list()
+  }
+
+  # --- Save parameter handling ---
+
+  # Error: both save_at and save_n set (neither is an unset sentinel)
+  if (!missing(save_at) && !.is_unset(save_at) &&
+      !missing(save_n)  && !.is_unset(save_n)) {
+    cli::cli_abort(c(
+      "Cannot specify both {.arg save_at} and {.arg save_n}.",
+      "i" = "Pass {.val NA} to one of them to unset it."
+    ))
+  }
+
+  # save argg: entries added here go into sfm$sim_specs
+  argg <- time_vals
+
+  if (!missing(save_at)) {
+    if (.is_unset(save_at)) {
+      argg[["save_type"]] <- "all"
+      argg["save_at"] <- list(NULL)
+      argg["save_n"]  <- list(NULL)
+    } else {
+      validated <- .validate_save_at(save_at, sfm, time_vals)
+      argg[["save_type"]] <- "save_at"
+      argg[["save_at"]]   <- validated
+      argg["save_n"]      <- list(NULL)
+    }
+  } else if (!missing(save_n)) {
+    if (.is_unset(save_n)) {
+      argg[["save_type"]] <- "all"
+      argg["save_at"] <- list(NULL)
+      argg["save_n"]  <- list(NULL)
+    } else {
+      argg[["save_type"]] <- "save_n"
+      argg[["save_n"]]    <- .validate_save_n(save_n)
+      argg["save_at"]     <- list(NULL)
+    }
+  }
 
   # Ensure time_units are formatted correctly
   if (!missing(time_units)) {
@@ -339,8 +232,7 @@ sim_specs <- function(sfm,
     }
   }
 
-  # Collect all validated args to write into sfm
-  argg <- time_vals
+  # Collect remaining validated args
   if (!missing(method) || method_auto_set)     argg$method                 <- method
   if (!missing(time_units))                    argg$time_units             <- time_units
   if (!missing(language))                      argg$language               <- language
@@ -354,8 +246,10 @@ sim_specs <- function(sfm,
   language_changed <- "language" %in% names(argg) &&
     argg[["language"]] != sfm[["sim_specs"]][["language"]]
 
-  # Overwrite simulation specifications
-  sfm[["sim_specs"]] <- utils::modifyList(sfm[["sim_specs"]], argg)
+  # Overwrite simulation specifications (use list-subset assignment to preserve NULLs)
+  for (nm in names(argg)) {
+    sfm[["sim_specs"]][nm] <- list(argg[[nm]])
+  }
 
   # If language changed, clear entire cache and regenerate equation strings
   if (language_changed) {
@@ -368,8 +262,8 @@ sim_specs <- function(sfm,
   }
 
   # Selectively invalidate based on what changed
-  time_related <- c("start", "stop", "dt", "save_at", "save_from",
-                     "time_units", "method", "seed")
+  time_related <- c("start", "stop", "dt", "save_at", "save_n", "save_type",
+                    "time_units", "method", "seed")
   if (all(names(argg) %in% c("language", time_related))) {
     sfm <- invalidate_assemble(sfm, "times")
   } else {
@@ -384,3 +278,171 @@ sim_specs <- function(sfm,
 
   sfm
 }
+
+
+#' @noRd
+.validate_sim_numeric <- function(x, arg_name) {
+  x <- suppressWarnings(as.numeric(x))
+  if (is.na(x)) {
+    cli::cli_abort(c(
+      "Invalid {.arg {arg_name}} argument.",
+      "x" = "The {.arg {arg_name}} argument must be {.cls numeric}."
+    ))
+  }
+  x
+}
+
+
+#' Test whether a save parameter value should be treated as "unset"
+#' @noRd
+.is_unset <- function(x) {
+  is.null(x) || (length(x) == 1 && (is.na(x) || identical(x, "")))
+}
+
+
+#' Validate cross-checked simulation time arguments
+#'
+#' Receives the effective merged state of start/stop/dt (sfm defaults
+#' overwritten by user overrides), coerces to numeric, runs cross-argument
+#' checks, and strips scientific notation.
+#'
+#' @param args Named list with keys `start`, `stop`, `dt` (all three required).
+#' @returns The validated, formatted named list.
+#' @noRd
+.validate_sim_time_args <- function(args) {
+  for (nm in c("start", "stop", "dt")) {
+    args[[nm]] <- .validate_sim_numeric(args[[nm]], nm)
+  }
+
+  if (args$dt <= 0) {
+    cli::cli_abort(c(
+      "Invalid {.arg dt} argument.",
+      "x" = "{.arg dt} argument must be positive."
+    ))
+  }
+
+  if (args$dt != 1 && args$dt > 0.1) {
+    cli::cli_warn(c(
+      "Large timestep detected ({.arg dt} = {.val {args$dt}}).",
+      "i" = "This may lead to simulation inaccuracies.",
+      ">" = "Consider using smaller timesteps for better accuracy."
+    ))
+  }
+
+  if (args$start >= args$stop) {
+    cli::cli_abort(c(
+      "Invalid time interval.",
+      "x" = "{.arg start} ({.val {args$start}}) must be smaller than {.arg stop} ({.val {args$stop}})."
+    ))
+  }
+
+  if (args$dt > (args$stop - args$start)) {
+    cli::cli_abort(c(
+      "Invalid {.arg dt} argument.",
+      "x" = "{.arg dt} ({.val {args$dt}}) must be smaller than the time interval ({.arg stop} - {.arg start} = {.val {args$stop - args$start}})."
+    ))
+  }
+
+  for (nm in c("start", "stop", "dt")) {
+    args[[nm]] <- replace_digits_with_floats(scientific_notation(args[[nm]]), NULL)
+  }
+
+  args
+}
+
+
+#' Validate the save_at argument
+#'
+#' Returns a character scalar (interval) or character vector (explicit times).
+#'
+#' @param save_at Numeric scalar or vector supplied by the user.
+#' @param sfm An `sdbuildR` model object (for fallback effective values).
+#' @param time_vals Named list of validated time args (start/stop/dt), may be empty.
+#' @noRd
+.validate_save_at <- function(save_at, sfm, time_vals) {
+  eff_start <- as.numeric(time_vals[["start"]] %||% sfm[["sim_specs"]][["start"]])
+  eff_stop  <- as.numeric(time_vals[["stop"]]  %||% sfm[["sim_specs"]][["stop"]])
+  eff_dt    <- as.numeric(time_vals[["dt"]]    %||% sfm[["sim_specs"]][["dt"]])
+
+  if (length(save_at) == 1) {
+    val <- suppressWarnings(as.numeric(save_at))
+    if (is.na(val)) {
+      cli::cli_abort(c(
+        "Invalid {.arg save_at} argument.",
+        "x" = "{.arg save_at} must be numeric."
+      ))
+    }
+    if (val <= 0) {
+      cli::cli_abort(c(
+        "Invalid {.arg save_at} argument.",
+        "x" = "{.arg save_at} argument must be positive."
+      ))
+    }
+
+    # save_at < dt → auto-correct to dt
+    if (val < eff_dt) {
+      cli::cli_warn(c(
+        "Invalid {.arg save_at} and {.arg dt} relationship.",
+        "x" = "{.arg save_at} ({.val {val}}) must be >= {.arg dt} ({.val {eff_dt}}).",
+        "i" = "Automatically setting {.arg save_at} equal to {.arg dt}."
+      ))
+      val <- eff_dt
+    }
+
+    # Warn if stop doesn't align with the interval
+    remainder <- (eff_stop - eff_start) %% val
+    tol <- sqrt(.Machine$double.eps) * max(abs(eff_stop), 1)
+    if (remainder > tol && abs(remainder - val) > tol) {
+      cli::cli_warn(c(
+        "Endpoint may be missing.",
+        "i" = paste0(
+          "{.arg stop} ({.val {eff_stop}}) may not appear in output ",
+          "(does not align with {.arg save_at} = {.val {val}})."
+        ),
+        ">" = "Use a vector {.arg save_at} or {.arg save_n} to guarantee {.arg stop} is included."
+      ))
+    }
+
+    replace_digits_with_floats(scientific_notation(val), NULL)
+
+  } else {
+    vals <- suppressWarnings(as.numeric(save_at))
+    if (any(is.na(vals))) {
+      cli::cli_abort(c(
+        "Invalid {.arg save_at} argument.",
+        "x" = "All {.arg save_at} values must be numeric."
+      ))
+    }
+    vals <- sort(unique(vals))
+    out_of_range <- vals < eff_start | vals > eff_stop
+    if (any(out_of_range)) {
+      bad <- vals[out_of_range]
+      cli::cli_abort(c(
+        "Invalid {.arg save_at} values.",
+        "x" = "All values must be within [{.val {eff_start}}, {.val {eff_stop}}].",
+        ">" = "Out-of-range: {.val {bad}}."
+      ))
+    }
+    vapply(vals, function(x)
+      replace_digits_with_floats(scientific_notation(x), NULL), character(1))
+  }
+}
+
+
+#' Validate the save_n argument
+#'
+#' Returns a character integer string.
+#'
+#' @param save_n Integer (or coercible) supplied by the user.
+#' @noRd
+.validate_save_n <- function(save_n) {
+  n <- suppressWarnings(as.integer(save_n))
+  if (is.na(n) || n < 1) {
+    cli::cli_abort(c(
+      "Invalid {.arg save_n} argument.",
+      "x" = "Must be a positive integer ({.arg save_n} = 1 saves only the final time point)."
+    ))
+  }
+  as.character(n)
+}
+

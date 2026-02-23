@@ -25,7 +25,8 @@
       "behavior": {
         "initial_value": "1",
         "description": "The accumulated result of action.",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {

@@ -61,7 +61,8 @@
       "behavior": {
         "initial_value": "70",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -82,7 +83,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -145,7 +147,8 @@
       "behavior": {
         "initial_value": "7",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -154,7 +157,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {

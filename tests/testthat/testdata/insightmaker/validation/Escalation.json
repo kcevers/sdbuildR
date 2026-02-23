@@ -16,7 +16,8 @@
       "behavior": {
         "initial_value": "0.3",
         "description": "The results Ted produces.",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -25,7 +26,8 @@
       "behavior": {
         "initial_value": "0.4",
         "description": "The results Anne produces.",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {

@@ -16,7 +16,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "Default Xo is 1",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -37,7 +38,8 @@
       "behavior": {
         "initial_value": "2",
         "description": "Default Yo is 0",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -58,7 +60,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "Default Zo is 0",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {

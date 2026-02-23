@@ -159,11 +159,44 @@ compile_times <- function(sfm, language) {
     keep_unit <- ss[["keep_unit"]]
     unit_mult <- function(op) if (keep_unit) paste0(" ", op, " ", P[["time_units_name"]]) else ""
 
+    save_type <- ss[["save_type"]] %||% "all"
+    save_at   <- ss[["save_at"]]
+    save_n    <- ss[["save_n"]]
+
+    saveat_expr <- switch(save_type,
+      "all" = {
+        # Save at every dt step: use tstops (ensures all dt steps are stored)
+        P[["tstops_name"]]
+      },
+
+      "save_at" = if (length(save_at) == 1) {
+        # Scalar interval: Julia range evaluated natively
+        sprintf("%s[1]:%s%s:%s[2]",
+          P[["times_name"]], save_at, unit_mult("*"), P[["times_name"]])
+      } else {
+        # Explicit vector: broadcast-multiply with time units
+        um  <- if (keep_unit) paste0(" .* ", P[["time_units_name"]]) else ""
+        str <- paste(save_at, collapse = ", ")
+        sprintf("[%s]%s", str, um)
+      },
+
+      "save_n" = {
+        um <- if (keep_unit) paste0(" .* ", P[["time_units_name"]]) else ""
+        if (as.integer(save_n) == 1L) {
+          # Only save the final time point
+          sprintf("[%s[2]]", P[["times_name"]])
+        } else {
+          # range() evaluated in Julia — avoids R rounding issues
+          sprintf("range(%s[1], %s[2], length=%s)%s",
+            P[["times_name"]], P[["times_name"]], save_n, um)
+        }
+      }
+    )
+
     script <- fmt_script("times", "julia", ss,
-      times_unit_mult    = unit_mult(".*"),
-      dt_unit_mult       = unit_mult("*"),
-      saveat_unit_mult   = unit_mult("*"),
-      savefrom_unit_mult = unit_mult(".*")
+      times_unit_mult = unit_mult(".*"),
+      dt_unit_mult    = unit_mult("*"),
+      saveat_expr     = saveat_expr
     )
   }
 
@@ -499,15 +532,30 @@ compile_post <- function(sfm, filepath_sim = NULL, language) {
   save_intermediaries <- length(intermediaries[["names"]]) > 0
 
   if (language == "R") {
-    # If different times need to be saved, linearly interpolate
-    saveat_script <- ""
-    if (sfm[["sim_specs"]][["dt"]] != sfm[["sim_specs"]][["save_at"]] ||
-      sfm[["sim_specs"]][["start"]] != sfm[["sim_specs"]][["save_from"]]) {
-      saveat_script <- fmt_script("saveat", "R", sfm[["sim_specs"]])
-    }
+    ss        <- sfm[["sim_specs"]]
+    save_type <- ss[["save_type"]] %||% "all"
+    save_at   <- ss[["save_at"]]
+    save_n    <- ss[["save_n"]]
+
+    saveat_script <- switch(save_type,
+      "all" = "",
+
+      "save_at" = if (length(save_at) == 1) {
+        fmt_script("saveat_interval", language, ss, save_at_val = save_at)
+      } else {
+        fmt_script("saveat_explicit", language, ss,
+          save_at_str = paste(save_at, collapse = ", "))
+      },
+
+      "save_n" = if (as.integer(save_n) == 1L) {
+        fmt_script("saveat_n1", language, ss)
+      } else {
+        fmt_script("saveat_n", language, ss, save_n_val = save_n)
+      }
+    )
 
     # Process ODE output
-    script <- fmt_script("post_ode", "R",
+    script <- fmt_script("post_ode", language,
       saveat_script = saveat_script
     )
   } else if (language == "Julia") {
@@ -805,7 +853,7 @@ compile_ode <- function(sfm,
         "eltype(", P[["time_name"]], "), Any)\n",
         P[["callback_name"]], " = SavingCallback(",
         P[["callback_func_name"]], ", ", P[["intermediaries"]],
-        ", saveat = ", P[["savefrom_name"]],
+        ", saveat = ", P[["saveat_name"]],
         ")\n"
       ))
 

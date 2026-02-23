@@ -16,7 +16,8 @@
       "behavior": {
         "initial_value": "2",
         "description": "Default initial state is 2",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -46,7 +47,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "Default initial state is 0",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {

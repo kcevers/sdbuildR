@@ -16,7 +16,8 @@
       "behavior": {
         "initial_value": "79200000",
         "description": "Number of people in the 0 to 18 year old group.",
-        "units": "People"
+        "units": "People",
+        "non_negative": false
       }
     },
     {
@@ -25,7 +26,8 @@
       "behavior": {
         "initial_value": "29700000",
         "description": "Number of people in the 19 to 25 year old group.",
-        "units": "People"
+        "units": "People",
+        "non_negative": false
       }
     },
     {
@@ -34,7 +36,8 @@
       "behavior": {
         "initial_value": "39600000",
         "description": "Number of people in the 26 to 34 year old group.",
-        "units": "People"
+        "units": "People",
+        "non_negative": false
       }
     },
     {
@@ -43,7 +46,8 @@
       "behavior": {
         "initial_value": "85800000",
         "description": "Number of people in the 35 to 54 year old group.",
-        "units": "People"
+        "units": "People",
+        "non_negative": false
       }
     },
     {
@@ -272,7 +276,8 @@
       "behavior": {
         "initial_value": "2000",
         "description": "This level accumulates 'time' in the model. It is initializes to a base date. Then, as time flows, it increments. It is used as an lookup value for looking up information in a table that is indexed by year. The table was initialized with data from the years 2000 to 2100.",
-        "units": "Years"
+        "units": "Years",
+        "non_negative": false
       }
     },
     {
@@ -293,7 +298,8 @@
       "behavior": {
         "initial_value": "42900000",
         "description": "Number of people in the 55 to 64 year old group.",
-        "units": "People"
+        "units": "People",
+        "non_negative": false
       }
     },
     {
@@ -302,7 +308,8 @@
       "behavior": {
         "initial_value": "52800000",
         "description": "Number of people in the 65+ age group.",
-        "units": "People"
+        "units": "People",
+        "non_negative": false
       }
     },
     {

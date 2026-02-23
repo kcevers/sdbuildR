@@ -16,7 +16,8 @@
       "behavior": {
         "initial_value": "5000",
         "description": "default initial value is 5000:  population of individuals of whose state of health is of interest",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {
@@ -25,7 +26,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {
@@ -34,7 +36,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {
@@ -43,7 +46,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {
@@ -52,7 +56,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {
@@ -121,7 +126,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {
@@ -130,7 +136,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {
@@ -163,7 +170,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "investigated and usually diagnosed but could be misdiagnosed",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {
@@ -196,7 +204,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {
@@ -217,7 +226,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "treated",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {
@@ -250,7 +260,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {
@@ -370,7 +381,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {
@@ -379,7 +391,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {
@@ -400,7 +413,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {

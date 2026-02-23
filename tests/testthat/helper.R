@@ -8,6 +8,7 @@ skip_if_julia_not_ready <- function() {
   if (!is_julia_ready()) {
     testthat::skip()
   }
+  invisible()
 }
 
 
@@ -25,9 +26,7 @@ expect_successful_simulation <- function(sfm, ...) {
   expect_true("time" %in% colnames(sim$df))
 
   # Time range should be correct
-  expect_equal(min(sim$df$time), as.numeric(sfm$sim_specs$save_from))
   expect_equal(max(sim$df$time), as.numeric(sfm$sim_specs$stop))
-  expect_equal(mean(diff(unique(sim$df$time))), as.numeric(sfm$sim_specs$save_at))
 
   invisible(sim)
 }

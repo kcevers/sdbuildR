@@ -16,7 +16,8 @@
       "behavior": {
         "initial_value": "[INITIAL_POPULATION]",
         "description": "",
-        "units": "Whales"
+        "units": "Whales",
+        "non_negative": false
       }
     },
     {

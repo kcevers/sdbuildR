@@ -50,9 +50,8 @@
 #' sfm <- build(sfm, c("predator", "prey"), eqn = "runif(1, min = 20, max = 80)")
 #'
 #' # For ensemble simulations, it is highly recommended to reduce the
-#' # returned output. For example, to save only every 1 time units and discard
-#' # the first 100 time units, use:
-#' sfm <- sim_specs(sfm, save_at = 1, save_from = 100)
+#' # returned output. For example, to save output only every 1 time unit:
+#' sfm <- sim_specs(sfm, save_at = 1)
 #'
 #' # Run ensemble simulation with 100 simulations
 #' sims <- ensemble(sfm, n = 100)
@@ -275,8 +274,8 @@ ensemble <- function(sfm,
     n_conditions <- 1
   }
 
+  total_sims <- n * n_conditions
   if (verbose) {
-    total_sims <- n * n_conditions
     sim_word <- ifelse(total_sims == 1, "simulation", "simulations")
     if (is.null(range)) {
       msg <- c(
@@ -301,26 +300,7 @@ ensemble <- function(sfm,
     range = range, cross = cross
   )
 
-  old_threads <- .sdbuildR_env[["prev_JULIA_NUM_THREADS"]]
-
-  if (!is.null(.sdbuildR_env[["JULIA_NUM_THREADS"]]) && !is.null(old_threads)) {
-    ensemble_pars[["threaded"]] <- TRUE
-    Sys.setenv("JULIA_NUM_THREADS" = .sdbuildR_env[["JULIA_NUM_THREADS"]])
-
-    on.exit(
-      {
-        if (is.na(old_threads)) {
-          Sys.unsetenv("JULIA_NUM_THREADS")
-        } else {
-          Sys.setenv("JULIA_NUM_THREADS" = old_threads)
-        }
-      },
-      add = TRUE
-    )
-  } else {
-    ensemble_pars[["threaded"]] <- FALSE
-  }
-
+  ensemble_pars[["threaded"]] <- .sdbuildR_env[["jl"]][["use_threads"]] 
 
   # Get output filepaths
   ensemble_pars[["filepath_df"]] <- c(
@@ -347,11 +327,11 @@ ensemble <- function(sfm,
   write_script(script, filepath)
   script <- paste0(readLines(filepath), collapse = "\n")
 
+  use_julia()
 
   # Evaluate script
   sim <- tryCatch(
     {
-      use_julia()
 
       # Evaluate script
       start_t <- Sys.time()
@@ -438,7 +418,7 @@ ensemble <- function(sfm,
         df = df,
         summary = summary,
         n = n,
-        n_total = n_total,
+        n_total = total_sims,
         n_conditions = n_conditions,
         conditions = conditions,
         init = init,
@@ -461,7 +441,7 @@ ensemble <- function(sfm,
         df = NULL,
         summary = NULL,
         n = n,
-        n_total = n_total,
+        n_total = total_sims,
         n_conditions = n_conditions,
         conditions = NULL,
         init = NULL,
@@ -503,63 +483,3 @@ ensemble <- function(sfm,
 #   invisible(NULL)
 # }
 
-
-#' Set up threaded ensemble simulations
-#'
-#' Specify the number of threads for ensemble simulations in Julia. This will not overwrite your current global setting for JULIA_NUM_THREADS. Note that this does not affect regular simulations with [simulate()].
-#'
-#' @param n Number of Julia threads to use. Defaults to `parallel::detectCores() - 1``. If set to a value higher than the number of available cores minus 1, it will be set to the number of available cores minus 1.
-#' @param stop Stop using threaded ensemble simulations. Defaults to FALSE.
-#'
-#' @returns No return value, called for side effects
-#' @concept julia
-#' @seealso [ensemble()], [use_julia()]
-#' @noRd
-#' @keywords internal
-#'
-use_threads <- function(n = parallel::detectCores() - 1, stop = FALSE) {
-  if (!is.numeric(n)) {
-    cli::cli_abort(c(
-      "Invalid {.arg n} argument.",
-      "x" = "The {.arg n} argument must be {.cls numeric}.",
-      ">" = "Specify number of threads, e.g., {.code n = 4}."
-    ))
-  }
-
-  if (n < 1) {
-    cli::cli_abort(c(
-      "Invalid thread count.",
-      "x" = "The {.arg n} argument must be at least {.val 1}."
-    ))
-  }
-
-  if (!is.logical(stop)) {
-    cli::cli_abort(c(
-      "Invalid {.arg stop} argument.",
-      "x" = "The {.arg stop} argument must be {.code TRUE} or {.code FALSE}."
-    ))
-  }
-
-  if (stop) {
-    .sdbuildR_env[["JULIA_NUM_THREADS"]] <- NULL
-  } else {
-    # Set number of Julia threads to use
-    if (n > (parallel::detectCores() - 1)) {
-      max_threads <- parallel::detectCores() - 1
-      cli::cli_warn(c(
-        "Requested thread count {.val {n}} exceeds available cores {.val {max_threads}}.",
-        "i" = "Using maximum safe value: {.val {max_threads}} threads."
-      ))
-      n <- max_threads
-    }
-
-    # Save user's old setting
-    .sdbuildR_env[["prev_JULIA_NUM_THREADS"]] <- Sys.getenv("JULIA_NUM_THREADS",
-      unset = NA
-    )
-
-    .sdbuildR_env[["JULIA_NUM_THREADS"]] <- n
-  }
-
-  invisible()
-}

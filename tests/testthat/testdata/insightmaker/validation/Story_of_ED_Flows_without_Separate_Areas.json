@@ -16,7 +16,8 @@
       "behavior": {
         "initial_value": "1",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {
@@ -49,7 +50,8 @@
       "behavior": {
         "initial_value": "1",
         "description": "lying or sitting in an ambulance bay, waiting room, or in a ED area waiting to be seen by an EDMO",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {
@@ -70,7 +72,8 @@
       "behavior": {
         "initial_value": "180",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {
@@ -79,7 +82,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -88,7 +92,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -109,7 +114,8 @@
       "behavior": {
         "initial_value": "1",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {
@@ -202,7 +208,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {
@@ -259,7 +266,8 @@
       "behavior": {
         "initial_value": "15",
         "description": "can be split into special areas like paeds subacute psych and procedure rooms",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {
@@ -268,7 +276,8 @@
       "behavior": {
         "initial_value": "2",
         "description": "can be split into special areas like paeds subacute psych and procedure rooms",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {
@@ -289,7 +298,8 @@
       "behavior": {
         "initial_value": "5",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {
@@ -298,7 +308,8 @@
       "behavior": {
         "initial_value": "1",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {
@@ -627,7 +638,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {
@@ -648,7 +660,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -717,7 +730,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -738,7 +752,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {
@@ -882,7 +897,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -951,7 +967,8 @@
       "behavior": {
         "initial_value": "60",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -960,7 +977,8 @@
       "behavior": {
         "initial_value": "100",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {

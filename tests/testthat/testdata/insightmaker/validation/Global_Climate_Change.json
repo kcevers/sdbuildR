@@ -16,7 +16,8 @@
       "behavior": {
         "initial_value": "[e0] * scaledJoules",
         "description": "",
-        "units": "Joules"
+        "units": "Joules",
+        "non_negative": false
       }
     },
     {
@@ -37,7 +38,8 @@
       "behavior": {
         "initial_value": "[e0] * scaledJoules",
         "description": "",
-        "units": "Joules"
+        "units": "Joules",
+        "non_negative": false
       }
     },
     {
@@ -70,7 +72,8 @@
       "behavior": {
         "initial_value": "[Historical_CO2_PPM] * CO2MassToPPM",
         "description": "",
-        "units": "Tons CO2"
+        "units": "Tons CO2",
+        "non_negative": false
       }
     },
     {

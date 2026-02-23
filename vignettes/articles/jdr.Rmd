@@ -1554,7 +1554,7 @@ if (recreate_figs) {
 We increase the simulation length and only save the last timepoint to compute the effectiveness of the intervention.
 
 ```{r}
-sfm <- sfm |> sim_specs(stop = 1000, save_from = 1000)
+sfm <- sfm |> sim_specs(stop = 1000, save_n = 1)
 sims <- ensemble(sfm, n = 1000, return_sims = TRUE)
 y <- sims$df[sims$df$variable == "X", "value"]
 tab <- table(round(y, 4)) |>

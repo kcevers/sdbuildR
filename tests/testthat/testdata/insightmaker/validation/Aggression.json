@@ -16,7 +16,8 @@
       "behavior": {
         "initial_value": "0.1",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -34,7 +35,8 @@
       "behavior": {
         "initial_value": "0.5",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -76,7 +78,8 @@
       "behavior": {
         "initial_value": "0.1",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -109,7 +112,8 @@
       "behavior": {
         "initial_value": "0.5",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {

@@ -52,7 +52,8 @@
       "behavior": {
         "initial_value": ".5",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {

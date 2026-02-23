@@ -38,7 +38,7 @@ convert_equations_IM <- function(type,
 
   # If equation is now empty, don't run rest of functions but set equation to zero
   if (!nzchar(eqn)) {
-    eqn <- "0.0"
+    eqn <- "0"
     translated_func <- c()
     add_vars <- data.frame()
   } else {
@@ -155,7 +155,7 @@ remove_comments <- function(eqn) {
     eqn <- trimws(paste0(split_formula[-seq_idxs_range], collapse = ""))
 
     if (!nzchar(eqn)) {
-      eqn <- "0.0"
+      eqn <- "0"
     }
   } else {
     doc <- ""

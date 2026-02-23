@@ -79,7 +79,8 @@
       "behavior": {
         "initial_value": "5",
         "description": "",
-        "units": "unitless"
+        "units": "unitless",
+        "non_negative": false
       }
     },
     {

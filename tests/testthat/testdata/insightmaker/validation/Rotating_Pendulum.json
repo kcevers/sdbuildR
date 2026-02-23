@@ -16,7 +16,8 @@
       "behavior": {
         "initial_value": "10",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -37,7 +38,8 @@
       "behavior": {
         "initial_value": "1.52",
         "description": "Can vary between 0 and pi/2",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {

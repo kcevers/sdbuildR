@@ -25,7 +25,8 @@
       "behavior": {
         "initial_value": ".1",
         "description": "The success of a initially set to .1",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -34,7 +35,8 @@
       "behavior": {
         "initial_value": ".1",
         "description": "The success of b initially set to .1",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {

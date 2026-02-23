@@ -16,7 +16,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "",
-        "units": "Stuff"
+        "units": "Stuff",
+        "non_negative": false
       }
     },
     {

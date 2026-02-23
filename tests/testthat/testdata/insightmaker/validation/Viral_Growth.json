@@ -16,7 +16,8 @@
       "behavior": {
         "initial_value": "[Initial_Users]",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {

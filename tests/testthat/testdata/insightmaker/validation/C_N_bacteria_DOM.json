@@ -16,7 +16,8 @@
       "behavior": {
         "initial_value": "25",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {
@@ -34,7 +35,8 @@
       "behavior": {
         "initial_value": "[DOC]/[DO_C_N]",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -43,7 +45,8 @@
       "behavior": {
         "initial_value": "1",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -52,7 +55,8 @@
       "behavior": {
         "initial_value": "1",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -112,7 +116,8 @@
       "behavior": {
         "initial_value": "0.3",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -142,7 +147,8 @@
       "behavior": {
         "initial_value": "1",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {

@@ -16,7 +16,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "Unintended consequences ",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -25,7 +26,8 @@
       "behavior": {
         "initial_value": "100",
         "description": "Problems are treated as a stock.",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -58,7 +60,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {

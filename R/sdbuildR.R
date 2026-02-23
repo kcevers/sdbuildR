@@ -237,10 +237,11 @@ new_sim_specs <- function() {
   spec_defaults <- as.list(formals(sim_specs))
   spec_defaults <- spec_defaults[!names(spec_defaults) %in% c("sfm", "...")]
 
-  # Manually overwrite these as the defaults of save_at and save_from are
-  # defined in terms of other variables
-  spec_defaults[["save_at"]] <- spec_defaults[["dt"]]
-  spec_defaults[["save_from"]] <- spec_defaults[["start"]]
+  # Flat save fields: save_type discriminates mode; save_at and save_n are NULL
+  # (meaning "save all dt steps") by default
+  spec_defaults[["save_type"]] <- "all"
+  spec_defaults["save_at"]     <- list(NULL)
+  spec_defaults["save_n"]      <- list(NULL)
   spec_defaults
 }
 
@@ -913,9 +914,9 @@ print.sdbuildR <- function(x, ...) {
   has_name <- !is.null(model_name) && nzchar(model_name) && model_name != default_name
 
   if (has_name) {
-    cli::cli_h1("sdbuildR model: {model_name}")
+    cli::cli_h1("Stock-and-Flow Model: {model_name}")
   } else {
-    cli::cli_h1("sdbuildR model")
+    cli::cli_h1("Stock-and-Flow Model")
   }
 
   # Count line

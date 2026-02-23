@@ -16,7 +16,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "This stock is the unintended consequence of implementing change A.",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -25,7 +26,8 @@
       "behavior": {
         "initial_value": "100",
         "description": "Problems are treated as a stock.",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -58,7 +60,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "This is the fix that the leaders of the organization have in mind.",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {

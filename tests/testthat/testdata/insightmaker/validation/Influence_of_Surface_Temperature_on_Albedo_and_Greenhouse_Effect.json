@@ -16,7 +16,8 @@
       "behavior": {
         "initial_value": "1",
         "description": "",
-        "units": "Joules"
+        "units": "Joules",
+        "non_negative": true
       }
     },
     {
@@ -25,7 +26,8 @@
       "behavior": {
         "initial_value": "1",
         "description": "",
-        "units": "Joules"
+        "units": "Joules",
+        "non_negative": true
       }
     },
     {

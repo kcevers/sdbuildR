@@ -97,7 +97,7 @@ test_that("ensemble() runs successfully", {
   sfm <- sdbuildR("Crielaard2022") |> sim_specs(
     language = "Julia",
     start = 0, stop = 10, dt = 0.1,
-    save_from = 5, save_at = 1
+    save_at = 1
   )
 
   sims <- silence(ensemble(sfm))
@@ -111,7 +111,7 @@ test_that("ensemble() returns correct structure", {
   sfm <- sdbuildR("Crielaard2022") |> sim_specs(
     language = "Julia",
     start = 0, stop = 10, dt = 0.1,
-    save_from = 5, save_at = 1
+    save_at = 1
   )
   sims <- silence(ensemble(sfm, return_sims = TRUE))
 
@@ -134,7 +134,7 @@ test_that("ensemble() respects only_stocks = TRUE", {
   sfm <- sdbuildR("Crielaard2022") |> sim_specs(
     language = "Julia",
     start = 0, stop = 10, dt = 0.1,
-    save_from = 5, save_at = 1
+    save_at = 1
   )
   df <- as.data.frame(sfm, properties = "eqn")
   n_stocks <- nrow(df[df[["type"]] == "stock", ])
@@ -154,7 +154,7 @@ test_that("ensemble() returns all variables with only_stocks = FALSE", {
   sfm <- sdbuildR("Crielaard2022") |> sim_specs(
     language = "Julia",
     start = 0, stop = 10, dt = 0.1,
-    save_from = 5, save_at = 1
+    save_at = 1
   )
   df <- as.data.frame(sfm, properties = "eqn")
   n_all <- nrow(df[df[["type"]] %in% c("stock", "flow", "aux"), ])
@@ -175,7 +175,7 @@ test_that("ensemble() summary has consistent timeseries lengths", {
   sfm <- sdbuildR("Crielaard2022") |> sim_specs(
     language = "Julia",
     start = 0, stop = 10, dt = 0.1,
-    save_from = 5, save_at = 1
+    save_at = 1
   )
   sims <- silence(ensemble(sfm, only_stocks = FALSE))
 
@@ -190,7 +190,7 @@ test_that("ensemble() returns correct n properties", {
   sfm <- sdbuildR("Crielaard2022") |> sim_specs(
     language = "Julia",
     start = 0, stop = 10, dt = 0.1,
-    save_from = 5, save_at = 1
+    save_at = 1
   )
   sims <- silence(ensemble(sfm, n = nr_sims, return_sims = TRUE))
 
@@ -209,7 +209,7 @@ test_that("ensemble() returns constants and init summaries", {
   sfm <- sdbuildR("Crielaard2022") |> sim_specs(
     language = "Julia",
     start = 0, stop = 10, dt = 0.1,
-    save_from = 5, save_at = 1
+    save_at = 1
   )
   sims <- silence(ensemble(sfm, n = nr_sims, return_sims = TRUE))
 
@@ -237,7 +237,7 @@ test_that("ensemble() custom quantiles", {
   sfm <- sdbuildR("Crielaard2022") |> sim_specs(
     language = "Julia",
     start = 0, stop = 10, dt = 0.1,
-    save_from = 5, save_at = 1
+    save_at = 1
   )
   sims <- silence(ensemble(sfm, quantiles = c(0.1, 0.5, 0.9, 1)))
   expect_true(sims[["success"]])
@@ -255,7 +255,7 @@ test_that("ensemble() works with single variable range", {
   sfm <- sdbuildR("Crielaard2022") |> sim_specs(
     language = "Julia",
     start = 0, stop = 10, dt = 0.1,
-    save_from = 5, save_at = 1
+    save_at = 1
   )
   sims <- silence(ensemble(sfm,
     range = list("a2" = seq(0.2, 0.8, by = 0.05)),
@@ -270,7 +270,7 @@ test_that("ensemble() crossed design computes correct conditions", {
   sfm <- sdbuildR("Crielaard2022") |> sim_specs(
     language = "Julia",
     start = 0, stop = 10, dt = 0.1,
-    save_from = 5, save_at = 1
+    save_at = 1
   )
   n <- 3
   sims <- silence(ensemble(sfm,
@@ -295,7 +295,7 @@ test_that("ensemble() non-crossed design pairs values", {
   sfm <- sdbuildR("Crielaard2022") |> sim_specs(
     language = "Julia",
     start = 0, stop = 10, dt = 0.1,
-    save_from = 5, save_at = 1
+    save_at = 1
   )
   sims <- silence(ensemble(sfm,
     range = list(
@@ -318,7 +318,7 @@ test_that("ensemble() non-crossed design conditions data frame", {
   sfm <- sdbuildR("Crielaard2022") |> sim_specs(
     language = "Julia",
     start = 0, stop = 10, dt = 0.1,
-    save_from = 5, save_at = 1
+    save_at = 1
   )
   sims <- silence(ensemble(sfm,
     range = list(
@@ -385,7 +385,7 @@ test_that("ensemble() with mixed stock and constant in range", {
     build(c("predator", "prey"), eqn = "runif(1, 30, 50)") |>
     sim_specs(
       language = "Julia",
-      dt = 0.1, save_at = 10, save_from = 150,
+      dt = 0.1, save_at = 10,
       start = 0, stop = 200
     )
 
@@ -421,7 +421,7 @@ test_that("ensemble() is reproducible with seed", {
     sim_specs(
       language = "Julia",
       start = 0, stop = 10, dt = 0.1,
-      save_from = 5, seed = 123
+      seed = 123
     ) |>
     build(c("predator", "prey"), eqn = "runif(1)")
 
@@ -442,7 +442,7 @@ test_that("ensemble() works with single time point", {
     sim_specs(
       language = "Julia",
       start = 0, stop = 5, dt = 0.1,
-      save_from = 5
+      save_n = 1
     ) |>
     build(c("predator", "prey"), eqn = "runif(1)")
 
@@ -486,7 +486,7 @@ test_that("ensemble() works with interpolation function", {
     sim_specs(
       language = "Julia",
       start = 0, stop = 50, dt = 0.1,
-      save_from = 50
+      save_n = 1
     ) |>
     build("X", eqn = "runif(1, 0, K)") |>
     build("input", "constant", eqn = "pulse(times, 10, width = dt, height = .01)") |>
@@ -506,7 +506,7 @@ test_that("ensemble() prints simulation count", {
   sfm <- sdbuildR("Crielaard2022") |> sim_specs(
     language = "Julia",
     start = 0, stop = 10, dt = 0.1,
-    save_from = 5, save_at = 1
+    save_at = 1
   )
 
   # Basic ensemble
@@ -538,7 +538,7 @@ test_that("plot.ensemble_sdbuildR() renders summary plot", {
   sfm <- sdbuildR("Crielaard2022") |> sim_specs(
     language = "Julia",
     start = 0, stop = 10, dt = 0.1,
-    save_from = 5, save_at = 1
+    save_at = 1
   )
   sims <- silence(ensemble(sfm, n = 10))
 
@@ -552,7 +552,7 @@ test_that("plot.ensemble_sdbuildR() rejects invalid type", {
   sfm <- sdbuildR("Crielaard2022") |> sim_specs(
     language = "Julia",
     start = 0, stop = 10, dt = 0.1,
-    save_from = 5, save_at = 1
+    save_at = 1
   )
   sims <- silence(ensemble(sfm))
 
@@ -565,7 +565,7 @@ test_that("plot.ensemble_sdbuildR() rejects invalid central_tendency", {
   sfm <- sdbuildR("Crielaard2022") |> sim_specs(
     language = "Julia",
     start = 0, stop = 10, dt = 0.1,
-    save_from = 5, save_at = 1
+    save_at = 1
   )
   sims <- silence(ensemble(sfm))
 
@@ -582,7 +582,7 @@ test_that("plot.ensemble_sdbuildR() informs when i used with summary type", {
   sfm <- sdbuildR("Crielaard2022") |> sim_specs(
     language = "Julia",
     start = 0, stop = 10, dt = 0.1,
-    save_from = 5, save_at = 1
+    save_at = 1
   )
   sims <- silence(ensemble(sfm, n = 10, return_sims = TRUE))
 
@@ -598,7 +598,7 @@ test_that("plot.ensemble_sdbuildR() validates j index with single condition", {
   sfm <- sdbuildR("Crielaard2022") |> sim_specs(
     language = "Julia",
     start = 0, stop = 10, dt = 0.1,
-    save_from = 5, save_at = 1
+    save_at = 1
   )
   sims <- silence(ensemble(sfm))
 
@@ -614,7 +614,7 @@ test_that("plot.ensemble_sdbuildR() validates j index with multiple conditions",
   sfm <- sdbuildR("Crielaard2022") |> sim_specs(
     language = "Julia",
     start = 0, stop = 10, dt = 0.1,
-    save_from = 5, save_at = 1
+    save_at = 1
   )
   nr_cond <- 3
   sims <- silence(ensemble(sfm,
@@ -637,7 +637,7 @@ test_that("plot.ensemble_sdbuildR() requires return_sims for type = 'sims'", {
   sfm <- sdbuildR("Crielaard2022") |> sim_specs(
     language = "Julia",
     start = 0, stop = 10, dt = 0.1,
-    save_from = 5, save_at = 1
+    save_at = 1
   )
   sims <- silence(ensemble(sfm, return_sims = FALSE))
 
@@ -653,7 +653,7 @@ test_that("plot.ensemble_sdbuildR() renders sims plot", {
   sfm <- sdbuildR("Crielaard2022") |> sim_specs(
     language = "Julia",
     start = 0, stop = 10, dt = 0.1,
-    save_from = 5, save_at = 1
+    save_at = 1
   )
   nr_sims <- 10
   sims <- silence(ensemble(sfm, n = nr_sims, return_sims = TRUE))
@@ -668,7 +668,7 @@ test_that("plot.ensemble_sdbuildR() renders with specific j and i", {
   sfm <- sdbuildR("Crielaard2022") |> sim_specs(
     language = "Julia",
     start = 0, stop = 10, dt = 0.1,
-    save_from = 5, save_at = 1
+    save_at = 1
   )
   sims <- silence(ensemble(sfm,
     range = list(

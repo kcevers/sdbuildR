@@ -16,7 +16,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "",
-        "units": "Meters per Second"
+        "units": "Meters per Second",
+        "non_negative": false
       }
     },
     {
@@ -55,7 +56,8 @@
       "behavior": {
         "initial_value": "0.02",
         "description": "",
-        "units": "Meters"
+        "units": "Meters",
+        "non_negative": false
       }
     },
     {

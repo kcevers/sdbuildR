@@ -16,7 +16,8 @@
       "behavior": {
         "initial_value": "1",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -67,7 +68,8 @@
       "behavior": {
         "initial_value": "1",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {

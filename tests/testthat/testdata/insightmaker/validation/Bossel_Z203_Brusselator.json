@@ -16,7 +16,8 @@
       "behavior": {
         "initial_value": "1",
         "description": "Xo Default initial value is 1",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -46,7 +47,8 @@
       "behavior": {
         "initial_value": "4",
         "description": "Yo Default initial value is 4",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {

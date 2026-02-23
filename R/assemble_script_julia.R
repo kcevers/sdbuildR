@@ -480,7 +480,7 @@ compile_run_ode_ensemble <- function(sfm, ensemble_pars, static, only_stocks) {
       P[["callback_func_name"]], ", ",
       P[["intermediaries"]], "[",
       P[["ensemble_iter"]], "], saveat = ",
-      P[["savefrom_name"]], ")\n"
+      P[["saveat_name"]], ")\n"
     )
     intermediaries_remake <- paste0(
       ", ", P[["callback_name"]], " = ", P[["callback_name"]]

@@ -16,7 +16,8 @@
       "behavior": {
         "initial_value": "3",
         "description": "Units: g C m-2",
-        "units": "grams/meter^2"
+        "units": "grams/meter^2",
+        "non_negative": false
       }
     },
     {
@@ -139,7 +140,8 @@
       "behavior": {
         "initial_value": "3",
         "description": "Units: g C m-2",
-        "units": "grams/meter^2"
+        "units": "grams/meter^2",
+        "non_negative": false
       }
     },
     {
@@ -190,7 +192,8 @@
       "behavior": {
         "initial_value": "15",
         "description": "Units: g C m-2",
-        "units": "grams/meter^2"
+        "units": "grams/meter^2",
+        "non_negative": false
       }
     },
     {

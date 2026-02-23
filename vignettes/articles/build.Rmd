@@ -373,8 +373,7 @@ sfm <- sdbuildR("predator_prey") |>
     stop = 250,
     method = "euler",
     dt = 0.001,
-    save_at = 0.1,
-    save_from = 100
+    save_at = 0.1
   )
 ```
 

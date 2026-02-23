@@ -16,7 +16,8 @@
       "behavior": {
         "initial_value": "[Initial_Work_to_Do]",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -103,7 +104,8 @@
       "behavior": {
         "initial_value": "8",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {

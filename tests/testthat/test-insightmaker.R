@@ -260,7 +260,6 @@ test_that("translating .InsightMaker models works", {
 
     # Compare variable properties **
 
-
   }
 
 })

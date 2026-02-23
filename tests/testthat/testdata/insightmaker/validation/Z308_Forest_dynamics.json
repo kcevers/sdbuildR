@@ -16,7 +16,8 @@
       "behavior": {
         "initial_value": "0.2",
         "description": "UNITS: t ODM/ha",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -25,7 +26,8 @@
       "behavior": {
         "initial_value": "1",
         "description": "UNITS: t ODM/ha",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {

@@ -16,7 +16,8 @@
       "behavior": {
         "initial_value": "10",
         "description": "The <i>E. coli<\/i> growth simulation begins with one viable cell.  The exponential growth model assumes no limits for the moment.",
-        "units": "Cells"
+        "units": "Cells",
+        "non_negative": true
       }
     },
     {
@@ -76,7 +77,8 @@
       "behavior": {
         "initial_value": "1000000000",
         "description": "",
-        "units": "Units"
+        "units": "Units",
+        "non_negative": false
       }
     },
     {

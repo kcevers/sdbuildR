@@ -858,7 +858,7 @@ prep_model_elements_IM <- function(children_attrs, node_types, type = c("Insight
 
       # Default is zero
       if (!is_defined(x[["eqn_insightmaker"]])) {
-        x[["eqn_insightmaker"]] <- "0.0"
+        x[["eqn_insightmaker"]] <- "0"
       }
 
       # Remove the element # don't to make IM_to_json() work
@@ -866,7 +866,7 @@ prep_model_elements_IM <- function(children_attrs, node_types, type = c("Insight
       # x[eqn_name] <- NULL
     } else if (x[["type"]] %in% c("variable", "stock", "flow")) {
       # The default value of a stock/flow/variable is 0 - add in case left unspecified
-      x[["eqn_insightmaker"]] <- "0.0"
+      x[["eqn_insightmaker"]] <- "0"
     }
 
     x[["units"]] <- trimws(x[["units"]])
@@ -1321,11 +1321,11 @@ sim_specs_IM <- function(sfm, method, time_units, start, length, dt) {
       args[["dt"]] <- ".1"
     }
 
-    args[["save_at"]] <- args[["dt"]]
+    # save_at defaults to "all" — no auto-sync needed
   }
 
   if ("start" %in% names(args)) {
-    args[["save_from"]] <- start <- args[["start"]]
+    start <- args[["start"]]
   } else {
     start <- 0
   }

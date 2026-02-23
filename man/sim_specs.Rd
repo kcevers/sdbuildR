@@ -7,11 +7,11 @@
 sim_specs(
   sfm,
   method = "euler",
-  start = "0.0",
-  stop = "100.0",
-  dt = "0.01",
-  save_at = dt,
-  save_from = start,
+  start = 0,
+  stop = 100,
+  dt = 0.01,
+  save_at = NULL,
+  save_n = NULL,
   seed = NULL,
   time_units = "s",
   language = "R",
@@ -23,40 +23,55 @@ sim_specs(
 \arguments{
 \item{sfm}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
 
-\item{method}{Integration method. Defaults to "euler".}
+\item{method}{Integration method. Defaults to \code{"euler"}.}
 
-\item{start}{Start time of simulation. Defaults to 0.}
+\item{start}{Start time of simulation. Defaults to \code{0}.}
 
-\item{stop}{End time of simulation. Defaults to 100.}
+\item{stop}{End time of simulation. Defaults to \code{100}.}
 
 \item{dt}{Timestep of solver; controls simulation accuracy. Smaller = more
-accurate but slower. Defaults to 0.01.}
+accurate but slower. Defaults to \code{0.01}.}
 
-\item{save_at}{Timestep at which to save computed values; controls output size.
-Must be >= dt. Use larger than dt to reduce memory without sacrificing accuracy.
-Example: dt = 0.01, save_at = 1 gives accurate simulation but only saves
-every 100th point. Defaults to \code{dt} (i.e., save everything).}
+\item{save_at}{Controls which time points are saved in the output. Either:
+\itemize{
+\item A single number: save every N time units (interval). Must be >= \code{dt}.
+Use larger than \code{dt} to reduce output size without sacrificing accuracy.
+Example: \code{dt = 0.01}, \code{save_at = 1} saves every 100th computed point.
+\item A numeric vector: explicit time points to include in output.
+Values must lie within \verb{[start, stop]}.
+}
+Pass \code{NA}, \code{NULL}, or \code{""} to reset to saving all dt steps.
+Mutually exclusive with \code{save_n}. Defaults to \code{NULL} (save all).}
 
-\item{save_from}{Time at which to start saving values. Use to discard initial
-transient behavior. Must be >= start. Defaults to \code{start}.}
+\item{save_n}{Save exactly N evenly-spaced time points from \code{start} to \code{stop}.
+\code{save_n = 1} saves only the final time point (stop).
+Pass \code{NA}, \code{NULL}, or \code{""} to reset to saving all dt steps.
+Mutually exclusive with \code{save_at}. Defaults to \code{NULL} (save all).}
 
-\item{seed}{Seed number to ensure reproducibility across runs in case of random elements. Must be an integer. Defaults to NULL (no seed).}
+\item{seed}{Seed number to ensure reproducibility across runs in case of
+random elements. Must be an integer. Defaults to \code{NULL} (no seed).}
 
-\item{time_units}{Simulation time unit, e.g. 's' (second). Defaults to "s".}
+\item{time_units}{Simulation time unit, e.g. \code{"s"} (second). Defaults to \code{"s"}.}
 
-\item{language}{Coding language in which to simulate model. Either "R" or "Julia". Julia is necessary for using units or delay functions. Defaults to "R".}
+\item{language}{Coding language in which to simulate model. Either \code{"R"} or
+\code{"Julia"}. Julia is necessary for using units or running ensemble simulations.
+Defaults to \code{"R"}.}
 
-\item{keep_nonnegative_stock}{If TRUE, keeps original non-negativity setting of stocks. Defaults to FALSE.}
+\item{keep_nonnegative_stock}{If \code{TRUE}, keeps original non-negativity setting
+of stocks. Defaults to \code{FALSE}.}
 
-\item{keep_nonnegative_flow}{If TRUE, keeps original non-negativity setting of flows. Defaults to TRUE.}
+\item{keep_nonnegative_flow}{If \code{TRUE}, keeps original non-negativity setting
+of flows. Defaults to \code{TRUE}.}
 
-\item{keep_unit}{If TRUE, keeps units of variables. Defaults to TRUE.}
+\item{keep_unit}{If \code{TRUE}, keeps units of variables. Defaults to \code{TRUE}.}
 }
 \value{
 A stock-and-flow model object of class \code{\link{sdbuildR}}
 }
 \description{
-Simulation specifications are the settings that determine how the model is simulated, such as the integration method (i.e. solver), start and stop time, and timestep. Modify these specifications for an existing stock-and-flow model.
+Simulation specifications are the settings that determine how the model is
+simulated, such as the integration method (i.e. solver), start and stop time,
+and timestep. Modify these specifications for an existing stock-and-flow model.
 }
 \examples{
 sfm <- sdbuildR("predator_prey") |>
@@ -70,14 +85,17 @@ sfm <- sim_specs(sfm, method = rk4)
 # Change the time units to "years", such that one time unit is one year
 sfm <- sim_specs(sfm, time_units = years)
 
-# To save storage but not affect accuracy, use save_at and save_from
-sfm <- sim_specs(sfm, save_at = 1, save_from = 10)
+# Save at an interval to reduce output size without affecting accuracy
+sfm <- sim_specs(sfm, save_at = 1)
 sim <- simulate(sfm)
 head(as.data.frame(sim))
 
+# Save exactly 11 evenly-spaced time points (t=0, 5, 10, ..., 50)
+sfm <- sim_specs(sfm, save_n = 11)
+
 # Add stochastic initial condition but specify seed to obtain same result
 sfm <- sim_specs(sfm, seed = 1) |>
-  build(c("predator", "prey"), eqn = "runif(1, 20, 50)")
+  build(c(predator, prey), eqn = runif(1, 20, 50))
 
 # Change the simulation language to Julia to use units
 sfm <- sim_specs(sfm, language = Julia)

@@ -40,7 +40,8 @@
       "behavior": {
         "initial_value": "90",
         "description": "The initial number of susceptible people.",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -49,7 +50,8 @@
       "behavior": {
         "initial_value": "10",
         "description": "The initial number of infected people.",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -100,7 +102,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "The concern in the population.",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {

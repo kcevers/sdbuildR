@@ -68,8 +68,8 @@ templates <- function(template) {
       meta(name = "Susceptible-Infected-Recovered (SIR)") |>
       sim_specs(start = 0, stop = 20, time_units = "weeks") |>
       build("Susceptible", "stock", eqn = "99999") |>
-      build("Infected", "stock", eqn = "1") |>
-      build("Recovered", "stock", eqn = "0.0") |>
+      build("Infected", "stock", eqn = 1) |>
+      build("Recovered", "stock", eqn = 0) |>
       build("Beta", "constant", eqn = "Effective_Contact_Rate / Total_Population") |>
       build("Lambda", "aux", eqn = "Beta * Infected") |>
       build("Infection_Rate", "flow", eqn = "Susceptible * Lambda", from = "Susceptible", to = "Infected") |>
@@ -310,7 +310,7 @@ templates <- function(template) {
 
   } else if (template == "JDR") {
     sfm <- sdbuildR() |>
-      sim_specs(method = "euler", start = "0.0", stop = "182.5", dt = "0.01", save_at = "0.1", save_from = "0.0", seed = "123", time_units = "d", language = "R") |>
+      sim_specs(method = "euler", start = "0.0", stop = "182.5", dt = "0.01", save_at = "0.1", seed = "123", time_units = "d", language = "R") |>
       meta(
         name = "Job Resources and Demands Theory",
         caption = "JD-R Theory as formalized in Evers et al. (submitted)"

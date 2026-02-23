@@ -16,25 +16,28 @@
       "behavior": {
         "initial_value": "0",
         "description": "Assumption vision acts as an force therefor should been equivocated with acceleration ",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
       "name": "Distributed_Leadership",
       "type": "STOCK",
       "behavior": {
-        "initial_value": "0.0",
+        "initial_value": "0",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {
       "name": "School_Culture",
       "type": "STOCK",
       "behavior": {
-        "initial_value": "0.0",
+        "initial_value": "0",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -82,7 +85,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -109,7 +113,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "Internal Expertise, PLC's",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -118,7 +123,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -146,9 +152,10 @@
       "name": "Funding",
       "type": "STOCK",
       "behavior": {
-        "initial_value": "0.0",
+        "initial_value": "0",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -169,7 +176,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "Relationships with outside experts and organizations contribute to the knowledge of the school.  Additionally, these partnerships may have added influences for community support which can help with funding.",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -214,7 +222,8 @@
       "behavior": {
         "initial_value": "0",
         "description": " Levin, B. B., &amp; Schrum, L. (2013). Using systems thinking to leverage technology for school improvement: Lessons learned from award-winning secondary Schools/Districts. <i style=\"color: rgb(76, 76, 76); font-family: verdana, arial, helvetica; font-size: 12px; line-height: 16.80000114440918px; text-indent: -30px;\"> Journal of Research on Technology in Education, <\/i><i style=\"color: rgb(76, 76, 76); font-family: verdana, arial, helvetica; font-size: 12px; line-height: 16.80000114440918px; text-indent: -30px;\">46<\/i> (1), 29-51. Retrieved from http://search.proquest.com.proxy1.ncu.edu/docview/1492734491?accountid=28180 ",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {
@@ -242,9 +251,10 @@
       "name": "Teacher_proficiency_level",
       "type": "STOCK",
       "behavior": {
-        "initial_value": "0.0",
+        "initial_value": "0",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -289,7 +299,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {

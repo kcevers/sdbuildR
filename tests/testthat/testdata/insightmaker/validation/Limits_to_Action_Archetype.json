@@ -16,7 +16,8 @@
       "behavior": {
         "initial_value": "0",
         "description": "The state of things at the beginning of the simulation assumed to be less than the desired state.",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {

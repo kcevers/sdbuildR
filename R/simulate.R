@@ -390,7 +390,7 @@ compare_models <- function(sfm1, sfm2) {
   )
 
   # Sim specs diff
-  spec_fields <- c("start", "stop", "dt", "save_at", "save_from",
+  spec_fields <- c("start", "stop", "dt", "save_at", "save_type", "save_n",
                    "time_units", "method", "seed", "language")
   s1 <- sfm1[["sim_specs"]]
   s2 <- sfm2[["sim_specs"]]
@@ -787,13 +787,13 @@ get_build_code <- function(sfm) {
   # Simulation specifications — filter out defaults
   sim_specs_list <- sfm[["sim_specs"]]
   ss_defaults <- formals(sim_specs)
-  ss_defaults <- ss_defaults[!names(ss_defaults) %in% c("sfm", "save_at", "save_from")]
+  ss_defaults <- ss_defaults[!names(ss_defaults) %in% c("sfm", "save_at", "save_n")]
 
   sim_specs_list <- sim_specs_list[vapply(names(sim_specs_list), function(nm) {
     val <- sim_specs_list[[nm]]
-    # Dynamic defaults: save_at defaults to dt, save_from defaults to start
-    if (nm == "save_at")   return(!identical(val, sim_specs_list[["dt"]]))
-    if (nm == "save_from") return(!identical(val, sim_specs_list[["start"]]))
+    # Omit save_type = "all" (the default) and NULL save_at/save_n
+    if (nm == "save_type") return(!identical(val, "all"))
+    if (nm %in% c("save_at", "save_n")) return(!is.null(val))
     !nm %in% names(ss_defaults) || !identical(val, ss_defaults[[nm]])
   }, logical(1))]
 

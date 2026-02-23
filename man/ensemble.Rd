@@ -72,9 +72,8 @@ sfm <- sdbuildR("predator_prey") |> sim_specs(language = "Julia")
 sfm <- build(sfm, c("predator", "prey"), eqn = "runif(1, min = 20, max = 80)")
 
 # For ensemble simulations, it is highly recommended to reduce the
-# returned output. For example, to save only every 1 time units and discard
-# the first 100 time units, use:
-sfm <- sim_specs(sfm, save_at = 1, save_from = 100)
+# returned output. For example, to save output only every 1 time unit:
+sfm <- sim_specs(sfm, save_at = 1)
 
 # Run ensemble simulation with 100 simulations
 sims <- ensemble(sfm, n = 100)

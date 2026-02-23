@@ -16,7 +16,8 @@
       "behavior": {
         "initial_value": "1",
         "description": "",
-        "units": "Individuals"
+        "units": "Individuals",
+        "non_negative": false
       }
     },
     {
@@ -127,7 +128,8 @@
       "behavior": {
         "initial_value": "100",
         "description": "",
-        "units": "Kilograms"
+        "units": "Kilograms",
+        "non_negative": false
       }
     },
     {

@@ -15,7 +15,7 @@ script_template <- function() {
 # Simulation time unit (smallest time scale in your model)
 %(time_units_name)s = '%(time_units)s'
 ",
-    times_julia = "\n\n# Simulation time unit (smallest time scale in your model)\n%(time_units_name)s = u\"%(time_units)s\"\n# Define time sequence\n%(times_name)s = (%(start)s, %(stop)s)%(times_unit_mult)s\n# Initialize time (only necessary if constants use t)\n%(time_name)s = %(times_name)s[1]\n# Time step\n%(timestep_name)s = %(dt)s%(dt_unit_mult)s\n# Save at value\n%(saveat_name)s = %(save_at)s%(saveat_unit_mult)s\n# Define saving time sequence\n%(savefrom_name)s = %(save_from)s%(savefrom_unit_mult)s; %(savefrom_name)s = %(savefrom_name)s:%(saveat_name)s:%(times_name)s[2]\n%(tstops_name)s = %(times_name)s[1]:%(timestep_name)s:%(times_name)s[2]\n",
+    times_julia = "\n\n# Simulation time unit (smallest time scale in your model)\n%(time_units_name)s = u\"%(time_units)s\"\n# Define time sequence\n%(times_name)s = (%(start)s, %(stop)s)%(times_unit_mult)s\n# Initialize time (only necessary if constants use t)\n%(time_name)s = %(times_name)s[1]\n# Time step\n%(timestep_name)s = %(dt)s%(dt_unit_mult)s\n# Define saving time sequence\n%(saveat_name)s = %(saveat_expr)s\n%(tstops_name)s = %(times_name)s[1]:%(timestep_name)s:%(times_name)s[2]\n",
 
     # -- compile_nonneg_stocks -------------------------------------------------
 
@@ -73,12 +73,15 @@ attributes(%(sim_df_name)s)$valroot
 
     run_ode_r = "\n\n# Run ODE\n%(sim_df_name)s = as.data.frame(deSolve::ode(\n  func=%(ode_func_name)s,\n  y=%(initial_value_name)s,\n  times=%(times_name)s,\n  parms=%(parameter_name)s,\n  method = '%(method)s'%(root_arg)s\n)) %(check_root)s\n",
     post_ode_r = "%(saveat_script)s# Wide to long\n    %(sim_df_name)s <- stats::reshape(\n       data = as.data.frame(%(sim_df_name)s),\n       direction = \"long\",\n       idvar = \"time\",\n       varying = colnames(%(sim_df_name)s)[colnames(%(sim_df_name)s) != \"time\"],\n       v.names = \"value\",\n       timevar = \"variable\",\n       # Ensure variable names are used\n       times = colnames(%(sim_df_name)s)[colnames(%(sim_df_name)s) != \"time\"]\n     )\nrownames(%(sim_df_name)s) <- NULL",
-    run_ode_julia = "\n\n# Run ODE\n%(prob_name)s = ODEProblem(%(ode_func_name)s!, %(model_setup_name)s.%(initial_value_name)s, %(times_name)s, %(model_setup_name)s.%(parameter_name)s)\n%(solution_name)s = solve(%(prob_name)s, %(method)s, dt = %(timestep_name)s, saveat = %(savefrom_name)s, tstops = %(tstops_name)s, adaptive = false%(callback_arg)s)\n",
+    run_ode_julia = "\n\n# Run ODE\n%(prob_name)s = ODEProblem(%(ode_func_name)s!, %(model_setup_name)s.%(initial_value_name)s, %(times_name)s, %(model_setup_name)s.%(parameter_name)s)\n%(solution_name)s = solve(%(prob_name)s, %(method)s, dt = %(timestep_name)s, saveat = %(saveat_name)s, tstops = %(tstops_name)s, adaptive = false%(callback_arg)s)\n",
     post_ode_julia = "%(sim_df_name)s, %(parameter_name)s, %(parameter_names)s, %(initial_value_name)s, %(initial_value_names)s = clean_df(%(prob_name)s, %(solution_name)s, %(model_setup_name)s.%(initial_value_names)s, %(intermediaries_or_nothing)s, %(model_setup_name)s.%(intermediary_names)s)\n\nCSV.write(\"%(filepath_sim)s\", %(sim_df_name)s)\n\n# Delete variables\n%(solution_name)s = Nothing\n%(sim_df_name)s = Nothing\nNothing",
 
     # -- compile_run_ode: R saveat interpolation --------------------------------
 
-    saveat_r = "\n# Linearly interpolate to reduce stored values to save_at\nnew_times = seq(%(save_from)s, %(stop)s, by = %(save_at)s)\n%(sim_df_name)s = %(saveat_func)s(%(sim_df_name)s, 'time', new_times)\n",
+    saveat_interval_r = "\n# Save at interval\nnew_times = seq(%(start)s, %(stop)s, by = %(save_at_val)s)\n%(sim_df_name)s = %(saveat_func)s(%(sim_df_name)s, 'time', new_times)\n",
+    saveat_n_r        = "\n# Save n evenly-spaced points\nnew_times = seq(%(start)s, %(stop)s, length.out = %(save_n_val)s)\n%(sim_df_name)s = %(saveat_func)s(%(sim_df_name)s, 'time', new_times)\n",
+    saveat_n1_r       = "\n# Save only stop\nnew_times = c(%(stop)s)\n%(sim_df_name)s = %(saveat_func)s(%(sim_df_name)s, 'time', new_times)\n",
+    saveat_explicit_r = "\n# Explicit save times\nnew_times = c(%(save_at_str)s)\n%(sim_df_name)s = %(saveat_func)s(%(sim_df_name)s, 'time', new_times)\n",
 
     # -- compile_static: Julia ensemble definition --------------------------
 
@@ -88,7 +91,7 @@ attributes(%(sim_df_name)s)$valroot
 
     # -- compile_run_ode: Julia ensemble problem --------------------------------
 
-    ensemble_prob_julia = "\n\n# Create ODE problem\n%(prob_name)s = ODEProblem(%(ode_func_name)s!, %(model_setup_name)s.%(initial_value_name)s, %(times_name)s, %(model_setup_name)s.%(parameter_name)s)\n\n%(intermediaries_setup)s# Define ensemble problem\nfunction %(ensemble_func_name)s(prob, %(ensemble_iter)s, repeat)\n%(static_str)s%(intermediaries_callback)s\n\tremake(prob, u0 = %(model_setup_name)s.%(initial_value_name)s, p = %(model_setup_name)s.%(parameter_name)s%(intermediaries_remake)s)\nend\n\nfunction %(ensemble_output_func)s(sol, i)\n\t# Save both solution and parameters\n\treturn (t = sol.t, u = sol.u, p = sol.prob.p, u0 = sol.prob.u0), false\nend\n\n%(ensemble_prob_name)s = EnsembleProblem(%(prob_name)s, prob_func = %(ensemble_func_name)s, output_func = %(ensemble_output_func)s)\n%(solution_name)s = solve(%(ensemble_prob_name)s, %(method)s%(threaded_str)s, dt = %(timestep_name)s, saveat = %(savefrom_name)s, tstops = %(tstops_name)s, adaptive = false, trajectories = %(ensemble_total_n)s);\n",
+    ensemble_prob_julia = "\n\n# Create ODE problem\n%(prob_name)s = ODEProblem(%(ode_func_name)s!, %(model_setup_name)s.%(initial_value_name)s, %(times_name)s, %(model_setup_name)s.%(parameter_name)s)\n\n%(intermediaries_setup)s# Define ensemble problem\nfunction %(ensemble_func_name)s(prob, %(ensemble_iter)s, repeat)\n%(static_str)s%(intermediaries_callback)s\n\tremake(prob, u0 = %(model_setup_name)s.%(initial_value_name)s, p = %(model_setup_name)s.%(parameter_name)s%(intermediaries_remake)s)\nend\n\nfunction %(ensemble_output_func)s(sol, i)\n\t# Save both solution and parameters\n\treturn (t = sol.t, u = sol.u, p = sol.prob.p, u0 = sol.prob.u0), false\nend\n\n%(ensemble_prob_name)s = EnsembleProblem(%(prob_name)s, prob_func = %(ensemble_func_name)s, output_func = %(ensemble_output_func)s)\n%(solution_name)s = solve(%(ensemble_prob_name)s, %(method)s%(threaded_str)s, dt = %(timestep_name)s, saveat = %(saveat_name)s, tstops = %(tstops_name)s, adaptive = false, trajectories = %(ensemble_total_n)s);\n",
 
     # -- compile_run_ode: Julia ensemble save dataframe -------------------------
 

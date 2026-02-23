@@ -137,14 +137,6 @@ test_that("sim_specs() rejects invalid time_units", {
   expect_error(sim_specs(sfm1, time_units = "invalid123"), "only contain letters")
 })
 
-test_that("sim_specs() sets save_at parameter", {
-  sfm <- sdbuildR()
-  sfm1 <- build(sfm, "Stock1", type = "stock")
-  sfm2 <- sim_specs(sfm1, dt = 0.1, save_at = 1)
-
-  expect_equal(sfm2[["sim_specs"]][["save_at"]], "1.0")
-})
-
 test_that("sim_specs() warns about large dt", {
   sfm <- sdbuildR()
   sfm1 <- build(sfm, "Stock1", type = "stock")
@@ -163,21 +155,6 @@ test_that("sim_specs() returns sdbuildR object", {
   expect_s3_class(sfm2, "sdbuildR")
 })
 
-# --- Bug regression: save_at auto-correction must use sfm dt, not default ----
-
-test_that("save_at auto-corrects to sfm dt (not function default) when save_at < sfm dt", {
-  sfm <- sdbuildR() |>
-    suppressWarnings(sim_specs(dt = 0.5))  # store dt = 0.5
-
-  # Pass only save_at smaller than the stored dt — auto-correction should fire
-  sfm2 <- expect_warning(
-    sim_specs(sfm, save_at = 0.1),
-    "save_at.*equal to.*dt|dt.*save_at"
-  )
-  # Must be 0.5 (the stored dt), NOT 0.01 (the function signature default)
-  expect_equal(as.numeric(sfm2[["sim_specs"]][["save_at"]]), 0.5)
-})
-
 # --- New positive-value guards --------------------------------------------------
 
 test_that("sim_specs() rejects non-positive dt", {
@@ -188,8 +165,8 @@ test_that("sim_specs() rejects non-positive dt", {
 
 test_that("sim_specs() rejects non-positive save_at", {
   sfm <- sdbuildR()
-  expect_error(sim_specs(sfm, dt = 0.01, save_at = 0),  "positive")
-  expect_error(sim_specs(sfm, dt = 0.01, save_at = -1), "positive")
+  expect_error(sim_specs(sfm, save_at = 0),  "positive")
+  expect_error(sim_specs(sfm, save_at = -1), "positive")
 })
 
 # --- NSE support ---------------------------------------------------------------
@@ -222,4 +199,130 @@ test_that("sim_specs() supports !! injection for NSE args", {
   expect_equal(
     sim_specs(sfm, method = !!meth)[["sim_specs"]][["method"]], "rk4"
   )
+})
+
+# --- Save parameter: defaults ---------------------------------------------------
+
+test_that("new sdbuildR() has save_type = 'all' and NULL save fields", {
+  sfm <- sdbuildR()
+  expect_equal(sfm[["sim_specs"]][["save_type"]], "all")
+  expect_null(sfm[["sim_specs"]][["save_at"]])
+  expect_null(sfm[["sim_specs"]][["save_n"]])
+})
+
+# --- Save parameter: save_at scalar (interval) ----------------------------------
+
+test_that("sim_specs() stores save_at interval", {
+  sfm2 <- sim_specs(sdbuildR(), save_at = 1)
+  expect_equal(sfm2[["sim_specs"]][["save_type"]], "save_at")
+  expect_equal(sfm2[["sim_specs"]][["save_at"]], "1.0")
+  expect_null(sfm2[["sim_specs"]][["save_n"]])
+})
+
+test_that("sim_specs() auto-corrects save_at < dt", {
+  expect_warning(
+    sfm2 <- sim_specs(sdbuildR(), save_at = 0.001),
+    "Automatically setting"
+  )
+  expect_equal(as.numeric(sfm2[["sim_specs"]][["save_at"]]),
+               as.numeric(sfm2[["sim_specs"]][["dt"]]))
+})
+
+test_that("sim_specs() warns on save_at interval misalignment with stop", {
+  # stop = 10, save_at = 3: 10 %% 3 = 1, stop not aligned
+  expect_warning(
+    sim_specs(sdbuildR(), stop = 10, save_at = 3),
+    "Endpoint may be missing"
+  )
+})
+
+test_that("sim_specs() does not warn when save_at aligns with stop", {
+  # stop = 10, save_at = 2: 10 %% 2 = 0, aligned
+  expect_no_warning(sim_specs(sdbuildR(), stop = 10, save_at = 2))
+})
+
+# --- Save parameter: save_at vector (explicit times) ----------------------------
+
+test_that("sim_specs() stores save_at vector", {
+  sfm2 <- sim_specs(sdbuildR(), save_at = c(1, 5, 10))
+  expect_equal(sfm2[["sim_specs"]][["save_type"]], "save_at")
+  expect_equal(length(sfm2[["sim_specs"]][["save_at"]]), 3L)
+  expect_null(sfm2[["sim_specs"]][["save_n"]])
+})
+
+test_that("sim_specs() rejects save_at vector with out-of-range values", {
+  expect_error(sim_specs(sdbuildR(), save_at = c(1, 200)), "out-of-range|within")
+})
+
+test_that("sim_specs() sorts and deduplicates save_at vector", {
+  sfm2 <- sim_specs(sdbuildR(), save_at = c(10, 1, 5, 1))
+  vals <- as.numeric(sfm2[["sim_specs"]][["save_at"]])
+  expect_equal(vals, c(1, 5, 10))
+})
+
+# --- Save parameter: save_n -----------------------------------------------------
+
+test_that("sim_specs() stores save_n", {
+  sfm2 <- sim_specs(sdbuildR(), save_n = 100)
+  expect_equal(sfm2[["sim_specs"]][["save_type"]], "save_n")
+  expect_equal(as.integer(sfm2[["sim_specs"]][["save_n"]]), 100L)
+  expect_null(sfm2[["sim_specs"]][["save_at"]])
+})
+
+test_that("sim_specs() save_n = 1 stores correctly", {
+  sfm2 <- sim_specs(sdbuildR(), save_n = 1)
+  expect_equal(sfm2[["sim_specs"]][["save_type"]], "save_n")
+  expect_equal(as.integer(sfm2[["sim_specs"]][["save_n"]]), 1L)
+})
+
+test_that("sim_specs() rejects invalid save_n", {
+  expect_error(sim_specs(sdbuildR(), save_n = 0),    "positive integer")
+  expect_error(sim_specs(sdbuildR(), save_n = -1),   "positive integer")
+  expect_error(sim_specs(sdbuildR(), save_n = "abc"), "positive integer")
+})
+
+# --- Save parameter: mutual exclusion -------------------------------------------
+
+test_that("sim_specs() errors when both save_at and save_n provided", {
+  expect_error(sim_specs(sdbuildR(), save_at = 1, save_n = 100), "Cannot specify both")
+})
+
+test_that("sim_specs() allows both save_at and save_n when one is NA", {
+  expect_no_error(sim_specs(sdbuildR(), save_at = NA, save_n = 100))
+  expect_no_error(sim_specs(sdbuildR(), save_at = 1, save_n = NA))
+})
+
+# --- Save parameter: reset to "all" with NA/NULL/"" ----------------------------
+
+test_that("sim_specs() resetting save_at to NA gives save_type = all", {
+  sfm  <- sim_specs(sdbuildR(), save_at = 1)
+  sfm2 <- sim_specs(sfm, save_at = NA)
+  expect_equal(sfm2[["sim_specs"]][["save_type"]], "all")
+  expect_null(sfm2[["sim_specs"]][["save_at"]])
+  expect_null(sfm2[["sim_specs"]][["save_n"]])
+})
+
+test_that("sim_specs() resetting save_n to NA gives save_type = all", {
+  sfm  <- sim_specs(sdbuildR(), save_n = 50)
+  sfm2 <- sim_specs(sfm, save_n = NA)
+  expect_equal(sfm2[["sim_specs"]][["save_type"]], "all")
+  expect_null(sfm2[["sim_specs"]][["save_at"]])
+  expect_null(sfm2[["sim_specs"]][["save_n"]])
+})
+
+# --- Save parameter: overwriting -----------------------------------------------
+
+test_that("sim_specs() save_n overwrites previous save_at", {
+  sfm  <- sim_specs(sdbuildR(), save_at = 1)
+  sfm2 <- sim_specs(sfm, save_n = 50)
+  expect_equal(sfm2[["sim_specs"]][["save_type"]], "save_n")
+  expect_equal(as.integer(sfm2[["sim_specs"]][["save_n"]]), 50L)
+  expect_null(sfm2[["sim_specs"]][["save_at"]])
+})
+
+test_that("sim_specs() save_at overwrites previous save_n", {
+  sfm  <- sim_specs(sdbuildR(), save_n = 50)
+  sfm2 <- sim_specs(sfm, save_at = 2)
+  expect_equal(sfm2[["sim_specs"]][["save_type"]], "save_at")
+  expect_null(sfm2[["sim_specs"]][["save_n"]])
 })

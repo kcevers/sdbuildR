@@ -34,7 +34,8 @@
       "behavior": {
         "initial_value": "50",
         "description": "The amount of challenges currently facing society.",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
@@ -67,7 +68,8 @@
       "behavior": {
         "initial_value": "30",
         "description": "The amount of citizen involvement to tackle challenges.",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {

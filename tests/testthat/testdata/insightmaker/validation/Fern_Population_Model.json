@@ -25,7 +25,8 @@
       "behavior": {
         "initial_value": "1",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": true
       }
     },
     {
@@ -79,7 +80,8 @@
       "behavior": {
         "initial_value": "##Assuming the ecosystem is the area of Burnaby, i.e. 17,000 football fields\n##Assuming the number of blades of grass that can fit in a football field, and that 2000 blades of grass comprise one fern, and that there are 17k football fields worth of land, means there can be 3.3 billion ferns\n\n\n",
         "description": "",
-        "units": "Unitless"
+        "units": "Unitless",
+        "non_negative": false
       }
     },
     {
