@@ -5,7 +5,7 @@
 \title{Modify meta of stock-and-flow model}
 \usage{
 meta(
-  sfm,
+  object,
   name = "My Model",
   caption = "My Model Description",
   created = Sys.time(),
@@ -17,7 +17,7 @@ meta(
 )
 }
 \arguments{
-\item{sfm}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
+\item{object}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
 
 \item{name}{Model name. Defaults to "My Model".}
 

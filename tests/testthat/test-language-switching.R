@@ -56,9 +56,9 @@ test_that("multiple language switches maintain integrity", {
   skip_if_julia_not_ready()
 
   sfm <- sdbuildR() |>
-    build(name = "S", type = "stock", eqn = "100") |>
-    build(name = "births", type = "flow", eqn = "0.1 * S", to = "S") |>
-    build(name = "deaths", type = "flow", eqn = "0.05 * S", from = "S") |>
+    update(name = "S", type = "stock", eqn = "100") |>
+    update(name = "births", type = "flow", eqn = "0.1 * S", to = "S") |>
+    update(name = "deaths", type = "flow", eqn = "0.05 * S", from = "S") |>
     sim_specs(stop = 5)
 
   # Switch R → Julia → R → Julia (3 rounds)
@@ -86,9 +86,9 @@ test_that("R and Julia produce consistent results", {
   skip_if_julia_not_ready()
 
   sfm <- sdbuildR() |>
-    build(name = "Population", type = "stock", eqn = "100") |>
-    build(name = "births", type = "flow", eqn = "0.05 * Population", to = "Population") |>
-    build(name = "deaths", type = "flow", eqn = "0.03 * Population", from = "Population") |>
+    update(name = "Population", type = "stock", eqn = "100") |>
+    update(name = "births", type = "flow", eqn = "0.05 * Population", to = "Population") |>
+    update(name = "deaths", type = "flow", eqn = "0.03 * Population", from = "Population") |>
     sim_specs(stop = 10, dt = 0.1, save_at = 0.5)
 
   # Simulate with R
@@ -111,9 +111,9 @@ test_that("switching languages preserves variable structure", {
   skip_if_julia_not_ready()
 
   sfm <- sdbuildR() |>
-    build(name = "S", type = "stock", eqn = "100") |>
-    build(name = "rate", type = "aux", eqn = "0.5") |>
-    build(name = "inflow", type = "flow", eqn = "rate * S", to = "S")
+    update(name = "S", type = "stock", eqn = "100") |>
+    update(name = "rate", type = "aux", eqn = "0.5") |>
+    update(name = "inflow", type = "flow", eqn = "rate * S", to = "S")
 
   # Get initial variable count
   initial_vars <- nrow(sfm$variables)
@@ -136,13 +136,13 @@ test_that("language switching works with multiple stocks and flows", {
   skip_if_julia_not_ready()
 
   sfm <- sdbuildR() |>
-    build(name = "S", type = "stock", eqn = "900") |>
-    build(name = "I", type = "stock", eqn = "100") |>
-    build(name = "R", type = "stock", eqn = "0") |>
-    build(name = "beta", type = "aux", eqn = "0.5") |>
-    build(name = "gamma", type = "aux", eqn = "0.1") |>
-    build(name = "infection", type = "flow", eqn = "beta * S * I / 1000", from = "S", to = "I") |>
-    build(name = "recovery", type = "flow", eqn = "gamma * I", from = "I", to = "R") |>
+    update(name = "S", type = "stock", eqn = "900") |>
+    update(name = "I", type = "stock", eqn = "100") |>
+    update(name = "R", type = "stock", eqn = "0") |>
+    update(name = "beta", type = "aux", eqn = "0.5") |>
+    update(name = "gamma", type = "aux", eqn = "0.1") |>
+    update(name = "infection", type = "flow", eqn = "beta * S * I / 1000", from = "S", to = "I") |>
+    update(name = "recovery", type = "flow", eqn = "gamma * I", from = "I", to = "R") |>
     sim_specs(stop = 50, dt = 0.1)
 
   # R simulation
@@ -172,7 +172,7 @@ test_that("language switching works with isolated stocks", {
   skip_if_julia_not_ready()
 
   sfm <- sdbuildR() |>
-    build(name = "IsolatedStock", type = "stock", eqn = "42")
+    update(name = "IsolatedStock", type = "stock", eqn = "42")
 
   # R simulation
   sfm_r <- sim_specs(sfm, language = "R", stop = 5)

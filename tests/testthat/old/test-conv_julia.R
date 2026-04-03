@@ -140,7 +140,7 @@ test_that("converting functions to Julia with named arguments", {
 
 
   # Error for na.rm
-  expect_error(sdbuildR() |> build("a", "stock", eqn = "sd(x = test, na.rm = T)"), "na\\.rm is not supported as an argument in sdbuildR. Please use na\\.omit\\(x\\) instead")
+  expect_error(sdbuildR() |> update("a", "stock", eqn = "sd(x = test, na.rm = T)"), "na\\.rm is not supported as an argument in sdbuildR. Please use na\\.omit\\(x\\) instead")
 
   # Check that wrong arguments throw error
   expect_error(convert_equations_julia(
@@ -214,30 +214,30 @@ test_that("custom function definitons work", {
   # Is the function now usable?
   sfm <- sfm |>
     sim_specs(language = "R", stop = 1, dt = .1) |>
-    build("a", "stock", eqn = "custom_func(1, 2)")
+    update("a", "stock", eqn = "custom_func(1, 2)")
   sim <- expect_no_error(simulate(sfm))
   expect_equal(sim$df[1, "value"], 1 + 2)
 
   # Name argument
-  sfm <- sfm |> build("a", eqn = "custom_func(1, y = 2)")
+  sfm <- sfm |> update("a", eqn = "custom_func(1, y = 2)")
   expect_equal(sfm$model$variables$stock$a$eqn, "custom_func(1.0, y = 2.0)")
   sim <- expect_no_error(simulate(sfm))
   expect_equal(sim$df[1, "value"], 1 + 2)
 
   # Switch order of arguments
-  sfm <- sfm |> build("a", eqn = "custom_func(1, z = 3, y = 2)")
+  sfm <- sfm |> update("a", eqn = "custom_func(1, z = 3, y = 2)")
   expect_equal(sfm$model$variables$stock$a$eqn, "custom_func(1.0, z = 3.0, y = 2.0)")
   sim <- expect_no_error(simulate(sfm))
   expect_equal(sim$df[1, "value"], 1 + 2)
 
   # # Named argument throws error when translating to Julia
-  # sfm = sfm |> build("a", eqn = "custom_func(1, y = 2)")
+  # sfm = sfm |> update("a", eqn = "custom_func(1, y = 2)")
   # expect_equal(sfm$model$variables$stock$a$eqn, "custom_func(1.0, y = 2.0)")
   # expect_error(simulate(sfm), "The following variables were used as functions with named arguments in the Julia translated equation")
   #
   # # Switch order of arguments
   # sfm = sfm |>
-  #   build("a",eqn = "custom_func(1, z = 3, y = 2)")
+  #   update("a",eqn = "custom_func(1, z = 3, y = 2)")
   # expect_equal(sfm$model$variables$stock$a$eqn, "custom_func(1.0, z = 3.0, y = 2.0)")
   # expect_error(simulate(sfm), "The following variables were used as functions with named arguments in the Julia translated equation")
 
@@ -249,7 +249,7 @@ test_that("custom function definitons work", {
   # Is the function now usable?
   sfm <- sfm |>
     sim_specs(language = "Julia", stop = 1, dt = .1) |>
-    build("a", "stock", eqn = "custom_func(1, 2)")
+    update("a", "stock", eqn = "custom_func(1, 2)")
   sim <- expect_no_error(simulate(sfm))
   expect_equal(sim$df[1, "value"], 1 + 2)
 })

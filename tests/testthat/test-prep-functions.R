@@ -8,9 +8,9 @@
 # Test prep_stock_change() creates list columns
 test_that("prep_stock_change() creates list columns", {
   sfm <- sdbuildR() |>
-    build(name = "S", type = "stock", eqn = "100") |>
-    build(name = "inflow1", type = "flow", eqn = "5", to = "S") |>
-    build(name = "outflow1", type = "flow", eqn = "3", from = "S")
+    update(name = "S", type = "stock", eqn = "100") |>
+    update(name = "inflow1", type = "flow", eqn = "5", to = "S") |>
+    update(name = "outflow1", type = "flow", eqn = "3", from = "S")
 
   # Call prep function
   sfm <- prep_stock_change(sfm)
@@ -31,9 +31,9 @@ test_that("prep_stock_change() creates list columns", {
 # Test prep_stock_change() creates list columns
 test_that("prep_stock_change() creates list columns", {
   sfm <- sdbuildR() |>
-    build(name = "S", type = "stock", eqn = "100", units = "people") |>
-    build(name = "inflow1", type = "flow", eqn = "5", to = "S", units = "people/day") |>
-    build(name = "outflow1", type = "flow", eqn = "3", from = "S", units = "people/day") |>
+    update(name = "S", type = "stock", eqn = "100", units = "people") |>
+    update(name = "inflow1", type = "flow", eqn = "5", to = "S", units = "people/day") |>
+    update(name = "outflow1", type = "flow", eqn = "3", from = "S", units = "people/day") |>
     sim_specs(language = "Julia")
 
   # Call Julia prep function
@@ -55,11 +55,11 @@ test_that("prep_stock_change() creates list columns", {
 # Test multiple flows populate correctly
 test_that("multiple flows populate correctly in list columns", {
   sfm <- sdbuildR() |>
-    build(name = "S", type = "stock", eqn = "100") |>
-    build(name = "in1", type = "flow", eqn = "2", to = "S") |>
-    build(name = "in2", type = "flow", eqn = "3", to = "S") |>
-    build(name = "out1", type = "flow", eqn = "1", from = "S") |>
-    build(name = "out2", type = "flow", eqn = "1.5", from = "S")
+    update(name = "S", type = "stock", eqn = "100") |>
+    update(name = "in1", type = "flow", eqn = "2", to = "S") |>
+    update(name = "in2", type = "flow", eqn = "3", to = "S") |>
+    update(name = "out1", type = "flow", eqn = "1", from = "S") |>
+    update(name = "out2", type = "flow", eqn = "1.5", from = "S")
 
   sfm <- prep_stock_change(sfm)
 
@@ -79,8 +79,8 @@ test_that("multiple flows populate correctly in list columns", {
 # Test list columns work across language switching
 test_that("list columns work across language switching", {
   sfm <- sdbuildR() |>
-    build(name = "S", type = "stock", eqn = "100") |>
-    build(name = "births", type = "flow", eqn = "0.1 * S", to = "S")
+    update(name = "S", type = "stock", eqn = "100") |>
+    update(name = "births", type = "flow", eqn = "0.1 * S", to = "S")
 
   # Start with R
   sfm <- sim_specs(sfm, language = "R")
@@ -107,7 +107,7 @@ test_that("list columns work across language switching", {
 # Test stocks with no flows have empty list columns
 test_that("stocks with no flows have empty list columns", {
   sfm <- sdbuildR() |>
-    build(name = "IsolatedStock", type = "stock", eqn = "50")
+    update(name = "IsolatedStock", type = "stock", eqn = "50")
 
   sfm <- prep_stock_change(sfm)
 
@@ -128,12 +128,12 @@ test_that("stocks with no flows have empty list columns", {
 # Test list extraction in sum_eqn generation
 test_that("sum_eqn correctly generated from list columns", {
   sfm <- sdbuildR() |>
-    build(name = "A", type = "stock", eqn = "100") |>
-    build(name = "B", type = "stock", eqn = "50") |>
-    build(name = "f1", type = "flow", eqn = "10", to = "A") |>
-    build(name = "f2", type = "flow", eqn = "5", to = "A") |>
-    build(name = "f3", type = "flow", eqn = "8", from = "A") |>
-    build(name = "f4", type = "flow", eqn = "3", to = "B")
+    update(name = "A", type = "stock", eqn = "100") |>
+    update(name = "B", type = "stock", eqn = "50") |>
+    update(name = "f1", type = "flow", eqn = "10", to = "A") |>
+    update(name = "f2", type = "flow", eqn = "5", to = "A") |>
+    update(name = "f3", type = "flow", eqn = "8", from = "A") |>
+    update(name = "f4", type = "flow", eqn = "3", to = "B")
 
   sfm <- prep_stock_change(sfm)
 
@@ -155,9 +155,9 @@ test_that("sum_eqn correctly generated from list columns", {
 test_that("R and Julia prep produce equivalent list structures", {
   # Create model
   sfm_base <- sdbuildR() |>
-    build(name = "S", type = "stock", eqn = "100") |>
-    build(name = "in1", type = "flow", eqn = "5", to = "S") |>
-    build(name = "out1", type = "flow", eqn = "3", from = "S")
+    update(name = "S", type = "stock", eqn = "100") |>
+    update(name = "in1", type = "flow", eqn = "5", to = "S") |>
+    update(name = "out1", type = "flow", eqn = "3", from = "S")
 
   # R prep
   sfm_r <- sfm_base
@@ -184,8 +184,8 @@ test_that("R and Julia prep produce equivalent list structures", {
 test_that("prep functions handle pre-existing list columns", {
   # Manually create a model with list columns already set
   sfm <- sdbuildR() |>
-    build(name = "S", type = "stock", eqn = "100") |>
-    build(name = "births", type = "flow", eqn = "0.1 * S", to = "S")
+    update(name = "S", type = "stock", eqn = "100") |>
+    update(name = "births", type = "flow", eqn = "0.1 * S", to = "S")
 
   # First prep call
   sfm <- prep_stock_change(sfm)
@@ -202,9 +202,9 @@ test_that("prep functions handle pre-existing list columns", {
 # Test bidirectional flow (from and to same stock)
 test_that("bidirectional flows handled correctly", {
   sfm <- sdbuildR() |>
-    build(name = "Reservoir", type = "stock", eqn = "1000") |>
-    build(name = "pump_in", type = "flow", eqn = "10", to = "Reservoir") |>
-    build(name = "drain_out", type = "flow", eqn = "5", from = "Reservoir")
+    update(name = "Reservoir", type = "stock", eqn = "1000") |>
+    update(name = "pump_in", type = "flow", eqn = "10", to = "Reservoir") |>
+    update(name = "drain_out", type = "flow", eqn = "5", from = "Reservoir")
 
   sfm <- prep_stock_change(sfm)
 
@@ -223,9 +223,9 @@ test_that("bidirectional flows handled correctly", {
 # Test Julia prep with units
 test_that("Julia prep handles units correctly with list columns", {
   sfm <- sdbuildR() |>
-    build(name = "Water", type = "stock", eqn = "100", units = "liters") |>
-    build(name = "rain", type = "flow", eqn = "2", to = "Water", units = "liters/hour") |>
-    build(name = "evap", type = "flow", eqn = "1", from = "Water", units = "liters/hour") |>
+    update(name = "Water", type = "stock", eqn = "100", units = "liters") |>
+    update(name = "rain", type = "flow", eqn = "2", to = "Water", units = "liters/hour") |>
+    update(name = "evap", type = "flow", eqn = "1", from = "Water", units = "liters/hour") |>
     sim_specs(language = "Julia")
 
   sfm <- prep_stock_change(sfm)

@@ -317,11 +317,27 @@ generate_colors <- function(n_vars, colors = NULL, palette = "Dark 2") {
 #'
 filter_variables <- function(vars, names_df, df, type_sim = "sim") {
   # Check whether specified variables are in the model
-  validate_vars_in_model(vars, names_df, df, context = "model")
+  validate_vars_in_model(vars, names_df, NULL, context = "model")
+
+  vars_in_df <- vars[vars %in% df[["variable"]]]
+  vars_missing_df <- setdiff(vars, vars_in_df)
+  if (length(vars_missing_df) > 0) {
+    cli::cli_warn(c(
+      "Some requested variables are not available in the simulated data and will be ignored.",
+      "!" = "Missing: {paste0(vars_missing_df, collapse = ', ')}"
+    ))
+  }
+
+  if (length(vars_in_df) == 0) {
+    cli::cli_abort(c(
+      "No requested variables are available in the simulated data.",
+      ">" = "Run {.fn simulate} with {.code only_stocks = FALSE} or choose different {.arg vars}."
+    ))
+  }
 
   # Filter both dataframes to include only specified variables
-  names_df <- names_df[match(vars, names_df[["name"]]), , drop = FALSE]
-  df <- df[df[["variable"]] %in% vars, , drop = FALSE]
+  names_df <- names_df[match(vars_in_df, names_df[["name"]]), , drop = FALSE]
+  df <- df[df[["variable"]] %in% vars_in_df, , drop = FALSE]
 
   return(list(names_df = names_df, df = df))
 }

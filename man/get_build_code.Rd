@@ -4,10 +4,10 @@
 \alias{get_build_code}
 \title{Generate code to build stock-and-flow model}
 \usage{
-get_build_code(sfm)
+get_build_code(object)
 }
 \arguments{
-\item{sfm}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
+\item{object}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
 }
 \value{
 String with code to build stock-and-flow model from scratch.

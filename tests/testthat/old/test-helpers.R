@@ -62,8 +62,8 @@ test_that("get_names() works", {
 
   # Check with variables
   sfm <- sdbuildR() |>
-    build("a", "aux") |>
-    build("b", "aux")
+    update("a", "aux") |>
+    update("b", "aux")
   result <- get_names(sfm)
   expected <- data.frame(
     type = c("aux", "aux"),
@@ -75,8 +75,8 @@ test_that("get_names() works", {
 
   # Check with units
   sfm <- sdbuildR() |>
-    build("a", "stock", units = "1/s") |>
-    build("b", "aux", units = "m")
+    update("a", "stock", units = "1/s") |>
+    update("b", "aux", units = "m")
   result <- get_names(sfm)
   expected <- data.frame(
     type = c("stock", "aux"),
@@ -88,8 +88,8 @@ test_that("get_names() works", {
 
   # Check with label
   sfm <- sdbuildR() |>
-    build("a", "stock", label = "A") |>
-    build("b", "aux", label = "B")
+    update("a", "stock", label = "A") |>
+    update("b", "aux", label = "B")
   result <- get_names(sfm)
   expected <- data.frame(
     type = c("stock", "aux"),

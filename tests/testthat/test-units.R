@@ -1,4 +1,3 @@
-
 test_that("u() returns unit string", {
   result <- u("10 seconds")
   expect_type(result, "character")

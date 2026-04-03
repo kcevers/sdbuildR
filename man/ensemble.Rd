@@ -5,81 +5,116 @@
 \title{Run ensemble simulations}
 \usage{
 ensemble(
-  sfm,
+  object,
   n = 10,
   return_sims = FALSE,
-  range = NULL,
+  conditions = NULL,
   cross = TRUE,
   quantiles = c(0.025, 0.975),
-  only_stocks = TRUE,
-  verbose = TRUE
+  verbose = TRUE,
+  ...
 )
 }
 \arguments{
-\item{sfm}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
+\item{object}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
 
-\item{n}{Number of simulations to run in the ensemble. When range is specified, n defines the number of simulations to run per condition. If each condition only needs to be run once, set n = 1. Defaults to 10.}
+\item{n}{Number of simulations to run in the ensemble. When conditions is
+specified, n defines the number of simulations to run per condition. If
+each condition only needs to be run once, set \code{n = 1}. Defaults to \code{n = 10}.}
 
-\item{return_sims}{If TRUE, return the individual simulations in the ensemble. Set to FALSE to save memory. Defaults to FALSE.}
+\item{return_sims}{If \code{TRUE}, return the individual simulations in the
+ensemble, along with the summary statistics. Set to \code{FALSE} to save memory (default).}
 
-\item{range}{A named list specifying parameter ranges for ensemble conditions. Names must correspond to existing stock or constant variable names in the model. Each list element should be a numeric vector of values to test.
+\item{conditions}{A named list specifying parameter values for ensemble
+conditions. Names must correspond to existing stocks or constants
+in the model. Each list element should be a numeric vector of values
+to test.
 
-If cross = TRUE (default), all combinations of values are generated. For example, list(param1 = c(1, 2), param2 = c(10, 20)) creates 4 conditions: (1,10), (1,20), (2,10), (2,20).
+If cross = \code{TRUE} (default), all combinations of values are generated. For
+example, list(param1 = c(1, 2), param2 = c(10, 20)) creates 4 conditions:
+(1,10), (1,20), (2,10), (2,20).
 
-If cross = FALSE, values are paired element-wise, requiring all vectors to have equal length. For example, list(param1 = c(1, 2, 3), param2 = c(10, 20, 30)) creates 3 conditions: (1,10), (2,20), (3,30).
-Defaults to NULL (no parameter variation).}
+If cross = \code{FALSE}, values are paired element-wise, requiring all vectors to
+have equal length. For example, list(param1 = c(1, 2, 3), param2 =
+c(10, 20, 30)) creates 3 conditions: (1,10), (2,20), (3,30).
+Defaults to \code{NULL} (no parameter variation).}
 
-\item{cross}{If TRUE, cross the parameters in the range list to generate all possible combinations of parameters. Defaults to TRUE.}
+\item{cross}{If \code{TRUE}, cross the parameters in the conditions list to
+generate all possible combinations of parameters. Defaults to \code{TRUE}.}
 
-\item{quantiles}{Quantiles to calculate in the summary, e.g. c(0.025, 0.975).}
+\item{quantiles}{Quantiles to calculate in the summary, e.g. c(0.025,
+0.975).}
 
-\item{only_stocks}{If TRUE, only return stocks in output, discarding flows and auxiliaries. If FALSE, flows and auxiliaries are saved, which slows down the simulation. Defaults to FALSE.}
+\item{verbose}{If \code{TRUE} (default), print details and duration of simulation.}
 
-\item{verbose}{If TRUE, print details and duration of simulation. Defaults to TRUE.}
+\item{...}{Optional arguments passed to \code{\link[=sim_specs]{sim_specs()}}; these can be used to override the simulation specifications set in the model object.}
 }
 \value{
-Object of class \code{\link[=ensemble]{ensemble_sdbuildR}}, which is a list containing:
+Object of class \code{\link[=ensemble]{ensemble_sdbuildR}}, which is a list
+containing:
 \describe{
-\item{success}{If TRUE, simulation was successful. If FALSE, simulation failed.}
-\item{error_message}{If success is FALSE, contains the error message.}
-\item{df}{data.frame with simulation results in long format, if return_sims is TRUE. The iteration number is indicated by column "i". If range was specified, the condition is indicated by column "j".}
-\item{summary}{data.frame with summary statistics of the ensemble, including quantiles specified in quantiles. If range was specified, summary statistics are calculated for each condition (j) in the ensemble.}
-\item{n}{Number of simulations run in the ensemble (per condition j if range is specified).}
-\item{n_total}{Total number of simulations run in the ensemble (across all conditions if range is specified).}
+\item{success}{If \code{TRUE}, simulation was successful. If \code{FALSE}, simulation
+failed.}
+
+\item{error_message}{If success is \code{FALSE}, contains the error message.}
+\item{df}{data.frame with simulation results in long format, if return_sims
+is \code{TRUE}. The iteration number is indicated by column "i". If conditions
+was specified, the condition is indicated by column "j".}
+\item{summary}{data.frame with summary statistics of the ensemble,
+including quantiles specified in quantiles. If conditions was specified,
+summary statistics are calculated for each condition (j) in the ensemble.}
+\item{n}{Number of simulations run in the ensemble (per condition j if
+conditions is specified).}
+\item{n_total}{Total number of simulations run in the ensemble (across all
+conditions if conditions is specified).}
 \item{n_conditions}{Total number of conditions.}
-\item{conditions}{data.frame with the conditions used in the ensemble, if range is specified.}
-\item{init}{List with df (if return_sims = TRUE) and summary, containing data.frame with the initial values of the stocks used in the ensemble.}
-\item{constants}{List with df (if return_sims = TRUE) and summary, containing data.frame with the constant parameters used in the ensemble.}
-\item{script}{Julia script used for the ensemble simulation.}
+\item{conditions}{data.frame with the conditions used in the ensemble, if
+conditions was specified.}
+\item{init}{List with df (if return_sims = TRUE) and summary, containing
+data.frame with the initial values of the stocks used in the ensemble.}
+\item{constants}{List with df (if return_sims = TRUE) and summary,
+containing data.frame with the constant parameters used in the ensemble.}
+\item{script}{Script used for the ensemble simulation (Julia only).}
 \item{duration}{Duration of the simulation in seconds.}
 \item{...}{Other parameters passed to ensemble}
 }
 }
 \description{
-Run an ensemble simulation of a stock-and-flow model, varying initial conditions and/or parameters in the range specified in \code{range}. The ensemble can be run in parallel using multiple threads by first setting \code{nthreads} in \code{\link[=use_julia]{use_julia()}}. The results are returned as a data.frame with summary statistics and optionally individual simulations.
+Run an ensemble simulation of a stock-and-flow model, varying initial
+conditions and/or parameters in the conditions specified in \code{conditions}.
+For Julia models, the ensemble can be run in parallel using multiple threads
+by first setting \code{nthreads} in \code{\link[=use_julia]{use_julia()}}. For R models, use
+\code{\link[future:plan]{future::plan()}} to control parallel execution. The results are returned as a
+data.frame with summary statistics and optionally individual simulations.
 }
 \details{
-To run large simulations, it is recommended to limit the output size by saving fewer values. To create a reproducible ensemble simulation, set a seed using \code{\link[=sim_specs]{sim_specs()}}.
+To run large simulations, it is recommended to limit the output size by
+saving fewer values with \code{save_at} or \code{save_n} in \code{\link[=sim_specs]{sim_specs()}}. To create a reproducible ensemble simulation, set a seed using \code{\link[=sim_specs]{sim_specs()}}.
 
-If you do not see any variation within a condition of the ensemble (i.e. the confidence bands are virtually non-existent), there are likely no random elements in your model. Without these, there can be no variability in the model. Try specifying a random initial condition or adding randomness to other model elements.
+If you do not see any variation within a condition of the ensemble (i.e. the
+confidence bands are virtually non-existent), there are likely no random
+elements in your model. Without these, there can be no variability in the
+model. Try specifying a random initial condition or adding randomness to
+other model elements (see examples).
 }
 \examples{
-\dontshow{if (is_julia_ready()) withAutoprint(\{ # examplesIf}
-# Load example and set simulation language to Julia
-sfm <- sdbuildR("predator_prey") |> sim_specs(language = "Julia")
+# Ensemble simulation in R (no parallelization)
+# Load example
+sfm <- sdbuildR(predator_prey)
 
 # Set random initial conditions
-sfm <- build(sfm, c("predator", "prey"), eqn = "runif(1, min = 20, max = 80)")
+sfm <- update(sfm, c(predator, prey), 
+              eqn = runif(1, min = 20, max = 80))
 
 # For ensemble simulations, it is highly recommended to reduce the
-# returned output. For example, to save output only every 1 time unit:
-sfm <- sim_specs(sfm, save_at = 1)
+# returned output. For example, to save only 100 values per simulation:
+sfm <- sim_specs(sfm, save_n = 100)
 
-# Run ensemble simulation with 100 simulations
-sims <- ensemble(sfm, n = 100)
+# Run ensemble simulation with 10 simulations
+sims <- ensemble(sfm, n = 10)
 plot(sims)
 
-# Plot individual trajectories
+# To plot individual trajectories, rerun the ensemble with return_sims = TRUE. Note that this can consume a lot of memory for large simulations.
 sims <- ensemble(sfm, n = 10, return_sims = TRUE)
 plot(sims, type = "sims")
 
@@ -89,14 +124,20 @@ plot(sims, type = "sims", i = 1)
 # Plot the median with lighter individual trajectories
 plot(sims, central_tendency = "median", type = "sims", alpha = 0.1)
 
+\dontshow{if (Sys.getenv("NOT_CRAN") == "true") withAutoprint(\{ # examplesIf}
+# For larger ensembles, we can use parallelization with future
+if (requireNamespace("future", quietly = TRUE) && requireNamespace("future.apply", quietly = TRUE)) {
+ future::plan(future::multisession, workers = 4)
+}
+
 # Ensembles can also be run with exact values for the initial conditions
 # and parameters. Below, we vary the initial values of the predator and the
-# birth rate of the predators (delta). We generate a hunderd samples per
+# birth rate of the predators (delta). We generate a hundred samples per
 # condition. By default, the parameters are crossed, meaning that all
 # combinations of the parameters are run.
 sims <- ensemble(sfm,
   n = 50,
-  range = list("predator" = c(10, 50), "delta" = c(.025, .05))
+  conditions = list(predator = c(10, 50), delta = c(.025, .05))
 )
 
 plot(sims)
@@ -105,22 +146,30 @@ plot(sims)
 # Plot specific conditions:
 plot(sims, j = c(1, 3), nrows = 1)
 
-# Generate a non-crossed design, where the length of each range needs to be
-# equal:
+# Generate a non-crossed design, where the length of each conditions vector
+# needs to be equal:
 sims <- ensemble(sfm,
   n = 10, cross = FALSE,
-  range = list(
-    "predator" = c(10, 20, 30),
-    "delta" = c(.020, .025, .03)
+  conditions = list(
+    predator = c(10, 20, 30),
+    delta = c(.020, .025, .03)
   )
 )
 plot(sims, nrows = 3)
 
-# Run simulation in parallel
-use_julia(nthreads = 4)
-sims <- ensemble(sfm, n = 10)
+# Stop parallelization after use
+if (requireNamespace("future", quietly = TRUE) && requireNamespace("future.apply", quietly = TRUE)) {
+ future::plan(future::sequential) 
+}
+\dontshow{\}) # examplesIf}
+\dontshow{if (Sys.getenv("NOT_CRAN") == "true" && is_julia_ready()) withAutoprint(\{ # examplesIf}
 
-# Stop using threads
+# Run simulation in parallel (Julia)
+use_julia(nthreads = 4)
+sfm <- sfm |> sim_specs(language = "Julia")
+sims <- ensemble(sfm, n = 50)
+
+# Stop using threads (restarts Julia session)
 use_julia(nthreads = 1)
 
 # Close Julia
@@ -128,6 +177,7 @@ use_julia(stop = TRUE)
 \dontshow{\}) # examplesIf}
 }
 \seealso{
-\code{\link[=build]{build()}}, \code{\link[=sdbuildR]{sdbuildR()}}, \code{\link[=sim_specs]{sim_specs()}}, \code{\link[=use_julia]{use_julia()}}
+\code{\link[=update]{update()}}, \code{\link[=sdbuildR]{sdbuildR()}}, \code{\link[=sim_specs]{sim_specs()}}, \code{\link[=use_julia]{use_julia()}},
+\code{\link[future:plan]{future::plan()}}
 }
 \concept{simulate}

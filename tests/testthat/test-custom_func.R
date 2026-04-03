@@ -120,7 +120,7 @@ test_that("change_name() renames funcs", {
 test_that("custom_func() preserves variables", {
   sfm <- sdbuildR()
 
-  sfm1 <- build(sfm, "Stock1", type = "stock")
+  sfm1 <- update(sfm, "Stock1", type = "stock")
   sfm2 <- custom_func(sfm1, "param1", eqn = "5")
 
   # Check both exist
@@ -137,8 +137,8 @@ test_that("custom_func() can be used in variable equations", {
   sfm <- sdbuildR()
 
   sfm1 <- custom_func(sfm, "rate", eqn = "0.05")
-  sfm2 <- build(sfm1, "Stock1", type = "stock")
-  sfm3 <- build(sfm2, "Flow1",
+  sfm2 <- update(sfm1, "Stock1", type = "stock")
+  sfm3 <- update(sfm2, "Flow1",
     type = "flow",
     eqn = "Stock1 * rate", from = "Stock1"
   )
@@ -164,13 +164,12 @@ test_that("custom_func() returns the modified model", {
   expect_true(is.list(result))
 })
 
-test_that("build() with type = 'func' works directly", {
+test_that("update() with type = 'func' works directly", {
   sfm <- sdbuildR()
 
-  sfm1 <- build(sfm, "f", "func", eqn = "function(x) x * 2")
+  sfm1 <- update(sfm, "f", "func", eqn = "function(x) x * 2")
   df <- as.data.frame(sfm1, type = "func", properties = c("name", "eqn"))
   expect_equal(nrow(df), 1)
   expect_equal(df[["name"]], "f")
   expect_match(df[["eqn"]], "function")
 })
-

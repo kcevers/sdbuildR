@@ -28,15 +28,15 @@ test_that("R script components persist through simulation", {
   sim <- simulate(sfm, only_stocks = TRUE)
 
   # Check that NO NEW fields were added during simulate
-  fields_after <- names(sim$sfm$assemble)
+  fields_after <- names(sim$object$assemble)
   expect_equal(sort(fields_before), sort(fields_after))
   expect_equal(length(fields_after), length(empty_assemble()))
 
-  # Check that components still exist in sim$sfm
+  # Check that components still exist in sim$object
   req_names <- names(empty_assemble())
   for (name in req_names) {
-    expect_true(name %in% names(sim$sfm$assemble))
-    expect_false(is.null(sim$sfm$assemble[[name]]))
+    expect_true(name %in% names(sim$object$assemble))
+    expect_false(is.null(sim$object$assemble[[name]]))
   }
 
   expect_equal(sim$success, TRUE)
@@ -45,9 +45,9 @@ test_that("R script components persist through simulation", {
 
 test_that("R funcs are pre-cached in assemble", {
   sfm <- sdbuildR() |>
-    build("S", "stock", eqn = 100) |>
-    build("I", "stock", eqn = 1) |>
-    build("contact_rate", "constant", eqn = 0.5) |>
+    update("S", "stock", eqn = 100) |>
+    update("I", "stock", eqn = 1) |>
+    update("contact_rate", "constant", eqn = 0.5) |>
     custom_func(name = "infection_rate", eqn = "contact_rate * S * I") |>
     sim_specs(language = "R", start = 0, stop = 10, dt = 0.1)
 
@@ -62,9 +62,9 @@ test_that("R funcs are pre-cached in assemble", {
 
 test_that("R custom_unit pre-cached and work correctly", {
   sfm <- sdbuildR() |>
-    build("S", "stock", eqn = 100) |>
-    build("I", "stock", eqn = 1) |>
-    build("recovery_rate", "constant", eqn = 0.1) |>
+    update("S", "stock", eqn = 100) |>
+    update("I", "stock", eqn = 1) |>
+    update("recovery_rate", "constant", eqn = 0.1) |>
     custom_unit(name = "people", eqn = "person") |>
     sim_specs(language = "R", start = 0, stop = 10, dt = 0.1)
 
@@ -110,15 +110,15 @@ test_that("Julia script components persist through simulation", {
   sim <- simulate(sfm, only_stocks = TRUE)
 
   # Check that NO NEW fields were added during simulate
-  fields_after <- names(sim$sfm$assemble)
+  fields_after <- names(sim$object$assemble)
   expect_equal(sort(fields_before), sort(fields_after))
   expect_equal(length(fields_after), length(empty_assemble()))
 
   # Check that components are still cached after simulate
   req_names <- names(empty_assemble())
   for (name in req_names) {
-    expect_true(name %in% names(sim$sfm$assemble))
-    expect_false(is.null(sim$sfm$assemble[[name]]))
+    expect_true(name %in% names(sim$object$assemble))
+    expect_false(is.null(sim$object$assemble[[name]]))
   }
 
   expect_equal(sim$success, TRUE)
@@ -162,11 +162,10 @@ test_that("Julia equations differ from R equations in cached components", {
 })
 
 
-
 test_that("cache invalidates when sim_specs parameters change", {
   sfm <- sdbuildR() |>
-    build(name = "S", type = "stock", eqn = "100") |>
-    build(name = "births", type = "flow", eqn = "0.1 * S", to = "S")
+    update(name = "S", type = "stock", eqn = "100") |>
+    update(name = "births", type = "flow", eqn = "0.1 * S", to = "S")
 
   # Initial sim_specs
   sfm1 <- sim_specs(sfm, language = "R", start = 0, stop = 10, dt = 0.1)

@@ -43,6 +43,28 @@ test_that("plot() validates variable existence in simulation", {
   )
 })
 
+test_that("plot() warns and continues when some vars are missing from data", {
+  sim <- sir_sim() # default only_stocks = TRUE
+
+  expect_warning(
+    pl <- plot(sim, vars = c("Susceptible", "Infection_Rate")),
+    "not available in the simulated data"
+  )
+  expect_plotly(pl)
+})
+
+test_that("plot() errors when all requested vars are missing from data", {
+  sim <- sir_sim() # default only_stocks = TRUE
+
+  expect_warning(
+    expect_error(
+      plot(sim, vars = c("Infection_Rate", "Recovery_Rate")),
+      "No requested variables are available"
+    ),
+    "not available in the simulated data"
+  )
+})
+
 test_that("plot() validates font_family as character", {
   sim <- sir_sim()
 
@@ -198,12 +220,12 @@ test_that("plot() with custom wrap width", {
   skip_if_not_installed("vdiffr")
 
   sfm <- sdbuildR()
-  sfm <- build(sfm,
+  sfm <- update(sfm,
     name = "a",
     label = "Very Long Stock Name That Should Wrap", type = "stock"
   )
   stock_name_clean <- sfm$variables$name[1]
-  sfm <- build(sfm,
+  sfm <- update(sfm,
     name = "b",
     label = "Long Flow Name That Should Also Wrap", type = "flow",
     from = !!stock_name_clean
@@ -236,8 +258,8 @@ test_that("plot() respects add_constants", {
   skip_if_not_installed("vdiffr")
 
   sfm <- sdbuildR()
-  sfm <- build(sfm, "Stock1", type = "stock")
-  sfm <- build(sfm, "const_val", type = "constant", eqn = "100")
+  sfm <- update(sfm, "Stock1", type = "stock")
+  sfm <- update(sfm, "const_val", type = "constant", eqn = "100")
   sim <- simulate(sfm)
 
   vdiffr::expect_doppelganger(
@@ -260,7 +282,7 @@ test_that("plot() shows legend for single-variable plot", {
   skip_if_not_installed("vdiffr")
 
   sfm <- sdbuildR()
-  sfm <- build(sfm, "Stock1", type = "stock")
+  sfm <- update(sfm, "Stock1", type = "stock")
   sim <- simulate(sfm)
 
   vdiffr::expect_doppelganger(
@@ -287,8 +309,8 @@ test_that("plot() handles variables with duplicate display labels", {
   skip_if_not_installed("vdiffr")
 
   sfm <- sdbuildR()
-  sfm <- build(sfm, "var1", type = "stock", label = "Same")
-  sfm <- build(sfm, "var2", type = "stock", label = "Same")
+  sfm <- update(sfm, "var1", type = "stock", label = "Same")
+  sfm <- update(sfm, "var2", type = "stock", label = "Same")
   sim <- simulate(sfm)
 
   vdiffr::expect_doppelganger(
@@ -302,10 +324,10 @@ test_that("plot() respects vars filtering for constants", {
   skip_if_not_installed("vdiffr")
 
   sfm <- sdbuildR()
-  sfm <- build(sfm, "S", type = "stock")
-  sfm <- build(sfm, "I", type = "stock")
-  sfm <- build(sfm, "const1", type = "constant", eqn = "50")
-  sfm <- build(sfm, "const2", type = "constant", eqn = "100")
+  sfm <- update(sfm, "S", type = "stock")
+  sfm <- update(sfm, "I", type = "stock")
+  sfm <- update(sfm, "const1", type = "constant", eqn = "50")
+  sfm <- update(sfm, "const2", type = "constant", eqn = "100")
   sim <- simulate(sfm)
 
   # Request only S and const1
@@ -320,8 +342,8 @@ test_that("plot() with vars = constant automatically enables add_constants", {
   skip_if_not_installed("vdiffr")
 
   sfm <- sdbuildR()
-  sfm <- build(sfm, "Stock1", type = "stock")
-  sfm <- build(sfm, "const_val", type = "constant", eqn = "75")
+  sfm <- update(sfm, "Stock1", type = "stock")
+  sfm <- update(sfm, "const_val", type = "constant", eqn = "75")
   sim <- simulate(sfm)
 
   # Even without add_constants = TRUE, specifying a constant in vars should include it

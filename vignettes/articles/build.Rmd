@@ -134,19 +134,19 @@ We create four flows: the births and deaths of both the predators and prey. The 
 
 ```{r, fig.width=8, fig.height=4}
 sfm <- flow(sfm, predator_births,
-  eqn = delta*prey*predator,
+  eqn = delta * prey * predator,
   label = "Births", to = predator
 ) |>
   flow(predator_deaths,
-    eqn = gamma*predator,
+    eqn = gamma * predator,
     label = "Deaths", from = predator
   ) |>
   flow(prey_births,
-    eqn = alpha*prey,
+    eqn = alpha * prey,
     label = "Births", to = prey
   ) |>
   flow(prey_deaths,
-    eqn = beta*prey*predator,
+    eqn = beta * prey * predator,
     label = "Deaths", from = prey
   )
 plot(sfm)
@@ -268,7 +268,8 @@ Maya's sleep is decreasing, but we haven't yet added the effect of her sleep def
 ```{r}
 sfm <- change_name(sfm, "back_to_normal", new_name = "need_for_rest") |>
   flow(need_for_rest,
-        eqn = workload * necessary_sleep / sleep) |>
+    eqn = workload * necessary_sleep / sleep
+  ) |>
   constant(work_growth, eqn = 1.5)
 ```
 
@@ -464,7 +465,7 @@ New functions can be defined such that they can be used anywhere in the model. F
 
 ```{r}
 sfm <- sdbuildR() |>
-  custom_func(f, eqn = function(x, slope = 1, midpoint = .5) 1 / (1 + exp(-slope*(x-midpoint))))
+  custom_func(f, eqn = function(x, slope = 1, midpoint = .5) 1 / (1 + exp(-slope * (x - midpoint))))
 ```
 
 This will create a function `f()` that can be used in any equation in the model like so: 

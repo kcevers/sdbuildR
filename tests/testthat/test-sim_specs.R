@@ -68,6 +68,23 @@ test_that("sim_specs() modifies seed", {
   expect_equal(as.numeric(sfm$sim_specs$seed), 123)
 })
 
+test_that("sim_specs() stores vars and preserves order after deduplication", {
+  sfm <- sdbuildR("SIR") |>
+    sim_specs(vars = c("Susceptible", "Infected", "Susceptible"))
+
+  expect_equal(sfm$sim_specs$vars, c("Susceptible", "Infected"))
+})
+
+test_that("sim_specs() rejects vars that are not time-varying", {
+  sfm <- sdbuildR("SIR")
+  expect_error(sim_specs(sfm, vars = c("Beta")), "time-varying")
+})
+
+test_that("sim_specs() rejects unknown vars", {
+  sfm <- sdbuildR("SIR")
+  expect_error(sim_specs(sfm, vars = c("does_not_exist")), "Unsupported|unknown")
+})
+
 
 cli::test_that_cli(configs = c("plain", "ansi"), "clean_language() rejects invalid language", {
   expect_snapshot(clean_language("python"), error = TRUE)
@@ -75,10 +92,9 @@ cli::test_that_cli(configs = c("plain", "ansi"), "clean_language() rejects inval
 })
 
 
-
 test_that("sim_specs() sets basic parameters", {
   sfm <- sdbuildR()
-  sfm1 <- build(sfm, "Stock1", type = "stock")
+  sfm1 <- update(sfm, "Stock1", type = "stock")
   sfm2 <- suppressWarnings(sim_specs(sfm1, start = 0, stop = 10, dt = 0.5))
 
   expect_equal(sfm2[["sim_specs"]][["start"]], "0.0")
@@ -88,7 +104,7 @@ test_that("sim_specs() sets basic parameters", {
 
 test_that("sim_specs() validates start < stop", {
   sfm <- sdbuildR()
-  sfm1 <- build(sfm, "Stock1", type = "stock")
+  sfm1 <- update(sfm, "Stock1", type = "stock")
 
   expect_error(
     sim_specs(sfm1, start = 10, stop = 5),
@@ -98,7 +114,7 @@ test_that("sim_specs() validates start < stop", {
 
 test_that("sim_specs() validates numeric parameters", {
   sfm <- sdbuildR()
-  sfm1 <- build(sfm, "Stock1", type = "stock")
+  sfm1 <- update(sfm, "Stock1", type = "stock")
 
   expect_error(sim_specs(sfm1, start = "abc"), "numeric")
   expect_error(sim_specs(sfm1, stop = "xyz"), "numeric")
@@ -107,7 +123,7 @@ test_that("sim_specs() validates numeric parameters", {
 
 test_that("sim_specs() validates language parameter", {
   sfm <- sdbuildR()
-  sfm1 <- build(sfm, "Stock1", type = "stock")
+  sfm1 <- update(sfm, "Stock1", type = "stock")
 
   expect_no_error(sim_specs(sfm1, language = "R"))
   expect_no_error(sim_specs(sfm1, language = "Julia"))
@@ -115,7 +131,7 @@ test_that("sim_specs() validates language parameter", {
 
 test_that("sim_specs() validates method parameter", {
   sfm <- sdbuildR()
-  sfm1 <- build(sfm, "Stock1", type = "stock")
+  sfm1 <- update(sfm, "Stock1", type = "stock")
 
   expect_no_error(sim_specs(sfm1, method = "euler", language = "R"))
   expect_no_error(sim_specs(sfm1, method = "rk4", language = "R"))
@@ -123,7 +139,7 @@ test_that("sim_specs() validates method parameter", {
 
 test_that("sim_specs() handles time_units", {
   sfm <- sdbuildR()
-  sfm1 <- build(sfm, "Stock1", type = "stock")
+  sfm1 <- update(sfm, "Stock1", type = "stock")
 
   expect_no_error(sim_specs(sfm1, time_units = "days"))
   expect_no_error(sim_specs(sfm1, time_units = "hours"))
@@ -132,14 +148,14 @@ test_that("sim_specs() handles time_units", {
 
 test_that("sim_specs() rejects invalid time_units", {
   sfm <- sdbuildR()
-  sfm1 <- build(sfm, "Stock1", type = "stock")
+  sfm1 <- update(sfm, "Stock1", type = "stock")
 
   expect_error(sim_specs(sfm1, time_units = "invalid123"), "only contain letters")
 })
 
 test_that("sim_specs() warns about large dt", {
   sfm <- sdbuildR()
-  sfm1 <- build(sfm, "Stock1", type = "stock")
+  sfm1 <- update(sfm, "Stock1", type = "stock")
 
   expect_warning(
     sim_specs(sfm1, dt = 0.5),
@@ -149,7 +165,7 @@ test_that("sim_specs() warns about large dt", {
 
 test_that("sim_specs() returns sdbuildR object", {
   sfm <- sdbuildR()
-  sfm1 <- build(sfm, "Stock1", type = "stock")
+  sfm1 <- update(sfm, "Stock1", type = "stock")
   sfm2 <- sim_specs(sfm1, start = 0, stop = 10)
 
   expect_s3_class(sfm2, "sdbuildR")
@@ -159,13 +175,13 @@ test_that("sim_specs() returns sdbuildR object", {
 
 test_that("sim_specs() rejects non-positive dt", {
   sfm <- sdbuildR()
-  expect_error(sim_specs(sfm, dt = 0),    "positive")
+  expect_error(sim_specs(sfm, dt = 0), "positive")
   expect_error(sim_specs(sfm, dt = -0.1), "positive")
 })
 
 test_that("sim_specs() rejects non-positive save_at", {
   sfm <- sdbuildR()
-  expect_error(sim_specs(sfm, save_at = 0),  "positive")
+  expect_error(sim_specs(sfm, save_at = 0), "positive")
   expect_error(sim_specs(sfm, save_at = -1), "positive")
 })
 
@@ -189,7 +205,7 @@ test_that("sim_specs() accepts bare symbols via NSE", {
 })
 
 test_that("sim_specs() supports !! injection for NSE args", {
-  sfm  <- sdbuildR()
+  sfm <- sdbuildR()
   lang <- "Julia"
   meth <- "rk4"
 
@@ -224,8 +240,10 @@ test_that("sim_specs() auto-corrects save_at < dt", {
     sfm2 <- sim_specs(sdbuildR(), save_at = 0.001),
     "Automatically setting"
   )
-  expect_equal(as.numeric(sfm2[["sim_specs"]][["save_at"]]),
-               as.numeric(sfm2[["sim_specs"]][["dt"]]))
+  expect_equal(
+    as.numeric(sfm2[["sim_specs"]][["save_at"]]),
+    as.numeric(sfm2[["sim_specs"]][["dt"]])
+  )
 })
 
 test_that("sim_specs() warns on save_at interval misalignment with stop", {
@@ -276,8 +294,8 @@ test_that("sim_specs() save_n = 1 stores correctly", {
 })
 
 test_that("sim_specs() rejects invalid save_n", {
-  expect_error(sim_specs(sdbuildR(), save_n = 0),    "positive integer")
-  expect_error(sim_specs(sdbuildR(), save_n = -1),   "positive integer")
+  expect_error(sim_specs(sdbuildR(), save_n = 0), "positive integer")
+  expect_error(sim_specs(sdbuildR(), save_n = -1), "positive integer")
   expect_error(sim_specs(sdbuildR(), save_n = "abc"), "positive integer")
 })
 
@@ -295,7 +313,7 @@ test_that("sim_specs() allows both save_at and save_n when one is NA", {
 # --- Save parameter: reset to "all" with NA/NULL/"" ----------------------------
 
 test_that("sim_specs() resetting save_at to NA gives save_type = all", {
-  sfm  <- sim_specs(sdbuildR(), save_at = 1)
+  sfm <- sim_specs(sdbuildR(), save_at = 1)
   sfm2 <- sim_specs(sfm, save_at = NA)
   expect_equal(sfm2[["sim_specs"]][["save_type"]], "all")
   expect_null(sfm2[["sim_specs"]][["save_at"]])
@@ -303,7 +321,7 @@ test_that("sim_specs() resetting save_at to NA gives save_type = all", {
 })
 
 test_that("sim_specs() resetting save_n to NA gives save_type = all", {
-  sfm  <- sim_specs(sdbuildR(), save_n = 50)
+  sfm <- sim_specs(sdbuildR(), save_n = 50)
   sfm2 <- sim_specs(sfm, save_n = NA)
   expect_equal(sfm2[["sim_specs"]][["save_type"]], "all")
   expect_null(sfm2[["sim_specs"]][["save_at"]])
@@ -313,7 +331,7 @@ test_that("sim_specs() resetting save_n to NA gives save_type = all", {
 # --- Save parameter: overwriting -----------------------------------------------
 
 test_that("sim_specs() save_n overwrites previous save_at", {
-  sfm  <- sim_specs(sdbuildR(), save_at = 1)
+  sfm <- sim_specs(sdbuildR(), save_at = 1)
   sfm2 <- sim_specs(sfm, save_n = 50)
   expect_equal(sfm2[["sim_specs"]][["save_type"]], "save_n")
   expect_equal(as.integer(sfm2[["sim_specs"]][["save_n"]]), 50L)
@@ -321,7 +339,7 @@ test_that("sim_specs() save_n overwrites previous save_at", {
 })
 
 test_that("sim_specs() save_at overwrites previous save_n", {
-  sfm  <- sim_specs(sdbuildR(), save_n = 50)
+  sfm <- sim_specs(sdbuildR(), save_n = 50)
   sfm2 <- sim_specs(sfm, save_at = 2)
   expect_equal(sfm2[["sim_specs"]][["save_type"]], "save_at")
   expect_null(sfm2[["sim_specs"]][["save_n"]])

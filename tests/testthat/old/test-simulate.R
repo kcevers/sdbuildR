@@ -1,7 +1,7 @@
 test_that("dependencies works", {
   sfm <- sdbuildR() |>
-    build("a", "stock", eqn = "b + c") |>
-    build(c("b", "c"), "flow")
+    update("a", "stock", eqn = "b + c") |>
+    update(c("b", "c"), "flow")
 
   dep <- expect_no_error(expect_no_warning(expect_no_message(dependencies(sfm))))
   expect_equal(sort(names(dep)), letters[1:3])
@@ -46,7 +46,7 @@ test_that("get_build_code() works", {
 
     if (s == "Crielaard2022") {
       sfm <- sfm |>
-        build(c("Food_intake", "Hunger", "Compensatory_behaviour"),
+        update(c("Food_intake", "Hunger", "Compensatory_behaviour"),
           eqn = c(.5, .3, .1)
         )
     }

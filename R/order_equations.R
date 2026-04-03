@@ -47,13 +47,17 @@ topological_sort <- function(dependencies_dict) {
   # Get correct order using topological sort
   out <- tryCatch(
     {
-      list(order = igraph::topo_sort(g, mode = "out") |> names(), issue = FALSE, msg = "",
-           cycle_nodes = NULL, edge_list = NULL)
+      list(
+        order = igraph::topo_sort(g, mode = "out") |> names(), issue = FALSE, msg = "",
+        cycle_nodes = NULL, edge_list = NULL
+      )
     },
     error = function(msg) {
       out <- circularity(g)
-      list(order = eq_names, issue = out[["issue"]], msg = out[["msg"]],
-           cycle_nodes = out[["cycle_nodes"]], edge_list = out[["edge_list"]])
+      list(
+        order = eq_names, issue = out[["issue"]], msg = out[["msg"]],
+        cycle_nodes = out[["cycle_nodes"]], edge_list = out[["edge_list"]]
+      )
     }
   )
 
@@ -139,7 +143,7 @@ find_newly_defined_var <- function(eqn) {
 #'
 #' Find which other variables each variable is dependent on.
 #'
-#' @inheritParams build
+#' @inheritParams update.sdbuildR
 #' @param reverse If FALSE, list for each variable X which variables Y it depends on for its equation definition. If TRUE, don't show dependencies but dependents. This reverses the dependencies, such that for each variable X, it lists what other variables Y depend on X.
 #'
 #' @returns List, with for each model variable what other variables it depends on, or if \code{reverse = TRUE}, which variables depend on it
@@ -150,14 +154,14 @@ find_newly_defined_var <- function(eqn) {
 #' sfm <- sdbuildR("SIR")
 #' dependencies(sfm)
 #'
-dependencies <- function(sfm, reverse = FALSE) {
-  dep <- dependencies_(sfm, eqns = NULL, only_var = TRUE, only_model_var = TRUE)
+dependencies <- function(object, reverse = FALSE) {
+  dep <- dependencies_(object, eqns = NULL, only_var = TRUE, only_model_var = TRUE)
 
   if (reverse) {
     dep <- reverse_dep(dep)
   }
 
-  return(dep)
+  dep
 }
 
 
@@ -196,26 +200,26 @@ reverse_dep <- function(dep) {
   # Remove duplicates (shouldn't happen but just in case)
   reverse_dep <- lapply(reverse_dep, unique)
 
-  return(reverse_dep)
+  reverse_dep
 }
 
 
 #' Find dependencies in equation (only for internal use)
 #'
 #' @param eqns String with equation to find dependencies in; defaults to NULL to find dependencies of all variables.
-#' @inheritParams build
+#' @inheritParams update.sdbuildR
 #' @param only_var If TRUE, only look for variable names, not functions.
 #' @param only_model_var If TRUE, only look for dependencies on other model variables.
 #'
 #' @returns Vector of dependencies (variable names in equation)
 #' @noRd
 #'
-dependencies_ <- function(sfm, eqns = NULL, only_var = TRUE, only_model_var = TRUE) {
-  var_names <- unique(get_model_var(sfm))
+dependencies_ <- function(object, eqns = NULL, only_var = TRUE, only_model_var = TRUE) {
+  var_names <- unique(get_model_var(object))
 
   # Funcs and graphical functions can be functions
-  gf_names <- sfm[["variables"]][sfm[["variables"]][["type"]] == "lookup", "name"]
-  func_names <- get_funcs(sfm)[["name"]]
+  gf_names <- object[["variables"]][object[["variables"]][["type"]] == "lookup", "name"]
+  func_names <- get_funcs(object)[["name"]]
   possible_func_in_model <- c(
     func_names,
     gf_names,
@@ -225,16 +229,16 @@ dependencies_ <- function(sfm, eqns = NULL, only_var = TRUE, only_model_var = TR
   # If no equations are provided, use all equations in the model
   if (is.null(eqns)) {
     # Get equations from variables data frame
-    eqn_idx <- sfm[["variables"]][["type"]] %in% c("stock", "flow", "aux", "constant")
-    eqns <- sfm[["variables"]][eqn_idx, "eqn"]
-    names(eqns) <- sfm[["variables"]][eqn_idx, "name"]
+    eqn_idx <- object[["variables"]][["type"]] %in% c("stock", "flow", "aux", "constant")
+    eqns <- object[["variables"]][eqn_idx, "eqn"]
+    names(eqns) <- object[["variables"]][eqn_idx, "name"]
 
     # Add graphical function dependencies on source
-    gf_idx <- sfm[["variables"]][["type"]] == "lookup"
+    gf_idx <- object[["variables"]][["type"]] == "lookup"
     if (any(gf_idx)) {
-      gf_source <- sfm[["variables"]][gf_idx, "source"]
+      gf_source <- object[["variables"]][gf_idx, "source"]
       gf_source <- gf_source[nzchar(gf_source)]
-      gf_names <- sfm[["variables"]][gf_idx, "name"]
+      gf_names <- object[["variables"]][gf_idx, "name"]
       gf_source <- stats::setNames(gf_source, gf_names[nzchar(gf_source)])
       eqns <- c(eqns, gf_source)
     }
@@ -285,15 +289,15 @@ dependencies_ <- function(sfm, eqns = NULL, only_var = TRUE, only_model_var = TR
 
 #' Order equations of static and dynamic part of stock-and-flow model
 #'
-#' @inheritParams build
+#' @inheritParams update.sdbuildR
 #' @param print_msg If TRUE, print message if the ordering fails; defaults to TRUE.
 #'
 #' @returns List with order of static and dynamic variables
 #' @noRd
 #'
-order_equations <- function(sfm, print_msg = TRUE) {
+order_equations <- function(object, print_msg = TRUE) {
   # Handle empty model: no variables to order
-  if (is.null(sfm[["variables"]]) || nrow(sfm[["variables"]]) == 0) {
+  if (is.null(object[["variables"]]) || nrow(object[["variables"]]) == 0) {
     empty <- topological_sort(list())
     return(list(
       static = empty,
@@ -303,7 +307,7 @@ order_equations <- function(sfm, print_msg = TRUE) {
   }
 
   # Add .outflow to detect delayed variables
-  var_names <- unique(get_model_var(sfm))
+  var_names <- unique(get_model_var(object))
   idx_delay <- grepl(paste0(
     P[["delayN_suffix"]], "[0-9]+$|",
     P[["smoothN_suffix"]], "[0-9]+$"
@@ -315,13 +319,13 @@ order_equations <- function(sfm, print_msg = TRUE) {
   )
 
   # Exclude func-type variables from ordering (they compile separately in the preamble)
-  vars_to_order <- sfm[["variables"]][sfm[["variables"]][["type"]] != "func", ]
+  vars_to_order <- object[["variables"]][object[["variables"]][["type"]] != "func", ]
 
   # Separate auxiliary variables into static parameters and dynamically updated auxiliaries
   deps <- split(vars_to_order, seq_len(nrow(vars_to_order))) |>
     lapply(function(x) {
       if (is_defined(x[["eqn"]])) {
-        d <- unlist(dependencies_(sfm, x[["eqn"]],
+        d <- unlist(dependencies_(object, x[["eqn"]],
           only_var = TRUE, only_model_var = TRUE
         ))
 

@@ -55,7 +55,7 @@ test_that("custom_unit() sets documentation", {
 test_that("custom_unit() preserves variables and funcs", {
   sfm <- sdbuildR()
 
-  sfm1 <- build(sfm, "Stock1", type = "stock")
+  sfm1 <- update(sfm, "Stock1", type = "stock")
   sfm2 <- custom_func(sfm1, "param1", eqn = "5")
   sfm3 <- custom_unit(sfm2, "unit1", "definition1")
 
@@ -105,7 +105,7 @@ test_that("custom_unit() can use special characters in definitions", {
 
 test_that("custom_unit() rejects names that clash with variable names", {
   sfm <- sdbuildR()
-  sfm <- build(sfm, "X", type = "stock")
+  sfm <- update(sfm, "X", type = "stock")
 
   expect_error(
     custom_unit(sfm, "X"),
@@ -129,7 +129,7 @@ test_that("change_name() renames model units", {
 test_that("change_name() for units updates variable unit references", {
   sfm <- sdbuildR()
   sfm <- custom_unit(sfm, "BMI", "kg/m^2")
-  sfm <- build(sfm, "weight", type = "stock", units = "BMI")
+  sfm <- update(sfm, "weight", type = "stock", units = "BMI")
 
   sfm2 <- change_name(sfm, "BMI", "bmi")
 
@@ -153,7 +153,7 @@ test_that("change_name() errors on nonexistent names", {
 
 test_that("change_name() errors on mixed variable and unit names", {
   sfm <- sdbuildR()
-  sfm <- build(sfm, "var1", type = "stock")
+  sfm <- update(sfm, "var1", type = "stock")
   sfm <- custom_unit(sfm, "unit1", "definition")
 
   expect_error(
@@ -217,7 +217,7 @@ test_that("discard() fails when some units don't exist", {
 test_that("discard() warns about lingering unit references", {
   sfm <- sdbuildR()
   sfm <- custom_unit(sfm, "BMI", "kg/m^2")
-  sfm <- build(sfm, "weight", type = "stock", units = "BMI")
+  sfm <- update(sfm, "weight", type = "stock", units = "BMI")
 
   expect_warning(
     discard(sfm, "BMI"),
@@ -227,7 +227,7 @@ test_that("discard() warns about lingering unit references", {
 
 test_that("discard() errors on mixed variable and unit names", {
   sfm <- sdbuildR()
-  sfm <- build(sfm, "var1", type = "stock")
+  sfm <- update(sfm, "var1", type = "stock")
   sfm <- custom_unit(sfm, "unit1", "definition")
 
   expect_error(
@@ -240,4 +240,3 @@ test_that("custom_unit() errors when model object passed as name", {
   sfm <- sdbuildR()
   expect_error(custom_unit(sfm, sfm, eqn = "kg/m^2"), "passed where a variable name")
 })
-

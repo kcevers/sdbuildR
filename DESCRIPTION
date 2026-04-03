@@ -37,6 +37,8 @@ Imports:
     textutils
 Suggests: 
     DiagrammeRsvg,
+    future,
+    future.apply,
     htmlwidgets,
     kableExtra,
     knitr,

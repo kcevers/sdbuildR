@@ -6,7 +6,7 @@
     identical(Sys.getenv("NOT_CRAN"), "true") &&
 
       # Condition 2: Custom environmental variable is "true"
-      identical(Sys.getenv("AUTO_INSTALL_JULIA_ENV"), "true") 
+      identical(Sys.getenv("AUTO_INSTALL_JULIA_ENV"), "true")
   )
 
   if (should_auto_setup) {
@@ -17,6 +17,9 @@
         if (!status) {
           install_julia_env()
         }
+
+        # Close Julia session
+        use_julia(stop = TRUE)
       },
       error = function(e) {
         invisible()

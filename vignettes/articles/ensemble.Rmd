@@ -143,7 +143,7 @@ Instead of generating an ensemble with random initial conditions, we can also sp
 ```{r}
 sims <- ensemble(sfm,
   n = 100,
-  range = list("a2" = c(0.2, 0.4, 0.6, 0.8))
+  conditions = list("a2" = c(0.2, 0.4, 0.6, 0.8))
 )
 ```
 
@@ -156,7 +156,7 @@ We can also vary multiple parameters at once. For example, we can vary both $a_2
 
 ```{r}
 sims <- ensemble(sfm,
-  range = list(
+  conditions = list(
     "a2" = c(0.2, 0.8),
     "a1" = c(1.3, 1.5)
   ),
@@ -174,11 +174,11 @@ The plot shows similarity within columns but differences between columns. As $a_
 sims$conditions
 ```
 
-To generate a non-crossed designed, set `cross = FALSE`. In this case, the length of each range needs to be the same.
+To generate a non-crossed designed, set `cross = FALSE`. In this case, the length of each conditions vector needs to be the same.
 
 ```{r}
 sims <- ensemble(sfm,
-  range = list(
+  conditions = list(
     "a2" = c(0.4, 0.5, 0.6),
     "a1" = c(1.3, 1.4, 1.5)
   ),

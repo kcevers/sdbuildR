@@ -60,20 +60,28 @@ decode_unicode <- function(text) {
 #' Calls pre_assemble_components() to ensure the model structure cache is
 #' populated, then generates the runtime-specific run_ode and post sections.
 #'
-#' @inheritParams simulate
+#' @inheritParams simulate.sdbuildR
 #' @param filepath_sim Path to output CSV file (Julia only).
 #' @param only_stocks Logical; if TRUE, only stock values are saved.
+#' @param vars Character vector of variable names to save, or NULL.
 #'
-#' @returns List with `script` (character) and `sfm` (updated model with cache).
+#' @returns List with `script` (character) and `object` (updated model with cache).
 #' @noRd
-compile <- function(sfm, only_stocks = FALSE,
-                    filepath_sim = NULL) {
-  language <- sfm[["sim_specs"]][["language"]]
+compile <- function(object, only_stocks = FALSE,
+                    filepath_sim = NULL,
+                    vars = NULL) {
+  language <- object[["sim_specs"]][["language"]]
+
+  if (!is.null(vars)) {
+    vars <- validate_sim_vars(object, vars)
+    stock_names <- get_variables_by_type(object, "stock")[["name"]]
+    only_stocks <- all(vars %in% stock_names)
+  }
 
   # Populate the model structure cache (ordering, times, funcs, static, ode, etc.)
-  sfm <- pre_assemble_components(sfm)
+  object <- pre_assemble_components(object)
 
-  ordering <- sfm[["assemble"]][["ordering"]]
+  ordering <- object[["assemble"]][["ordering"]]
 
   # Adjust only_stocks based on ordering (no dynamic vars → stocks only)
   if (is.null(ordering[["dynamic"]][["order"]])) {
@@ -83,33 +91,35 @@ compile <- function(sfm, only_stocks = FALSE,
   # --- R: compile ODE (depends on only_stocks, not pre-assembled) ------------
   if (language == "R") {
     no_assemble <- empty_assemble()
-    ode_undefined <- identical(sfm[["assemble"]][["ode"]], no_assemble[["ode"]])
+    ode_undefined <- identical(object[["assemble"]][["ode"]], no_assemble[["ode"]])
     if (ode_undefined) {
-      sfm[["assemble"]][["ode"]] <- compile_ode(sfm,
+      object[["assemble"]][["ode"]] <- compile_ode(object,
         only_stocks = only_stocks,
         language = language,
-        is_ensemble = FALSE
+        is_ensemble = FALSE,
+        vars = vars
       )
     }
   }
 
-  ode    <- sfm[["assemble"]][["ode"]]
-  static <- sfm[["assemble"]][["static"]]
+  ode <- object[["assemble"]][["ode"]]
+  static <- object[["assemble"]][["static"]]
 
   # --- Compile run ODE and post ----------------------------------------------
-  run_ode <- compile_run_ode(sfm,
+  run_ode <- compile_run_ode(object,
     filepath_sim = filepath_sim,
     only_stocks = only_stocks,
     language = language
   )
 
-  post <- compile_post(sfm,
+  post <- compile_post(object,
     filepath_sim = filepath_sim,
-    language = language
+    language = language,
+    vars = vars
   )
 
   # --- Build seed string -----------------------------------------------------
-  seed <- sfm[["sim_specs"]][["seed"]]
+  seed <- object[["sim_specs"]][["seed"]]
   seed_str <- if (is_defined(seed)) fmt_script("prep_seed", language, seed = seed) else ""
 
   # --- Assemble final script -------------------------------------------------
@@ -117,29 +127,28 @@ compile <- function(sfm, only_stocks = FALSE,
     script <- paste0(c(
       "# Load packages\nlibrary(sdbuildR)",
       seed_str,
-      sfm[["assemble"]][["times"]],
-      sfm[["assemble"]][["funcs"]],
-      sfm[["assemble"]][["nonneg_stocks"]][["func_def"]],
+      object[["assemble"]][["times"]],
+      object[["assemble"]][["funcs"]],
+      object[["assemble"]][["nonneg_stocks"]][["func_def"]],
       ode,
       static[["script"]],
       run_ode,
-      post), collapse = "\n"
-    )
-
+      post
+    ), collapse = "\n")
   } else {
     script <- paste0(c(
       seed_str,
-      sfm[["assemble"]][["units"]],
-      sfm[["assemble"]][["times"]],
-      sfm[["assemble"]][["funcs"]],
+      object[["assemble"]][["units"]],
+      object[["assemble"]][["times"]],
+      object[["assemble"]][["funcs"]],
       ode,
       static[["script"]],
       run_ode,
-      post), collapse = "\n"
-    )
+      post
+    ), collapse = "\n")
   }
 
-  list(script = script, sfm = sfm)
+  list(script = script, object = object)
 }
 
 
@@ -150,8 +159,8 @@ compile <- function(sfm, only_stocks = FALSE,
 #' @inheritParams compile
 #' @noRd
 #'
-compile_times <- function(sfm, language) {
-  ss <- sfm[["sim_specs"]]
+compile_times <- function(object, language) {
+  ss <- object[["sim_specs"]]
 
   if (language == "R") {
     script <- fmt_script("times", "R", ss)
@@ -160,26 +169,26 @@ compile_times <- function(sfm, language) {
     unit_mult <- function(op) if (keep_unit) paste0(" ", op, " ", P[["time_units_name"]]) else ""
 
     save_type <- ss[["save_type"]] %||% "all"
-    save_at   <- ss[["save_at"]]
-    save_n    <- ss[["save_n"]]
+    save_at <- ss[["save_at"]]
+    save_n <- ss[["save_n"]]
 
     saveat_expr <- switch(save_type,
       "all" = {
         # Save at every dt step: use tstops (ensures all dt steps are stored)
         P[["tstops_name"]]
       },
-
       "save_at" = if (length(save_at) == 1) {
         # Scalar interval: Julia range evaluated natively
-        sprintf("%s[1]:%s%s:%s[2]",
-          P[["times_name"]], save_at, unit_mult("*"), P[["times_name"]])
+        sprintf(
+          "%s[1]:%s%s:%s[2]",
+          P[["times_name"]], save_at, unit_mult("*"), P[["times_name"]]
+        )
       } else {
         # Explicit vector: broadcast-multiply with time units
-        um  <- if (keep_unit) paste0(" .* ", P[["time_units_name"]]) else ""
+        um <- if (keep_unit) paste0(" .* ", P[["time_units_name"]]) else ""
         str <- paste(save_at, collapse = ", ")
         sprintf("[%s]%s", str, um)
       },
-
       "save_n" = {
         um <- if (keep_unit) paste0(" .* ", P[["time_units_name"]]) else ""
         if (as.integer(save_n) == 1L) {
@@ -187,8 +196,10 @@ compile_times <- function(sfm, language) {
           sprintf("[%s[2]]", P[["times_name"]])
         } else {
           # range() evaluated in Julia — avoids R rounding issues
-          sprintf("range(%s[1], %s[2], length=%s)%s",
-            P[["times_name"]], P[["times_name"]], save_n, um)
+          sprintf(
+            "range(%s[1], %s[2], length=%s)%s",
+            P[["times_name"]], P[["times_name"]], save_n, um
+          )
         }
       }
     )
@@ -206,13 +217,13 @@ compile_times <- function(sfm, language) {
 
 #' Compile script for global variables
 #'
-#' @inheritParams build
+#' @inheritParams update.sdbuildR
 #'
 #' @returns Func script as character string
 #' @noRd
-compile_funcs <- function(sfm, language) {
+compile_funcs <- function(object, language) {
   script <- ""
-  func_df <- get_funcs(sfm)
+  func_df <- get_funcs(object)
 
   if (nrow(func_df) == 0 || !any(nzchar(func_df[["eqn"]]))) {
     return(script)
@@ -221,7 +232,7 @@ compile_funcs <- function(sfm, language) {
   lang <- lang_adapter(language)
 
   # Julia needs var_names and regex_units for equation conversion; R ignores them
-  var_names <- if (language == "Julia") get_model_var(sfm) else NULL
+  var_names <- if (language == "Julia") get_model_var(object) else NULL
   regex_units <- if (language == "Julia") get_regex_units() else NULL
 
   eqns <- character(nrow(func_df))
@@ -248,7 +259,6 @@ compile_funcs <- function(sfm, language) {
 }
 
 
-
 #' Compile script for static variables, i.e. initial conditions, functions, and parameters
 #'
 #' @inheritParams compile
@@ -258,12 +268,12 @@ compile_funcs <- function(sfm, language) {
 #'
 #' @returns List with necessary scripts
 #'
-compile_static <- function(sfm, language,
+compile_static <- function(object, language,
                            ordering_override = NULL,
                            ensemble_iter_code = "") {
-  keep_unit <- sfm[["sim_specs"]][["keep_unit"]]
-  intermediaries <- sfm[["assemble"]][["intermediaries"]]
-  ordering <- if (!is.null(ordering_override)) ordering_override else sfm[["assemble"]][["ordering"]]
+  keep_unit <- object[["sim_specs"]][["keep_unit"]]
+  intermediaries <- object[["assemble"]][["intermediaries"]]
+  ordering <- if (!is.null(ordering_override)) ordering_override else object[["assemble"]][["ordering"]]
 
   # If ordering for static_and_dynamic is missing, treat as issue and fall back to static only
   if (is.null(ordering[["static_and_dynamic"]][["order"]])) {
@@ -271,7 +281,7 @@ compile_static <- function(sfm, language,
   }
 
   # Extract and order equations (same helper as R branch)
-  gathered <- gather_static_equations(sfm, ordering)
+  gathered <- gather_static_equations(object, ordering)
   constant_eqn <- gathered$constant_eqn
   stock_eqn <- gathered$stock_eqn
   gf_eqn <- gathered$gf_eqn
@@ -306,7 +316,7 @@ compile_static <- function(sfm, language,
 
     #** removed:
     #   # Re-gather with possibly modified ordering (after ensemble var removal)
-    #   gathered <- gather_static_equations(sfm, ordering)
+    #   gathered <- gather_static_equations(object, ordering)
     #   static_str <- gathered$str
 
     # Replace any reference to model_setup.intermediary_names with intermediary_names
@@ -317,7 +327,7 @@ compile_static <- function(sfm, language,
 
 
     # Put parameters together in named tuple; include graphical functions as otherwise these are not defined outside of the let block
-    #   if (nrow(get_variables_by_type(sfm, "constant")) > 0 || nrow(get_variables_by_type(sfm, "gf")) > 0) {
+    #   if (nrow(get_variables_by_type(object, "constant")) > 0 || nrow(get_variables_by_type(object, "gf")) > 0) {
     if (length(constant_eqn) > 0 || length(gf_eqn) > 0) {
       pars_def <- paste0(
         "\n\n# Define parameters in named tuple\n",
@@ -332,7 +342,7 @@ compile_static <- function(sfm, language,
     }
 
     # # Check for delayN() and smoothN() functions
-    # delayN_smoothN <- get_delay(sfm, type = "delayN_smoothN")
+    # delayN_smoothN <- get_delay(object, type = "delayN_smoothN")
 
     # if (length(delayN_smoothN) > 0) {
     #   delay_names <- names(unlist(unname(delayN_smoothN), recursive = FALSE))
@@ -366,10 +376,10 @@ compile_static <- function(sfm, language,
     #   ))
     #   static_str <- stringr::str_replace_all(static_str, dict)
     # } else {
-      init_def_stocks <- paste0(names(stock_eqn), collapse = ", ")
-      # Symbols are faster than characters
-      init_names <- paste0(paste0(":", names(stock_eqn)), collapse = ", ")
-      init_idx <- ""
+    init_def_stocks <- paste0(names(stock_eqn), collapse = ", ")
+    # Symbols are faster than characters
+    init_names <- paste0(paste0(":", names(stock_eqn)), collapse = ", ")
+    init_idx <- ""
     # }
 
     # Put initial states together in (unnamed) vector
@@ -377,12 +387,12 @@ compile_static <- function(sfm, language,
       "\n# Define initial condition in vector\n",
       P[["initial_value_name"]],
       " = [Base.Iterators.flatten(",
-      # ifelse(keep_unit, "Unitful.ustrip.(", ""), 
+      # ifelse(keep_unit, "Unitful.ustrip.(", ""),
       "[",
       init_def_stocks,
       # Add extra comma in case there is only one stock
-      ",]", 
-      # ifelse(keep_unit, ")", ""), 
+      ",]",
+      # ifelse(keep_unit, ")", ""),
       ")...]\n"
     )
 
@@ -430,7 +440,6 @@ compile_static <- function(sfm, language,
       intermediary_names_correct = intermediary_names_correct,
       delay_idx_return = delay_idx_return
     )
-
   }
 
 
@@ -443,21 +452,21 @@ compile_static <- function(sfm, language,
 
 #' Compile script for non-negative stocks
 #'
-#' @inheritParams build
+#' @inheritParams update.sdbuildR
 #' @inheritParams compile
 #'
 #' @noRd
 #' @returns List with necessary scripts for ensuring non-negative stocks
 #'
-compile_nonneg_stocks <- function(sfm, language) {
-  keep_nonnegative_stock <- sfm[["sim_specs"]][["keep_nonnegative_stock"]]
+compile_nonneg_stocks <- function(object, language) {
+  keep_nonnegative_stock <- object[["sim_specs"]][["keep_nonnegative_stock"]]
   nonneg_stocks <- empty_nonneg_stocks()
   scripts <- prep_script_template()
 
 
   if (language == "R") {
     # Non-negative stocks
-    stock_df <- sfm[["variables"]][sfm[["variables"]][["type"]] == "stock", ]
+    stock_df <- object[["variables"]][object[["variables"]][["type"]] == "stock", ]
     nonneg_idx <- which(stock_df[["non_negative"]])
 
     if (keep_nonnegative_stock && length(nonneg_idx) > 0) {
@@ -472,8 +481,8 @@ compile_nonneg_stocks <- function(sfm, language) {
 
       check_root <- scripts[["nonneg_check_root_r"]][["template"]]
 
-      nonneg_stocks[["func_def"]]   <- func_def
-      nonneg_stocks[["root_arg"]]   <- root_arg
+      nonneg_stocks[["func_def"]] <- func_def
+      nonneg_stocks[["root_arg"]] <- root_arg
       nonneg_stocks[["check_root"]] <- check_root
     }
   }
@@ -496,18 +505,18 @@ compile_nonneg_stocks <- function(sfm, language) {
 #' @noRd
 #'
 compile_run_ode <- function(
-  sfm,
+  object,
   filepath_sim = NULL,
   only_stocks = NULL,
   language
 ) {
-  nonneg_stocks <- sfm[["assemble"]][["nonneg_stocks"]]
-  intermediaries <- sfm[["assemble"]][["intermediaries"]]
+  nonneg_stocks <- object[["assemble"]][["nonneg_stocks"]]
+  intermediaries <- object[["assemble"]][["intermediaries"]]
   save_intermediaries <- length(intermediaries[["names"]]) > 0
 
   if (language == "R") {
     script <- fmt_script("run_ode", language,
-      method = sfm[["sim_specs"]][["method"]],
+      method = object[["sim_specs"]][["method"]],
       root_arg = nonneg_stocks[["root_arg"]],
       check_root = nonneg_stocks[["check_root"]]
     )
@@ -518,7 +527,7 @@ compile_run_ode <- function(
     )
 
     script <- fmt_script("run_ode", language,
-      method = sfm[["sim_specs"]][["method"]],
+      method = object[["sim_specs"]][["method"]],
       callback_arg = callback_arg
     )
   }
@@ -527,26 +536,25 @@ compile_run_ode <- function(
 }
 
 
-compile_post <- function(sfm, filepath_sim = NULL, language) {
-  intermediaries <- sfm[["assemble"]][["intermediaries"]]
+compile_post <- function(object, filepath_sim = NULL, language, vars = NULL) {
+  intermediaries <- object[["assemble"]][["intermediaries"]]
   save_intermediaries <- length(intermediaries[["names"]]) > 0
 
   if (language == "R") {
-    ss        <- sfm[["sim_specs"]]
+    ss <- object[["sim_specs"]]
     save_type <- ss[["save_type"]] %||% "all"
-    save_at   <- ss[["save_at"]]
-    save_n    <- ss[["save_n"]]
+    save_at <- ss[["save_at"]]
+    save_n <- ss[["save_n"]]
 
     saveat_script <- switch(save_type,
       "all" = "",
-
       "save_at" = if (length(save_at) == 1) {
         fmt_script("saveat_interval", language, ss, save_at_val = save_at)
       } else {
         fmt_script("saveat_explicit", language, ss,
-          save_at_str = paste(save_at, collapse = ", "))
+          save_at_str = paste(save_at, collapse = ", ")
+        )
       },
-
       "save_n" = if (as.integer(save_n) == 1L) {
         fmt_script("saveat_n1", language, ss)
       } else {
@@ -561,9 +569,37 @@ compile_post <- function(sfm, filepath_sim = NULL, language) {
   } else if (language == "Julia") {
     intermediaries_or_nothing <- ifelse(save_intermediaries, P[["intermediaries"]], "nothing")
 
+    stock_names <- get_variables_by_type(object, "stock")[["name"]]
+    if (!is.null(vars)) {
+      vars <- validate_sim_vars(object, vars)
+      selected_stock_names <- vars[vars %in% stock_names]
+      save_idx <- which(stock_names %in% selected_stock_names)
+      save_idx_arg <- if (length(save_idx) > 0) {
+        paste0("[", paste0(save_idx, collapse = ", "), "]")
+      } else {
+        "Int[]"
+      }
+
+      selected_inter_names <- vars[vars %in% intermediaries[["names"]]]
+      intermediary_names_arg <- if (length(selected_inter_names) > 0) {
+        paste0("[:", paste0(selected_inter_names, collapse = ", :"), "]")
+      } else {
+        "Symbol[]"
+      }
+
+      selected_var_names_arg <- paste0("[:", paste0(vars, collapse = ", :"), "]")
+    } else {
+      save_idx_arg <- "nothing"
+      intermediary_names_arg <- paste0(P[["model_setup_name"]], ".", P[["intermediary_names"]])
+      selected_var_names_arg <- "nothing"
+    }
+
     script <- fmt_script("post_ode", language,
       intermediaries_or_nothing = intermediaries_or_nothing,
-      filepath_sim = filepath_sim
+      filepath_sim = filepath_sim,
+      intermediary_names_arg = intermediary_names_arg,
+      save_idx_arg = save_idx_arg,
+      selected_var_names_arg = selected_var_names_arg
     )
   }
 
@@ -578,63 +614,63 @@ compile_post <- function(sfm, filepath_sim = NULL, language) {
 #' the ensemble-specific portions (ensemble_def, ensemble_iter, run_ode,
 #' post) on top.
 #'
-#' @inheritParams simulate
+#' @inheritParams simulate.sdbuildR
 #' @inheritParams ensemble
 #' @param ensemble_pars List of ensemble parameters constructed by ensemble().
 #'
-#' @returns List with `script` (character) and `sfm` (updated model).
+#' @returns List with `script` (character) and `object` (updated model).
 #' @noRd
-compile_ensemble <- function(sfm, ensemble_pars, only_stocks = TRUE) {
-  language <- sfm[["sim_specs"]][["language"]]
+compile_ensemble <- function(object, ensemble_pars, only_stocks = TRUE) {
+  language <- object[["sim_specs"]][["language"]]
 
-  # Ensure base cache is populated — reuses build() cache if already done
-  sfm <- pre_assemble_components(sfm)
+  # Ensure base cache is populated — reuses update() cache if already done
+  object <- pre_assemble_components(object)
 
-  # Reformat range values as Julia float literals (does not modify sfm)
-  out <- prep_ensemble_range(sfm, ensemble_pars)
-  sfm <- out[["sfm"]]
+  # Reformat conditions values as Julia float literals (does not modify object)
+  out <- prep_ensemble_conditions(object, ensemble_pars)
+  object <- out[["object"]]
   ensemble_pars <- out[["ensemble_pars"]]
   rm(out)
 
-  ordering <- sfm[["assemble"]][["ordering"]]
+  ordering <- object[["assemble"]][["ordering"]]
 
   # Adjust only_stocks based on ordering (no dynamic vars → stocks only)
   if (is.null(ordering[["dynamic"]][["order"]])) {
     only_stocks <- TRUE
   }
 
-  # Ensemble-specific static: range vars excluded, ensemble_def/iter prepended
-  static_ens <- compile_static_ensemble(sfm, ensemble_pars)
+  # Ensemble-specific static: conditions vars excluded, ensemble_def/iter prepended
+  static_ens <- compile_static_ensemble(object, ensemble_pars)
 
   # ODE without callback_setup (recreated per member inside run_ode_ensemble)
-  ode <- compile_ode(sfm, only_stocks, language, is_ensemble = TRUE)
+  ode <- compile_ode(object, only_stocks, language, is_ensemble = TRUE)
 
   # Ensemble run_ode and post-processing
-  run_ode <- compile_run_ode_ensemble(sfm, ensemble_pars, static_ens, only_stocks)
-  post    <- compile_post_ensemble(sfm, ensemble_pars)
+  run_ode <- compile_run_ode_ensemble(object, ensemble_pars, static_ens, only_stocks)
+  post <- compile_post_ensemble(object, ensemble_pars)
 
   # Seed string
-  seed <- sfm[["sim_specs"]][["seed"]]
+  seed <- object[["sim_specs"]][["seed"]]
   seed_str <- if (is_defined(seed)) fmt_script("prep_seed", language, seed = seed) else ""
 
   script <- paste0(c(
     seed_str,
-    sfm[["assemble"]][["units"]],
-    sfm[["assemble"]][["times"]],
-    sfm[["assemble"]][["funcs"]],
+    object[["assemble"]][["units"]],
+    object[["assemble"]][["times"]],
+    object[["assemble"]][["funcs"]],
     ode,
     static_ens[["script"]],
     run_ode,
     post
   ), collapse = "\n")
 
-  list(script = script, sfm = sfm)
+  list(script = script, object = object)
 }
 
 
 #' Compile script for ODE function passed to deSolve::ode
 #'
-#' @inheritParams build
+#' @inheritParams update.sdbuildR
 #' @inheritParams compile
 #' @inheritParams order_equations
 #' @inheritParams compile_static
@@ -643,34 +679,35 @@ compile_ensemble <- function(sfm, ensemble_pars, only_stocks = TRUE) {
 #' @importFrom rlang .data
 #' @noRd
 #'
-compile_ode <- function(sfm,
+compile_ode <- function(object,
                         only_stocks,
                         language,
-                        is_ensemble = FALSE) {
-  keep_nonnegative_stock <- sfm[["sim_specs"]][["keep_nonnegative_stock"]]
-  keep_unit <- sfm[["sim_specs"]][["keep_unit"]]
+                        is_ensemble = FALSE,
+                        vars = NULL) {
+  keep_nonnegative_stock <- object[["sim_specs"]][["keep_nonnegative_stock"]]
+  keep_unit <- object[["sim_specs"]][["keep_unit"]]
 
-  ordering <- sfm[["assemble"]][["ordering"]]
-  static <- sfm[["assemble"]][["static"]]
-  intermediaries <- sfm[["assemble"]][["intermediaries"]]
+  ordering <- object[["assemble"]][["ordering"]]
+  static <- object[["assemble"]][["static"]]
+  intermediaries <- object[["assemble"]][["intermediaries"]]
   save_intermediaries <- length(intermediaries[["names"]]) > 0
 
   lang <- lang_adapter(language)
 
   # Get and order dynamic equations
-  dynamic <- gather_dynamic_equations(sfm, ordering, separator = "\n\t\t")
+  dynamic <- gather_dynamic_equations(object, ordering, separator = "\n\t\t")
   dynamic_eqn <- dynamic$eqns
   dynamic_eqn_str <- dynamic$str
 
   if (language == "R") {
     # Sum change in stock equations
-    stock_change <- gather_stock_changes(sfm, assign_op = lang$assign_op, language = language)
+    stock_change <- gather_stock_changes(object, assign_op = lang$assign_op, language = language)
 
     # Compile stock changes in one string
     stock_change_str <- paste0(stock_change, collapse = "\n\t\t")
 
     # Get names of summed change in stocks from data frame
-    stock_df_all <- sfm[["variables"]][sfm[["variables"]][["type"]] == "stock", ]
+    stock_df_all <- object[["variables"]][object[["variables"]][["type"]] == "stock", ]
     stock_changes_names <- stock_df_all[["sum_name"]]
 
     state_change_str <- paste0(
@@ -679,23 +716,33 @@ compile_ode <- function(sfm,
     )
 
     # Graphical functions (gf)
-    gf_str <- build_gf_return_str(sfm)
+    gf_str <- build_gf_return_str(object)
 
     # Save all variables in return statement
     if (!only_stocks) {
       # Filter out functions in case they are in auxiliaries
       if (length(names(dynamic_eqn)) > 0 || nzchar(gf_str)) {
-        # Build variable name assignments
-        var_assignments <- ""
-        if (length(names(dynamic_eqn)) > 0) {
-          var_assignments <- paste0(paste0(names(dynamic_eqn), " = ", names(dynamic_eqn)), collapse = ", ")
+        selected_dynamic_names <- names(dynamic_eqn)
+        if (!is.null(vars)) {
+          selected_dynamic_names <- vars[vars %in% selected_dynamic_names]
         }
 
+        # Build variable name assignments
+        var_assignments <- ""
+        if (length(selected_dynamic_names) > 0) {
+          var_assignments <- paste0(paste0(selected_dynamic_names, " = ", selected_dynamic_names), collapse = ", ")
+        }
+
+        include_gf <- nzchar(gf_str) && is.null(vars)
         save_var_str <- paste0(
           ", Filter(Negate(is.function), c(",
-          var_assignments, ifelse(nzchar(gf_str), ", ", ""),
-          gf_str, "))"
+          var_assignments, ifelse(include_gf && nzchar(var_assignments), ", ", ""),
+          ifelse(include_gf, gf_str, ""), "))"
         )
+
+        if (!nzchar(var_assignments) && !include_gf) {
+          save_var_str <- ""
+        }
       } else {
         # No variables to save (isolated stocks only)
         save_var_str <- ""
@@ -716,14 +763,14 @@ compile_ode <- function(sfm,
     )
   } else if (language == "Julia") {
     # Sum change in stock equations
-    stock_change <- gather_stock_changes(sfm, assign_op = lang$assign_op, language = language)
+    stock_change <- gather_stock_changes(object, assign_op = lang$assign_op, language = language)
     stock_change_str <- paste0(stock_change, collapse = "\n\t")
 
     # Add units to stocks
     add_stock_units <- ""
     # if (keep_unit) {
     #   # For each stock that has a unit, add
-    #   stock_vars <- get_variables_by_type(sfm, "stock")
+    #   stock_vars <- get_variables_by_type(object, "stock")
     #   stock_names <- stock_vars[["name"]]
     #   stock_units <- stock_vars[["units"]]
     #   idx <- stock_units != "1"
@@ -740,7 +787,7 @@ compile_ode <- function(sfm,
     # }
 
     # Non-negative stocks
-    stock_vars_df <- get_variables_by_type(sfm, "stock")
+    stock_vars_df <- get_variables_by_type(object, "stock")
     nonneg_stocks <- stock_vars_df[["non_negative"]] |> unlist()
     add_nonneg <- any(nonneg_stocks) & keep_nonnegative_stock
 
@@ -772,7 +819,7 @@ compile_ode <- function(sfm,
     }
 
     # # If delayN() and smoothN() were used, state has to be unpacked differently
-    # delayN_smoothN <- get_delay(sfm, type = "delayN_smoothN")
+    # delayN_smoothN <- get_delay(object, type = "delayN_smoothN")
 
     # if (length(delayN_smoothN) > 0) {
     #   delay_names <- names(unlist(unname(delayN_smoothN), recursive = FALSE))
@@ -796,10 +843,10 @@ compile_ode <- function(sfm,
 
     #   unpack_state_str <- paste0(unpack_nondelayN, "\n\t", paste0(unpack_delayN, collapse = "\n\t"))
     # } else {
-      unpack_state_str <- paste0(
-        paste0(names(stock_change), collapse = ", "),
-        ", = ", P[["state_name"]]
-      )
+    unpack_state_str <- paste0(
+      paste0(names(stock_change), collapse = ", "),
+      ", = ", P[["state_name"]]
+    )
     # }
 
     # Unpack parameters string
@@ -881,7 +928,7 @@ compile_ode <- function(sfm,
 #' @returns List with script
 #'
 #' @noRd
-compile_units <- function(sfm, language) {
+compile_units <- function(object, language) {
   if (language == "R") {
     stop("compile_units() only works for Julia.")
   } else if (language == "Julia") {
@@ -893,12 +940,12 @@ compile_units <- function(sfm, language) {
     # end\n", P[["MyCustomUnits"]], P[["MyCustomUnits"]])
     script <- ""
 
-    if (nrow(sfm[["custom_unit"]]) > 0) {
-      if (nrow(sfm[["custom_unit"]]) > 1) {
+    if (nrow(object[["custom_unit"]]) > 0) {
+      if (nrow(object[["custom_unit"]]) > 1) {
         # Topological sort of units
-        eq_names <- sfm[["custom_unit"]][["name"]]
+        eq_names <- object[["custom_unit"]][["name"]]
         deps <- lapply(
-          sfm[["custom_unit"]][["eqn"]],
+          object[["custom_unit"]][["eqn"]],
           function(x) {
             unlist(stringr::str_extract_all(x, eq_names))
           }
@@ -910,12 +957,12 @@ compile_units <- function(sfm, language) {
           cli::cli_inform(paste0("Ordering custom units failed. ", paste0(out[["msg"]])))
         }
 
-        sfm[["custom_unit"]] <- sfm[["custom_unit"]][out[["order"]], ]
+        object[["custom_unit"]] <- object[["custom_unit"]][out[["order"]], ]
       }
 
 
-      unit_str <- lapply(seq_len(nrow(sfm[["custom_unit"]])), function(i) {
-        row <- sfm[["custom_unit"]][i, ]
+      unit_str <- lapply(seq_len(nrow(object[["custom_unit"]])), function(i) {
+        row <- object[["custom_unit"]][i, ]
         if (is_defined(row[["eqn"]])) {
           unit_def <- row[["eqn"]]
         } else {
@@ -937,5 +984,3 @@ compile_units <- function(sfm, language) {
     script
   }
 }
-
-

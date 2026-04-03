@@ -32,7 +32,7 @@ on \href{https://docs.oasis-open.org/sdbuildR/sdbuildR/v1.0/os/sdbuildR-v1.0-os.
 \describe{
 \item{meta}{Meta-information about model. A list containing arguments listed in \code{\link[=meta]{meta()}}.}
 \item{sim_specs}{Simulation specifications. A list containing arguments listed in \code{\link[=sim_specs]{sim_specs()}}.}
-\item{model}{Model variables, grouped under the variable types stock, flow, aux (auxiliaries), constant, gf (graphical functions), and func (custom functions). Each variable contains arguments as listed in \code{\link[=build]{build()}}.}
+\item{model}{Model variables, grouped under the variable types stock, flow, aux (auxiliaries), constant, gf (graphical functions), and func (custom functions). Each variable contains arguments as listed in \code{\link[=update]{update()}}.}
 \item{custom_unit}{Custom model units. A list containing arguments listed in \code{\link[=custom_unit]{custom_unit()}}.}
 }
 
@@ -45,7 +45,7 @@ library.
 }
 \details{
 Do not edit the object manually; this will likely lead to errors downstream.
-Rather, use \code{\link[=meta]{meta()}}, \code{\link[=sim_specs]{sim_specs()}}, \code{\link[=build]{build()}}, \code{\link[=custom_func]{custom_func()}}, and
+Rather, use \code{\link[=meta]{meta()}}, \code{\link[=sim_specs]{sim_specs()}}, \code{\link[=update]{update()}}, \code{\link[=custom_func]{custom_func()}}, and
 \code{\link[=custom_unit]{custom_unit()}} for safe manipulation.
 }
 \examples{
@@ -62,6 +62,6 @@ sim <- simulate(sfm)
 plot(sim)
 }
 \seealso{
-\code{\link[=build]{build()}}, \code{\link[=meta]{meta()}}, \code{\link[=custom_func]{custom_func()}}, \code{\link[=custom_unit]{custom_unit()}}, \code{\link[=sim_specs]{sim_specs()}}
+\code{\link[=update]{update()}}, \code{\link[=meta]{meta()}}, \code{\link[=custom_func]{custom_func()}}, \code{\link[=custom_unit]{custom_unit()}}, \code{\link[=sim_specs]{sim_specs()}}
 }
 \concept{build}

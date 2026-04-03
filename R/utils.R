@@ -120,8 +120,6 @@ near <- function(x, y, tol = .Machine$double.eps^0.5) {
 }
 
 
-
-
 #' Switch names and values of list, handling different lengths in entries
 #'
 #' @param x List
@@ -337,14 +335,13 @@ str_wrap_ <- function(str, width) {
 #'
 ensure_length <- function(arg, target, arg_name = NULL, target_name = NULL) {
   if (length(arg) != 1 && length(arg) != length(target)) {
-
     if (is.null(arg_name)) {
       arg_name <- deparse(substitute(arg))
     }
     if (is.null(target_name)) {
       target_name <- deparse(substitute(target))
     }
-    arg_val <- paste0(arg, collapse = ", ") 
+    arg_val <- paste0(arg, collapse = ", ")
     target_val <- paste0(target, collapse = ", ")
 
     cli::cli_abort(c(
@@ -352,7 +349,6 @@ ensure_length <- function(arg, target, arg_name = NULL, target_name = NULL) {
       "x" = "Length must be either 1 or equal to the length of {.arg {target_name}}.",
       "i" = "Received length {.val {length(arg)}} for {.arg {arg_name}} and length {.val {length(target)}} for {.arg {target_name}}."
     ))
-    
   } else if (length(arg) < length(target)) {
     arg <- rep(arg, length.out = length(target)) # Repeat to match the target length
   }
@@ -408,7 +404,7 @@ clean_language <- function(language) {
 
 #' Clean variable type
 #'
-#' @inheritParams build
+#' @inheritParams update.sdbuildR
 #'
 #' @returns Cleaned string or vector
 #' @noRd
@@ -440,6 +436,11 @@ clean_type <- function(type) {
   type[type == "gf" | type == "graphical function"] <- "lookup"
 
   type
+}
+
+
+.julia_func_names <- function() {
+  c("is_function_or_interp", "itp", "make_ramp", "make_step", "make_pulse", "make_seasonal", "round_IM", "logit", "expit", "logistic", "nonnegative", "rbool", "rdist", "indexof", "contains_IM", "round_", "\u2295", "convert_u", "saveat_func", "clean_df", "clean_constants", "clean_init", "transform_intermediaries", "generate_param_combinations", "ensemble_to_df", "ensemble_to_df_threaded", "ensemble_summ", "ensemble_summ_threaded")
 }
 
 
@@ -480,7 +481,7 @@ clean_name <- function(new, protected = NULL) {
     get_exported_functions("sdbuildR"),
 
     # Add Julia custom function names
-    names(julia_func()),
+    .julia_func_names(),
 
     # These are variables in the ode and cannot be model element names
     unname(unlist(P[names(P) %in% c(
@@ -527,35 +528,35 @@ clean_name <- function(new, protected = NULL) {
 
 #' Quickly get names of model variables
 #'
-#' @inheritParams build
+#' @inheritParams update.sdbuildR
 #'
 #' @noRd
 #' @returns Vector with names of model variables
-get_model_var <- function(sfm) {
-  sfm[["variables"]][["name"]]
+get_model_var <- function(object) {
+  object[["variables"]][["name"]]
 }
 
 
 #' Get func-type variables from model
 #'
-#' @inheritParams build
+#' @inheritParams update.sdbuildR
 #' @returns data.frame of func-type variables
 #' @noRd
-get_funcs <- function(sfm) {
-  sfm[["variables"]][sfm[["variables"]][["type"]] == "func", ]
+get_funcs <- function(object) {
+  object[["variables"]][object[["variables"]][["type"]] == "func", ]
 }
 
 
 #' Create data frame with stock-and-flow model variables, types, labels, and units
 #'
-#' @inheritParams build
+#' @inheritParams update.sdbuildR
 #'
 #' @returns data.frame
 #' @noRd
 #'
-get_names <- function(sfm) {
+get_names <- function(object) {
   # Return variables data frame (already has type, name, label, units)
-  if (nrow(sfm[["variables"]]) == 0) {
+  if (nrow(object[["variables"]]) == 0) {
     names_df <- data.frame(
       type = character(0),
       name = character(0),
@@ -564,11 +565,85 @@ get_names <- function(sfm) {
       stringsAsFactors = FALSE
     )
   } else {
-    names_df <- sfm[["variables"]][, c("type", "name", "label", "units")]
+    names_df <- object[["variables"]][, c("type", "name", "label", "units")]
   }
 
   rownames(names_df) <- NULL
   names_df
+}
+
+
+#' Get names of time-varying variables in simulation output
+#'
+#' @inheritParams update.sdbuildR
+#'
+#' @returns Character vector with names of stock, flow, and aux variables.
+#' @noRd
+get_sim_output_var_names <- function(object) {
+  names_df <- get_names(object)
+  names_df[names_df[["type"]] %in% c("stock", "flow", "aux"), "name", drop = TRUE]
+}
+
+
+#' Validate vars argument for simulation output selection
+#'
+#' @inheritParams update.sdbuildR
+#' @param vars Character vector of variable names to save.
+#'
+#' @returns Cleaned character vector of unique variable names.
+#' @noRd
+validate_sim_vars <- function(object, vars) {
+  if (is.null(vars)) {
+    return(NULL)
+  }
+
+  if (!is.character(vars)) {
+    cli::cli_abort(c(
+      "Invalid {.arg vars} argument.",
+      "x" = "The {.arg vars} argument must be a {.cls character} vector."
+    ))
+  }
+
+  vars <- trimws(vars)
+  vars <- vars[nzchar(vars)]
+  vars <- unique(vars)
+
+  if (length(vars) == 0) {
+    cli::cli_abort(c(
+      "Invalid {.arg vars} argument.",
+      "x" = "The {.arg vars} argument cannot be empty.",
+      ">" = "Provide one or more variable names, e.g. {.code vars = c('S', 'I')}"
+    ))
+  }
+
+  allowed <- get_sim_output_var_names(object)
+  idx <- !(vars %in% allowed)
+  if (any(idx)) {
+    cli::cli_abort(c(
+      "Invalid variables in {.arg vars}.",
+      "x" = "Unsupported or unknown variable(s): {paste0(vars[idx], collapse = ', ')}.",
+      "i" = "Only time-varying variables ({.code stock}, {.code flow}, {.code aux}) are allowed.",
+      ">" = "Available variables: {paste0(allowed, collapse = ', ')}"
+    ))
+  }
+
+  vars
+}
+
+
+#' Filter long simulation data frame by selected variables
+#'
+#' @param df Data frame with a "variable" column.
+#' @param vars Character vector of variable names, or NULL.
+#'
+#' @returns Filtered data frame.
+#' @noRd
+filter_sim_df_vars <- function(df, vars) {
+  if (is.null(vars) || nrow(df) == 0 || !"variable" %in% names(df)) {
+    return(df)
+  }
+
+  df[df[["variable"]] %in% vars, , drop = FALSE]
 }
 
 
@@ -681,7 +756,7 @@ sort_args <- function(arg, func_name, default_arg = NULL, var_names = NULL) {
     idx <- !names_arg %in% names(default_arg) & !is.na(names_arg)
     if (!varargs && any(idx)) {
       bad_args <- names_arg[idx]
-      allowed  <- names(default_arg)
+      allowed <- names(default_arg)
       cli::cli_abort(c(
         "{cli::qty(length(bad_args))}Invalid argument{?s} for {.fn {func_name}}.",
         "x" = "{.code {bad_args}} {?is/are} not allowed.",
@@ -886,25 +961,25 @@ get_words <- function(eqn) {
 #'
 #' Helper functions to convert from old nested structure access to new flat data frame access.
 #'
-#' @param sfm A stock-and-flow model
+#' @param object A stock-and-flow model
 #' @param type Type of variable to extract (e.g., "stock", "flow", "aux", "constant", "lookup")
 #'
 #' @returns data.frame of variables of the specified type
 #' @noRd
-get_variables_by_type <- function(sfm, type) {
-  sfm[["variables"]][sfm[["variables"]][["type"]] == type, ]
+get_variables_by_type <- function(object, type) {
+  object[["variables"]][object[["variables"]][["type"]] == type, ]
 }
 
 #' Extract a column from variables of a specific type as a named list
 #'
-#' @param sfm A stock-and-flow model
+#' @param object A stock-and-flow model
 #' @param type Type of variable to extract
 #' @param column Column name to extract (e.g., "eqn_str", "units", etc.)
 #'
 #' @returns Named list where names are variable names and values are the column values
 #' @noRd
-get_vars_column_as_list <- function(sfm, type, column) {
-  vars_df <- get_variables_by_type(sfm, type)
+get_vars_column_as_list <- function(object, type, column) {
+  vars_df <- get_variables_by_type(object, type)
   if (nrow(vars_df) == 0) {
     return(list())
   }
@@ -995,7 +1070,7 @@ get_range_pairs <- function(eqn, var_names,
   close_locs <- close_locs[!close_locs %in% exclude_idxs]
 
   if (length(open_locs) != length(close_locs)) {
-    n_open  <- length(open_locs)
+    n_open <- length(open_locs)
     n_close <- length(close_locs)
     cli::cli_abort(c(
       "Mismatched brackets in equation.",
@@ -1122,21 +1197,17 @@ get_range_all_pairs <- function(eqn, var_names,
 }
 
 
-
-
-
-
 # ===== Import Conversion Context =====
 # These functions manage the conversion pipeline for importing models from
 # external vendors (InsightMaker, Stella, Vensim, etc.). The context pattern
 # separates intermediate state (variables being transformed) from the final
-# model structure (sfm), allowing conversions to happen in the correct order.
+# model structure (object), allowing conversions to happen in the correct order.
 
 #' Create a new import conversion context
 #'
 #' Creates a context object for managing the import conversion pipeline.
 #' The context holds intermediate data while components are progressively
-#' moved to the sfm as they become ready.
+#' moved to the object as they become ready.
 #'
 #' @param vendor Character. The source vendor (e.g., "insightmaker", "stella", "vensim").
 #'
@@ -1145,8 +1216,8 @@ get_range_all_pairs <- function(eqn, var_names,
 #'
 create_import_context <- function(vendor) {
   ctx <- list(
-    # The sfm being built - components added progressively as they become ready
-    sfm = new_sdbuildR(),
+    # The object being built - components added progressively as they become ready
+    object = new_sdbuildR(),
 
     # Vendor identification
     vendor = vendor,
@@ -1161,7 +1232,7 @@ create_import_context <- function(vendor) {
     # Vendor-specific meta info (for import_metadata)
     vendor_meta = list(),
 
-    # Variables in intermediate state (not yet ready for sfm)
+    # Variables in intermediate state (not yet ready for object)
     # This is a list of variable specs, NOT yet a data frame
     # Each element has: name, type, eqn, units, etc.
     variables = list(),
@@ -1175,7 +1246,7 @@ create_import_context <- function(vendor) {
     # Original macro info (for import_metadata)
     original_macros = NULL,
 
-    # Custom units (ready to add to sfm)
+    # Custom units (ready to add to object)
     units = NULL,
 
     # Settings from the source model
@@ -1190,7 +1261,7 @@ create_import_context <- function(vendor) {
 }
 
 
-#' Add simulation specs to context's sfm
+#' Add simulation specs to context's object
 #'
 #' Once sim_specs are parsed and validated, add them to the sfm.
 #'
@@ -1207,13 +1278,13 @@ ctx_add_sim_specs <- function(ctx, settings, settings_converter = identity) {
     args <- settings_converter(settings)
 
     # Call sim_specs with the converted arguments
-    ctx$sfm <- do.call(sim_specs, c(list(sfm = ctx$sfm), args))
+    ctx$object <- do.call(sim_specs, c(list(object = ctx$object), args))
   }
   ctx
 }
 
 
-#' Add meta to context's sfm
+#' Add meta to context's object
 #'
 #' Once meta info is parsed, add it to the sfm.
 #'
@@ -1225,7 +1296,7 @@ ctx_add_sim_specs <- function(ctx, settings, settings_converter = identity) {
 #'
 ctx_add_meta <- function(ctx, meta) {
   if (!is.null(meta) && length(meta) > 0) {
-    ctx$sfm[["meta"]] <- utils::modifyList(ctx$sfm[["meta"]], meta)
+    ctx$object[["meta"]] <- utils::modifyList(ctx$object[["meta"]], meta)
   }
   ctx
 }
@@ -1294,12 +1365,12 @@ ctx_capture_original_macros <- function(ctx) {
 }
 
 
-#' Move variables from context to sfm (raw, no Julia conversion)
+#' Move variables from context to object (raw, no Julia conversion)
 #'
-#' Adds variables to the sfm WITHOUT Julia conversion. This is used by import
+#' Adds variables to the object WITHOUT Julia conversion. This is used by import
 #' pipelines where equations need further conversion before Julia translation.
 #'
-#' Temporary columns that exist in sfm$variables will be preserved by
+#' Temporary columns that exist in object$variables will be preserved by
 #' add_variable_row(). These should be initialized with ctx_init_temp_columns()
 #' and cleaned up with ctx_cleanup_temp_columns().
 #'
@@ -1307,7 +1378,7 @@ ctx_capture_original_macros <- function(ctx) {
 #'
 #' @param ctx Import context
 #'
-#' @returns Updated context with variables added to sfm
+#' @returns Updated context with variables added to object
 #' @noRd
 #'
 ctx_add_variables <- function(ctx) {
@@ -1325,10 +1396,10 @@ ctx_add_variables <- function(ctx) {
     "conveyor", "len"
   )
 
-  # Add temporary columns to sfm$variables if they don't exist yet
+  # Add temporary columns to object$variables if they don't exist yet
   for (col in temp_cols) {
-    if (!col %in% colnames(ctx$sfm[["variables"]])) {
-      ctx$sfm[["variables"]][[col]] <- NA
+    if (!col %in% colnames(ctx$object[["variables"]])) {
+      ctx$object[["variables"]][[col]] <- NA
     }
   }
 
@@ -1341,8 +1412,8 @@ ctx_add_variables <- function(ctx) {
     # Filter elem to only include valid parameters for add_variable_row()
     elem_for_add <- elem[names(elem) %in% valid_params]
 
-    # Add variable to sfm using add_variable_row()
-    # ctx$sfm <- do.call(add_variable_row, c(list(sfm = ctx$sfm), elem_for_add))
+    # Add variable to object using add_variable_row()
+    # ctx$object <- do.call(add_variable_row, c(list(object = ctx$object), elem_for_add))
     row <- do.call(get_variable_row, elem_for_add)
 
     # Add temporary columns to the row
@@ -1354,23 +1425,22 @@ ctx_add_variables <- function(ctx) {
       }
     }
 
-    ctx$sfm[["variables"]] <- bind_rows_(ctx$sfm[["variables"]], row)
-
+    ctx$object[["variables"]] <- bind_rows_(ctx$object[["variables"]], row)
   }
 
   ctx
 }
 
 
-#' Move variables from context to sfm using build()
+#' Move variables from context to object using update()
 #'
 #' After all equation conversions are complete (including Julia conversion),
-#' add variables to the sfm using build(). This does full validation and
+#' add variables to the object using update(). This does full validation and
 #' Julia equation conversion.
 #'
 #' @param ctx Import context
 #'
-#' @returns Updated context with variables added to sfm
+#' @returns Updated context with variables added to object
 #' @noRd
 #'
 ctx_finalize_variables <- function(ctx) {
@@ -1383,8 +1453,8 @@ ctx_finalize_variables <- function(ctx) {
   for (elem in ctx$variables) {
     elem_for_build <- elem[names(elem) %in% allowed_col]
 
-    # Add variable to sfm using build()
-    ctx$sfm <- do.call(build, c(list(sfm = ctx$sfm), elem_for_build))
+    # Add variable to object using update()
+    ctx$object <- do.call(update.sdbuildR, c(list(object = ctx$object), elem_for_build))
   }
 
   ctx
@@ -1413,19 +1483,19 @@ ctx_build_import_metadata <- function(ctx) {
 }
 
 
-#' Finalize context and return sfm
+#' Finalize context and return object
 #'
 #' Final step: build import_metadata and attach to sfm.
 #'
 #' @param ctx Import context
 #'
-#' @returns sfm with import_metadata attached
+#' @returns object with import_metadata attached
 #' @noRd
 #'
 ctx_finalize <- function(ctx) {
-  ctx$sfm[["import_metadata"]] <- ctx_build_import_metadata(ctx)
-  ctx$sfm <- sanitize_sdbuildR(ctx$sfm)
-  ctx$sfm
+  ctx$object[["import_metadata"]] <- ctx_build_import_metadata(ctx)
+  ctx$object <- sanitize_sdbuildR(ctx$object)
+  ctx$object
 }
 
 

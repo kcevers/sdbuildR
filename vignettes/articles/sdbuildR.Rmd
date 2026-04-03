@@ -59,8 +59,8 @@ Lastly, a stock-and-flow model can be created from scratch. We first initialize 
 sfm <- sdbuildR() |>
   meta(name = "Population growth") |>
   stock(X, eqn = 100, label = "Population size") |>
-  flow(change, 
-    eqn = r * (1 - X/K), to = X,
+  flow(change,
+    eqn = r * (1 - X / K), to = X,
     label = "Births and Deaths"
   ) |>
   constant(r, eqn = 5, label = "Growth rate") |>

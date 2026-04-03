@@ -4,10 +4,10 @@
 \alias{custom_unit}
 \title{Create or modify custom units}
 \usage{
-custom_unit(sfm, name, eqn = 1, doc = "")
+custom_unit(object, name, eqn = 1, doc = "")
 }
 \arguments{
-\item{sfm}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
+\item{object}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
 
 \item{name}{Name of unit. A character vector.}
 
@@ -22,24 +22,28 @@ A stock-and-flow model object of class \code{\link{sdbuildR}}.
 Add or change custom units in a stock-and-flow model. Custom units offer greater flexibility in defining units that are not part of the standard library. Custom units may be new base units, or may be defined in terms of other (custom) units. See \code{\link[=u]{u()}} for more information on the rules of specifying units. Note that units are only supported in Julia, not in R.
 }
 \examples{
-\dontshow{if (is_julia_ready()) withAutoprint(\{ # examplesIf}
+\dontshow{if (Sys.getenv("NOT_CRAN") == "true" && is_julia_ready()) withAutoprint(\{ # examplesIf}
 # Units are only supported with Julia
+use_julia()
 sfm <- sdbuildR("Crielaard2022")
-sfm <- custom_unit(sfm, BMI, eqn = kg/m^2, doc = "Body Mass Index")
+sfm <- custom_unit(sfm, BMI, eqn = kg / m^2, doc = "Body Mass Index")
 
 # You may also use words rather than symbols for the unit definition.
 # The following modifies the unit BMI:
-sfm <- custom_unit(sfm, BMI, eqn = kilogram/meters^2)
+sfm <- custom_unit(sfm, BMI, eqn = kilogram / meters^2)
 
-# Rename unit:
+# Rename unit
 sfm <- change_name(sfm, BMI, BodyMassIndex)
 
-# Remove unit:
+# Remove unit
 sfm <- discard(sfm, BodyMassIndex)
 
 # Unit names may need to be changed to be syntactically valid or to avoid
 # overlap with existing units:
 sfm <- custom_unit(sdbuildR(), C0^2)
+
+# Close Julia session
+use_julia(stop = TRUE)
 \dontshow{\}) # examplesIf}
 }
 \seealso{

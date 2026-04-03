@@ -4,10 +4,10 @@
 \alias{dependencies}
 \title{Find dependencies}
 \usage{
-dependencies(sfm, reverse = FALSE)
+dependencies(object, reverse = FALSE)
 }
 \arguments{
-\item{sfm}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
+\item{object}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
 
 \item{reverse}{If FALSE, list for each variable X which variables Y it depends on for its equation definition. If TRUE, don't show dependencies but dependents. This reverses the dependencies, such that for each variable X, it lists what other variables Y depend on X.}
 }

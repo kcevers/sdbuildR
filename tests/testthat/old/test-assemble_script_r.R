@@ -5,7 +5,7 @@ test_that("simulate R for templates", {
     if (s == "Crielaard2022") {
       sfm <- sfm |>
         # Update initial condition to be non-stochastic
-        build(c("Food_intake", "Hunger", "Compensatory_behaviour"), eqn = round(runif(3), 8))
+        update(c("Food_intake", "Hunger", "Compensatory_behaviour"), eqn = round(runif(3), 8))
     }
 
     sim1 <- simulate(sfm |> sim_specs(language = "R"), only_stocks = TRUE)
@@ -34,15 +34,15 @@ test_that("simulate with different components works", {
 
   sfm <- sdbuildR() |>
     sim_specs(language = "R") |>
-    build("a", "stock") |>
-    build("b", "flow")
+    update("a", "stock") |>
+    update("b", "flow")
   expect_warning(sim <- simulate(sfm), "These flows are not connected to any stock:\\n- b")
   expect_false(sim$success)
 
   # With one stock and no flows and no parameters
   sfm <- sdbuildR() |>
     sim_specs(language = "R", start = 0, stop = 10, dt = 0.1) |>
-    build("A", "stock", eqn = "100")
+    update("A", "stock", eqn = "100")
   sim <- expect_no_error(simulate(sfm))
   expect_equal(sort(names(sim$df)), c("time", "value", "variable"))
   # Basic plot covered in consolidated test-plot-simulate_sdbuildR.R
@@ -50,8 +50,8 @@ test_that("simulate with different components works", {
   # One stock with flows, other stock without flows
   sfm <- sdbuildR() |>
     sim_specs(language = "R", start = 0, stop = 10, dt = 0.1) |>
-    build(c("A", "B"), "stock", eqn = "100") |>
-    build("C", "flow", eqn = "1", to = "A")
+    update(c("A", "B"), "stock", eqn = "100") |>
+    update("C", "flow", eqn = "1", to = "A")
   sim <- expect_no_error(simulate(sfm, only_stocks = FALSE))
   expect_equal(sort(names(sim$df)), c("time", "value", "variable"))
   expect_equal(unique(sim$df$variable), c("A", "B", "C"))
@@ -59,9 +59,9 @@ test_that("simulate with different components works", {
   # With one intermediary -> error in constructing Dataframe before in Julia
   sfm <- sdbuildR() |>
     sim_specs(language = "R", start = 0, stop = 10, dt = 0.1) |>
-    build("A", "stock", eqn = "100") |>
-    build("B", "flow", eqn = "1", to = "A") |>
-    build("C", "aux", eqn = "B + 1")
+    update("A", "stock", eqn = "100") |>
+    update("B", "flow", eqn = "1", to = "A") |>
+    update("C", "aux", eqn = "B + 1")
   sim <- expect_no_message(simulate(sfm, only_stocks = FALSE))
   expect_equal(sort(names(sim$df)), c("time", "value", "variable"))
   expect_equal(unique(sim$df$variable), c("A", "B", "C"))
@@ -69,17 +69,17 @@ test_that("simulate with different components works", {
   # Stocks without flows
   sfm <- sdbuildR() |>
     sim_specs(language = "R", start = 0, stop = 10, dt = 0.1) |>
-    build("A", "stock", eqn = "100") |>
-    build("B", "stock", eqn = "1") |>
-    build("C", "aux", eqn = "B + 1")
+    update("A", "stock", eqn = "100") |>
+    update("B", "stock", eqn = "1") |>
+    update("C", "aux", eqn = "B + 1")
   sim <- expect_no_message(simulate(sfm, only_stocks = FALSE))
   expect_equal(sort(names(sim$df)), c("time", "value", "variable"))
   expect_equal(unique(sim$df$variable), c("A", "B", "C"))
 
   # # With macros
   # sfm = sdbuildR(start = 0, stop = 10, dt = 0.1) |>
-  #   build("A", "stock", eqn = "100") |>
-  #   build("B", "flow", eqn = "1 + C(t)", to = "A") |>
+  #   update("A", "stock", eqn = "100") |>
+  #   update("B", "flow", eqn = "1 + C(t)", to = "A") |>
   #   macro("C", eqn = "function(x) x + 1")
   # expect_no_message(simulate(sfm))
   # **solve macros& functions and how to define, maybe don't use (;x) as all arguments have to be named then, but with (x) they have to be in the right order
@@ -107,7 +107,7 @@ test_that("simulate with different components works", {
 
 test_that("equations that refer to the variable itself throw error", {
   sfm <- sdbuildR() %>%
-    build("E", "stock", eqn = "E")
+    update("E", "stock", eqn = "E")
   expect_warning(
     sim <- simulate(sfm),
     "Define these missing variables or correct any spelling mistakes"
@@ -178,7 +178,7 @@ test_that("seed works", {
   sfm <- sdbuildR("predator_prey") |>
     sim_specs(language = "R", start = 0, stop = 10, dt = 0.1) |>
     sim_specs(seed = NULL) |>
-    build(c("predator", "prey"), eqn = "runif(1, 20, 50)")
+    update(c("predator", "prey"), eqn = "runif(1, 20, 50)")
   sim1 <- simulate(sfm)
   sim2 <- simulate(sfm)
   expect_equal(sim1$df$value[1] == sim2$df$value[1], FALSE)
@@ -195,8 +195,8 @@ test_that("seed works", {
 test_that("function in aux still works", {
   sfm <- sdbuildR() |>
     sim_specs(language = "R", start = 0, stop = 10, dt = .1) |>
-    build("A", "stock") |>
-    build("input", "aux", eqn = "ramp(times, 5, 10, -1)")
+    update("A", "stock") |>
+    update("input", "aux", eqn = "ramp(times, 5, 10, -1)")
   sim <- expect_no_error(expect_no_message(simulate(sfm, only_stocks = FALSE)))
 
   # Check that input is not returned as a variable
@@ -204,7 +204,7 @@ test_that("function in aux still works", {
 
   # Check with two intermediary variables
   sfm <- sfm |>
-    build("a2", "aux", eqn = " 0.38 + input(t)")
+    update("a2", "aux", eqn = " 0.38 + input(t)")
   sim <- expect_no_error(expect_no_message(simulate(sfm, only_stocks = FALSE)))
 
   # Check that input is not returned as a variable

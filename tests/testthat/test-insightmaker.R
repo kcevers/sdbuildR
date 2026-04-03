@@ -174,7 +174,7 @@ test_that("import_metadata raw_model contains the complete original model", {
 
 test_that("translating .InsightMaker models works", {
   keep_nonnegative_flow <- TRUE
-  keep_nonnegative_stock <- FALSE# TRUE
+  keep_nonnegative_stock <- FALSE # TRUE
   only_stocks <- TRUE
   dt <- .1
   save_at <- 1
@@ -220,11 +220,12 @@ test_that("translating .InsightMaker models works", {
     contains_stocks <- any(df[["type"]] == "stock")
 
     if (contains_stocks) {
-      sim_IM <- expect_successful_simulation(sim_specs(sfm_IM,
-      seed = seed, dt = dt, save_at = save_at),
+      sim_IM <- expect_successful_simulation(
+        sim_specs(sfm_IM,
+          seed = seed, dt = dt, save_at = save_at
+        ),
         only_stocks = only_stocks
       )
-      
     }
 
     # Test JSON version
@@ -248,8 +249,10 @@ test_that("translating .InsightMaker models works", {
     expect_true(!is.null(sfm_json[["import_metadata"]]))
 
     if (contains_stocks) {
-      sim_json <- expect_successful_simulation(sim_specs(sfm_json,
-      seed = seed, dt = dt, save_at = save_at),
+      sim_json <- expect_successful_simulation(
+        sim_specs(sfm_json,
+          seed = seed, dt = dt, save_at = save_at
+        ),
         only_stocks = only_stocks
       )
 
@@ -259,11 +262,8 @@ test_that("translating .InsightMaker models works", {
     }
 
     # Compare variable properties **
-
   }
-
 })
-
 
 
 test_that("ABM model issues error", {
@@ -296,4 +296,3 @@ test_that("ABM model issues error", {
     )
   }
 })
-

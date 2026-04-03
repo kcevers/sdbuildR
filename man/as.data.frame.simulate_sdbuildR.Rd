@@ -7,7 +7,7 @@
 \method{as.data.frame}{simulate_sdbuildR}(x, row.names = NULL, optional = FALSE, direction = "long", ...)
 }
 \arguments{
-\item{x}{Output of simulate().}
+\item{x}{Output of \code{\link[=simulate.sdbuildR]{simulate()}}.}
 
 \item{row.names}{NULL or a character vector giving the row names for the data frame. Missing values are not allowed.}
 
@@ -38,6 +38,6 @@ head(df_wide)
 
 }
 \seealso{
-\code{\link[=simulate]{simulate()}}, \code{\link[=sdbuildR]{sdbuildR()}}
+\code{\link[=simulate.sdbuildR]{simulate()}}, \code{\link[=sdbuildR]{sdbuildR()}}
 }
 \concept{build}

@@ -22,7 +22,7 @@ Start Julia session and activate Julia environment to simulate stock-and-flow mo
 \details{
 Julia supports running stock-and-flow models with units as well as \link[=ensemble]{ensemble simulations}.
 
-In every R session, \code{\link[=use_julia]{use_julia()}} needs to be run once (which is done automatically in \code{\link[=simulate]{simulate()}}), which can take around 30-60 seconds.
+In every R session, \code{\link[=use_julia]{use_julia()}} needs to be run once (which is done automatically in \code{\link[=simulate.sdbuildR]{simulate()}}), which can take around 30-60 seconds.
 }
 \examples{
 \dontshow{if (is_julia_ready()) withAutoprint(\{ # examplesIf}

@@ -1,11 +1,10 @@
-
 #' Modify simulation specifications
 #'
 #' Simulation specifications are the settings that determine how the model is
 #' simulated, such as the integration method (i.e. solver), start and stop time,
 #' and timestep. Modify these specifications for an existing stock-and-flow model.
 #'
-#' @inheritParams build
+#' @inheritParams update.sdbuildR
 #' @param method Integration method. Defaults to `"euler"`.
 #' @param start Start time of simulation. Defaults to `0`.
 #' @param stop End time of simulation. Defaults to `100`.
@@ -31,6 +30,12 @@
 #' @param language Coding language in which to simulate model. Either `"R"` or
 #'   `"Julia"`. Julia is necessary for using units or running ensemble simulations.
 #'   Defaults to `"R"`.
+#' @param only_stocks If `TRUE`, only return stocks in output, discarding flows
+#'   and auxiliaries. If `FALSE`, flows and auxiliaries are saved, which slows
+#'   down the simulation. Defaults to `TRUE`.
+#' @param vars Character vector of variable names to save in simulation output.
+#'   Can include only time-varying variables (`stock`, `flow`, `aux`).
+#'   If specified, this overrides `only_stocks`.
 #' @param keep_nonnegative_stock If `TRUE`, keeps original non-negativity setting
 #'   of stocks. Defaults to `FALSE`.
 #' @param keep_nonnegative_flow If `TRUE`, keeps original non-negativity setting
@@ -64,47 +69,49 @@
 #'
 #' # Add stochastic initial condition but specify seed to obtain same result
 #' sfm <- sim_specs(sfm, seed = 1) |>
-#'   build(c(predator, prey), eqn = runif(1, 20, 50))
+#'   update(c(predator, prey), eqn = runif(1, 20, 50))
 #'
 #' # Change the simulation language to Julia to use units
 #' sfm <- sim_specs(sfm, language = Julia)
 #'
-sim_specs <- function(sfm,
+sim_specs <- function(object,
                       method = "euler",
                       start = 0,
                       stop = 100,
                       dt = 0.01,
                       save_at = NULL,
-                      save_n  = NULL,
+                      save_n = NULL,
                       seed = NULL,
                       time_units = "s",
                       language = "R",
+                      only_stocks = TRUE,
+                      vars = NULL,
                       keep_nonnegative_stock = FALSE,
                       keep_nonnegative_flow = TRUE,
                       keep_unit = TRUE) {
   # Basic check
-  if (missing(sfm)) {
-    missing_arg("sfm")
+  if (missing(object)) {
+    missing_arg("object")
   }
-  check_sdbuildR(sfm)
+  check_sdbuildR(object)
 
-  # NSE: allow bare symbols, e.g. sim_specs(sfm, language = Julia, method = rk4)
+  # NSE: allow bare symbols, e.g. sim_specs(object, language = Julia, method = rk4)
   if (!missing(time_units)) time_units <- .expr_to_char(rlang::enexpr(time_units))
-  if (!missing(method))     method     <- .expr_to_char(rlang::enexpr(method))
-  if (!missing(language))   language   <- .expr_to_char(rlang::enexpr(language))
+  if (!missing(method)) method <- .expr_to_char(rlang::enexpr(method))
+  if (!missing(language)) language <- .expr_to_char(rlang::enexpr(language))
 
   # --- Time argument validation ---
   user_time <- list()
   if (!missing(start)) user_time$start <- start
-  if (!missing(stop))  user_time$stop  <- stop
-  if (!missing(dt))    user_time$dt    <- dt
+  if (!missing(stop)) user_time$stop <- stop
+  if (!missing(dt)) user_time$dt <- dt
 
   if (length(user_time) > 0) {
-    # Merge sfm defaults with user values, then validate the combined state
+    # Merge object defaults with user values, then validate the combined state
     eff_time <- list(
-      start = sfm[["sim_specs"]][["start"]],
-      stop  = sfm[["sim_specs"]][["stop"]],
-      dt    = sfm[["sim_specs"]][["dt"]]
+      start = object[["sim_specs"]][["start"]],
+      stop  = object[["sim_specs"]][["stop"]],
+      dt    = object[["sim_specs"]][["dt"]]
     )
     eff_time[names(user_time)] <- user_time
     time_vals <- .validate_sim_time_args(eff_time)
@@ -116,36 +123,36 @@ sim_specs <- function(sfm,
 
   # Error: both save_at and save_n set (neither is an unset sentinel)
   if (!missing(save_at) && !.is_unset(save_at) &&
-      !missing(save_n)  && !.is_unset(save_n)) {
+    !missing(save_n) && !.is_unset(save_n)) {
     cli::cli_abort(c(
       "Cannot specify both {.arg save_at} and {.arg save_n}.",
       "i" = "Pass {.val NA} to one of them to unset it."
     ))
   }
 
-  # save argg: entries added here go into sfm$sim_specs
+  # save argg: entries added here go into object$sim_specs
   argg <- time_vals
 
   if (!missing(save_at)) {
     if (.is_unset(save_at)) {
       argg[["save_type"]] <- "all"
       argg["save_at"] <- list(NULL)
-      argg["save_n"]  <- list(NULL)
+      argg["save_n"] <- list(NULL)
     } else {
-      validated <- .validate_save_at(save_at, sfm, time_vals)
+      validated <- .validate_save_at(save_at, object, time_vals)
       argg[["save_type"]] <- "save_at"
-      argg[["save_at"]]   <- validated
-      argg["save_n"]      <- list(NULL)
+      argg[["save_at"]] <- validated
+      argg["save_n"] <- list(NULL)
     }
   } else if (!missing(save_n)) {
     if (.is_unset(save_n)) {
       argg[["save_type"]] <- "all"
       argg["save_at"] <- list(NULL)
-      argg["save_n"]  <- list(NULL)
+      argg["save_n"] <- list(NULL)
     } else {
       argg[["save_type"]] <- "save_n"
-      argg[["save_n"]]    <- .validate_save_n(save_n)
-      argg["save_at"]     <- list(NULL)
+      argg[["save_n"]] <- .validate_save_n(save_n)
+      argg["save_at"] <- list(NULL)
     }
   }
 
@@ -192,10 +199,10 @@ sim_specs <- function(sfm,
   if (!missing(language)) {
     language <- clean_language(language)
 
-    old_language <- sfm[["sim_specs"]][["language"]]
+    old_language <- object[["sim_specs"]][["language"]]
     if (missing(method) && language != old_language) {
       # Method not specified: translate the current method to the new language
-      method <- solvers(sfm[["sim_specs"]][["method"]],
+      method <- solvers(object[["sim_specs"]][["method"]],
         from = old_language, to = language,
         show_info = TRUE
       )
@@ -212,7 +219,7 @@ sim_specs <- function(sfm,
     }
   } else if (!missing(method)) {
     # Language not changing: validate method against the current language
-    method <- solvers(method, from = sfm[["sim_specs"]][["language"]], show_info = TRUE)
+    method <- solvers(method, from = object[["sim_specs"]][["language"]], show_info = TRUE)
     method <- method[["name"]]
   }
 
@@ -232,51 +239,70 @@ sim_specs <- function(sfm,
     }
   }
 
+  # Validate only_stocks
+  if (!missing(only_stocks)) {
+    if (!is.logical(only_stocks) || length(only_stocks) != 1 || is.na(only_stocks)) {
+      cli::cli_abort(c(
+        "Invalid {.arg only_stocks} argument.",
+        "x" = "The {.arg only_stocks} argument must be {.code TRUE} or {.code FALSE}."
+      ))
+    }
+  }
+
+  # Validate vars
+  if (!missing(vars)) {
+    vars <- validate_sim_vars(object, vars)
+  }
+
   # Collect remaining validated args
-  if (!missing(method) || method_auto_set)     argg$method                 <- method
-  if (!missing(time_units))                    argg$time_units             <- time_units
-  if (!missing(language))                      argg$language               <- language
-  if (!missing(keep_nonnegative_stock))        argg$keep_nonnegative_stock <- keep_nonnegative_stock
-  if (!missing(keep_nonnegative_flow))         argg$keep_nonnegative_flow  <- keep_nonnegative_flow
-  if (!missing(keep_unit))                     argg$keep_unit              <- keep_unit
+  if (!missing(method) || method_auto_set) argg$method <- method
+  if (!missing(time_units)) argg$time_units <- time_units
+  if (!missing(language)) argg$language <- language
+  if (!missing(only_stocks)) argg$only_stocks <- only_stocks
+  if (!missing(vars)) argg$vars <- vars
+  if (!missing(keep_nonnegative_stock)) argg$keep_nonnegative_stock <- keep_nonnegative_stock
+  if (!missing(keep_nonnegative_flow)) argg$keep_nonnegative_flow <- keep_nonnegative_flow
+  if (!missing(keep_unit)) argg$keep_unit <- keep_unit
   # seed handled separately: c() preserves NULL elements, unlike $ assignment
-  if (!missing(seed))                          argg <- c(argg, list(seed = seed))
+  if (!missing(seed)) argg <- c(argg, list(seed = seed))
 
   # Check if language is changing
   language_changed <- "language" %in% names(argg) &&
-    argg[["language"]] != sfm[["sim_specs"]][["language"]]
+    argg[["language"]] != object[["sim_specs"]][["language"]]
 
   # Overwrite simulation specifications (use list-subset assignment to preserve NULLs)
   for (nm in names(argg)) {
-    sfm[["sim_specs"]][nm] <- list(argg[[nm]])
+    object[["sim_specs"]][nm] <- list(argg[[nm]])
   }
 
   # If language changed, clear entire cache and regenerate equation strings
   if (language_changed) {
-    sfm <- invalidate_assemble(sfm, "all")
+    object <- invalidate_assemble(object, "all")
 
-    if (nrow(sfm[["variables"]])) {
-      sfm <- prep_equations_variables(sfm)
-      sfm <- prep_stock_change(sfm)
+    if (nrow(object[["variables"]])) {
+      object <- prep_equations_variables(object)
+      object <- prep_stock_change(object)
     }
   }
 
   # Selectively invalidate based on what changed
-  time_related <- c("start", "stop", "dt", "save_at", "save_n", "save_type",
-                    "time_units", "method", "seed")
+  time_related <- c(
+    "start", "stop", "dt", "save_at", "save_n", "save_type",
+    "time_units", "method", "seed"
+  )
   if (all(names(argg) %in% c("language", time_related))) {
-    sfm <- invalidate_assemble(sfm, "times")
+    object <- invalidate_assemble(object, "times")
   } else {
     # keep_unit, keep_nonnegative_stock/flow affect equation formatting
-    sfm <- invalidate_assemble(sfm, "all")
+    object <- invalidate_assemble(object, "all")
   }
 
-  sfm <- sanitize_sdbuildR(sfm)
+  object <- sanitize_sdbuildR(object)
 
   # Pre-assemble script components so they're available for modification before simulate()
-  sfm <- pre_assemble_components(sfm)
+  object <- pre_assemble_components(object)
 
-  sfm
+  object
 }
 
 
@@ -302,7 +328,7 @@ sim_specs <- function(sfm,
 
 #' Validate cross-checked simulation time arguments
 #'
-#' Receives the effective merged state of start/stop/dt (sfm defaults
+#' Receives the effective merged state of start/stop/dt (object defaults
 #' overwritten by user overrides), coerces to numeric, runs cross-argument
 #' checks, and strips scientific notation.
 #'
@@ -356,13 +382,13 @@ sim_specs <- function(sfm,
 #' Returns a character scalar (interval) or character vector (explicit times).
 #'
 #' @param save_at Numeric scalar or vector supplied by the user.
-#' @param sfm An `sdbuildR` model object (for fallback effective values).
+#' @param object An `sdbuildR` model object (for fallback effective values).
 #' @param time_vals Named list of validated time args (start/stop/dt), may be empty.
 #' @noRd
-.validate_save_at <- function(save_at, sfm, time_vals) {
-  eff_start <- as.numeric(time_vals[["start"]] %||% sfm[["sim_specs"]][["start"]])
-  eff_stop  <- as.numeric(time_vals[["stop"]]  %||% sfm[["sim_specs"]][["stop"]])
-  eff_dt    <- as.numeric(time_vals[["dt"]]    %||% sfm[["sim_specs"]][["dt"]])
+.validate_save_at <- function(save_at, object, time_vals) {
+  eff_start <- as.numeric(time_vals[["start"]] %||% object[["sim_specs"]][["start"]])
+  eff_stop <- as.numeric(time_vals[["stop"]] %||% object[["sim_specs"]][["stop"]])
+  eff_dt <- as.numeric(time_vals[["dt"]] %||% object[["sim_specs"]][["dt"]])
 
   if (length(save_at) == 1) {
     val <- suppressWarnings(as.numeric(save_at))
@@ -397,14 +423,13 @@ sim_specs <- function(sfm,
         "Endpoint may be missing.",
         "i" = paste0(
           "{.arg stop} ({.val {eff_stop}}) may not appear in output ",
-          "(does not align with {.arg save_at} = {.val {val}})."
+          "({.arg stop} is not a multiple of {.arg save_at} = {.val {val}})."
         ),
-        ">" = "Use a vector {.arg save_at} or {.arg save_n} to guarantee {.arg stop} is included."
+        ">" = "If {.arg stop} should be included, specify {.arg save_n} instead of {.arg save_at}, or specify explicit save times with a vector {.arg save_at}."
       ))
     }
 
     replace_digits_with_floats(scientific_notation(val), NULL)
-
   } else {
     vals <- suppressWarnings(as.numeric(save_at))
     if (any(is.na(vals))) {
@@ -423,8 +448,9 @@ sim_specs <- function(sfm,
         ">" = "Out-of-range: {.val {bad}}."
       ))
     }
-    vapply(vals, function(x)
-      replace_digits_with_floats(scientific_notation(x), NULL), character(1))
+    vapply(vals, function(x) {
+      replace_digits_with_floats(scientific_notation(x), NULL)
+    }, character(1))
   }
 }
 
@@ -445,4 +471,3 @@ sim_specs <- function(sfm,
   }
   as.character(n)
 }
-

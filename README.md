@@ -18,33 +18,34 @@ complicated by nonlinearities, delays, and feedback loops. sdbuildR aims
 to make stock-and-flow modeling accessible and effortless, enabling you
 to dedicate your expertise to what matters most: building insightful,
 high-quality models. Get started at
-<https://kcevers.github.io/sdbuildR/>!
+<https://kcevers.github.io/sdbuildR/>\!
 
 ## Features
 
-- **Accessibility**: Get started with stock-and-flow models with limited
-  knowledge.
-- **Flexibility**: Modify your models easily and robustly.
-- **Insight Maker integration**: Import models from [Insight
-  Maker](https://insightmaker.com/).
-- **Julia backend**: Use Julia for high-performance simulations, without
-  any knowledge of Julia.
-- **Unit support**: Use standard or custom units to verify and interpret
-  your model.
+  - **Accessibility**: Get started with stock-and-flow models with
+    limited knowledge.
+  - **Flexibility**: Modify your models easily and robustly.
+  - **Insight Maker integration**: Import models from [Insight
+    Maker](https://insightmaker.com/).
+  - **Julia backend**: Use Julia for high-performance simulations,
+    without any knowledge of Julia.
+  - **Unit support**: Use standard or custom units to verify and
+    interpret your model.
 
 All package capabilities are described in the vignettes:
 
-- [Build](https://kcevers.github.io/sdbuildR/articles/build.html): Learn
-  how to build, modify, and debug stock-and-flow models.
-- [Julia
-  setup](https://kcevers.github.io/sdbuildR/articles/julia-setup.html):
-  Install and set up the Julia environment for running ensemble
-  simulations and using units.
-- [Ensemble](https://kcevers.github.io/sdbuildR/articles/ensemble.html):
-  Learn how to assess a model’s sensitivity, uncertainty and robustness
-  with ensemble simulations.
-- [Units](https://kcevers.github.io/sdbuildR/articles/units.html): Learn
-  why and how to use (custom) units.
+  - [Build](https://kcevers.github.io/sdbuildR/articles/build.html):
+    Learn how to build, modify, and debug stock-and-flow models.
+  - [Julia
+    setup](https://kcevers.github.io/sdbuildR/articles/julia-setup.html):
+    Install and set up the Julia environment for running ensemble
+    simulations and using
+    units.
+  - [Ensemble](https://kcevers.github.io/sdbuildR/articles/ensemble.html):
+    Learn how to assess a model’s sensitivity, uncertainty and
+    robustness with ensemble simulations.
+  - [Units](https://kcevers.github.io/sdbuildR/articles/units.html):
+    Learn why and how to use (custom) units.
 
 ## Installation
 
@@ -77,9 +78,9 @@ citation("sdbuildR")
 #> To cite package 'sdbuildR' in publications use:
 #> 
 #>   Evers K (2025). _sdbuildR: Easily Build, Simulate, and Visualise
-#>   Stock-and-Flow Models_. R package version 1.0.7.9000,
-#>   https://github.com/KCEvers/sdbuildR,
-#>   <https://kcevers.github.io/sdbuildR/>.
+#>   Stock-and-Flow Models_. doi:10.32614/CRAN.package.sdbuildR
+#>   <https://doi.org/10.32614/CRAN.package.sdbuildR>, R package version
+#>   1.0.8.
 #> 
 #> A BibTeX entry for LaTeX users is
 #> 
@@ -87,30 +88,30 @@ citation("sdbuildR")
 #>     title = {sdbuildR: Easily Build, Simulate, and Visualise Stock-and-Flow Models},
 #>     author = {Kyra Caitlin Evers},
 #>     year = {2025},
-#>     note = {R package version 1.0.7.9000, https://github.com/KCEvers/sdbuildR},
-#>     url = {https://kcevers.github.io/sdbuildR/},
+#>     note = {R package version 1.0.8},
+#>     doi = {10.32614/CRAN.package.sdbuildR},
 #>   }
 ```
 
 ## Limitations
 
-- Unlike in other system dynamics software, sdbuildR provides only
-  minimal support for non-negative stocks and flows. Specifically,
-  setting stocks to non-negative will constrain the stocks to remain
-  non-negative, but will not adjust the corresponding flows. In any
-  case, enforcing either stocks or flows to be non-negative is not
-  recommended, as it may mask model misspecification. Stocks and flows
-  that logically cannot be negative (e.g., animals or deaths) should
-  ideally remain non-negative as a result of the model’s equations and
-  parameters, rather than by forcing them to be non-negative.
+  - Unlike in other system dynamics software, sdbuildR provides only
+    minimal support for non-negative stocks and flows. Specifically,
+    setting stocks to non-negative will constrain the stocks to remain
+    non-negative, but will not adjust the corresponding flows. In any
+    case, enforcing either stocks or flows to be non-negative is not
+    recommended, as it may mask model misspecification. Stocks and flows
+    that logically cannot be negative (e.g., animals or deaths) should
+    ideally remain non-negative as a result of the model’s equations and
+    parameters, rather than by forcing them to be non-negative.
 
-- sdbuildR does not support vectorized operations, destructuring
-  assignment, or minimum and maximum constraints for variables.
+  - sdbuildR does not support vectorized operations, destructuring
+    assignment, or minimum and maximum constraints for variables.
 
-- sdbuildR does not support the Insight Maker functions Stop(),
-  Prompt(), Confirm(), Pause(), Fix(), Map(), Filter(), and Repeat(),
-  nor the delay and past functions. A message is issued if any of these
-  are detected.
+  - sdbuildR does not support the Insight Maker functions Stop(),
+    Prompt(), Confirm(), Pause(), Fix(), Map(), Filter(), and Repeat(),
+    nor the delay and past functions. A message is issued if any of
+    these are detected.
 
 ## Other system dynamics software
 
@@ -133,5 +134,5 @@ sdbuildR is under active development. While thoroughly tested, the
 package may have bugs, particularly in complex model translations. We
 encourage users to report [issues on
 GitHub](https://github.com/KCEvers/sdbuildR/issues) - your input helps
-the package improve! Use `diagnose()` to diagnose model errors, and use
+the package improve\! Use `diagnose()` to diagnose model errors, and use
 the vignettes for guidance.

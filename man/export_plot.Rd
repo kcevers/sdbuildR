@@ -28,8 +28,8 @@ Save a plot of a stock-and-flow diagram or a simulation to a specified file path
 \examples{
 
 # Only if dependencies are installed
-if (require("DiagrammeRsvg", quietly = TRUE) &
-  require("rsvg", quietly = TRUE)) {
+if (requireNamespace("DiagrammeRsvg", quietly = TRUE) &
+  requireNamespace("rsvg", quietly = TRUE)) {
   sfm <- sdbuildR("SIR")
   file <- tempfile(fileext = ".png")
   export_plot(plot(sfm), file)
@@ -42,8 +42,8 @@ if (require("DiagrammeRsvg", quietly = TRUE) &
 \dontrun{
 # requires internet
 # Only if dependencies are installed
-if (require("htmlwidgets", quietly = TRUE) &
-  require("webshot2", quietly = TRUE)) {
+if (requireNamespace("htmlwidgets", quietly = TRUE) &
+  requireNamespace("webshot2", quietly = TRUE)) {
   # Requires Chrome to save plotly plot:
   sim <- simulate(sfm)
   export_plot(plot(sim), file)

@@ -35,7 +35,7 @@ P <- list(
   fix_length_suffix = "_fixlength",
   ensemble_prob_name = "ensemble_prob",
   ensemble_output_func = "output_func",
-  ensemble_range = "ensemble_range",
+  ensemble_conditions = "ensemble_conditions",
   ensemble_pars = "ensemble_pars",
   ensemble_iter = "i",
   ensemble_n = "ensemble_n",

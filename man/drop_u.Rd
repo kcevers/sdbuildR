@@ -19,8 +19,8 @@ In rare cases, it may be desirable to drop the units of a variable within an equ
 # For example, the cosine function only accepts unitless arguments or
 # arguments with units in radians or degrees
 sfm <- sdbuildR() |>
-  build("a", "constant", eqn = "10", units = "minutes") |>
-  build("b", "constant", eqn = "cos(drop_u(a))")
+  update("a", "constant", eqn = "10", units = "minutes") |>
+  update("b", "constant", eqn = "cos(drop_u(a))")
 }
 \seealso{
 \code{\link[=custom_unit]{custom_unit()}}, \code{\link[=unit_prefixes]{unit_prefixes()}}, \code{\link[=u]{u()}}, \code{\link[=convert_u]{convert_u()}}

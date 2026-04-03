@@ -1,7 +1,7 @@
 test_that("change_name updates dependencies correctly", {
   sfm <- sdbuildR() |>
-    build("a", "constant", eqn = 1) |>
-    build("b", "aux", eqn = "a * 2") |>
+    update("a", "constant", eqn = 1) |>
+    update("b", "aux", eqn = "a * 2") |>
     sim_specs()
 
   # Check initial dependencies
@@ -28,9 +28,9 @@ test_that("change_name updates dependencies correctly", {
 
 test_that("change_name clears and rebuilds cache", {
   sfm <- sdbuildR() |>
-    build("x", "stock", eqn = 10) |>
-    build("flow_in", "flow", eqn = "rate", to = "x") |>
-    build("rate", "constant", eqn = 0.5) |>
+    update("x", "stock", eqn = 10) |>
+    update("flow_in", "flow", eqn = "rate", to = "x") |>
+    update("rate", "constant", eqn = 0.5) |>
     sim_specs()
 
   # Cache should be populated
@@ -39,7 +39,7 @@ test_that("change_name clears and rebuilds cache", {
   # Rename variable
   sfm <- change_name(sfm, "rate", "growth_rate")
 
-  # Cache should be cleared after build
+  # Cache should be cleared after update
   expect_null(sfm[["assemble"]][["ordering"]])
 
   # After sim_specs, cache should be repopulated with new name
@@ -51,9 +51,9 @@ test_that("change_name clears and rebuilds cache", {
 
 test_that("change_name updates flow to/from references in dependencies", {
   sfm <- sdbuildR() |>
-    build("population", "stock", eqn = 100) |>
-    build("births", "flow", eqn = "birth_rate * population", to = "population") |>
-    build("birth_rate", "constant", eqn = 0.1) |>
+    update("population", "stock", eqn = 100) |>
+    update("births", "flow", eqn = "birth_rate * population", to = "population") |>
+    update("birth_rate", "constant", eqn = 0.1) |>
     sim_specs()
 
   # Rename the stock
@@ -75,8 +75,8 @@ test_that("change_name updates flow to/from references in dependencies", {
 
 test_that("change_name updates graphical function source", {
   sfm <- sdbuildR() |>
-    build("input_var", "aux", eqn = "Time") |>
-    build("lookup1", "lookup",
+    update("input_var", "aux", eqn = "Time") |>
+    update("lookup1", "lookup",
       xpts = c(0, 1, 2),
       ypts = c(0, 0.5, 1),
       source = "input_var"
@@ -98,6 +98,6 @@ test_that("change_name updates graphical function source", {
 })
 
 test_that("change_name() errors when model object passed as name", {
-  sfm <- sdbuildR() |> build("A", type = "constant")
+  sfm <- sdbuildR() |> update("A", type = "constant")
   expect_error(change_name(sfm, sfm, new_name = "B"), "passed where a variable name")
 })

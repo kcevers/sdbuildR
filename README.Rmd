@@ -15,7 +15,7 @@ knitr::opts_chunk$set(
 
 # sdbuildR: Easily Build, Simulate, and Visualise Stock-and-Flow Models in R
 
-<!-- badges: start -->
+<!-- badges: start --> 
 [![R-CMD-check](https://github.com/KCEvers/sdbuildR/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/KCEvers/sdbuildR/actions/workflows/R-CMD-check.yaml)
 [![Codecov test coverage](https://codecov.io/gh/KCEvers/sdbuildR/graph/badge.svg)](https://app.codecov.io/gh/KCEvers/sdbuildR)
 [![CRAN status](https://www.r-pkg.org/badges/version/sdbuildR)](https://CRAN.R-project.org/package=sdbuildR)

@@ -21,34 +21,36 @@ Unit strings are converted to their standard symbols using regular expressions. 
 \examples{
 # Use units in equations
 sfm <- sdbuildR() |>
-  constant(a, 
-    eqn = u('10kilometers') - u('3meters'),
+  constant(a,
+    eqn = u("10kilometers") - u("3meters"),
     units = "centimeters"
   )
 
 # Units can also be set by multiplying a number with a unit
 sfm <- sdbuildR() |>
-  constant(a, eqn = 10 * u('kilometers') - u('3meters'))
+  constant(a, eqn = 10 * u("kilometers") - u("3meters"))
 
 # Addition and subtraction is only allowed between matching units
 sfm <- sdbuildR() |>
-  constant(a, eqn = u('3seconds') + u('1hour'))
+  constant(a, eqn = u("3seconds") + u("1hour"))
 
 # Division, multiplication, and exponentiation are allowed between different units
 sfm <- sdbuildR() |>
-  constant(a, eqn = u('10grams') / u('1minute'))
+  constant(a, eqn = u("10grams") / u("1minute"))
 
 # Use custom units in equations
 sfm <- sdbuildR() |>
-  custom_unit(BMI, eqn = kg/meters^2, doc = "Body Mass Index") |>
-  flow(weight_gain, eqn = u('2 BMI / year'), units = "BMI/year")
+  custom_unit(BMI, eqn = kg / meters^2, doc = "Body Mass Index") |>
+  flow(weight_gain, eqn = u("2 BMI / year"), units = "BMI/year")
 
 # Unit strings are often needed in flows to ensure dimensional consistency
 sfm <- sdbuildR() |>
   sim_specs(stop = 1, time_units = "days") |>
   stock(consumed_food, eqn = 1, units = "kilocalories") |>
-  flow(eating, eqn = u('750kilocalories') / u('6hours'), 
-       units = "kilocalories/day", to = consumed_food)
+  flow(eating,
+    eqn = u("750kilocalories") / u("6hours"),
+    units = "kilocalories/day", to = consumed_food
+  )
 
 }
 \seealso{

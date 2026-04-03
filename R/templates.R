@@ -50,57 +50,56 @@ templates <- function(template) {
 
 
   if (template == "logistic_model") {
-    sfm <- sdbuildR() |>
+    object <- sdbuildR() |>
       meta(name = "Logistic model") |>
       sim_specs(stop = 200) |>
-      build("X", "stock", eqn = ".01", label = "Population size") |>
-      # build("flow", "flow", eqn = "r * X * (1 - X / K)", to = "X", label = "Net change") |>
-      build("inflow", "flow", eqn = "r * X", to = "X", label = "Births") |>
-      build("outflow", "flow", eqn = "r * X^2 / K", from = "X", label = "Deaths") |>
-      build("r", "constant", eqn = "0.1", label = "Growth rate") |>
-      build("K", "constant", eqn = "1", label = "Carrying capacity")
+      update("X", "stock", eqn = ".01", label = "Population size") |>
+      # update("flow", "flow", eqn = "r * X * (1 - X / K)", to = "X", label = "Net change") |>
+      update("inflow", "flow", eqn = "r * X", to = "X", label = "Births") |>
+      update("outflow", "flow", eqn = "r * X^2 / K", from = "X", label = "Deaths") |>
+      update("r", "constant", eqn = "0.1", label = "Growth rate") |>
+      update("K", "constant", eqn = "1", label = "Carrying capacity")
   } else if (template == "SIR") {
     # Chapter 5 Duggan: SIR Aggregate.R & Chapter 7. Screening.R
     # https://github.com/JimDuggan/SDMR/blob/master/models/05%20Chapter/R/01%20SIR%20Aggregate.R
     # https://github.com/JimDuggan/SDMR/blob/master/models/07%20Chapter/R/02%20Screening.R
 
-    sfm <- sdbuildR() |>
+    object <- sdbuildR() |>
       meta(name = "Susceptible-Infected-Recovered (SIR)") |>
       sim_specs(start = 0, stop = 20, time_units = "weeks") |>
-      build("Susceptible", "stock", eqn = "99999") |>
-      build("Infected", "stock", eqn = 1) |>
-      build("Recovered", "stock", eqn = 0) |>
-      build("Beta", "constant", eqn = "Effective_Contact_Rate / Total_Population") |>
-      build("Lambda", "aux", eqn = "Beta * Infected") |>
-      build("Infection_Rate", "flow", eqn = "Susceptible * Lambda", from = "Susceptible", to = "Infected") |>
-      build("Recovery_Rate", "flow", eqn = "Infected / Delay", from = "Infected", to = "Recovered") |>
-      build("Total_Population", "constant", eqn = "100000") |>
-      build("Effective_Contact_Rate", "constant", eqn = "2") |>
-      build("Delay", "constant", eqn = "2")
-
+      update("Susceptible", "stock", eqn = "99999") |>
+      update("Infected", "stock", eqn = 1) |>
+      update("Recovered", "stock", eqn = 0) |>
+      update("Beta", "constant", eqn = "Effective_Contact_Rate / Total_Population") |>
+      update("Lambda", "aux", eqn = "Beta * Infected") |>
+      update("Infection_Rate", "flow", eqn = "Susceptible * Lambda", from = "Susceptible", to = "Infected") |>
+      update("Recovery_Rate", "flow", eqn = "Infected / Delay", from = "Infected", to = "Recovered") |>
+      update("Total_Population", "constant", eqn = "100000") |>
+      update("Effective_Contact_Rate", "constant", eqn = "2") |>
+      update("Delay", "constant", eqn = "2")
   } else if (template == "predator_prey") {
-    sfm <- sdbuildR() |>
+    object <- sdbuildR() |>
       meta(name = "Predator-Prey Dynamics (Lotka-Volterra)") |>
       sim_specs(method = "euler", stop = 500) |>
-      build("predator", "stock", eqn = 10, label = "Predator") |>
-      build("prey", "stock", eqn = 50, label = "Prey") |>
-      build("predator_births", "flow",
+      update("predator", "stock", eqn = 10, label = "Predator") |>
+      update("prey", "stock", eqn = 50, label = "Prey") |>
+      update("predator_births", "flow",
         eqn = "delta*prey*predator",
         label = "Births", to = "predator"
       ) |>
-      build("predator_deaths", "flow",
+      update("predator_deaths", "flow",
         eqn = "gamma*predator",
         label = "Deaths", from = "predator"
       ) |>
-      build("prey_births", "flow",
+      update("prey_births", "flow",
         eqn = "alpha*prey",
         label = "Births", to = "prey"
       ) |>
-      build("prey_deaths", "flow",
+      update("prey_deaths", "flow",
         eqn = "beta*prey*predator",
         label = "Deaths", from = "prey"
       ) |>
-      build(c("delta", "gamma", "alpha", "beta"), "constant",
+      update(c("delta", "gamma", "alpha", "beta"), "constant",
         eqn = c(.025, .5, .5, .05),
         label = c("Delta", "Gamma", "Alpha", "Beta"),
         doc = c(
@@ -108,241 +107,238 @@ templates <- function(template) {
           "Birth rate of prey", "Death rate of prey by predators"
         )
       )
-
   } else if (template == "cusp") {
-    sfm <- sdbuildR() |>
+    object <- sdbuildR() |>
       meta(name = "Cusp Catastrophe") |>
       sim_specs(method = "euler", stop = 500) |>
-      build("x", "stock", eqn = .1) |>
-      build("dxdt", "flow",
+      update("x", "stock", eqn = .1) |>
+      update("dxdt", "flow",
         eqn = "a + b*x - x^3 + rnorm(1, dt)",
         to = "x"
       ) |>
-      build("a", "constant", eqn = 2, label = "Normal variable") |>
-      build("b", "constant", eqn = 2, label = "Splitting variable")
-
+      update("a", "constant", eqn = 2, label = "Normal variable") |>
+      update("b", "constant", eqn = 2, label = "Splitting variable")
   } else if (template == "Crielaard2022") {
-    sfm <- sdbuildR() |>
+    object <- sdbuildR() |>
       meta(
         name = "Eating Behaviour (Crielaard et al., 2022)",
         doi = "10.1037/met0000484"
       ) |>
       sim_specs(time_units = "days", stop = 100) |>
-      build("Food_intake", "stock",
+      update("Food_intake", "stock",
         eqn = "runif(1)",
         label = "Food intake"
       ) |>
-      build("Hunger", "stock", eqn = "runif(1)") |>
-      build("Compensatory_behaviour", "stock",
+      update("Hunger", "stock", eqn = "runif(1)") |>
+      update("Compensatory_behaviour", "stock",
         eqn = "runif(1)",
         label = "Compensatory behaviour"
       ) |>
-      build("Losing_energy_by_compensatory_behavior", "flow",
+      update("Losing_energy_by_compensatory_behavior", "flow",
         eqn = "(0.3 * Compensatory_behaviour) * ((1 - Hunger) / 1)",
         label = "Losing energy by compensatory behavior", to = "Hunger"
       ) |>
-      build("Feeling_hunger", "flow",
+      update("Feeling_hunger", "flow",
         eqn = "((0.8 * Hunger^a0) * Food_intake) * ((1 - Food_intake) / 1)",
         label = "Feeling hunger", to = "Food_intake"
       ) |>
-      build("Satiety", "flow",
+      update("Satiety", "flow",
         eqn = "(1.3 * (Food_intake)) * ((1 - Food_intake) / 1)",
         from = "Food_intake"
       ) |>
-      build("Food_intake_reduces_hunger", "flow",
+      update("Food_intake_reduces_hunger", "flow",
         eqn = "((1.4 * Food_intake^a0) * Hunger) * ((1 - Hunger) / 1)", label = "Food intake reduces hunger",
         from = "Hunger"
       ) |>
-      build("Compensating_for_having_eaten", "flow",
+      update("Compensating_for_having_eaten", "flow",
         eqn = "(Sig(a2 * Food_intake)) * ((1 - Compensatory_behaviour) / 1)",
         label = "Compensating for having eaten",
         to = "Compensatory_behaviour"
       ) |>
-      build("Satisfaction_with_hungry_feeling", "flow",
+      update("Satisfaction_with_hungry_feeling", "flow",
         eqn = "(1.3 * Hunger * Compensatory_behaviour) * ((1 - Compensatory_behaviour) / 1)",
         label = "Satisfaction with hungry feeling", from = "Compensatory_behaviour"
       ) |>
-      build("Effect_of_eating_triggers", "flow",
+      update("Effect_of_eating_triggers", "flow",
         eqn = "(a1 * Food_intake) * ((1 - Food_intake) / 1)",
         to = "Food_intake", label = "Effect of eating triggers"
       ) |>
-      build("Effect_of_compensatory_behavior", "flow",
+      update("Effect_of_compensatory_behavior", "flow",
         eqn = "(2 * Compensatory_behaviour * Food_intake) * ((1 - Food_intake) / 1)",
         from = "Food_intake",
         label = "Effect of compensatory behavior"
       ) |>
-      build(c("a0", "a1", "a2"), "constant", eqn = c(1.31, 1.5, 0.38)) |>
+      update(c("a0", "a1", "a2"), "constant", eqn = c(1.31, 1.5, 0.38)) |>
       custom_func(name = "Sig", eqn = "function(x) 1 / (1 + exp(1)^(-x))")
-
   } else if (template == "coffee_cup") {
-    sfm <- sdbuildR() |>
+    object <- sdbuildR() |>
       meta(name = "Coffee cup", caption = "Coffee cup cooling or heating from Meadows' Thinking in Systems (Chapter 1)") |>
       sim_specs(stop = 100, dt = 1, time_units = "minute", language = "Julia") |>
-      build("coffee_temperature", "stock", eqn = "100", units = "Celsius", label = "Coffee temperature") |>
-      build("cooling", "flow", eqn = "discrepancy * .1 / u('min')", units = "Celsius/min", to = "coffee_temperature", label = "Cooling or heating") |>
-      build("discrepancy", "aux", eqn = "room_temperature - coffee_temperature", units = "Celsius", label = "Discrepancy") |>
-      build("room_temperature", "constant", eqn = "18", units = "Celsius", label = "Room temperature")
-
+      update("coffee_temperature", "stock", eqn = "100", units = "Celsius", label = "Coffee temperature") |>
+      update("cooling", "flow", eqn = "discrepancy * .1 / u('min')", units = "Celsius/min", to = "coffee_temperature", label = "Cooling or heating") |>
+      update("discrepancy", "aux", eqn = "room_temperature - coffee_temperature", units = "Celsius", label = "Discrepancy") |>
+      update("room_temperature", "constant", eqn = "18", units = "Celsius", label = "Room temperature")
   } else if (template == "bank_account") {
-    sfm <- sdbuildR() |>
+    object <- sdbuildR() |>
       meta(
         name = "Bank account with interest",
         caption = "Bank account with compounding interest from Meadows' Thinking in Systems (Chapter 1)"
       ) |>
       sim_specs(start = 0, stop = 12, dt = 1, time_units = "year", language = "Julia") |>
-      build("money_in_bank_account", "stock",
+      update("money_in_bank_account", "stock",
         eqn = "100",
         label = "Money in bank account", units = "dollar"
       ) |>
-      build("interest_added", "flow",
+      update("interest_added", "flow",
         eqn = "money_in_bank_account * interest_rate / u('1year')",
         label = "Adding interest",
         units = "dollar/year", to = "money_in_bank_account"
       ) |>
-      build("interest_rate", "constant",
+      update("interest_rate", "constant",
         eqn = ".02", label = "Interest rate",
         units = "1"
       )
-
   } else if (template == "Lorenz") {
-    sfm <- sdbuildR() |>
+    object <- sdbuildR() |>
       meta(
         name = "Lorenz Attractor",
         caption = "Lorenz Attractor system for chaotic dynamics"
       ) |>
       sim_specs(stop = 50, time_units = "hours") |>
       # Stocks
-      build("x", "stock", eqn = "1") |>
-      build("y", "stock", eqn = "1") |>
-      build("z", "stock", eqn = "1") |>
+      update("x", "stock", eqn = "1") |>
+      update("y", "stock", eqn = "1") |>
+      update("z", "stock", eqn = "1") |>
       # Flows (differential equations)
-      build("dx_dt", "flow", eqn = "sigma * (y - x)", to = "x", label = "Rate of change of X") |>
-      build("dy_dt", "flow", eqn = "x * (rho - z) - y", to = "y", label = "Rate of change of Y") |>
-      build("dz_dt", "flow", eqn = "x * y - beta * z", to = "z", label = "Rate of change of Z") |>
+      update("dx_dt", "flow", eqn = "sigma * (y - x)", to = "x", label = "Rate of change of X") |>
+      update("dy_dt", "flow", eqn = "x * (rho - z) - y", to = "y", label = "Rate of change of Y") |>
+      update("dz_dt", "flow", eqn = "x * y - beta * z", to = "z", label = "Rate of change of Z") |>
       # Parameters
-      build("sigma", "constant", eqn = "10") |>
-      build("rho", "constant", eqn = "28") |>
-      build("beta", "constant", eqn = "8/3")
-
+      update("sigma", "constant", eqn = "10") |>
+      update("rho", "constant", eqn = "28") |>
+      update("beta", "constant", eqn = "8/3")
   } else if (template == "Rossler") {
-    sfm <- sdbuildR() |>
+    object <- sdbuildR() |>
       meta(
         name = "Rossler Attractor",
         caption = "Chaotic Rossler system in 3D"
       ) |>
       sim_specs(stop = 100, time_units = "hours") |>
       # Stocks
-      build("x", "stock", eqn = "1") |>
-      build("y", "stock", eqn = "1") |>
-      build("z", "stock", eqn = "1") |>
+      update("x", "stock", eqn = "1") |>
+      update("y", "stock", eqn = "1") |>
+      update("z", "stock", eqn = "1") |>
       # Flows
-      build("dx_dt", "flow", eqn = "-y - z", to = "x", label = "Rate of change of X") |>
-      build("dy_dt", "flow", eqn = "x + a * y", to = "y", label = "Rate of change of Y") |>
-      build("dz_dt", "flow", eqn = "b + z * (x - c)", to = "z", label = "Rate of change of Z") |>
+      update("dx_dt", "flow", eqn = "-y - z", to = "x", label = "Rate of change of X") |>
+      update("dy_dt", "flow", eqn = "x + a * y", to = "y", label = "Rate of change of Y") |>
+      update("dz_dt", "flow", eqn = "b + z * (x - c)", to = "z", label = "Rate of change of Z") |>
       # Parameters
-      build("a", "constant", eqn = "0.2") |>
-      build("b", "constant", eqn = "0.2") |>
-      build("c", "constant", eqn = "5.7")
-
+      update("a", "constant", eqn = "0.2") |>
+      update("b", "constant", eqn = "0.2") |>
+      update("c", "constant", eqn = "5.7")
   } else if (template == "vanderPol") {
-    sfm <- sdbuildR() |>
+    object <- sdbuildR() |>
       meta(
         name = "Van der Pol Oscillator",
         caption = "Nonlinear oscillator with limit cycle behavior"
       ) |>
       sim_specs(stop = 50, time_units = "hours") |>
       # Stocks
-      build("x", "stock", eqn = "0.1", label = "Position") |>
-      build("y", "stock", eqn = "0", label = "Velocity") |>
+      update("x", "stock", eqn = "0.1", label = "Position") |>
+      update("y", "stock", eqn = "0", label = "Velocity") |>
       # Flows
-      build("dx_dt", "flow", eqn = "y", to = "x", label = "Rate of change of position") |>
-      build("dy_dt", "flow", eqn = "mu * (1 - x^2) * y - x", to = "y", label = "Rate of change of velocity") |>
+      update("dx_dt", "flow", eqn = "y", to = "x", label = "Rate of change of position") |>
+      update("dy_dt", "flow", eqn = "mu * (1 - x^2) * y - x", to = "y", label = "Rate of change of velocity") |>
       # Parameters
-      build("mu", "constant", eqn = "1", label = "Damping parameter")
-
+      update("mu", "constant", eqn = "1", label = "Damping parameter")
   } else if (template == "Duffing") {
-    sfm <- sdbuildR() |>
+    object <- sdbuildR() |>
       meta(
         name = "Duffing Oscillator",
         caption = "Nonlinear oscillator with forcing"
       ) |>
       sim_specs(stop = 100, time_units = "hours") |>
       # Stocks
-      build("x", "stock", eqn = "0.1", label = "Position") |>
-      build("y", "stock", eqn = "0", label = "Velocity") |>
+      update("x", "stock", eqn = "0.1", label = "Position") |>
+      update("y", "stock", eqn = "0", label = "Velocity") |>
       # Flows
-      build("dx_dt", "flow",
+      update("dx_dt", "flow",
         eqn = "y", to = "x",
         label = "Rate of change of position"
       ) |>
-      build("dy_dt", "flow",
+      update("dy_dt", "flow",
         eqn = "-delta * y - alpha * x - beta * x^3 + gamma * cos(omega * t)",
         to = "y", label = "Rate of change of velocity"
       ) |>
       # Parameters
-      build("delta", "constant", eqn = "0.3", label = "Damping coefficient") |>
-      build("alpha", "constant", eqn = "-1", label = "Linear stiffness") |>
-      build("beta", "constant", eqn = "1", label = "Nonlinear stiffness") |>
-      build("gamma", "constant", eqn = "0.5", label = "Forcing amplitude") |>
-      build("omega", "constant", eqn = "1.2", label = "Forcing frequency")
-
+      update("delta", "constant", eqn = "0.3", label = "Damping coefficient") |>
+      update("alpha", "constant", eqn = "-1", label = "Linear stiffness") |>
+      update("beta", "constant", eqn = "1", label = "Nonlinear stiffness") |>
+      update("gamma", "constant", eqn = "0.5", label = "Forcing amplitude") |>
+      update("omega", "constant", eqn = "1.2", label = "Forcing frequency")
   } else if (template == "Chua") {
-    sfm <- sdbuildR() |>
+    object <- sdbuildR() |>
       meta(name = "Chua's Circuit", caption = "Chaotic electronic circuit model") |>
       sim_specs(stop = 50, time_units = "hours") |>
       # Stocks
-      build("x", "stock", eqn = "0.1", label = "Voltage 1") |>
-      build("y", "stock", eqn = "0", label = "Voltage 2") |>
-      build("z", "stock", eqn = "0", label = "Current") |>
+      update("x", "stock", eqn = "0.1", label = "Voltage 1") |>
+      update("y", "stock", eqn = "0", label = "Voltage 2") |>
+      update("z", "stock", eqn = "0", label = "Current") |>
       # Flows
-      build("dx_dt", "flow", eqn = "alpha * (y - x - fx)", to = "x", label = "Rate of change of x") |>
-      build("dy_dt", "flow", eqn = "x - y + z", to = "y", label = "Rate of change of y") |>
-      build("dz_dt", "flow", eqn = "-beta * y", to = "z", label = "Rate of change of z") |>
-      build("fx", "aux",
+      update("dx_dt", "flow", eqn = "alpha * (y - x - fx)", to = "x", label = "Rate of change of x") |>
+      update("dy_dt", "flow", eqn = "x - y + z", to = "y", label = "Rate of change of y") |>
+      update("dz_dt", "flow", eqn = "-beta * y", to = "z", label = "Rate of change of z") |>
+      update("fx", "aux",
         eqn = "m1 * x + 0.5 * (m0 - m1) * (abs(x + 1) - abs(x - 1))",
         label = "Nonlinear resistor"
       ) |>
       # Parameters
-      build("alpha", "constant", eqn = "15.6", label = "Parameter alpha") |>
-      build("beta", "constant", eqn = "28", label = "Parameter beta") |>
-      build("m0", "constant", eqn = "-1.143", label = "Nonlinear slope m0") |>
-      build("m1", "constant", eqn = "-0.714", label = "Nonlinear slope m1")
-
+      update("alpha", "constant", eqn = "15.6", label = "Parameter alpha") |>
+      update("beta", "constant", eqn = "28", label = "Parameter beta") |>
+      update("m0", "constant", eqn = "-1.143", label = "Nonlinear slope m0") |>
+      update("m1", "constant", eqn = "-0.714", label = "Nonlinear slope m1")
+      
   } else if (template == "JDR") {
-    sfm <- sdbuildR() |>
+
+    object <- sdbuildR() |>
       sim_specs(method = "euler", start = "0.0", stop = "182.5", dt = "0.01", save_at = "0.1", seed = "123", time_units = "d", language = "R") |>
       meta(
         name = "Job Resources and Demands Theory",
         caption = "JD-R Theory as formalized in Evers et al. (submitted)"
       ) |>
-      build(name = "E", type = "stock", eqn = "0.5", label = "Engagement") |>
-      build(name = "R", type = "stock", eqn = "0.7", label = "Job Resources") |>
-      build(name = "D", type = "stock", eqn = "0.2", label = "Job Demands") |>
-      build(name = "X", type = "stock", eqn = "0.5", label = "Energy") |>
-      build(name = "r_E_R", type = "constant", eqn = "0.2", label = "Motivation Rate") |>
-      build(name = "K_E", type = "constant", eqn = "1", label = "Engagement Capacity") |>
-      build(name = "r_A", type = "constant", eqn = "0.2", label = "Proactive Behaviour Rate") |>
-      build(name = "K_R", type = "constant", eqn = "1", label = "Resource Capacity") |>
-      build(name = "r_R_X", type = "constant", eqn = "0.05", label = "Energy Decay Rate") |>
-      build(name = "r_X_D", type = "constant", eqn = "0.4", label = "Fatigue from Demand Rate") |>
-      build(name = "K_X", type = "constant", eqn = "1", label = "Energy Capacity") |>
-      build(name = "r_X_X", type = "constant", eqn = "0.15", label = "Restoration Rate") |>
-      build(name = "r_E_X", type = "constant", eqn = "0.1", label = "Energy-Based Disengagement Rate") |>
-      build(name = "r_U", type = "constant", eqn = "0.15", label = "Self-undermining Rate") |>
-      build(name = "K_D", type = "constant", eqn = "1", label = "Demand Capacity") |>
-      build(name = "r_D", type = "constant", eqn = "0.2", label = "Demand Regulation Rate") |>
-      build(name = "P", type = "aux", eqn = "E + X", label = "Job Performance") |>
-      build(name = "E_R", type = "flow", eqn = "r_E_R * X * R * (1 + D) * (1 - E/K_E)", to = "E", label = "Motivation", doc = "Boost of demands") |>
-      build(name = "A_to_R", type = "flow", eqn = "r_A * E * (1 - R/K_R)", to = "R", label = "Proactive Behaviour") |>
-      build(name = "R_X", type = "flow", eqn = "r_R_X * R", from = "R", label = "Decay") |>
-      build(name = "X_D", type = "flow", eqn = "r_X_D * X * D / (1 + R)", from = "X", label = "Effort", doc = "Buffer of resources") |>
-      build(name = "X_X", type = "flow", eqn = "r_X_X * X * (1 - X/K_X)", to = "X", label = "Restoration") |>
-      build(name = "E_X", type = "flow", eqn = "r_E_X * E * (1 - X/K_X)", from = "E", label = "Energy-Based Disengagement") |>
-      build(name = "A_from_D", type = "flow", eqn = "r_A * E * D", from = "D", label = "Proactive Behaviour") |>
-      build(name = "U", type = "flow", eqn = "r_U * (1 - X/K_X)", to = "D", label = "Self-undermining") |>
-      build(name = "D_D", type = "flow", eqn = "r_D * (1 - D/K_D)", to = "D", label = "Demand Regulation")
+      update(name = "E", type = "stock", eqn = "0.5", label = "Engagement") |>
+      update(name = "R", type = "stock", eqn = "0.7", label = "Job Resources") |>
+      update(name = "D", type = "stock", eqn = "0.2", label = "Job Demands") |>
+      update(name = "X", type = "stock", eqn = "0.5", label = "Energy") |>
+      update(name = "r_E_R", type = "constant", eqn = "0.2", label = "Motivation Rate") |>
+      update(name = "K_E", type = "constant", eqn = "1", label = "Engagement Capacity") |>
+      update(name = "r_A", type = "constant", eqn = "0.2", label = "Proactive Behaviour Rate") |>
+      update(name = "K_R", type = "constant", eqn = "1", label = "Resource Capacity") |>
+      update(name = "r_R", type = "constant", eqn = "0.05", label = "Resource Decay Rate") |>
+      update(name = "r_X_D", type = "constant", eqn = "0.4", label = "Fatigue from Demand Rate") |>
+      update(name = "K_X", type = "constant", eqn = "1", label = "Energy Capacity") |>
+      update(name = "r_X_X", type = "constant", eqn = "0.15", label = "Restoration Rate") |>
+      update(name = "r_E_X", type = "constant", eqn = "0.1", label = "Energy-Based Disengagement Rate") |>
+      update(name = "r_U", type = "constant", eqn = "0.15", label = "Self-undermining Rate") |>
+      update(name = "K_D", type = "constant", eqn = "1", label = "Demand Capacity") |>
+      update(name = "r_D", type = "constant", eqn = "0.2", label = "Demand Regulation Rate") |>
+      update(name = "P", type = "aux", eqn = "E + X", label = "Job Performance") |>
+      update(name = "E_R", type = "flow", eqn = "r_E_R * X * R * (1 + D) * (1 - E/K_E)", to = "E", label = "Motivation", doc = "Boost of demands") |>
+      update(name = "A_to_R", type = "flow", eqn = "r_A * E * (1 - R/K_R)", to = "R", label = "Proactive Behaviour") |>
+      # update(name = "R_X", type = "flow", eqn = "r_R_X * R", from = "R", label = "Decay") |>
+      update(name = "from_R", type = "flow", eqn = "r_R * R * (1 - X/K_X)", from = "R", label = "Decay from effort") |>
+
+      update(name = "X_D", type = "flow", eqn = "r_X_D * X * D / (1 + R)", from = "X", label = "Effort", doc = "Buffer of resources") |>
+      update(name = "X_X", type = "flow", eqn = "r_X_X * X * (1 - X/K_X)", to = "X", label = "Restoration") |>
+      update(name = "E_X", type = "flow", eqn = "r_E_X * E * (1 - X/K_X)", from = "E", label = "Energy-Based Disengagement") |>
+      update(name = "A_from_D", type = "flow", eqn = "r_A * E * D", from = "D", label = "Proactive Behaviour") |>
+      update(name = "U", type = "flow", eqn = "r_U * (1 - X/K_X)", to = "D", label = "Self-undermining") |>
+      update(name = "D_D", type = "flow", eqn = "r_D * (1 - D/K_D)", to = "D", label = "Demand Regulation")
   }
 
 
-  sfm
+  # Compile the model to populate the assemble cache
+  
+
+  object
 }

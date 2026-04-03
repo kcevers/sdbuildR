@@ -5,7 +5,7 @@
 #' library.
 #'
 #' Do not edit the object manually; this will likely lead to errors downstream.
-#' Rather, use [meta()], [sim_specs()], [build()], [custom_func()], and
+#' Rather, use [meta()], [sim_specs()], [update()], [custom_func()], and
 #' [custom_unit()] for safe manipulation.
 #'
 #' @param template Name of the template to load. If `NULL`, an empty stock-and-flow
@@ -32,7 +32,7 @@
 #' \describe{
 #'  \item{meta}{Meta-information about model. A list containing arguments listed in [meta()].}
 #'  \item{sim_specs}{Simulation specifications. A list containing arguments listed in [sim_specs()].}
-#'  \item{model}{Model variables, grouped under the variable types stock, flow, aux (auxiliaries), constant, gf (graphical functions), and func (custom functions). Each variable contains arguments as listed in [build()].}
+#'  \item{model}{Model variables, grouped under the variable types stock, flow, aux (auxiliaries), constant, gf (graphical functions), and func (custom functions). Each variable contains arguments as listed in [update()].}
 #'  \item{custom_unit}{Custom model units. A list containing arguments listed in [custom_unit()].}
 #'  }
 #'
@@ -40,7 +40,7 @@
 #'
 #' @export
 #' @concept build
-#' @seealso [build()], [meta()], [custom_func()], [custom_unit()], [sim_specs()]
+#' @seealso [update()], [meta()], [custom_func()], [custom_unit()], [sim_specs()]
 #'
 #' @examples sfm <- sdbuildR()
 #' summary(sfm)
@@ -82,11 +82,16 @@ empty_assemble <- function() {
     post = "",
     intermediaries = list(),
     ensemble = list(),
-    diagnose = NULL,     # cached result: list(problems="", potential_problems="")
-    unit_strings = NULL  # cached result of find_unit_strings(): named char vec or character(0)
+    diagnose = NULL, # cached result: list(problems="", potential_problems="")
+    unit_strings = NULL, # cached result of find_unit_strings(): named char vec or character(0)
+    unit_tests = list(deps = NULL) # cached unit test dependencies (positionally indexed)
   )
 }
 
+
+empty_unit_tests <- function() {
+  list()
+}
 
 
 empty_custom_unit <- function() {
@@ -115,12 +120,11 @@ empty_variables <- function() {
     source = character(0),
     interpolation = character(0),
     extrapolation = character(0),
-    # Prepared equation strings (language-specific, updated in build())
+    # Prepared equation strings (language-specific, updated in update())
     eqn_str = character(0),
     # Stock accumulation equations and names (language-specific)
     sum_eqn = character(0),
     sum_name = character(0),
-    # sum_units = character(0),
     stringsAsFactors = FALSE
   )
 
@@ -133,7 +137,6 @@ empty_variables <- function() {
   variables_df$outflow <- list()
   variables_df
 }
-
 
 
 get_variable_row <- function(name, type,
@@ -149,7 +152,6 @@ get_variable_row <- function(name, type,
                              source = "",
                              interpolation = "linear",
                              extrapolation = "nearest") {
-    
   row <- data.frame(
     name = name,
     type = type,
@@ -183,18 +185,17 @@ get_variable_row <- function(name, type,
   row[["outflow"]] <- list(NULL)
 
   row
-
 }
 
-#' Add a variable to sfm 
+#' Add a variable to sfm
 #'
-#' @param sfm Stock-and-flow model
-#' @inheritParams build
+#' @param object Stock-and-flow model
+#' @inheritParams update.sdbuildR
 #'
-#' @returns Updated sfm with variable added
+#' @returns Updated object with variable added
 #' @noRd
 #'
-add_variable_row <- function(sfm, name, type,
+add_variable_row <- function(object, name, type,
                              eqn,
                              units,
                              label,
@@ -207,41 +208,38 @@ add_variable_row <- function(sfm, name, type,
                              source,
                              interpolation,
                              extrapolation) {
-
   # Create new row
   arg <- compact_(as.list(environment()))
-  if ("sfm" %in% names(arg)) {
-    arg[["sfm"]] <- NULL
+  if ("object" %in% names(arg)) {
+    arg[["object"]] <- NULL
   }
   new_row <- do.call(get_variable_row, arg)
 
 
   # Add to variables data frame
-  sfm[["variables"]] <- rbind(sfm[["variables"]], new_row)
+  object[["variables"]] <- rbind(object[["variables"]], new_row)
 
-  sfm
+  object
 }
-
-
 
 
 new_meta <- function() {
   meta_defaults <- as.list(formals(meta))
   meta_defaults <- meta_defaults[!names(meta_defaults) %in%
-    c("sfm", "...")]
+    c("object", "...")]
   meta_defaults[["created"]] <- Sys.time() # Manually overwrite time
   meta_defaults
 }
 
 new_sim_specs <- function() {
   spec_defaults <- as.list(formals(sim_specs))
-  spec_defaults <- spec_defaults[!names(spec_defaults) %in% c("sfm", "...")]
+  spec_defaults <- spec_defaults[!names(spec_defaults) %in% c("object", "...")]
 
   # Flat save fields: save_type discriminates mode; save_at and save_n are NULL
   # (meaning "save all dt steps") by default
   spec_defaults[["save_type"]] <- "all"
-  spec_defaults["save_at"]     <- list(NULL)
-  spec_defaults["save_n"]      <- list(NULL)
+  spec_defaults["save_at"] <- list(NULL)
+  spec_defaults["save_n"] <- list(NULL)
   spec_defaults
 }
 
@@ -273,25 +271,27 @@ new_sdbuildR <- function() {
     # Cache for pre-assembled simulation components
     assemble = empty_assemble(),
     # Import metadata (NULL for programmatic models, populated for imported models)
-    import_metadata = NULL
+    import_metadata = NULL,
+    # User-defined unit tests; named list keyed by label
+    unit_tests = empty_unit_tests()
   )
 
-  sfm <- structure(obj, class = "sdbuildR")
-  sfm <- sanitize_sdbuildR(sfm)
-  sfm
+  object <- structure(obj, class = "sdbuildR")
+  object <- sanitize_sdbuildR(object)
+  object
 }
 
 
 #' Get the sources and destinations of flows
 #'
-#' @inheritParams build
+#' @inheritParams update.sdbuildR
 #'
 #' @returns data.frame with for each flow which stock and flow to and/or from
 #' @noRd
-get_flow_df <- function(sfm) {
-  check_sdbuildR(sfm)
+get_flow_df <- function(object) {
+  check_sdbuildR(object)
 
-  flows <- sfm[["variables"]][sfm[["variables"]][["type"]] == "flow", ]
+  flows <- object[["variables"]][object[["variables"]][["type"]] == "flow", ]
 
   if (nrow(flows) == 0) {
     return(data.frame(name = character(0), to = character(0), from = character(0)))
@@ -304,7 +304,6 @@ get_flow_df <- function(sfm) {
     stringsAsFactors = FALSE
   )
 }
-
 
 
 #' Find longest regex match
@@ -336,21 +335,20 @@ find_matching_regex <- function(x, regex_units) {
 
 #' Get delayN and smoothN from stock-and-flow model
 #'
-#' @inheritParams build
+#' @inheritParams update.sdbuildR
 #'
 #' @returns Vector with delayN and smoothN functions
 #' @noRd
-get_delay <- function(sfm, type = c("delayN_smoothN", "past")) {
+get_delay <- function(object, type = c("delayN_smoothN", "past")) {
   type <- match.arg(type)
 
   result <- c()
 
   # Search through equations for delay functions
-  if (nrow(sfm[["variables"]]) > 0) {
-
+  if (nrow(object[["variables"]]) > 0) {
     # Get all equations
-    eqn <- sfm[["variables"]][["eqn"]]
-    var_names <- sfm[["variables"]][["name"]]
+    eqn <- object[["variables"]][["eqn"]]
+    var_names <- object[["variables"]][["name"]]
 
     if (type == "past") {
       # Look for past() or delay() functions
@@ -364,9 +362,9 @@ get_delay <- function(sfm, type = c("delayN_smoothN", "past")) {
       result <- var_names[idx]
     }
 
-    # for (i in seq_len(nrow(sfm[["variables"]]))) {
-    #   var_name <- sfm[["variables"]][i, "name"]
-    #   var_eqn <- sfm[["variables"]][i, "eqn"]
+    # for (i in seq_len(nrow(object[["variables"]]))) {
+    #   var_name <- object[["variables"]][i, "name"]
+    #   var_eqn <- object[["variables"]][i, "eqn"]
 
     #   if (!is.na(var_eqn) && nzchar(var_eqn)) {
     #     if (type == "past") {
@@ -390,13 +388,13 @@ get_delay <- function(sfm, type = c("delayN_smoothN", "past")) {
 
 #' Check whether object is of class [`sdbuildR`][sdbuildR]
 #'
-#' @inheritParams build
+#' @inheritParams update.sdbuildR
 #'
 #' @returns Invisibly returns TRUE, called for side effects.
 #' @noRd
-check_sdbuildR <- function(sfm) {
+check_sdbuildR <- function(object) {
   # Check whether it is an sdbuildR object
-  if (!inherits(sfm, "sdbuildR")) {
+  if (!inherits(object, "sdbuildR")) {
     cli::cli_abort(c(
       "Expected object of class {.cls sdbuildR}.",
       "i" = "Create a stock-and-flow model with {.fn sdbuildR} or {.fn insightmaker_to_sfm}."
@@ -406,49 +404,47 @@ check_sdbuildR <- function(sfm) {
 }
 
 
-
-
 #' Validate sdbuildR class
 #'
 #' Pure structural validator for stock-and-flow models. Checks that the object
 #' has the required fields and correct types, but does NOT modify the object.
 #' Use sanitize_sdbuildR() to apply defaults and fix invalid state.
 #'
-#' @inheritParams build
+#' @inheritParams update.sdbuildR
 #'
 #' @returns The stock-and-flow model, unchanged (invisibly)
 #' @noRd
 #'
-validate_sdbuildR <- function(sfm) {
-  check_sdbuildR(sfm)
+validate_sdbuildR <- function(object) {
+  check_sdbuildR(object)
 
   # Check custom_unit has required columns
-  if (nrow(sfm[["custom_unit"]])) {
+  if (nrow(object[["custom_unit"]])) {
     required_mu_cols <- colnames(empty_custom_unit())
-    missing_mu <- setdiff(required_mu_cols, colnames(sfm[["custom_unit"]]))
+    missing_mu <- setdiff(required_mu_cols, colnames(object[["custom_unit"]]))
     if (length(missing_mu) > 0) {
       cli::cli_warn("Model units is missing columns: {.field {missing_mu}}")
     }
   }
 
   # Check variables data frame has required columns
-  if (nrow(sfm[["variables"]]) > 0) {
+  if (nrow(object[["variables"]]) > 0) {
     required_var_cols <- colnames(empty_variables())
-    missing_cols <- setdiff(required_var_cols, colnames(sfm[["variables"]]))
+    missing_cols <- setdiff(required_var_cols, colnames(object[["variables"]]))
     if (length(missing_cols) > 0) {
       cli::cli_warn("Variables is missing columns: {.field {missing_cols}}")
     }
 
     # Warn about flow connections to non-stocks (but don't fix)
-    flows <- sfm[["variables"]][sfm[["variables"]][["type"]] == "flow", ]
-    non_stock_names <- sfm[["variables"]][sfm[["variables"]][["type"]] != "stock", "name"]
+    flows <- object[["variables"]][object[["variables"]][["type"]] == "flow", ]
+    non_stock_names <- object[["variables"]][object[["variables"]][["type"]] != "stock", "name"]
 
     if (nrow(flows) > 0) {
       flows_to_invalid <- !is.na(flows[["to"]]) & flows[["to"]] != "" & flows[["to"]] %in% non_stock_names
       if (any(flows_to_invalid)) {
         for (i in which(flows_to_invalid)) {
           flow_name <- flows[i, "name"]
-          to_name   <- flows[i, "to"]
+          to_name <- flows[i, "to"]
           cli::cli_warn(c(
             "{.code {flow_name}} flows to non-stock variable {.code {to_name}}.",
             "x" = "{.code {to_name}} is not a stock."
@@ -459,8 +455,8 @@ validate_sdbuildR <- function(sfm) {
       flows_from_invalid <- !is.na(flows[["from"]]) & flows[["from"]] != "" & flows[["from"]] %in% non_stock_names
       if (any(flows_from_invalid)) {
         for (i in which(flows_from_invalid)) {
-          flow_name  <- flows[i, "name"]
-          from_name  <- flows[i, "from"]
+          flow_name <- flows[i, "name"]
+          from_name <- flows[i, "from"]
           cli::cli_warn(c(
             "{.code {flow_name}} flows from non-stock variable {.code {from_name}}.",
             "x" = "{.code {from_name}} is not a stock."
@@ -483,7 +479,7 @@ validate_sdbuildR <- function(sfm) {
     }
   }
 
-  invisible(sfm)
+  invisible(object)
 }
 
 
@@ -492,53 +488,53 @@ validate_sdbuildR <- function(sfm) {
 #' Applies defaults and fixes invalid state in the stock-and-flow model.
 #' Called after modifier functions to ensure the object is in a consistent state.
 #'
-#' @inheritParams build
+#' @inheritParams update.sdbuildR
 #'
 #' @returns A stock-and-flow model of class [`sdbuildR`][sdbuildR]
 #' @noRd
 #'
-sanitize_sdbuildR <- function(sfm) {
-  check_sdbuildR(sfm)
+sanitize_sdbuildR <- function(object) {
+  check_sdbuildR(object)
 
   # Ensure custom_unit data frame has default properties
-  if (nrow(sfm[["custom_unit"]]) > 0) {
+  if (nrow(object[["custom_unit"]]) > 0) {
     # Ensure required columns exist
-    if (!"eqn" %in% colnames(sfm[["custom_unit"]])) {
-      sfm[["custom_unit"]][["eqn"]] <- "1"
+    if (!"eqn" %in% colnames(object[["custom_unit"]])) {
+      object[["custom_unit"]][["eqn"]] <- "1"
     }
-    if (!"doc" %in% colnames(sfm[["custom_unit"]])) {
-      sfm[["custom_unit"]][["doc"]] <- ""
+    if (!"doc" %in% colnames(object[["custom_unit"]])) {
+      object[["custom_unit"]][["doc"]] <- ""
     }
 
     # Ensure prefix is FALSE if not set
-    if (!"prefix" %in% colnames(sfm[["custom_unit"]])) {
-      sfm[["custom_unit"]][["prefix"]] <- FALSE
+    if (!"prefix" %in% colnames(object[["custom_unit"]])) {
+      object[["custom_unit"]][["prefix"]] <- FALSE
     } else {
       # Replace NA values in prefix with FALSE
-      idx_na_prefix <- is.na(sfm[["custom_unit"]][["prefix"]])
+      idx_na_prefix <- is.na(object[["custom_unit"]][["prefix"]])
       if (any(idx_na_prefix)) {
-        sfm[["custom_unit"]][idx_na_prefix, "prefix"] <- FALSE
+        object[["custom_unit"]][idx_na_prefix, "prefix"] <- FALSE
       }
     }
   }
 
   # Sanitize variables data frame
-  if (nrow(sfm[["variables"]])) {
+  if (nrow(object[["variables"]])) {
     # Migrate old "gf" type to "lookup"
-    idx_gf <- sfm[["variables"]][["type"]] == "gf"
+    idx_gf <- object[["variables"]][["type"]] == "gf"
     if (any(idx_gf)) {
-      sfm[["variables"]][idx_gf, "type"] <- "lookup"
+      object[["variables"]][idx_gf, "type"] <- "lookup"
     }
 
     # Ensure label is set (defaults to name if missing)
-    idx_missing_label <- !vapply(sfm[["variables"]][["label"]], is_defined, logical(1)) 
+    idx_missing_label <- !vapply(object[["variables"]][["label"]], is_defined, logical(1))
     if (any(idx_missing_label)) {
-      sfm[["variables"]][idx_missing_label, "label"] <- sfm[["variables"]][idx_missing_label, "name"]
+      object[["variables"]][idx_missing_label, "label"] <- object[["variables"]][idx_missing_label, "name"]
     }
 
     # Fix flows: ensure to and from only refer to stocks
-    flows <- sfm[["variables"]][sfm[["variables"]][["type"]] == "flow", ]
-    non_stock_names <- sfm[["variables"]][sfm[["variables"]][["type"]] != "stock", "name"]
+    flows <- object[["variables"]][object[["variables"]][["type"]] == "flow", ]
+    non_stock_names <- object[["variables"]][object[["variables"]][["type"]] != "stock", "name"]
 
     if (nrow(flows)) {
       # Fix invalid 'to'
@@ -546,12 +542,12 @@ sanitize_sdbuildR <- function(sfm) {
       if (any(flows_to_invalid)) {
         for (i in which(flows_to_invalid)) {
           flow_name <- flows[i, "name"]
-          to_name   <- flows[i, "to"]
+          to_name <- flows[i, "to"]
           cli::cli_warn(c(
             "{.code {flow_name}} flows to non-stock {.code {to_name}}.",
             ">" = "Removed {.code {to_name}} from {.arg to}."
           ))
-          sfm[["variables"]][sfm[["variables"]][["name"]] == flow_name, "to"] <- ""
+          object[["variables"]][object[["variables"]][["name"]] == flow_name, "to"] <- ""
         }
       }
 
@@ -559,13 +555,13 @@ sanitize_sdbuildR <- function(sfm) {
       flows_from_invalid <- !is.na(flows[["from"]]) & flows[["from"]] != "" & flows[["from"]] %in% non_stock_names
       if (any(flows_from_invalid)) {
         for (i in which(flows_from_invalid)) {
-          flow_name  <- flows[i, "name"]
-          from_name  <- flows[i, "from"]
+          flow_name <- flows[i, "name"]
+          from_name <- flows[i, "from"]
           cli::cli_warn(c(
             "{.code {flow_name}} flows from non-stock {.code {from_name}}.",
             ">" = "Removed {.code {from_name}} from {.arg from}."
           ))
-          sfm[["variables"]][sfm[["variables"]][["name"]] == flow_name, "from"] <- ""
+          object[["variables"]][object[["variables"]][["name"]] == flow_name, "from"] <- ""
         }
       }
 
@@ -580,13 +576,13 @@ sanitize_sdbuildR <- function(sfm) {
             "{.code {flow_name}} flows to and from the same variable {.code {same_name}}.",
             ">" = "Removed {.code {same_name}} from {.arg from}."
           ))
-          sfm[["variables"]][sfm[["variables"]][["name"]] == flow_name, "from"] <- ""
+          object[["variables"]][object[["variables"]][["name"]] == flow_name, "from"] <- ""
         }
       }
     }
   }
 
-  sfm
+  object
 }
 
 
@@ -594,7 +590,7 @@ sanitize_sdbuildR <- function(sfm) {
 #'
 #' The meta of a stock-and-flow model contains metadata about the model, such as the name, author, and version. Modify the meta of an existing model with standard or custom properties.
 #'
-#' @inheritParams build
+#' @inheritParams update.sdbuildR
 #' @param name Model name. Defaults to "My Model".
 #' @param caption Model description. Defaults to "My Model Description".
 #' @param created Date the model was created. Defaults to Sys.time().
@@ -616,19 +612,19 @@ sanitize_sdbuildR <- function(sfm) {
 #'     author = "Kyra Evers",
 #'     version = "1.1"
 #'   )
-meta <- function(sfm, name = "My Model", caption = "My Model Description",
-                   created = Sys.time(), author = "Me", version = "1.0", URL = "", doi = "", ...) {
+meta <- function(object, name = "My Model", caption = "My Model Description",
+                 created = Sys.time(), author = "Me", version = "1.0", URL = "", doi = "", ...) {
   # Basic check
-  if (missing(sfm)) {
-    missing_arg("sfm")
+  if (missing(object)) {
+    missing_arg("object")
   }
 
-  check_sdbuildR(sfm)
+  check_sdbuildR(object)
 
   # Get names of passed arguments
   passed_arg <- names(as.list(match.call())[-1]) |>
     # Remove some arguments
-    setdiff(c("sfm", "..."))
+    setdiff(c("object", "..."))
 
   # Collect all arguments
   argg <- c(
@@ -636,11 +632,11 @@ meta <- function(sfm, name = "My Model", caption = "My Model Description",
     list(...)
   )[unique(passed_arg)]
 
-  sfm[["meta"]] <- utils::modifyList(sfm[["meta"]], argg)
+  object[["meta"]] <- utils::modifyList(object[["meta"]], argg)
 
-  sfm <- sanitize_sdbuildR(sfm)
+  object <- sanitize_sdbuildR(object)
 
-  sfm
+  object
 }
 
 
@@ -729,9 +725,9 @@ get_building_block_prop <- function() {
 #' as.data.frame(sdbuildR("SIR"), properties = c("eqn", "label"))
 #'
 as.data.frame.sdbuildR <- function(x,
-                                         row.names = NULL, optional = FALSE,
-                                         type = NULL, name = NULL,
-                                         properties = NULL, ...) {
+                                   row.names = NULL, optional = FALSE,
+                                   type = NULL, name = NULL,
+                                   properties = NULL, ...) {
   check_sdbuildR(x)
   sfm <- x
   rm(x)
@@ -816,7 +812,7 @@ as.data.frame.sdbuildR <- function(x,
     }
   }
 
-  # Only keep columns that correspond to build() parameters
+  # Only keep columns that correspond to update() parameters
   allowed_props <- names(formals(get_variable_row))
   df <- df[, intersect(allowed_props, names(df)), drop = FALSE]
 
@@ -905,7 +901,7 @@ as.data.frame.sdbuildR <- function(x,
 #'
 #' @examples
 #' sfm <- sdbuildR("SIR")
-#' sfm
+#' print(sfm)
 #'
 print.sdbuildR <- function(x, ...) {
   # Header
@@ -922,22 +918,22 @@ print.sdbuildR <- function(x, ...) {
   # Count line
   vars <- x[["variables"]]
   types <- vars[["type"]]
-  n_stocks    <- sum(types == "stock")
-  n_flows     <- sum(types == "flow")
+  n_stocks <- sum(types == "stock")
+  n_flows <- sum(types == "flow")
   n_constants <- sum(types == "constant")
-  n_aux       <- sum(types == "aux")
-  n_lookup    <- sum(types == "lookup")
+  n_aux <- sum(types == "aux")
+  n_lookup <- sum(types == "lookup")
   total <- n_stocks + n_flows + n_constants + n_aux + n_lookup
 
   if (total == 0) {
     cli::cli_alert_info("Empty model without any variables.")
   } else {
     parts <- c()
-    if (n_stocks    > 0) parts <- c(parts, "{n_stocks} stock{?s}")
-    if (n_flows     > 0) parts <- c(parts, "{n_flows} flow{?s}")
+    if (n_stocks > 0) parts <- c(parts, "{n_stocks} stock{?s}")
+    if (n_flows > 0) parts <- c(parts, "{n_flows} flow{?s}")
     if (n_constants > 0) parts <- c(parts, "{n_constants} constant{?s}")
-    if (n_aux       > 0) parts <- c(parts, "{n_aux} {?auxiliary/auxiliaries}")
-    if (n_lookup    > 0) parts <- c(parts, "{n_lookup} lookup{?s}")
+    if (n_aux > 0) parts <- c(parts, "{n_aux} {?auxiliary/auxiliaries}")
+    if (n_lookup > 0) parts <- c(parts, "{n_lookup} lookup{?s}")
     cli::cli_text(paste(parts, collapse = " \u2022 "))
   }
 
@@ -952,23 +948,23 @@ print.sdbuildR <- function(x, ...) {
 
     for (i in seq_len(nrow(stock_rows))) {
       stock_name <- stock_rows[i, "name"]
-      inflows  <- unlist(stock_rows[i, "inflow"])
+      inflows <- unlist(stock_rows[i, "inflow"])
       outflows <- unlist(stock_rows[i, "outflow"])
 
-      if (is.null(inflows))  inflows  <- character(0)
+      if (is.null(inflows)) inflows <- character(0)
       if (is.null(outflows)) outflows <- character(0)
 
       shown_flows <- c(shown_flows, inflows, outflows)
 
       parts <- c(
-        if (length(inflows)  > 0) paste0("+ ", inflows),
+        if (length(inflows) > 0) paste0("+ ", inflows),
         if (length(outflows) > 0) paste0("- ", outflows)
       )
 
       if (length(parts) == 0) {
         cli::cli_text("  {stock_name}: (no flows)")
       } else {
-        cli::cli_text("  {stock_name}: {paste(parts, collapse = ', ')}")
+        cli::cli_text("  {stock_name}: {paste(parts, collapse = ' ')}")
       }
     }
 
@@ -1005,6 +1001,13 @@ print.sdbuildR <- function(x, ...) {
     "  Time: {ss$start} to {ss$stop} {time_unit} (dt = {ss$dt}) \u2022 {ss$method} \u2022 {ss$language}"
   )
 
+  # Unit tests (only shown when at least one is defined)
+  n_ut <- length(x[["unit_tests"]])
+  if (n_ut > 0L) {
+    n_active <- sum(vapply(x[["unit_tests"]], function(t) isTRUE(t[["active"]]), logical(1)))
+    cli::cli_text("  {n_ut} unit test{?s} defined ({n_active} active) \u2022 Run with {.fn verify}.")
+  }
+
   invisible(x)
 }
 
@@ -1036,7 +1039,7 @@ summary.sdbuildR <- function(object, ...) {
 
   # Run structural diagnostics
   diag_result <- diagnose(object)
-  n_errors   <- sum(vapply(diag_result, function(chk) chk$problem == "error",   logical(1)))
+  n_errors <- sum(vapply(diag_result, function(chk) chk$problem == "error", logical(1)))
   n_warnings <- sum(vapply(diag_result, function(chk) chk$problem == "warning", logical(1)))
 
   summary_obj <- list(
@@ -1082,7 +1085,7 @@ print.summary_sdbuildR <- function(x, ...) {
     cli::cli_bullets(c("v" = "No issues detected."))
   } else {
     parts <- c()
-    if (x$n_errors   > 0) parts <- c(parts, paste0(x$n_errors,   " error",   if (x$n_errors   != 1) "s"))
+    if (x$n_errors > 0) parts <- c(parts, paste0(x$n_errors, " error", if (x$n_errors != 1) "s"))
     if (x$n_warnings > 0) parts <- c(parts, paste0(x$n_warnings, " warning", if (x$n_warnings != 1) "s"))
     msg <- paste(parts, collapse = ", ")
     cli::cli_bullets(c("x" = "{msg} \u2014 run {.fn diagnose} for details."))

@@ -2,7 +2,7 @@
 #'
 #' Add or change custom units in a stock-and-flow model. Custom units offer greater flexibility in defining units that are not part of the standard library. Custom units may be new base units, or may be defined in terms of other (custom) units. See [u()] for more information on the rules of specifying units. Note that units are only supported in Julia, not in R.
 #'
-#' @inheritParams build
+#' @inheritParams update.sdbuildR
 #' @param name Name of unit. A character vector.
 #' @param eqn Definition of unit. String or vector of unit definitions. Defaults to `1` to indicate a base unit not defined in terms of other units.
 #' @param doc Documentation of unit.
@@ -13,31 +13,35 @@
 #' @concept units
 #' @seealso [unit_prefixes()], [discard()], [change_name()]
 #'
-#' @examplesIf is_julia_ready()
+#' @examplesIf Sys.getenv("NOT_CRAN") == "true" && is_julia_ready()
 #' # Units are only supported with Julia
+#' use_julia()
 #' sfm <- sdbuildR("Crielaard2022")
-#' sfm <- custom_unit(sfm, BMI, eqn = kg/m^2, doc = "Body Mass Index")
+#' sfm <- custom_unit(sfm, BMI, eqn = kg / m^2, doc = "Body Mass Index")
 #'
 #' # You may also use words rather than symbols for the unit definition.
 #' # The following modifies the unit BMI:
-#' sfm <- custom_unit(sfm, BMI, eqn = kilogram/meters^2)
+#' sfm <- custom_unit(sfm, BMI, eqn = kilogram / meters^2)
 #'
-#' # Rename unit:
+#' # Rename unit
 #' sfm <- change_name(sfm, BMI, BodyMassIndex)
-#' 
-#' # Remove unit:
+#'
+#' # Remove unit
 #' sfm <- discard(sfm, BodyMassIndex)
 #'
 #' # Unit names may need to be changed to be syntactically valid or to avoid
 #' # overlap with existing units:
 #' sfm <- custom_unit(sdbuildR(), C0^2)
 #'
-custom_unit <- function(sfm, name, eqn = 1, doc = "") {
+#' # Close Julia session
+#' use_julia(stop = TRUE)
+#'
+custom_unit <- function(object, name, eqn = 1, doc = "") {
   # Basic check
-  if (missing(sfm)) {
-    missing_arg("sfm")
+  if (missing(object)) {
+    missing_arg("object")
   }
-  check_sdbuildR(sfm)
+  check_sdbuildR(object)
 
   if (missing(name)) {
     missing_arg("name")
@@ -45,17 +49,17 @@ custom_unit <- function(sfm, name, eqn = 1, doc = "") {
   name_expr <- rlang::enexpr(name)
   .check_name_not_sdbuildR(name_expr, rlang::caller_env())
   name <- .expr_to_char(name_expr)
-  eqn  <- .expr_to_char(rlang::enexpr(eqn))
+  eqn <- .expr_to_char(rlang::enexpr(eqn))
 
   # Gather arguments for validation and processing
-  passed_arg <- setdiff(names(match.call()[-1]), "sfm")
+  passed_arg <- setdiff(names(match.call()[-1]), "object")
   args <- mget(passed_arg)
   args <- do.call(.validate_build_args, args)
 
   # Ensure length of vector arguments matches length of name
   args <- .ensure_length_build_args(args)
 
-  unit_names <- sfm[["custom_unit"]][["name"]]
+  unit_names <- object[["custom_unit"]][["name"]]
   idx_nonexist <- which(!name %in% unit_names)
 
   chosen_name <- name
@@ -80,9 +84,8 @@ custom_unit <- function(sfm, name, eqn = 1, doc = "") {
     cli::cli_abort(c(
       "x" = "{cli::qty(n)}Unallowed name{?s} for custom unit{?s}.",
       "i" = "Names of custom units cannot be the same as standard units.",
-      ">" = "Choose new name{?s} for: {.val {chosen_name[name_in_units]}}." 
+      ">" = "Choose new name{?s} for: {.val {chosen_name[name_in_units]}}."
     ))
-
   }
 
   # Check if all unit names contain at least one letter or digit
@@ -100,7 +103,7 @@ custom_unit <- function(sfm, name, eqn = 1, doc = "") {
 
   # Enforce unique names: new unit names must not clash with variable names
   if (length(idx_nonexist) > 0) {
-    var_names <- sfm[["variables"]][["name"]]
+    var_names <- object[["variables"]][["name"]]
     clashing <- name[idx_nonexist] %in% var_names
     if (any(clashing)) {
       clash_names <- name[idx_nonexist][clashing]
@@ -126,7 +129,7 @@ custom_unit <- function(sfm, name, eqn = 1, doc = "") {
 
   # Get names of passed arguments
   passed_arg <- names(as.list(match.call())[-1]) |>
-    setdiff("sfm")
+    setdiff("object")
   argg <- list()
   argg[["name"]] <- name
 
@@ -148,26 +151,26 @@ custom_unit <- function(sfm, name, eqn = 1, doc = "") {
     unit_name_i <- name[i]
 
     # Check if unit already exists
-    existing_idx <- which(sfm[["custom_unit"]][["name"]] == unit_name_i)
+    existing_idx <- which(object[["custom_unit"]][["name"]] == unit_name_i)
 
     if (length(existing_idx) > 0) {
       # Update existing unit row
       for (col in names(new_units[[i]])) {
-        sfm[["custom_unit"]][existing_idx, col] <- new_units[[i]][[col]]
+        object[["custom_unit"]][existing_idx, col] <- new_units[[i]][[col]]
       }
     } else {
       # Add new unit row
       new_row <- as.data.frame(new_units[[i]], stringsAsFactors = FALSE)
-      sfm[["custom_unit"]] <- bind_rows_(sfm[["custom_unit"]], new_row)
+      object[["custom_unit"]] <- bind_rows_(object[["custom_unit"]], new_row)
     }
   }
 
   # Clear assemble cache only for Julia (units only affect Julia scripts)
-  if (sfm[["sim_specs"]][["language"]] == "Julia") {
-    sfm <- invalidate_assemble(sfm, "units")
+  if (object[["sim_specs"]][["language"]] == "Julia") {
+    object <- invalidate_assemble(object, "units")
   }
 
-  sfm <- sanitize_sdbuildR(sfm)
-  validate_sdbuildR(sfm)
-  sfm
+  object <- sanitize_sdbuildR(object)
+  validate_sdbuildR(object)
+  object
 }

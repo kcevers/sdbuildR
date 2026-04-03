@@ -950,7 +950,6 @@ convert_builtin_functions_IM <- function(type, name, eqn, var_names) {
     )
 
     while (!done) {
-
       idx_df <- stringr::str_locate_all(eqn, IM_regex)
 
       # Remove NULL entries
@@ -1159,7 +1158,7 @@ convert_builtin_functions_IM <- function(type, name, eqn, var_names) {
           replacement <- out[["replacement"]]
           add_var <- out[["add_var"]]
 
-          if (nrow(add_var)){
+          if (nrow(add_var)) {
             add_vars <- rbind(add_vars, add_var)
 
             # Add newly created variables to names_df so that they are safe from replacement, e.g. if a variable contains the word "Time"
@@ -1299,12 +1298,16 @@ conv_lookup <- function(func, arg, name) {
   #   extrapolation = "nearest"
   # )) |>
   #   stats::setNames(func_name_str))
-  add_var <- do.call(get_variable_row, 
-                    list(name = func_name_str, type = "lookup",
-                    xpts = arg[2], ypts = arg[3],
-    source = arg[1],
-    interpolation = "linear",
-    extrapolation = "nearest"))
+  add_var <- do.call(
+    get_variable_row,
+    list(
+      name = func_name_str, type = "lookup",
+      xpts = arg[2], ypts = arg[3],
+      source = arg[1],
+      interpolation = "linear",
+      extrapolation = "nearest"
+    )
+  )
 
   replacement <- sprintf("[%s]([%s])", func_name_str, arg[1])
 

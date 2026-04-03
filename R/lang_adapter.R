@@ -251,11 +251,11 @@ lang_adapter_julia <- function() {
         # if (!is.null(row[["delayN"]]) && is_defined(row[["delayN"]])) {
         #   paste0(sum_eqn, " ./ ", P[["time_units_name"]])
         # } else {
-          paste0(
-            P[["convert_u_func"]], "(", sum_eqn,
-            ", Unitful.unit.(", row[["name"]], ")/",
-            P[["time_units_name"]], ")" #, " ./ Unitful.unit.(", row[["name"]], ")"
-          )
+        paste0(
+          P[["convert_u_func"]], "(", sum_eqn,
+          ", Unitful.unit.(", row[["name"]], ")/",
+          P[["time_units_name"]], ")" # , " ./ Unitful.unit.(", row[["name"]], ")"
+        )
         # }
       } else {
         # sum_eqn

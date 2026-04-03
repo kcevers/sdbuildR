@@ -18,12 +18,12 @@ test_that("summary() dependencies is a named list", {
 
 test_that("summary() only includes variables that have at least one dependency", {
   sfm <- sdbuildR() |>
-    build("S", type = "stock", eqn = "100") |>
-    build("k", type = "constant", eqn = "0.1") |>
-    build("Flow1", type = "flow", from = "S", eqn = "k * S")
+    update("S", type = "stock", eqn = "100") |>
+    update("k", type = "constant", eqn = "0.1") |>
+    update("Flow1", type = "flow", from = "S", eqn = "k * S")
   summ <- summary(sfm)
-  expect_false("k"    %in% names(summ$dependencies)) # constant — no deps
-  expect_false("S"    %in% names(summ$dependencies)) # stock — no deps
+  expect_false("k" %in% names(summ$dependencies)) # constant — no deps
+  expect_false("S" %in% names(summ$dependencies)) # stock — no deps
   expect_true("Flow1" %in% names(summ$dependencies)) # flow — depends on k and S
   expect_true("k" %in% summ$dependencies[["Flow1"]])
   expect_true("S" %in% summ$dependencies[["Flow1"]])
@@ -31,10 +31,10 @@ test_that("summary() only includes variables that have at least one dependency",
 
 test_that("summary() n_errors and n_warnings are zero for valid model", {
   sfm <- sdbuildR() |>
-    build("S", type = "stock", eqn = "100") |>
-    build("Flow1", type = "flow", from = "S", eqn = "0.1 * S")
+    update("S", type = "stock", eqn = "100") |>
+    update("Flow1", type = "flow", from = "S", eqn = "0.1 * S")
   summ <- summary(sfm)
-  expect_equal(summ$n_errors,   0L)
+  expect_equal(summ$n_errors, 0L)
   expect_equal(summ$n_warnings, 0L)
 })
 
@@ -46,7 +46,7 @@ test_that("summary() n_errors > 0 for model with errors", {
 
 test_that("summary() n_warnings > 0 for model with warnings", {
   sfm <- sdbuildR() |>
-    build("S", type = "stock") # disconnected stock — warning
+    update("S", type = "stock") # disconnected stock — warning
   summ <- summary(sfm)
   expect_gt(summ$n_warnings, 0)
 })
@@ -68,8 +68,8 @@ test_that("print(summary(sfm)) shows Diagnostics section", {
 
 test_that("print(summary(sfm)) reports no issues for valid model", {
   sfm <- sdbuildR() |>
-    build("S", type = "stock", eqn = "100") |>
-    build("Flow1", type = "flow", from = "S", eqn = "0.1 * S")
+    update("S", type = "stock", eqn = "100") |>
+    update("Flow1", type = "flow", from = "S", eqn = "0.1 * S")
   expect_snapshot(print(summary(sfm)))
 })
 

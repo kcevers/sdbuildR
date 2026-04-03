@@ -1348,7 +1348,7 @@ Vary $r_{X_D}$: the rate of energy depletion from demand.
 ```{r, fig.heigth = 8}
 sims <- ensemble(sfm,
   n = 100,
-  range = list("r_X_D" = c(0.175, 0.15, 0.1)),
+  conditions = list("r_X_D" = c(0.175, 0.15, 0.1)),
   return_sims = TRUE
 )
 
@@ -1425,7 +1425,7 @@ if (recreate_figs) {
 
   sims <- ensemble(sfm,
     n = 100,
-    range = list("r_X_D" = c(0.175, 0.15, 0.1)), return_sims = TRUE
+    conditions = list("r_X_D" = c(0.175, 0.15, 0.1)), return_sims = TRUE
   )
 
   pl_par <- plot(sims,

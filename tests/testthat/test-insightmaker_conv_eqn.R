@@ -167,4 +167,3 @@ test_that("convert_builtin_functions_IM statistical functions", {
   result <- convert_builtin_functions_IM(type, name, eqn, var_names)$eqn
   expect_equal(result, "mean(c(1, 2, 3))")
 })
-

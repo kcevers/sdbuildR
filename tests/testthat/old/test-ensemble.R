@@ -151,7 +151,7 @@ test_that("ensemble reproducibility with seed", {
       dt = .1,
       save_from = 5, seed = seed
     ) |>
-    build(c("predator", "prey"), eqn = "runif(1)")
+    update(c("predator", "prey"), eqn = "runif(1)")
   sims1 <- ensemble(sfm, return_sims = TRUE)
   sims2 <- ensemble(sfm, return_sims = TRUE)
 
@@ -171,7 +171,7 @@ test_that("plotting ensemble also works with singular time point", {
       dt = .1,
       save_from = 5
     ) |>
-    build(c("predator", "prey"), eqn = "runif(1)")
+    update(c("predator", "prey"), eqn = "runif(1)")
   sims <- ensemble(sfm)
   expect_true(sims$success)
   expect_equal(length(unique(sims$summary$time)), 1)
@@ -301,7 +301,7 @@ test_that("ensemble works with units", {
   # Test ensemble with model with units
   sfm <- sdbuildR("coffee_cup") |>
     sim_specs(language = "Julia", stop = 10, dt = 0.1) |>
-    build("coffee_temperature", eqn = "runif(1, 20, 150)")
+    update("coffee_temperature", eqn = "runif(1, 20, 150)")
   sims <- expect_no_error(ensemble(sfm))
 
   nr_sims <- 15
@@ -324,7 +324,7 @@ test_that("ensemble works with NA", {
 
   # Combine varying initial condition and parameters
   sfm <- sdbuildR("predator_prey") |>
-    build(c("predator", "prey"), eqn = "runif(1, 30, 50)") |>
+    update(c("predator", "prey"), eqn = "runif(1, 30, 50)") |>
     sim_specs(
       language = "Julia",
       dt = 0.1,
@@ -365,25 +365,25 @@ test_that("ensemble: order of range parameters", {
     sim_specs(language = "Julia") |>
     sim_specs(stop = 12, dt = 0.1, save_at = 1, time_units = "month") |>
     meta(name = "Maya's Burnout") |>
-    build("workload", "stock",
+    update("workload", "stock",
       eqn = 4
     ) |>
-    build("new_tasks", "flow",
+    update("new_tasks", "flow",
       eqn = "workload * work_growth",
       to = "workload"
     ) |>
-    build("work_growth", "constant",
+    update("work_growth", "constant",
       eqn = 1.5
     ) |>
-    build(c("sleep", "necessary_sleep", "worry_factor"),
+    update(c("sleep", "necessary_sleep", "worry_factor"),
       c("stock", "constant", "constant"),
       eqn = c("necessary_sleep", 8, .1)
     ) |>
-    build("worry_about_work", "flow",
+    update("worry_about_work", "flow",
       eqn = "workload * worry_factor",
       from = "sleep"
     ) |>
-    build("need_for_rest", "flow",
+    update("need_for_rest", "flow",
       eqn = "workload * necessary_sleep / sleep",
       from = "workload"
     )
@@ -412,9 +412,9 @@ test_that("ensemble works with interpolation function", {
       dt = .1,
       save_from = 50
     ) |>
-    build("X", eqn = "runif(1, 0, K)") |>
-    build("input", "constant", eqn = "pulse(times, 10, width = dt, height = .01)") |>
-    build("inflow2", "flow", eqn = "input(t)", to = "X")
+    update("X", eqn = "runif(1, 0, K)") |>
+    update("input", "constant", eqn = "pulse(times, 10, width = dt, height = .01)") |>
+    update("inflow2", "flow", eqn = "input(t)", to = "X")
 
   sims <- expect_no_error(ensemble(sfm))
   expect_true(sims$success)

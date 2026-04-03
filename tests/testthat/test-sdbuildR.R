@@ -51,7 +51,7 @@ test_that("check_sdbuildR rejects non-model objects", {
 
 test_that("sanitize_sdbuildR fills missing labels", {
   sfm <- sdbuildR()
-  sfm <- build(sfm, "S", type = "stock", eqn = "2")
+  sfm <- update(sfm, "S", type = "stock", eqn = "2")
 
   # Remove label to force defaults
   sfm[["variables"]][["label"]] <- ""
@@ -65,12 +65,12 @@ test_that("sanitize_sdbuildR fills missing labels", {
 
 test_that("sanitize_sdbuildR cleans invalid flow connections", {
   sfm <- sdbuildR()
-  sfm <- build(sfm, "Stock", type = "stock")
-  sfm <- build(sfm, "Aux", type = "aux")
+  sfm <- update(sfm, "Stock", type = "stock")
+  sfm <- update(sfm, "Aux", type = "aux")
 
-  # Invalid flow connections generate warnings during build (which calls sanitize_sdbuildR internally)
+  # Invalid flow connections generate warnings during update (which calls sanitize_sdbuildR internally)
   expect_warning(
-    sfm <- build(sfm, "FlowBad", type = "flow", to = "Aux"),
+    sfm <- update(sfm, "FlowBad", type = "flow", to = "Aux"),
     "non-stock"
   )
 
@@ -79,7 +79,7 @@ test_that("sanitize_sdbuildR cleans invalid flow connections", {
   expect_equal(flow_row[["from"]], "")
 
   expect_warning(
-    sfm <- build(sfm, "FlowBad", type = "flow", from = "Aux"),
+    sfm <- update(sfm, "FlowBad", type = "flow", from = "Aux"),
     "non-stock"
   )
 
@@ -88,26 +88,25 @@ test_that("sanitize_sdbuildR cleans invalid flow connections", {
   expect_equal(flow_row[["from"]], "")
 
   expect_error(
-    sfm <- build(sfm, "FlowBad", type = "flow", to = "Stock", from = "Stock"),
+    sfm <- update(sfm, "FlowBad", type = "flow", to = "Stock", from = "Stock"),
     "flow cannot have the same stock as both source and target"
   )
-
 })
 
 test_that("regular models have NULL import_metadata", {
   sfm <- sdbuildR()
   expect_null(sfm[["import_metadata"]])
 
-  sfm <- build(sfm, name = "x", type = "stock", eqn = "1")
+  sfm <- update(sfm, name = "x", type = "stock", eqn = "1")
   expect_null(sfm[["import_metadata"]])
 })
 
 
 test_that("validate_sdbuildR warns but does not mutate", {
   sfm <- sdbuildR()
-  sfm <- build(sfm, "Stock", type = "stock")
-  sfm <- build(sfm, "Aux", type = "aux")
-  sfm <- build(sfm, "BadFlow", type = "flow", to = "Stock")
+  sfm <- update(sfm, "Stock", type = "stock")
+  sfm <- update(sfm, "Aux", type = "aux")
+  sfm <- update(sfm, "BadFlow", type = "flow", to = "Stock")
 
   # Manually set invalid flow connection (bypass sanitize_sdbuildR)
   sfm[["variables"]][sfm[["variables"]][["name"]] == "BadFlow", "to"] <- "Aux"
@@ -165,9 +164,9 @@ test_that("print.sdbuildR() snapshot: SIR model", {
 
 test_that("print.sdbuildR() snapshot: model with constants", {
   sfm <- sdbuildR() |>
-    build("S", type = "stock", eqn = "100") |>
-    build("k", type = "constant", eqn = "0.1") |>
-    build("Flow1", type = "flow", from = "S", eqn = "k * S")
+    update("S", type = "stock", eqn = "100") |>
+    update("k", type = "constant", eqn = "0.1") |>
+    update("Flow1", type = "flow", from = "S", eqn = "k * S")
   expect_snapshot(print(sfm))
 })
 

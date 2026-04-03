@@ -191,10 +191,10 @@ contains_IM <- function(haystack, needle) {
 #' @examples
 #' # Create a simple model with a ramp function
 #' sfm <- sdbuildR() |>
-#'   build("a", "stock") |>
+#'   update("a", "stock") |>
 #'   # Specify the global variable "times" as simulation times
-#'   build("input", "constant", eqn = "ramp(times, 20, 30, 3)") |>
-#'   build("inflow", "flow", eqn = "input(t)", to = "a")
+#'   update("input", "constant", eqn = "ramp(times, 20, 30, 3)") |>
+#'   update("inflow", "flow", eqn = "input(t)", to = "a")
 #'
 #' \dontshow{
 #' sfm <- sim_specs(sfm, save_at = 1, dt = .1)
@@ -204,7 +204,7 @@ contains_IM <- function(haystack, needle) {
 #' plot(sim)
 #'
 #' # To create a decreasing ramp, set the height to a negative value
-#' sfm <- build(sfm, "input", eqn = "ramp(times, 20, 30, -3)")
+#' sfm <- update(sfm, "input", eqn = "ramp(times, 20, 30, -3)")
 #'
 #' sim <- simulate(sfm, only_stocks = FALSE)
 #' plot(sim)
@@ -269,7 +269,7 @@ ramp <- function(times, start, finish, height = 1) {
 
   # Create linear approximation function
   input <- stats::approxfun(signal, rule = 2, method = "linear")
-  return(input)
+  input
 }
 
 
@@ -294,10 +294,10 @@ ramp <- function(times, start, finish, height = 1) {
 #' # that starts at time 5, jumps to a height of 2
 #' # with a width of 1, and does not repeat
 #' sfm <- sdbuildR() |>
-#'   build("a", "stock") |>
+#'   update("a", "stock") |>
 #'   # Specify the global variable "times" as simulation times
-#'   build("input", "constant", eqn = "pulse(times, 5, 2, 1)") |>
-#'   build("inflow", "flow", eqn = "input(t)", to = "a")
+#'   update("input", "constant", eqn = "pulse(times, 5, 2, 1)") |>
+#'   update("inflow", "flow", eqn = "input(t)", to = "a")
 #'
 #' \dontshow{
 #' sfm <- sim_specs(sfm, dt = .1)
@@ -307,7 +307,7 @@ ramp <- function(times, start, finish, height = 1) {
 #' plot(sim)
 #'
 #' # Create a pulse that repeats every 5 time units
-#' sfm <- build(sfm, "input", eqn = "pulse(times, 5, 2, 1, 5)")
+#' sfm <- update(sfm, "input", eqn = "pulse(times, 5, 2, 1, 5)")
 #'
 #' sim <- simulate(sfm, only_stocks = FALSE)
 #' plot(sim)
@@ -410,10 +410,10 @@ pulse <- function(times, start, height = 1, width = 1, repeat_interval = NULL) {
 #' # Create a simple model with a step function
 #' # that jumps at time 50 to a height of 5
 #' sfm <- sdbuildR() |>
-#'   build("a", "stock") |>
+#'   update("a", "stock") |>
 #'   # Specify the global variable "times" as simulation times
-#'   build("input", "constant", eqn = "step(times, 50, 5)") |>
-#'   build("inflow", "flow", eqn = "input(t)", to = "a")
+#'   update("input", "constant", eqn = "step(times, 50, 5)") |>
+#'   update("inflow", "flow", eqn = "input(t)", to = "a")
 #'
 #' \dontshow{
 #' sfm <- sim_specs(sfm, dt = .1)
@@ -423,7 +423,7 @@ pulse <- function(times, start, height = 1, width = 1, repeat_interval = NULL) {
 #' plot(sim)
 #'
 #' # Negative heights are also possible
-#' sfm <- build(sfm, "input", eqn = "step(times, 50, -10)")
+#' sfm <- update(sfm, "input", eqn = "step(times, 50, -10)")
 #'
 #' sim <- simulate(sfm, only_stocks = FALSE)
 #' plot(sim)
@@ -485,10 +485,10 @@ step <- function(times, start, height = 1) {
 #' @examples
 #' # Create a simple model with a seasonal wave
 #' sfm <- sdbuildR() |>
-#'   build("a", "stock") |>
+#'   update("a", "stock") |>
 #'   # Specify the global variable "times" as simulation times
-#'   build("input", "constant", eqn = "seasonal(times, 10, 0)") |>
-#'   build("inflow", "flow", eqn = "input(t)", to = "a")
+#'   update("input", "constant", eqn = "seasonal(times, 10, 0)") |>
+#'   update("inflow", "flow", eqn = "input(t)", to = "a")
 #'
 #' sim <- simulate(sfm, only_stocks = FALSE)
 #' plot(sim)

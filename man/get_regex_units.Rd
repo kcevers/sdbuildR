@@ -4,10 +4,10 @@
 \alias{get_regex_units}
 \title{Get regular expressions for units in Julia}
 \usage{
-get_regex_units(sfm = NULL)
+get_regex_units(object = NULL)
 }
 \arguments{
-\item{sfm}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
+\item{object}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
 }
 \value{
 Named vector with regular expressions as names and units as entries

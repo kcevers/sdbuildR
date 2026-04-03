@@ -21,7 +21,7 @@ such as variable dependencies and diagnostics, use \code{\link[=summary.sdbuildR
 }
 \examples{
 sfm <- sdbuildR("SIR")
-sfm
+print(sfm)
 
 }
 \seealso{

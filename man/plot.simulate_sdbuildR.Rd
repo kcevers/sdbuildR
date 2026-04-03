@@ -18,7 +18,7 @@
 )
 }
 \arguments{
-\item{x}{Output of simulate().}
+\item{x}{Output of \code{\link[=simulate.sdbuildR]{simulate()}}.}
 
 \item{add_constants}{If TRUE, include constants in plot. Defaults to FALSE.}
 
@@ -57,6 +57,6 @@ plot(sim, add_constants = TRUE)
 
 }
 \seealso{
-\code{\link[=simulate]{simulate()}}, \code{\link[=as.data.frame.simulate_sdbuildR]{as.data.frame.simulate_sdbuildR()}}, \code{\link[=plot.simulate_sdbuildR]{plot.simulate_sdbuildR()}}
+\code{\link[=simulate.sdbuildR]{simulate()}}, \code{\link[=as.data.frame.simulate_sdbuildR]{as.data.frame.simulate_sdbuildR()}}, \code{\link[=plot.simulate_sdbuildR]{plot.simulate_sdbuildR()}}
 }
 \concept{simulate}

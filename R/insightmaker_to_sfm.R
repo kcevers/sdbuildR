@@ -9,10 +9,10 @@
 #' @param keep_nonnegative_flow If TRUE, keeps original non-negativity setting of flows. Defaults to TRUE.
 #' @param keep_nonnegative_stock If TRUE, keeps original non-negativity setting of stocks. Defaults to FALSE.
 #'
-#' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR]
+#' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR].
 #' @export
 #' @concept insightmaker
-#' @seealso [build()], [sdbuildR()]
+#' @seealso [update()], [sdbuildR()]
 #'
 #' @examplesIf has_internet() && Sys.getenv("NOT_CRAN") == "true"
 #' # Load a model from Insight Maker
@@ -46,7 +46,7 @@ insightmaker_to_sfm <- function(URL,
 
   # Parse model into import context
   # file_to_sdbuildR() returns a context with:
-  # - ctx$sfm: sfm with sim_specs, meta, and variables added (no Julia conversion yet)
+  # - ctx$object: object with sim_specs, meta, and variables added (no Julia conversion yet)
   # - ctx$variables: original variable list (for reference)
   # - ctx$original_variables: data frame for import_metadata
   # - ctx$original_macros: data frame for import_metadata
@@ -73,11 +73,11 @@ insightmaker_to_sfm <- function(URL,
 
   # Add URL to meta
   if (!missing(URL)) {
-    ctx$sfm[["meta"]][["URL"]] <- URL
+    ctx$object[["meta"]][["URL"]] <- URL
   }
 
-  # Extract sfm for convenience (conversion functions work on sfm)
-  sfm <- ctx$sfm
+  # Extract object for convenience (conversion functions work on object)
+  object <- ctx$object
 
   # Clean up units
   if (P[["debug"]]) {
@@ -86,9 +86,9 @@ insightmaker_to_sfm <- function(URL,
 
   regex_units <- get_regex_units()
 
-  sfm <- tryCatch(
+  object <- tryCatch(
     {
-      clean_units_IM(sfm, regex_units)
+      clean_units_IM(object, regex_units)
     },
     error = function(e) {
       cli::cli_abort(
@@ -102,9 +102,9 @@ insightmaker_to_sfm <- function(URL,
   )
 
   # Check non-negativity for flows and stocks
-  sfm <- tryCatch(
+  object <- tryCatch(
     {
-      check_nonnegativity(sfm, keep_nonnegative_flow, keep_nonnegative_stock)
+      check_nonnegativity(object, keep_nonnegative_flow, keep_nonnegative_stock)
     },
     error = function(e) {
       cli::cli_abort(
@@ -122,9 +122,9 @@ insightmaker_to_sfm <- function(URL,
     cli::cli_inform("Converting macros")
   }
 
-  sfm <- tryCatch(
+  object <- tryCatch(
     {
-      convert_macros_IM_wrapper(sfm, regex_units = regex_units)
+      convert_macros_IM_wrapper(object, regex_units = regex_units)
     },
     error = function(e) {
       cli::cli_abort(
@@ -142,9 +142,9 @@ insightmaker_to_sfm <- function(URL,
     cli::cli_inform("Converting equations")
   }
 
-  sfm <- tryCatch(
+  object <- tryCatch(
     {
-      convert_equations_IM_wrapper(sfm, regex_units = regex_units)
+      convert_equations_IM_wrapper(object, regex_units = regex_units)
     },
     error = function(e) {
       cli::cli_abort(
@@ -158,9 +158,9 @@ insightmaker_to_sfm <- function(URL,
   )
 
   # Finalize equations by removing brackets from names
-  sfm <- tryCatch(
+  object <- tryCatch(
     {
-      remove_brackets_from_names(sfm)
+      remove_brackets_from_names(object)
     },
     error = function(e) {
       cli::cli_abort(
@@ -173,9 +173,9 @@ insightmaker_to_sfm <- function(URL,
   )
 
   # Split auxiliaries into constants and auxiliaries
-  sfm <- tryCatch(
+  object <- tryCatch(
     {
-      split_aux_wrapper(sfm)
+      split_aux_wrapper(object)
     },
     error = function(e) {
       cli::cli_abort(
@@ -190,27 +190,27 @@ insightmaker_to_sfm <- function(URL,
   # Prepare equation strings for the target language
   # This must happen before sim_specs() to ensure eqn_str and sum_eqn are populated
   # Determine which language will be used (check for units first)
-  unit_strings <- find_unit_strings(sfm)
-  df_units <- as.data.frame(sfm, type = c("stock", "aux", "constant", "lookup"), properties = "units")
+  unit_strings <- find_unit_strings(object)
+  df_units <- as.data.frame(object, type = c("stock", "aux", "constant", "lookup"), properties = "units")
 
   will_use_julia <- length(unit_strings) > 0 ||
-    nrow(sfm[["custom_unit"]]) > 0 ||
+    nrow(object[["custom_unit"]]) > 0 ||
     any(df_units[["units"]] != "1")
 
   # Prepare equations (adapter handles R vs Julia based on sim_specs)
   if (will_use_julia) {
-    sfm[["sim_specs"]][["language"]] <- "Julia"
+    object[["sim_specs"]][["language"]] <- "Julia"
   }
-  sfm <- prep_equations_variables(sfm)
-  sfm <- prep_stock_change(sfm)
+  object <- prep_equations_variables(object)
+  object <- prep_stock_change(object)
 
   # Determine simulation language: if using units, set to Julia
   # Reuse variables computed above for prep functions
   if (will_use_julia) {
     cli::cli_inform("Units detected. Setting language to {.code Julia}")
-    sfm <- sim_specs(sfm, language = "Julia")
+    object <- sim_specs(object, language = "Julia")
   }
-  sfm <- sim_specs(sfm, keep_nonnegative_flow = keep_nonnegative_flow, keep_nonnegative_stock = keep_nonnegative_stock)
+  object <- sim_specs(object, keep_nonnegative_flow = keep_nonnegative_flow, keep_nonnegative_stock = keep_nonnegative_stock)
 
   # Clean up temporary columns used during conversion
   # These columns are no longer needed and should not appear in the final sdbuildR object
@@ -218,21 +218,21 @@ insightmaker_to_sfm <- function(URL,
   #                "name_insightmaker", "id_insightmaker",
   #                "conveyor", "len")
   # for (col in temp_cols) {
-  #   if (col %in% colnames(sfm[["variables"]])) {
-  #     sfm[["variables"]][[col]] <- NULL
+  #   if (col %in% colnames(object[["variables"]])) {
+  #     object[["variables"]][[col]] <- NULL
   #   }
   # }
   allowed_cols <- colnames(empty_variables())
-  sfm[["variables"]] <- sfm[["variables"]][, colnames(sfm[["variables"]]) %in% allowed_cols]
+  object[["variables"]] <- object[["variables"]][, colnames(object[["variables"]]) %in% allowed_cols]
 
-  # Update context with converted sfm
-  ctx$sfm <- sfm
+  # Update context with converted object
+  ctx$object <- object
 
-  # Build import_metadata from context and attach to sfm
-  sfm[["import_metadata"]] <- ctx_build_import_metadata(ctx)
+  # Build import_metadata from context and attach to object
+  object[["import_metadata"]] <- ctx_build_import_metadata(ctx)
 
-  sfm <- sanitize_sdbuildR(sfm)
-  validate_sdbuildR(sfm)
-  
-  sfm
+  object <- sanitize_sdbuildR(object)
+  validate_sdbuildR(object)
+
+  object
 }

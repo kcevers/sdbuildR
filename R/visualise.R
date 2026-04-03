@@ -16,8 +16,8 @@
 #' @examples
 #'
 #' # Only if dependencies are installed
-#' if (require("DiagrammeRsvg", quietly = TRUE) &
-#'   require("rsvg", quietly = TRUE)) {
+#' if (requireNamespace("DiagrammeRsvg", quietly = TRUE) &&
+#'   requireNamespace("rsvg", quietly = TRUE)) {
 #'   sfm <- sdbuildR("SIR")
 #'   file <- tempfile(fileext = ".png")
 #'   export_plot(plot(sfm), file)
@@ -30,8 +30,8 @@
 #' \dontrun{
 #' # requires internet
 #' # Only if dependencies are installed
-#' if (require("htmlwidgets", quietly = TRUE) &
-#'   require("webshot2", quietly = TRUE)) {
+#' if (requireNamespace("htmlwidgets", quietly = TRUE) &&
+#'   requireNamespace("webshot2", quietly = TRUE)) {
 #'   # Requires Chrome to save plotly plot:
 #'   sim <- simulate(sfm)
 #'   export_plot(plot(sim), file)
@@ -97,21 +97,9 @@ export_plot <- function(pl, file, width = 3, height = 4, units = "cm", dpi = 300
 #' @noRd
 #'
 export_diagram <- function(pl, file, format, width, height) {
-  if (!requireNamespace("rsvg", quietly = TRUE)) {
-    cli::cli_abort(c(
-      "Package {.pkg rsvg} is required.",
-      "x" = "The {.pkg rsvg} package is not installed.",
-      ">" = "Install it with: {.code install.packages('rsvg')}."
-    ))
-  }
+  rlang::check_installed("rsvg", reason = "to export stock-and-flow diagrams to image files.")
 
-  if (!requireNamespace("DiagrammeRsvg", quietly = TRUE)) {
-    cli::cli_abort(c(
-      "Package {.pkg DiagrammeRsvg} is required.",
-      "x" = "The {.pkg DiagrammeRsvg} package is not installed.",
-      ">" = "Install it with: {.code install.packages('DiagrammeRsvg')}."
-    ))
-  }
+  rlang::check_installed("DiagrammeRsvg", reason = "to export stock-and-flow diagrams to image files.")
 
   temp <- charToRaw(DiagrammeRsvg::export_svg(pl))
 
@@ -135,7 +123,7 @@ export_diagram <- function(pl, file, format, width, height) {
     ))
   }
 
-  return(invisible())
+  invisible()
 }
 
 
@@ -148,21 +136,9 @@ export_diagram <- function(pl, file, format, width, height) {
 #' @noRd
 #'
 export_plotly <- function(pl, file, format, width, height) {
-  if (!requireNamespace("htmlwidgets", quietly = TRUE)) {
-    cli::cli_abort(c(
-      "Package {.pkg htmlwidgets} is required.",
-      "x" = "The {.pkg htmlwidgets} package is not installed.",
-      ">" = "Install it with: {.code install.packages('htmlwidgets')}."
-    ))
-  }
+  rlang::check_installed("htmlwidgets", reason = "to export plotly visualizations to image files.")
 
-  if (!requireNamespace("webshot2", quietly = TRUE)) {
-    cli::cli_abort(c(
-      "Package {.pkg webshot2} is required.",
-      "x" = "The {.pkg webshot2} package is not installed.",
-      ">" = "Install it with: {.code install.packages('webshot2')}."
-    ))
-  }
+  rlang::check_installed("webshot2", reason = "to export plotly visualizations to image files.")
 
   # Create temporary HTML file
   temp_html <- tempfile(fileext = ".html")
@@ -247,19 +223,19 @@ export_plotly <- function(pl, file, format, width, height) {
 #' plot(sfm, vars = "Susceptible")
 #'
 plot.sdbuildR <- function(x,
-                                vars = NULL,
-                                format_label = TRUE,
-                                wrap_width = 20,
-                                font_size = 18,
-                                font_family = "Times New Roman",
-                                stock_col = "#83d3d4",
-                                flow_col = "#f48153",
-                                dependency_col = "#999999",
-                                show_dependencies = TRUE,
-                                show_constants = FALSE,
-                                show_aux = TRUE,
-                                minlen = 2,
-                                ...) {
+                          vars = NULL,
+                          format_label = TRUE,
+                          wrap_width = 20,
+                          font_size = 18,
+                          font_family = "Times New Roman",
+                          stock_col = "#83d3d4",
+                          flow_col = "#f48153",
+                          dependency_col = "#999999",
+                          show_dependencies = TRUE,
+                          show_constants = FALSE,
+                          show_aux = TRUE,
+                          minlen = 2,
+                          ...) {
   sfm <- x
   rm(x)
   check_sdbuildR(sfm)
@@ -271,7 +247,7 @@ plot.sdbuildR <- function(x,
   if (nrow(df) == 0) {
     cli::cli_warn(c(
       "i" = "Model contains no variables.",
-      ">" = "Add variables using {.fn build} before plotting."
+      ">" = "Add variables using {.fn update} before plotting."
     ))
     return(invisible(NULL))
   }
@@ -481,9 +457,6 @@ plot.sdbuildR <- function(x,
   cloud_nodes <- flow_edges <- flow_nodes <- dependency_edges <- ""
 
   if (length(flow_names) > 0) {
-    # # Create dataframe with direction of flows
-    # flow_df <- get_flow_df(sfm)
-
     # If the flow is to a stock that doesn't exist, remove
     flow_df[["from"]] <- ifelse(flow_df[["from"]] %in% stock_names,
       flow_df[["from"]], ""
@@ -644,14 +617,14 @@ plot.sdbuildR <- function(x,
 #' @param df data.frame to plot
 #' @param constants Constants to plot
 #' @inheritParams plot.simulate_sdbuildR
-#' @inheritParams build
+#' @inheritParams update.sdbuildR
 #'
 #' @returns List
 #' @noRd
 #'
-prep_plot <- function(sfm, type_sim, df, constants, add_constants, vars, palette, colors, wrap_width) {
+prep_plot <- function(object, type_sim, df, constants, add_constants, vars, palette, colors, wrap_width) {
   # Get names of stocks and non-stock variables
-  names_df <- get_names(sfm)
+  names_df <- get_names(object)
 
   # Validate variable parameters
   validate_plot_params(vars = vars)
@@ -700,7 +673,7 @@ prep_plot <- function(sfm, type_sim, df, constants, add_constants, vars, palette
     result <- filter_variables(vars, names_df, df, type_sim = type_sim)
     names_df <- result$names_df
     df <- result$df
-    highlight_these_names <- vars
+    highlight_these_names <- names_df[["name"]]
   } else {
     # Default: highlight stocks
     highlight_these_names <- determine_highlight_vars(names_df, highlight_strategy = "auto")
@@ -753,7 +726,7 @@ prep_plot <- function(sfm, type_sim, df, constants, add_constants, vars, palette
 #'
 #' Visualize simulation results of a stock-and-flow model. Plot the evolution of stocks over time, with the option of also showing other model variables.
 #'
-#' @param x Output of simulate().
+#' @param x Output of [`simulate()`][simulate.sdbuildR()].
 #' @param add_constants If TRUE, include constants in plot. Defaults to FALSE.
 #' @param vars Variables to plot. Defaults to NULL to plot all variables.
 #' @param palette Colour palette. Must be one of hcl.pals().
@@ -767,7 +740,7 @@ prep_plot <- function(sfm, type_sim, df, constants, add_constants, vars, palette
 #' @returns Plotly object
 #' @export
 #' @concept simulate
-#' @seealso [simulate()], [as.data.frame.simulate_sdbuildR()], [plot.simulate_sdbuildR()]
+#' @seealso [`simulate()`][simulate.sdbuildR()], [as.data.frame.simulate_sdbuildR()], [plot.simulate_sdbuildR()]
 #' @method plot simulate_sdbuildR
 #'
 #' @examples
@@ -782,15 +755,15 @@ prep_plot <- function(sfm, type_sim, df, constants, add_constants, vars, palette
 #' plot(sim, add_constants = TRUE)
 #'
 plot.simulate_sdbuildR <- function(x,
-                                  add_constants = FALSE,
-                                  vars = NULL,
-                                  palette = "Dark 2",
-                                  colors = NULL,
-                                  font_family = "Times New Roman",
-                                  font_size = 16,
-                              wrap_width = 25,
-                              showlegend = TRUE,
-                              ...) {
+                                   add_constants = FALSE,
+                                   vars = NULL,
+                                   palette = "Dark 2",
+                                   colors = NULL,
+                                   font_family = "Times New Roman",
+                                   font_size = 16,
+                                   wrap_width = 25,
+                                   showlegend = TRUE,
+                                   ...) {
   if (missing(x)) {
     cli::cli_abort(c(
       "No simulation data available.",
@@ -825,9 +798,9 @@ plot.simulate_sdbuildR <- function(x,
   dots <- list(...)
 
   # Extract optional parameters with defaults
-  matched_time_unit <- find_matching_regex(x[["sfm"]][["sim_specs"]][["time_units"]], get_regex_time_units())
+  matched_time_unit <- find_matching_regex(x[["object"]][["sim_specs"]][["time_units"]], get_regex_time_units())
   params <- extract_plot_params(dots, defaults = list(
-    main = x[["sfm"]][["meta"]][["name"]],
+    main = x[["object"]][["meta"]][["name"]],
     xlab = paste0("Time (", matched_time_unit, ")"),
     ylab = ""
   ))
@@ -836,7 +809,7 @@ plot.simulate_sdbuildR <- function(x,
   ylab <- params$ylab
 
   out <- prep_plot(
-    x[["sfm"]], "sim", x[["df"]], x[["constants"]], add_constants,
+    x[["object"]], "sim", x[["df"]], x[["constants"]], add_constants,
     vars, palette, colors, wrap_width
   )
   highlight_names <- out[["highlight_names"]]
@@ -1035,9 +1008,9 @@ plot.ensemble_sdbuildR <- function(x,
   }
 
   # Extract optional parameters with defaults
-  matched_time_unit <- find_matching_regex(x[["sfm"]][["sim_specs"]][["time_units"]], get_regex_time_units())
+  matched_time_unit <- find_matching_regex(x[["object"]][["sim_specs"]][["time_units"]], get_regex_time_units())
   params <- extract_plot_params(dots, defaults = list(
-    main = paste0("Ensemble of ", x[["sfm"]][["meta"]][["name"]]),
+    main = paste0("Ensemble of ", x[["object"]][["meta"]][["name"]]),
     xlab = paste0("Time (", matched_time_unit, ")"),
     ylab = "",
     sub = default_sub,
@@ -1078,9 +1051,10 @@ plot.ensemble_sdbuildR <- function(x,
             ">" = "Set {.code j = 1}."
           ))
         } else {
+          min_j <- 1
           cli::cli_abort(c(
             "Invalid {.arg j} indices.",
-            "x" = "The {.arg j} argument must contain integers between {.val 1} and {.val {x[[\"n_conditions\"]]}}."
+            "x" = "The {.arg j} argument must contain integers between {.val {min_j}} and {.val {x[[\"n_conditions\"]]}}."
           ))
         }
       }
@@ -1160,7 +1134,7 @@ plot.ensemble_sdbuildR <- function(x,
   }
 
   # Prepare for plotting
-  out <- prep_plot(x[["sfm"]], "ensemble", summary_df,
+  out <- prep_plot(x[["object"]], "ensemble", summary_df,
     constants = x[["constants"]][["summary"]], add_constants = add_constants,
     vars = vars, palette = palette, colors = colors, wrap_width = wrap_width
   )
@@ -1171,7 +1145,7 @@ plot.ensemble_sdbuildR <- function(x,
   colors <- out[["colors"]]
 
   if (type == "sims") {
-    out <- prep_plot(x[["sfm"]], "ensemble", df,
+    out <- prep_plot(x[["object"]], "ensemble", df,
       constants = x[["constants"]][["df"]], add_constants = add_constants,
       vars = vars, palette = palette, colors = colors, wrap_width = wrap_width
     )
@@ -1616,5 +1590,5 @@ plot_ensemble_helper <- function(j_idx, j_name, j, j_labels,
     pl <- plotly::layout(pl, yaxis = list(range = dots[["ylim"]]))
   }
 
-  return(pl)
+  pl
 }

@@ -72,7 +72,7 @@ test_that("compare output Julia and R for templates", {
   sfm <- sdbuildR("Crielaard2022") |>
     sim_specs(dt = 0.1, save_at = 1, stop = 10) |>
     # Update initial condition to be non-stochastic
-    build(c("Food_intake", "Hunger", "Compensatory_behaviour"),
+    update(c("Food_intake", "Hunger", "Compensatory_behaviour"),
       eqn = round(runif(3), 8)
     )
 

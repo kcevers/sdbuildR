@@ -31,10 +31,10 @@ Equivalent of Pulse() in Insight Maker
 # that starts at time 5, jumps to a height of 2
 # with a width of 1, and does not repeat
 sfm <- sdbuildR() |>
-  build("a", "stock") |>
+  update("a", "stock") |>
   # Specify the global variable "times" as simulation times
-  build("input", "constant", eqn = "pulse(times, 5, 2, 1)") |>
-  build("inflow", "flow", eqn = "input(t)", to = "a")
+  update("input", "constant", eqn = "pulse(times, 5, 2, 1)") |>
+  update("inflow", "flow", eqn = "input(t)", to = "a")
 
 \dontshow{
 sfm <- sim_specs(sfm, dt = .1)
@@ -44,7 +44,7 @@ sim <- simulate(sfm, only_stocks = FALSE)
 plot(sim)
 
 # Create a pulse that repeats every 5 time units
-sfm <- build(sfm, "input", eqn = "pulse(times, 5, 2, 1, 5)")
+sfm <- update(sfm, "input", eqn = "pulse(times, 5, 2, 1, 5)")
 
 sim <- simulate(sfm, only_stocks = FALSE)
 plot(sim)

@@ -1,4 +1,3 @@
-
 test_that("validate_plot_params passes on NULL inputs", {
   expect_invisible(validate_plot_params())
   expect_invisible(validate_plot_params(

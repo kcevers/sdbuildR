@@ -176,4 +176,3 @@ cli::test_that_cli(configs = c("plain", "ansi"), "clean_language() error message
 cli::test_that_cli(configs = c("plain", "ansi"), "clean_type() error messages", {
   expect_snapshot(clean_type(123), error = TRUE)
 })
-

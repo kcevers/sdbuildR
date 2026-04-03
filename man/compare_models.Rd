@@ -35,6 +35,6 @@ compare_models(sfm1, sfm2)
 
 }
 \seealso{
-\code{\link[=simulate]{simulate()}}, \code{\link[=summary.sdbuildR]{summary.sdbuildR()}}
+\code{\link[=simulate.sdbuildR]{simulate()}}, \code{\link[=summary.sdbuildR]{summary()}}
 }
 \concept{build}

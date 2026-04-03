@@ -5,7 +5,7 @@
 \title{Modify simulation specifications}
 \usage{
 sim_specs(
-  sfm,
+  object,
   method = "euler",
   start = 0,
   stop = 100,
@@ -15,13 +15,15 @@ sim_specs(
   seed = NULL,
   time_units = "s",
   language = "R",
+  only_stocks = TRUE,
+  vars = NULL,
   keep_nonnegative_stock = FALSE,
   keep_nonnegative_flow = TRUE,
   keep_unit = TRUE
 )
 }
 \arguments{
-\item{sfm}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
+\item{object}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
 
 \item{method}{Integration method. Defaults to \code{"euler"}.}
 
@@ -56,6 +58,14 @@ random elements. Must be an integer. Defaults to \code{NULL} (no seed).}
 \item{language}{Coding language in which to simulate model. Either \code{"R"} or
 \code{"Julia"}. Julia is necessary for using units or running ensemble simulations.
 Defaults to \code{"R"}.}
+
+\item{only_stocks}{If \code{TRUE}, only return stocks in output, discarding flows
+and auxiliaries. If \code{FALSE}, flows and auxiliaries are saved, which slows
+down the simulation. Defaults to \code{TRUE}.}
+
+\item{vars}{Character vector of variable names to save in simulation output.
+Can include only time-varying variables (\code{stock}, \code{flow}, \code{aux}).
+If specified, this overrides \code{only_stocks}.}
 
 \item{keep_nonnegative_stock}{If \code{TRUE}, keeps original non-negativity setting
 of stocks. Defaults to \code{FALSE}.}
@@ -95,7 +105,7 @@ sfm <- sim_specs(sfm, save_n = 11)
 
 # Add stochastic initial condition but specify seed to obtain same result
 sfm <- sim_specs(sfm, seed = 1) |>
-  build(c(predator, prey), eqn = runif(1, 20, 50))
+  update(c(predator, prey), eqn = runif(1, 20, 50))
 
 # Change the simulation language to Julia to use units
 sfm <- sim_specs(sfm, language = Julia)

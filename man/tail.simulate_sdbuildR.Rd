@@ -7,7 +7,7 @@
 \method{tail}{simulate_sdbuildR}(x, n = 6L, ...)
 }
 \arguments{
-\item{x}{Output of simulate().}
+\item{x}{Output of \code{\link[=simulate.sdbuildR]{simulate()}}.}
 
 \item{n}{Number of rows to print. Defaults to 6.}
 

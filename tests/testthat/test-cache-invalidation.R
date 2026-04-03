@@ -89,7 +89,7 @@ test_that("invalidate_assemble 'times' only clears times", {
 })
 
 
-# --- build() dependency-aware invalidation ------------------------------------
+# --- update() dependency-aware invalidation ------------------------------------
 
 test_that("changing constant value preserves ode and ordering", {
   sfm <- sdbuildR("SIR")
@@ -98,26 +98,25 @@ test_that("changing constant value preserves ode and ordering", {
   old_ordering <- sfm[["assemble"]][["ordering"]]
 
   # Change constant value (same dependencies, i.e., none)
-  sfm <- build(sfm, "Total_Population", eqn = "100")
+  sfm <- update(sfm, "Total_Population", eqn = "100")
 
   # ODE and ordering should be preserved
   expect_equal(sfm[["assemble"]][["ode"]], old_ode)
   expect_equal(sfm[["assemble"]][["ordering"]], old_ordering)
-
 })
 
 test_that("changing equation dependencies forces full variable invalidation", {
   sfm <- sdbuildR()
-  sfm <- build(sfm, "A", type = "stock", eqn = "10")
-  sfm <- build(sfm, "B", type = "constant", eqn = "5")
-  sfm <- build(sfm, "C", type = "constant", eqn = "3")
-  sfm <- build(sfm, "F1", type = "flow", eqn = "B", to = "A")
+  sfm <- update(sfm, "A", type = "stock", eqn = "10")
+  sfm <- update(sfm, "B", type = "constant", eqn = "5")
+  sfm <- update(sfm, "C", type = "constant", eqn = "3")
+  sfm <- update(sfm, "F1", type = "flow", eqn = "B", to = "A")
 
   old_dep <- sfm[["assemble"]][["ordering"]][["deps_by_name"]][["F1"]]
   expect_equal(old_dep, "B")
 
   # Change flow equation to depend on C instead of B (dependency change)
-  sfm <- build(sfm, "F1", eqn = "C")
+  sfm <- update(sfm, "F1", eqn = "C")
 
   # Ordering should be cleared since dependencies changed
   new_dep <- sfm[["assemble"]][["ordering"]][["deps_by_name"]][["F1"]]
@@ -128,16 +127,16 @@ test_that("changing equation dependencies forces full variable invalidation", {
 
 test_that("changing aux equation preserves ordering and static", {
   sfm <- sdbuildR()
-  sfm <- build(sfm, "A", type = "stock", eqn = "10")
-  sfm <- build(sfm, "k", type = "constant", eqn = "5")
-  sfm <- build(sfm, "rate", type = "aux", eqn = "k * 2")
-  sfm <- build(sfm, "F1", type = "flow", eqn = "rate", to = "A")
+  sfm <- update(sfm, "A", type = "stock", eqn = "10")
+  sfm <- update(sfm, "k", type = "constant", eqn = "5")
+  sfm <- update(sfm, "rate", type = "aux", eqn = "k * 2")
+  sfm <- update(sfm, "F1", type = "flow", eqn = "rate", to = "A")
 
   old_ordering <- sfm[["assemble"]][["ordering"]]
   old_static <- sfm[["assemble"]][["static"]]
 
   # Change aux equation with same dependencies
-  sfm <- build(sfm, "rate", eqn = "k * 3")
+  sfm <- update(sfm, "rate", eqn = "k * 3")
 
   # Ordering and static should be preserved
   expect_equal(sfm[["assemble"]][["ordering"]], old_ordering)
@@ -167,7 +166,6 @@ test_that("sim_specs time change preserves variable components", {
 })
 
 
-
 # --- Correctness: targeted matches full invalidation --------------------------
 
 test_that("targeted invalidation produces same simulation as full invalidation", {
@@ -176,14 +174,14 @@ test_that("targeted invalidation produces same simulation as full invalidation",
 
   # Simulate to populate cache
   sim1 <- simulate(sfm)
-  sfm_cached <- sim1$sfm
+  sfm_cached <- sim1$object
 
   # Path 1: Targeted invalidation (default behavior)
-  sfm2 <- build(sfm_cached, "Delay", eqn = "2")
+  sfm2 <- update(sfm_cached, "Delay", eqn = "2")
   sim2 <- simulate(sfm2)
 
   # Path 2: Force full invalidation
-  sfm3 <- build(sfm_cached, "Delay", eqn = "2")
+  sfm3 <- update(sfm_cached, "Delay", eqn = "2")
   sfm3 <- invalidate_assemble(sfm3, "all")
   sim3 <- simulate(sfm3)
 
@@ -192,7 +190,6 @@ test_that("targeted invalidation produces same simulation as full invalidation",
   expect_equal(sim2$df$variable, sim3$df$variable)
   expect_equal(sim2$df$time, sim3$df$time)
 })
-
 
 
 # --- diagnose and unit_strings cache fields -----------------------------------
@@ -234,4 +231,3 @@ test_that("invalidate_assemble 'units' clears diagnose but preserves unit_string
   expect_null(sfm[["assemble"]][["diagnose"]])
   expect_equal(sfm[["assemble"]][["unit_strings"]], old_unit_strings)
 })
-

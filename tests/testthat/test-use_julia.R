@@ -1,5 +1,4 @@
 test_that("use_julia() works", {
-
   skip_if_julia_not_ready()
 
   # Stop Julia
@@ -11,7 +10,7 @@ test_that("use_julia() works", {
   # Check if environment was initialized; now this should be false
   expect_false(is_julia_init())
 
-  # Set up environment 
+  # Set up environment
   expect_no_error(expect_no_warning(expect_message(use_julia())))
 
   # But the environment should be installed after calling use_julia()
@@ -26,7 +25,6 @@ test_that("use_julia() works", {
   expect_true(is_julia_ok())
   expect_true(is_julia_env_installed())
   expect_true(is_julia_init())
-
 })
 
 
@@ -44,10 +42,7 @@ test_that("use_julia() with threads works", {
   expect_equal(Sys.getenv("JULIA_NUM_THREADS"), "4")
   actual_threads <- as.integer(JuliaConnectoR::juliaEval("string(Threads.nthreads())"))
   expect_equal(actual_threads, 4)
-
 })
-
-
 
 
 test_that("install_julia_env() works", {
@@ -56,6 +51,8 @@ test_that("install_julia_env() works", {
   # Test installation
   expect_no_error(install_julia_env())
   expect_no_error(install_julia_env(remove = TRUE))
+
+  # Removing again should not cause an error
+  expect_no_error(install_julia_env(remove = TRUE))
   expect_no_error(install_julia_env())
 })
-

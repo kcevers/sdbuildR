@@ -188,8 +188,10 @@ test_that("converting functions to Julia with named arguments", {
 
 
   # Error when not all default arguments are at the end
-  expect_error(sdbuildR() |> custom_func("Function", "function(x, y = 1, z) x + y"), 
-  "Change the function definition of")
+  expect_error(
+    sdbuildR() |> custom_func("Function", "function(x, y = 1, z) x + y"),
+    "Change the function definition of"
+  )
 
   expect_error(sdbuildR() |> custom_func("Function", "function(x, y = 1, z){\nx + y\n}"), "Change the function definition of")
 
@@ -220,17 +222,17 @@ test_that("custom function definitons work", {
   # Is the function usable in R?
   sfm <- sfm |>
     sim_specs(language = "R", stop = 1, dt = .1) |>
-    build("a", "stock", eqn = "myfunc(1, 2)")
+    update("a", "stock", eqn = "myfunc(1, 2)")
   sim <- expect_no_error(simulate(sfm))
   expect_equal(sim$df[sim$df$variable == "a", "value"][1], 1 + 2)
 
   # Named argument in R
-  sfm <- sfm |> build("a", eqn = "myfunc(1, y = 2)")
+  sfm <- sfm |> update("a", eqn = "myfunc(1, y = 2)")
   sim <- expect_no_error(simulate(sfm))
   expect_equal(sim$df[1, "value"], 1 + 2)
 
   # Switch order of arguments in R
-  sfm <- sfm |> build("a", eqn = "myfunc(1, z = 3, y = 2)")
+  sfm <- sfm |> update("a", eqn = "myfunc(1, z = 3, y = 2)")
   sim <- expect_no_error(simulate(sfm))
   expect_equal(sim$df[1, "value"], 1 + 2)
 
@@ -247,7 +249,7 @@ test_that("custom function definitons work", {
   sfm <- sdbuildR() |>
     custom_func("myfunc", "function(x, y = 1, z = 2) x + y") |>
     sim_specs(language = "Julia", stop = 1, dt = .1) |>
-    build("a", "stock", eqn = "myfunc(1, 2)")
+    update("a", "stock", eqn = "myfunc(1, 2)")
   sim <- expect_no_error(simulate(sfm))
   expect_equal(sim$df[1, "value"], 1 + 2)
 })
@@ -725,4 +727,3 @@ test_that("adding scientific notation", {
   # Scientific notation already present will not be formatted correctly; and leading zeros will be preserved
   expect_equal(scientific_notation(".1e+02", task = "add"), ".1e+02")
 })
-

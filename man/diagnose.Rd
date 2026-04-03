@@ -4,10 +4,10 @@
 \alias{diagnose}
 \title{Debug stock-and-flow model}
 \usage{
-diagnose(sfm)
+diagnose(object)
 }
 \arguments{
-\item{sfm}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
+\item{object}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
 }
 \value{
 Object of class \code{diagnose_sdbuildR}. A flat named list with one
@@ -46,13 +46,13 @@ sfm <- sdbuildR()
 diagnose(sfm)
 
 # Detect stocks without inflows or outflows
-sfm <- sdbuildR() |> build("Prey", "stock")
+sfm <- sdbuildR() |> update("Prey", "stock")
 diagnose(sfm)
 
 # Detect circularity in equation definitions
 sfm <- sdbuildR() |>
-  build("Prey", "stock", eqn = "Predator") |>
-  build("Predator", "stock", eqn = "Prey")
+  update("Prey", "stock", eqn = "Predator") |>
+  update("Predator", "stock", eqn = "Prey")
 diagnose(sfm)
 
 }

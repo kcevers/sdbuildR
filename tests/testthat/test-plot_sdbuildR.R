@@ -67,8 +67,8 @@ test_that("plot() creates diagram for simple single-stock model", {
   skip_if_not_installed("vdiffr")
 
   sfm <- sdbuildR()
-  sfm1 <- build(sfm, "Stock1", type = "stock", label = "Population")
-  sfm2 <- build(sfm1, "Flow1", type = "flow", label = "Birth", from = "Stock1")
+  sfm1 <- update(sfm, "Stock1", type = "stock", label = "Population")
+  sfm2 <- update(sfm1, "Flow1", type = "flow", label = "Birth", from = "Stock1")
 
   vdiffr::expect_doppelganger(
     "sdbuildR-simple-stock-flow",
@@ -81,9 +81,9 @@ test_that("plot() creates diagram with auxiliary variables and dependencies", {
   skip_if_not_installed("vdiffr")
 
   sfm <- sdbuildR()
-  sfm1 <- build(sfm, "S", type = "stock")
-  sfm2 <- build(sfm1, "I", type = "stock")
-  sfm3 <- build(sfm2, "infection_rate", type = "aux", eqn = "S * I * 0.001")
+  sfm1 <- update(sfm, "S", type = "stock")
+  sfm2 <- update(sfm1, "I", type = "stock")
+  sfm3 <- update(sfm2, "infection_rate", type = "aux", eqn = "S * I * 0.001")
 
   vdiffr::expect_doppelganger(
     "sdbuildR-diagram-with-dependencies",
@@ -96,8 +96,8 @@ test_that("plot() with show_dependencies = FALSE hides dependency arrows", {
   skip_if_not_installed("vdiffr")
 
   sfm <- sdbuildR()
-  sfm1 <- build(sfm, "S", type = "stock")
-  sfm2 <- build(sfm1, "aux1", type = "aux", eqn = "S * 2")
+  sfm1 <- update(sfm, "S", type = "stock")
+  sfm2 <- update(sfm1, "aux1", type = "aux", eqn = "S * 2")
 
   vdiffr::expect_doppelganger(
     "sdbuildR-no-dependencies",
@@ -110,8 +110,8 @@ test_that("plot() with show_constants = TRUE displays constants", {
   skip_if_not_installed("vdiffr")
 
   sfm <- sdbuildR()
-  sfm1 <- build(sfm, "Stock1", type = "stock")
-  sfm2 <- build(sfm1, "const1", type = "constant", eqn = "5")
+  sfm1 <- update(sfm, "Stock1", type = "stock")
+  sfm2 <- update(sfm1, "const1", type = "constant", eqn = "5")
 
   vdiffr::expect_doppelganger(
     "sdbuildR-with-constants",
@@ -124,8 +124,8 @@ test_that("plot() with show_constants = FALSE hides constants", {
   skip_if_not_installed("vdiffr")
 
   sfm <- sdbuildR()
-  sfm1 <- build(sfm, "Stock1", type = "stock")
-  sfm2 <- build(sfm1, "const1", type = "constant", eqn = "5")
+  sfm1 <- update(sfm, "Stock1", type = "stock")
+  sfm2 <- update(sfm1, "const1", type = "constant", eqn = "5")
 
   vdiffr::expect_doppelganger(
     "sdbuildR-without-constants",
@@ -203,7 +203,7 @@ test_that("plot() with custom font size", {
   skip_if_not_installed("vdiffr")
 
   sfm <- sdbuildR()
-  sfm1 <- build(sfm, "Stock1", type = "stock", label = "Population")
+  sfm1 <- update(sfm, "Stock1", type = "stock", label = "Population")
 
   vdiffr::expect_doppelganger(
     "sdbuildR-large-font",
@@ -216,7 +216,7 @@ test_that("plot() with custom wrap width", {
   skip_if_not_installed("vdiffr")
 
   sfm <- sdbuildR()
-  sfm1 <- build(sfm, "VeryLongStockNameThatShouldWrap",
+  sfm1 <- update(sfm, "VeryLongStockNameThatShouldWrap",
     type = "stock", label = "Very Long Stock Name That Should Wrap"
   )
 
@@ -231,7 +231,7 @@ test_that("plot() with format_label = FALSE preserves original labels", {
   skip_if_not_installed("vdiffr")
 
   sfm <- sdbuildR()
-  sfm1 <- build(sfm, "Stock_1", type = "stock", label = "Stock_1")
+  sfm1 <- update(sfm, "Stock_1", type = "stock", label = "Stock_1")
 
   vdiffr::expect_doppelganger(
     "sdbuildR-format-label-false",
@@ -244,7 +244,7 @@ test_that("plot() with format_label = TRUE removes underscores", {
   skip_if_not_installed("vdiffr")
 
   sfm <- sdbuildR()
-  sfm1 <- build(sfm, "Stock_1", type = "stock", label = "Stock_1")
+  sfm1 <- update(sfm, "Stock_1", type = "stock", label = "Stock_1")
 
   vdiffr::expect_doppelganger(
     "sdbuildR-format-label-true",

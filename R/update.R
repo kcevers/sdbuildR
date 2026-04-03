@@ -1,6 +1,3 @@
-
-
-
 # ==============================================================================
 # NSE (Non-Standard Evaluation) HELPERS
 # ==============================================================================
@@ -14,18 +11,28 @@
 #' recursively processes each element. For other calls, deparses to string.
 #'
 #' Use `!!` (bang-bang injection) to pass the value of a variable instead of
-#' its name: `build(sfm, !!my_var, stock)`.
+#' its name: `update(sfm, !!my_var, stock)`.
 #'
 #' @param expr Expression captured by [rlang::enexpr()].
 #'   Can be NULL, a character string, a number, a symbol, or a call.
 #' @return Character vector, or NULL if `expr` is NULL.
 #' @noRd
 .expr_to_char <- function(expr) {
-  if (is.null(expr)) return(NULL)
-  if (is.character(expr)) return(expr)
-  if (is.numeric(expr)) return(as.character(expr))
-  if (is.logical(expr)) return(as.character(expr))
-  if (rlang::is_symbol(expr)) return(rlang::as_name(expr))
+  if (is.null(expr)) {
+    return(NULL)
+  }
+  if (is.character(expr)) {
+    return(expr)
+  }
+  if (is.numeric(expr)) {
+    return(as.character(expr))
+  }
+  if (is.logical(expr)) {
+    return(as.character(expr))
+  }
+  if (rlang::is_symbol(expr)) {
+    return(rlang::as_name(expr))
+  }
 
   if (rlang::is_call(expr)) {
     fn <- rlang::call_name(expr)
@@ -71,7 +78,7 @@
 #'   [rlang::caller_env()].
 #' @noRd
 .check_name_not_sdbuildR <- function(name_or_expr,
-                                      env = rlang::caller_env()) {
+                                     env = rlang::caller_env()) {
   is_sdbuildR_val <- function(x) inherits(x, "sdbuildR")
 
   if (rlang::is_symbol(name_or_expr)) {
@@ -213,15 +220,14 @@
 }
 
 
-
-.validate_units_arg <- function(units){
-  if (is.null(units)){
+.validate_units_arg <- function(units) {
+  if (is.null(units)) {
     units <- "1"
   } else {
-    if (!inherits(units, "character")){
+    if (!inherits(units, "character")) {
       units <- as.character(units)
     }
-    if (any(!nzchar(units))){
+    if (any(!nzchar(units))) {
       units[!nzchar(units)] <- "1"
     }
   }
@@ -360,7 +366,6 @@
 
 
 .validate_interpolation_arg <- function(interpolation) {
-
   interpolation <- tolower(interpolation)
   if (!all(interpolation %in% c("linear", "constant"))) {
     cli::cli_abort(c(
@@ -374,7 +379,6 @@
 
 
 .validate_extrapolation_arg <- function(extrapolation) {
-
   extrapolation <- tolower(extrapolation)
   if (!all(extrapolation %in% c("nearest", "na"))) {
     cli::cli_abort(c(
@@ -417,7 +421,6 @@
 
   # Validate xpts/ypts
   if (!is.null(xpts) && !is.null(ypts)) {
-
     if (any(lengths(xpts) != lengths(ypts))) {
       cli::cli_abort(c(
         "Length mismatch between {.arg xpts} and {.arg ypts}.",
@@ -463,7 +466,7 @@
 
 
 .validate_non_negative_arg <- function(non_negative) {
-  if (!is.null(non_negative)){
+  if (!is.null(non_negative)) {
     if (!all(is.logical(non_negative))) {
       cli::cli_abort(c(
         "Invalid {.arg non_negative} argument.",
@@ -488,97 +491,142 @@
 
 
 # ==============================================================================
-# OPERATION-SPECIFIC INTERNAL FUNCTIONS - Modular build operations
+# OPERATION-SPECIFIC INTERNAL FUNCTIONS - Modular update operations
 # ==============================================================================
-# These functions encapsulate specific build operations for clarity and testing.
+# These functions encapsulate specific update operations for clarity and testing.
 
 #' Rename a variable throughout the model
-#' @param sfm Stock-and-flow model
+#' @param object Stock-and-flow model
 #' @param old_name Current variable name
 #' @param new_name New variable name
 #' @noRd
-.change_name <- function(sfm, old_name, new_name) {
-  var_names <- sfm[["variables"]][["name"]]
+.change_name <- function(object, old_name, new_name) {
+  var_names <- object[["variables"]][["name"]]
 
   # Update name in data frame
-  idx_var <- match(old_name, sfm[["variables"]][["name"]])
-  sfm[["variables"]][idx_var, "name"] <- new_name
+  idx_var <- match(old_name, object[["variables"]][["name"]])
+  object[["variables"]][idx_var, "name"] <- new_name
 
   # Update label if it was same as old name
-  idx_label <- sfm[["variables"]][idx_var, "label"] == old_name
+  idx_label <- object[["variables"]][idx_var, "label"] == old_name
   if (any(idx_label)) {
-    sfm[["variables"]][idx_var[idx_label], "label"] <- new_name[idx_label]
+    object[["variables"]][idx_var[idx_label], "label"] <- new_name[idx_label]
   }
 
   # Replace references using word boundaries
   for (i in seq_along(old_name)) {
-    sfm[["variables"]][["eqn"]] <- gsub(
+    object[["variables"]][["eqn"]] <- gsub(
       paste0("\\b", old_name[i], "\\b"), new_name[i],
-      sfm[["variables"]][["eqn"]]
+      object[["variables"]][["eqn"]]
     )
   }
 
   # Update to/from/source references
   for (col in c("to", "from", "source")) {
-    idx <- match(sfm[["variables"]][[col]], old_name)
+    idx <- match(object[["variables"]][[col]], old_name)
     if (any(!is.na(idx))) {
-      sfm[["variables"]][which(!is.na(idx)), col] <- new_name[stats::na.omit(idx)]
+      object[["variables"]][which(!is.na(idx)), col] <- new_name[stats::na.omit(idx)]
     }
   }
 
-  sfm
+  # Update unit test references
+  if (length(object[["unit_tests"]]) > 0L) {
+    for (i in seq_along(object[["unit_tests"]])) {
+      test <- object[["unit_tests"]][[i]]
+
+      # Update expr_str: replace old variable references with new names
+      new_expr_str <- test[["expr_str"]]
+      for (j in seq_along(old_name)) {
+        new_expr_str <- gsub(
+          paste0("\\b", old_name[j], "\\b"), new_name[j], new_expr_str
+        )
+      }
+      if (new_expr_str != test[["expr_str"]]) {
+        object[["unit_tests"]][[i]][["expr_str"]] <- new_expr_str
+
+        # Re-generate label if the current label was auto-generated from the expression
+        new_label <- tryCatch(
+          interpret(parse(text = new_expr_str, keep.source = FALSE)[[1]]),
+          error = function(e) NULL
+        )
+        old_label <- tryCatch(
+          interpret(parse(text = test[["expr_str"]], keep.source = FALSE)[[1]]),
+          error = function(e) NULL
+        )
+        if (!is.null(new_label) && !is.null(old_label) && test[["label"]] == old_label) {
+          object[["unit_tests"]][[i]][["label"]] <- new_label
+        }
+      }
+
+      # Update condition keys: rename old_name -> new_name in conditions
+      cond_names <- names(test[["conditions"]])
+      if (length(cond_names) > 0L) {
+        hit <- match(cond_names, old_name)
+        changed <- !is.na(hit)
+        if (any(changed)) {
+          cond_names[changed] <- new_name[hit[changed]]
+          names(object[["unit_tests"]][[i]][["conditions"]]) <- cond_names
+        }
+      }
+    }
+
+    # Invalidate cached test deps (references changed)
+    object <- invalidate_assemble(object, "unit_tests")
+  }
+
+  object
 }
 
 #' Update variable properties in data frame
 #'
-#' @param i Index in name vector (for vectorized build)
+#' @param i Index in name vector (for vectorized update)
 #' @param passed_arg Character vector of properties that were passed
-#' @return Updated sfm with properties updated for variable at index i
+#' @return Updated object with properties updated for variable at index i
 #'
-#' @inheritParams build
+#' @inheritParams update.sdbuildR
 #' @noRd
-update_variable_row <- function(sfm, type, name, 
-                                        eqn, units, label, doc,
-                                        non_negative, to, from, 
-                                        xpts, ypts, source,
-                                        interpolation, extrapolation) {
-  # Identify which arguments were passed 
+update_variable_row <- function(object, type, name,
+                                eqn, units, label, doc,
+                                non_negative, to, from,
+                                xpts, ypts, source,
+                                interpolation, extrapolation) {
+  # Identify which arguments were passed
   passed_arg <- names(match.call())[-1] # Exclude function call
 
   # Find variable index
-  idx_var <- which(sfm[["variables"]][["name"]] == name)
+  idx_var <- which(object[["variables"]][["name"]] == name)
 
   if (length(idx_var) == 0) {
-    return(sfm) # Variable doesn't exist, skip update
+    return(object) # Variable doesn't exist, skip update
   }
 
   # Update scalar properties
   if ("eqn" %in% passed_arg) {
-    sfm[["variables"]][idx_var, "eqn"] <- eqn
+    object[["variables"]][idx_var, "eqn"] <- eqn
   }
-  if ("units" %in% passed_arg) sfm[["variables"]][idx_var, "units"] <- units
-  if ("label" %in% passed_arg) sfm[["variables"]][idx_var, "label"] <- label
-  if ("doc" %in% passed_arg) sfm[["variables"]][idx_var, "doc"] <- doc
-  if ("non_negative" %in% passed_arg) sfm[["variables"]][idx_var, "non_negative"] <- non_negative
+  if ("units" %in% passed_arg) object[["variables"]][idx_var, "units"] <- units
+  if ("label" %in% passed_arg) object[["variables"]][idx_var, "label"] <- label
+  if ("doc" %in% passed_arg) object[["variables"]][idx_var, "doc"] <- doc
+  if ("non_negative" %in% passed_arg) object[["variables"]][idx_var, "non_negative"] <- non_negative
 
   # Update flow properties
   if ("to" %in% passed_arg && type == "flow") {
-    sfm[["variables"]][idx_var, "to"] <- to
+    object[["variables"]][idx_var, "to"] <- to
   }
   if ("from" %in% passed_arg && type == "flow") {
-    sfm[["variables"]][idx_var, "from"] <- from
+    object[["variables"]][idx_var, "from"] <- from
   }
 
   # Update graphical function properties
   if (type == "lookup") {
-    if (!is.null(xpts)) sfm[["variables"]][idx_var, "xpts"] <- list(xpts)
-    if (!is.null(ypts)) sfm[["variables"]][idx_var, "ypts"] <- list(ypts)
-    if (!is.null(source)) sfm[["variables"]][idx_var, "source"] <- source
-    if ("interpolation" %in% passed_arg) sfm[["variables"]][idx_var, "interpolation"] <- interpolation
-    if ("extrapolation" %in% passed_arg) sfm[["variables"]][idx_var, "extrapolation"] <- extrapolation
+    if (!is.null(xpts)) object[["variables"]][idx_var, "xpts"] <- list(xpts)
+    if (!is.null(ypts)) object[["variables"]][idx_var, "ypts"] <- list(ypts)
+    if (!is.null(source)) object[["variables"]][idx_var, "source"] <- source
+    if ("interpolation" %in% passed_arg) object[["variables"]][idx_var, "interpolation"] <- interpolation
+    if ("extrapolation" %in% passed_arg) object[["variables"]][idx_var, "extrapolation"] <- extrapolation
   }
 
-  sfm
+  object
 }
 
 
@@ -588,7 +636,7 @@ update_variable_row <- function(sfm, type, name,
 #' the current language in sim_specs. Selectively invalidates assembly cache
 #' components based on what changed.
 #'
-#' @param sfm Stock-and-flow model
+#' @param object Stock-and-flow model
 #' @param modified_names Character vector of variable names that were modified.
 #'   If NULL (default), all variables are processed (full regeneration). If provided,
 #'   only the specified variables are updated for incremental performance.
@@ -599,43 +647,46 @@ update_variable_row <- function(sfm, type, name,
 #' @param connectivity_changed Logical: whether flow to/from connections changed
 #' @param nonneg_changed Logical: whether non_negative flag changed
 #' @noRd
-.prepare_model_for_assembly <- function(sfm, modified_names = NULL, sanitize = TRUE,
-                                         is_new_var = FALSE, modified_types = NULL,
-                                         deps_changed = NULL,
-                                         connectivity_changed = FALSE,
-                                         nonneg_changed = FALSE) {
+.prepare_model_for_assembly <- function(object, modified_names = NULL, sanitize = TRUE,
+                                        is_new_var = FALSE, modified_types = NULL,
+                                        deps_changed = NULL,
+                                        connectivity_changed = FALSE,
+                                        nonneg_changed = FALSE) {
   # Prepare equations for current language (adapter handles R vs Julia)
-  sfm <- prep_equations_variables(sfm, modified_names = modified_names)
-  sfm <- prep_stock_change(sfm, modified_names = modified_names)
+  object <- prep_equations_variables(object, modified_names = modified_names)
+  object <- prep_stock_change(object, modified_names = modified_names)
 
   # Selectively invalidate assembly cache based on what changed
-  if (is_new_var || is.null(sfm[["assemble"]][["ordering"]])) {
+  if (is_new_var || is.null(object[["assemble"]][["ordering"]])) {
     # New variable or no cached ordering: full variable-dependent invalidation
-    sfm <- invalidate_assemble(sfm, "variables")
+    object <- invalidate_assemble(object, "variables")
   } else if (isTRUE(deps_changed) || connectivity_changed) {
     # Dependencies or flow connectivity changed: ordering may be affected
-    sfm <- invalidate_assemble(sfm, "variables")
+    object <- invalidate_assemble(object, "variables")
   } else if (!is.null(modified_types)) {
     # Dependencies unchanged: only invalidate affected component type
     cats <- character(0)
-    if (any(modified_types %in% c("constant", "stock", "lookup")))
+    if (any(modified_types %in% c("constant", "stock", "lookup"))) {
       cats <- c(cats, "static")
-    if (any(modified_types %in% c("aux", "flow")))
+    }
+    if (any(modified_types %in% c("aux", "flow"))) {
       cats <- c(cats, "dynamic")
-    if (nonneg_changed)
+    }
+    if (nonneg_changed) {
       cats <- c(cats, "nonneg")
+    }
     if (length(cats) == 0) cats <- "variables"
-    sfm <- invalidate_assemble(sfm, cats)
+    object <- invalidate_assemble(object, cats)
   } else {
     # Fallback: full variable-dependent invalidation
-    sfm <- invalidate_assemble(sfm, "variables")
+    object <- invalidate_assemble(object, "variables")
   }
 
   if (sanitize) {
-    sfm <- sanitize_sdbuildR(sfm)
+    object <- sanitize_sdbuildR(object)
   }
 
-  sfm
+  object
 }
 
 
@@ -643,12 +694,12 @@ update_variable_row <- function(sfm, type, name,
 #'
 #' Stocks accumulate material or information over time, defining the state of
 #' the system. [stock()] adds or changes a stock variable. This is a
-#' convenience wrapper around [build()] with `type = "stock"`. See the
-#' **Stocks** section of [build()] for more details.
+#' convenience wrapper around [update()] with `type = "stock"`. See the
+#' **Stocks** section of [update()] for more details.
 #'
-#' @inheritParams build
+#' @inheritParams update.sdbuildR
 #' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR]
-#' @seealso [build()], [discard()], [change_name()]
+#' @seealso [update()], [discard()], [change_name()]
 #' @concept build
 #' @export
 #'
@@ -664,25 +715,23 @@ update_variable_row <- function(sfm, type, name,
 #'   stock(infected, eqn = 1, label = "Infected") |>
 #'   stock(recovered, eqn = 0, label = "Recovered")
 #'
-stock <- function(sfm, name,
+stock <- function(object, name,
                   eqn = 0,
                   units = 1,
                   label = name,
                   doc = "",
                   non_negative = FALSE
                   # inflow, outflow
-                  ) {
-
+) {
   # Capture passed arguments
   cl <- match.call()
 
-  # Change function call to build() with type = "stock"
-  cl[[1]] <- quote(build)
+  # Change function call to update() with type = "stock"
+  cl[[1]] <- quote(update)
   cl$type <- "stock"
 
-  # Evaluate the modified call in the parent frame 
+  # Evaluate the modified call in the parent frame
   eval.parent(cl)
-
 }
 
 
@@ -690,12 +739,12 @@ stock <- function(sfm, name,
 #'
 #' Flows move material and information through the system, increasing or
 #' decreasing stocks. [flow()] adds or changes a flow variable. This is a
-#' convenience wrapper around [build()] with `type = "flow"`. See the
-#' **Flows** section of [build()] for more details.
+#' convenience wrapper around [update()] with `type = "flow"`. See the
+#' **Flows** section of [update()] for more details.
 #'
-#' @inheritParams build
+#' @inheritParams update.sdbuildR
 #' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR]
-#' @seealso [build()], [discard()], [change_name()]
+#' @seealso [update()], [discard()], [change_name()]
 #' @concept build
 #' @export
 #'
@@ -707,38 +756,35 @@ stock <- function(sfm, name,
 #'   flow(births, eqn = population * 0.1, to = population) |>
 #'   flow(deaths, eqn = population * 0.05, from = population)
 #'
-flow <- function(sfm, name,
+flow <- function(object, name,
                  eqn = 0,
                  to = NULL,
                  from = NULL,
                  units = 1,
                  label = name,
                  doc = "",
-                 non_negative = FALSE
-                 ) {
-
+                 non_negative = FALSE) {
   # Capture passed arguments
   cl <- match.call()
 
-  # Change function call to build() with type = "flow"
-  cl[[1]] <- quote(build)
+  # Change function call to update() with type = "flow"
+  cl[[1]] <- quote(update)
   cl$type <- "flow"
 
-  # Evaluate the modified call in the parent frame 
+  # Evaluate the modified call in the parent frame
   eval.parent(cl)
-
 }
 
 #' Add or modify constants
 #'
 #' Constants are time-independent variables that do not change over the course
 #' of a simulation. [constant()] adds or changes a constant variable. This is a
-#' convenience wrapper around [build()] with `type = "constant"`. See the
-#' **Constants** section of [build()] for more details.
+#' convenience wrapper around [update()] with `type = "constant"`. See the
+#' **Constants** section of [update()] for more details.
 #'
-#' @inheritParams build
+#' @inheritParams update.sdbuildR
 #' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR]
-#' @seealso [build()], [discard()], [change_name()]
+#' @seealso [update()], [discard()], [change_name()]
 #' @concept build
 #' @export
 #'
@@ -749,35 +795,33 @@ flow <- function(sfm, name,
 #'   constant(growth_rate, eqn = 0.1, label = "Growth Rate") |>
 #'   constant(carrying_capacity, eqn = 1000, label = "Carrying Capacity")
 #'
-constant <- function(sfm, name,
+constant <- function(object, name,
                      eqn = 0,
                      units = 1,
                      label = name,
                      doc = "",
-                     non_negative = FALSE
-                     ) {
+                     non_negative = FALSE) {
   # Capture passed arguments
   cl <- match.call()
 
-  # Change function call to build() with type = "constant"
-  cl[[1]] <- quote(build)
+  # Change function call to update() with type = "constant"
+  cl[[1]] <- quote(update)
   cl$type <- "constant"
 
-  # Evaluate the modified call in the parent frame 
+  # Evaluate the modified call in the parent frame
   eval.parent(cl)
-
 }
 
 #' Add or modify auxiliaries
 #'
 #' Auxiliaries are dynamic variables used for intermediate calculations in the
 #' system. [auxiliary()] adds or changes an auxiliary variable. This is a convenience
-#' wrapper around [build()] with `type = "aux"`. See the **Auxiliaries** section
-#' of [build()] for more details.
+#' wrapper around [update()] with `type = "aux"`. See the **Auxiliaries** section
+#' of [`update()`][update.sdbuildR()] for more details.
 #'
-#' @inheritParams build
+#' @inheritParams update.sdbuildR
 #' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR]
-#' @seealso [build()], [discard()], [change_name()]
+#' @seealso [`update()`][update.sdbuildR()], [discard()], [change_name()]
 #' @concept build
 #' @export
 #'
@@ -789,24 +833,21 @@ constant <- function(sfm, name,
 #'   constant(carrying_capacity, eqn = 1000) |>
 #'   auxiliary(density, eqn = population / carrying_capacity, label = "Density")
 #'
-auxiliary <- function(sfm, name,
-                eqn = 0,
-                units = 1,
-                label = name,
-                doc = "",
-                non_negative = FALSE
-                ) {
-
+auxiliary <- function(object, name,
+                      eqn = 0,
+                      units = 1,
+                      label = name,
+                      doc = "",
+                      non_negative = FALSE) {
   # Capture passed arguments
   cl <- match.call()
 
-  # Change function call to build() with type = "aux"
-  cl[[1]] <- quote(build)
+  # Change function call to update() with type = "aux"
+  cl[[1]] <- quote(update)
   cl$type <- "aux"
 
-  # Evaluate the modified call in the parent frame 
+  # Evaluate the modified call in the parent frame
   eval.parent(cl)
-
 }
 
 #' @rdname auxiliary
@@ -817,16 +858,16 @@ aux <- auxiliary
 #' Create or modify custom variables or functions
 #'
 #' Custom functions are user-defined functions that can be used
-#' throughout a stock-and-flow model. [custom_func()] adds or changes a function. This is a convenience wrapper around [build()] with
+#' throughout a stock-and-flow model. [custom_func()] adds or changes a function. This is a convenience wrapper around [update()] with
 #' `type = "func"`.
 #'
-#' @inheritParams build
+#' @inheritParams update.sdbuildR
 #' @param name Name of the function variable. The equation will be assigned to this name.
 #' @param eqn Equation of the function variable. A character vector. Defaults to `0`.
 #' @param doc Documentation. Defaults to "".
 #'
 #' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR]
-#' @seealso [build()], [discard()], [change_name()]
+#' @seealso [`update()`][update.sdbuildR()], [discard()], [change_name()]
 #' @concept build
 #' @export
 #'
@@ -835,81 +876,77 @@ aux <- auxiliary
 #' # Simple function
 #' sfm <- sdbuildR() |>
 #'   custom_func(double, eqn = "function(x) x * 2") |>
-#'   build(a, constant, eqn = double(2))
+#'   update(a, constant, eqn = double(2))
 #'
 #' # Function with defaults
 #' sfm <- sdbuildR() |>
 #'   custom_func(scale, eqn = "function(x, factor = 10) x * factor") |>
-#'   build(b, constant, eqn = scale(2))
+#'   update(b, constant, eqn = scale(2))
 #'
 #' # If the logistic() function did not exist, you could create it yourself:
 #' sfm <- sdbuildR() |>
-#'        custom_func(my_logistic, eqn = "function(x, slope = 1, midpoint = .5){
+#'   custom_func(my_logistic, eqn = "function(x, slope = 1, midpoint = .5){
 #'    1 / (1 + exp(-slope*(x-midpoint)))
 #'  }") |>
-#'   build(c_, constant, eqn = my_logistic(2, slope = 50))
+#'   update(c_, constant, eqn = my_logistic(2, slope = 50))
 #'
-custom_func <- function(sfm, name, eqn = 0, 
-                units = 1, label = name, doc = "") {
+custom_func <- function(object, name, eqn = 0,
+                        units = 1, label = name, doc = "") {
   cl <- match.call()
-  cl[[1]] <- quote(build)
+  cl[[1]] <- quote(update)
   cl$type <- "func"
   eval.parent(cl)
 }
 
 
 #' Add or modify lookup variables (graphical functions)
-#' 
-#' Lookup variables define piecewise relationships using specified (x, y) points. [lookup()] adds or changes a lookup variable. This is a convenience wrapper around [build()] with `type = "lookup"`. See the **Lookup Variables** section of [build()] for more details.
-#' 
-#' @inheritParams build
+#'
+#' Lookup variables define piecewise relationships using specified (x, y) points. [lookup()] adds or changes a lookup variable. This is a convenience wrapper around [update()] with `type = "lookup"`. See the **Lookup Variables** section of [update()] for more details.
+#'
+#' @inheritParams update.sdbuildR
 #' @return A stock-and-flow model object of class [`sdbuildR`][sdbuildR()]
-#' 
-#' @seealso [build()], [discard()], [change_name()]
+#'
+#' @seealso [`update()`][update.sdbuildR()], [discard()], [change_name()]
 #' @concept build
 #' @export
 #' @examples
 #' # Create a lookup variable for a non-linear relationship
 #' sfm <- sdbuildR() |>
-#'    lookup(output,
-#'           source = t,
-#'           xpts = c(0, 5, 10),
-#'           ypts = c(0, 10, 15),
-#'           interpolation = "linear") |>
-#'    stock(x) |>
-#'    flow(x_in, eqn = output(t), to = x)
-#' 
+#'   lookup(output,
+#'     source = t,
+#'     xpts = c(0, 5, 10),
+#'     ypts = c(0, 10, 15),
+#'     interpolation = "linear"
+#'   ) |>
+#'   stock(x) |>
+#'   flow(x_in, eqn = output(t), to = x)
+#'
 #' sim <- simulate(sfm)
 #' plot(sim)
-#' 
-lookup <- function(sfm, name, 
+#'
+lookup <- function(object, name,
                    xpts, ypts, source = NULL,
-                   interpolation = "linear", 
+                   interpolation = "linear",
                    extrapolation = "nearest",
                    units = 1,
                    label = name,
                    doc = "",
-                   non_negative = FALSE
-                   ) {
-
+                   non_negative = FALSE) {
   # Capture passed arguments
   cl <- match.call()
 
-  # Change function call to build() with type = "lookup"
-  cl[[1]] <- quote(build)
+  # Change function call to update() with type = "lookup"
+  cl[[1]] <- quote(update)
   cl$type <- "lookup"
 
-  # Evaluate the modified call in the parent frame 
+  # Evaluate the modified call in the parent frame
   eval.parent(cl)
-
 }
 
 
-
 .validate_build_args <- function(name, type, label, eqn, to, from, units,
-                             xpts, ypts, source, interpolation, extrapolation,
-                             non_negative, doc) {
-  
+                                 xpts, ypts, source, interpolation, extrapolation,
+                                 non_negative, doc) {
   # Only validate arguments that were passed
   passed_arg <- names(match.call())[-1] # Exclude function name
   out <- list()
@@ -919,7 +956,7 @@ lookup <- function(sfm, name,
     out$name <- .validate_name_arg(name)
   }
 
-  # Validate type  
+  # Validate type
   if ("type" %in% passed_arg) {
     out$type <- .validate_type_arg(type)
   }
@@ -980,21 +1017,21 @@ lookup <- function(sfm, name,
 }
 
 
-.ensure_length_build_args <- function(args){
-  if (length(args)){
+.ensure_length_build_args <- function(args) {
+  if (length(args)) {
     # For any arguments that are not xpts or ypts, ensure they are either length 1 or the same length as name
     nms <- setdiff(names(args), c("xpts", "ypts"))
     for (arg_name in nms) {
       args[[arg_name]] <- ensure_length(args[[arg_name]], args[["name"]],
-         arg_name = arg_name, target_name = "name")
+        arg_name = arg_name, target_name = "name"
+      )
     }
   }
   args
 }
 
 
-.check_appropriate_properties <- function(type, passed_arg){
-
+.check_appropriate_properties <- function(type, passed_arg) {
   types <- unique(type)
   nonflow <- setdiff(types, "flow")
   nongf <- setdiff(types, "lookup")
@@ -1002,7 +1039,7 @@ lookup <- function(sfm, name,
   gfarg <- intersect(passed_arg, c("xpts", "ypts", "source", "interpolation", "extrapolation"))
 
   # Only 'from' and 'to' are appropriate for flows
-  if (length(nonflow) > 0){
+  if (length(nonflow) > 0) {
     flowarg <- intersect(passed_arg, c("from", "to"))
     if (length(flowarg) > 0) {
       cli::cli_warn(c(
@@ -1028,7 +1065,7 @@ lookup <- function(sfm, name,
 
 #' Create or modify variables
 #'
-#' Add or change variables in a stock-and-flow model. Variables may be stocks, flows, constants, auxiliaries, or graphical functions. When creating new variables, only "name", "type", and "eqn" (initial value for stocks) are required. When modifying existing variables, only "name" is required to identify the variable to modify, and any other properties can be updated by including the corresponding arguments. 
+#' Add or change variables in a stock-and-flow model. Variables may be stocks, flows, constants, auxiliaries, or graphical functions. When creating new variables, only "name", "type", and "eqn" (initial value for stocks) are required. When modifying existing variables, only "name" is required to identify the variable to modify, and any other properties can be updated by including the corresponding arguments.
 #'
 #' @section Stocks: Stocks define the state of the system. They accumulate material or information over time, such as people, products, or beliefs, which creates memory and inertia in the system. As such, stocks need not be tangible. Stocks are variables that can increase and decrease, and can be measured at a single moment in time. The value of a stock is increased or decreased by flows. A stock may have multiple inflows and multiple outflows. The net change in a stock is the sum of its inflows minus the sum of its outflows.
 #'
@@ -1056,8 +1093,8 @@ lookup <- function(sfm, name,
 #'
 #' ```r
 #' # These are equivalent:
-#' build(sfm, "population", "stock", eqn = "birth_rate * 0.1")
-#' build(sfm, population, stock, eqn = birth_rate * 0.1)
+#' update(sfm, "population", "stock", eqn = "birth_rate * 0.1")
+#' update(sfm, population, stock, eqn = birth_rate * 0.1)
 #' ```
 #'
 #' To inject the value of a variable (rather than its name), use the
@@ -1065,14 +1102,14 @@ lookup <- function(sfm, name,
 #'
 #' ```r
 #' my_name <- "population"
-#' build(sfm, !!my_name, stock, eqn = 100)
+#' update(sfm, !!my_name, stock, eqn = 100)
 #' ```
 #'
 #' The `label`, `doc`, `units`, `non_negative`, `xpts`, `ypts`,
 #' `interpolation`, and `extrapolation` arguments are not affected by NSE
 #' and are evaluated normally.
 #'
-#' @param sfm Stock-and-flow model, object of class [`sdbuildR`][sdbuildR].
+#' @param object Stock-and-flow model, object of class [`sdbuildR`][sdbuildR].
 #' @param name Variable name. Accepts a bare symbol (e.g., `population`), a string (`"population"`), or a vector via `c()` (e.g., `c(a, b)` or `c("a", "b")`). Use `!!` to inject from a variable.
 #' @param type Type of building block(s); accepts a bare symbol or string. One of `stock`, `flow`, `constant`, `aux`, `lookup`, or `func`. Does not need to be specified to modify an existing variable.
 #' @param label Name of variable used for plotting. Defaults to the same as name.
@@ -1087,7 +1124,7 @@ lookup <- function(sfm, name,
 #' @param interpolation Only for graphical functions: interpolation method. Must be either "constant" or "linear". Defaults to "linear".
 #' @param extrapolation Only for graphical functions: extrapolation method. Must be either "nearest" or "NA". Defaults to "nearest".
 #' @param doc Description of variable. Defaults to "" (no description).
-#' @param df A data.frame with variable properties to add and/or modify. Each row represents one variable to build. Required columns depend on the variable type being created:
+#' @param df A data.frame with variable properties to add and/or modify. Each row represents one variable to update. Required columns depend on the variable type being created:
 #'
 #' - All types require: 'type', 'name'
 #' - Stocks require: 'eqn' (initial value)
@@ -1100,11 +1137,14 @@ lookup <- function(sfm, name,
 #' Optional columns for graphical functions: 'source', 'interpolation', 'extrapolation'
 #'
 #' Columns not applicable to a variable type should be set to NA. See Examples for a complete demonstration.
+#' @param ... Additional arguments (currently unused).
 #'
 #' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR]
-#' @seealso [sdbuildR()] to initialize a model, [simulate()] to simulate a model, and [diagnose()] to check for errors in a model. Variable-specific helper functions [stock()], [flow()], [constant()], [aux()], and [lookup()] are also available as wrappers around build() that set the "type" argument for convenience. Further helper functions for modifying models are [change_name()] to rename a variable, [change_type()] to change a variable's type, and [discard()] to remove a variable.
+#' @seealso [sdbuildR()] to initialize a model, [`simulate()`][simulate.sdbuildR()] to simulate a model, and [diagnose()] to check for errors in a model. Variable-specific helper functions [stock()], [flow()], [constant()], [aux()], and [lookup()] are also available as wrappers around update() that set the "type" argument for convenience. Further helper functions for modifying models are [change_name()] to rename a variable, [change_type()] to change a variable's type, and [discard()] to remove a variable.
 #' @concept build
 #' @importFrom rlang enexpr is_symbol is_call as_name call_name call_args expr_deparse
+#' @importFrom stats update
+#' @method update sdbuildR
 #' @export
 #'
 #' @examples
@@ -1118,26 +1158,26 @@ lookup <- function(sfm, name,
 #'
 #' # Add two stocks. Specify their initial values in the "eqn" property
 #' # and their plotting label.
-#' sfm <- build(sfm, predator, stock, eqn = 10, label = "Predator") |>
-#'   build(prey, stock, eqn = 50, label = "Prey")
+#' sfm <- update(sfm, predator, stock, eqn = 10, label = "Predator") |>
+#'   update(prey, stock, eqn = 50, label = "Prey")
 #'
 #'
 #' # Add four flows: the births and deaths of both the predators and prey. The
 #' # "eqn" property of flows represents the rate of the flow. In addition, we
 #' # specify which stock the flow is coming from ("from") or flowing to ("to").
-#' sfm <- build(sfm, predator_births, flow,
+#' sfm <- update(sfm, predator_births, flow,
 #'   eqn = delta * prey * predator,
 #'   label = "Predator Births", to = predator
 #' ) |>
-#'   build(predator_deaths, flow,
+#'   update(predator_deaths, flow,
 #'     eqn = gamma * predator,
 #'     label = "Predator Deaths", from = predator
 #'   ) |>
-#'   build(prey_births, flow,
+#'   update(prey_births, flow,
 #'     eqn = alpha * prey,
 #'     label = "Prey Births", to = prey
 #'   ) |>
-#'   build(prey_deaths, flow,
+#'   update(prey_deaths, flow,
 #'     eqn = beta * prey * predator,
 #'     label = "Prey Deaths", from = prey
 #'   )
@@ -1145,7 +1185,7 @@ lookup <- function(sfm, name,
 #'
 #' # The flows make use of four other variables: "delta", "gamma", "alpha", and
 #' # "beta". Define these as constants in a vectorized manner for efficiency.
-#' sfm <- build(sfm, c(delta, gamma, alpha, beta), constant,
+#' sfm <- update(sfm, c(delta, gamma, alpha, beta), constant,
 #'   eqn = c(.025, .5, .5, .05),
 #'   label = c("Delta", "Gamma", "Alpha", "Beta"),
 #'   doc = c(
@@ -1159,7 +1199,7 @@ lookup <- function(sfm, name,
 #' plot(sim)
 #'
 #' # Modify a variable - note that we no longer need to specify type
-#' sfm <- build(sfm, delta, eqn = .03, label = "DELTA")
+#' sfm <- update(sfm, delta, eqn = .03, label = "DELTA")
 #'
 #' # To add and/or modify variables more quickly, pass a data.frame.
 #' # The data.frame is processed per row.
@@ -1175,7 +1215,7 @@ lookup <- function(sfm, name,
 #'   to = c(NA, "X", NA, NA, NA),
 #'   from = c(NA, NA, "X", NA, NA)
 #' )
-#' sfm <- build(sdbuildR(), df = df)
+#' sfm <- update(sdbuildR(), df = df)
 #'
 #' # Check for errors in the model
 #' diagnose(sfm)
@@ -1184,34 +1224,33 @@ lookup <- function(sfm, name,
 #'
 #' # To inject the value of an R variable, use !! (bang-bang)
 #' my_name <- "growth"
-#' sfm <- build(sfm, !!my_name, constant, eqn = 0.1)
+#' sfm <- update(sfm, !!my_name, constant, eqn = 0.1)
 #'
 #' # Strings still work for backward compatibility
-#' sfm <- build(sfm, "growth", eqn = 0.2)
+#' sfm <- update(sfm, "growth", eqn = 0.2)
 #'
-build <- function(sfm, name, type = NULL,
-                  eqn = 0,
-                  units = 1,
-                  label = name,
-                  doc = "",
-                  to = NULL, from = NULL,
-                  non_negative = FALSE,
-                  xpts = NULL, ypts = NULL,
-                  source = NULL,
-                  interpolation = "linear",
-                  extrapolation = "nearest",
-                  df = NULL) {
-
+update.sdbuildR <- function(object, name, type = NULL,
+                            eqn = 0,
+                            units = 1,
+                            label = name,
+                            doc = "",
+                            to = NULL, from = NULL,
+                            non_negative = FALSE,
+                            xpts = NULL, ypts = NULL,
+                            source = NULL,
+                            interpolation = "linear",
+                            extrapolation = "nearest",
+                            df = NULL, ...) {
   # Basic checks
-  if (missing(sfm)) {
-    missing_arg("sfm")
+  if (missing(object)) {
+    missing_arg("object")
   }
-  check_sdbuildR(sfm)
+  check_sdbuildR(object)
 
   # Handle data frame input
   if (!is.null(df)) {
-    sfm <- add_from_df(sfm, df)
-    return(sfm)
+    object <- add_from_df(object, df)
+    return(object)
   }
 
   # Validate inputs
@@ -1220,19 +1259,19 @@ build <- function(sfm, name, type = NULL,
   }
 
   # --- NSE: capture and deparse expressions before evaluation ----------------
-  # Allows bare symbols and expressions: build(sfm, pop, stock, eqn = a * b)
-  # Use !! for injection from variables: build(sfm, !!my_name, stock)
+  # Allows bare symbols and expressions: update(object, pop, stock, eqn = a * b)
+  # Use !! for injection from variables: update(object, !!my_name, stock)
   name_expr <- rlang::enexpr(name)
   .check_name_not_sdbuildR(name_expr, rlang::caller_env())
   name <- .expr_to_char(name_expr)
-  if (!missing(type))   type   <- .expr_to_char(rlang::enexpr(type))
-  if (!missing(eqn))    eqn    <- .expr_to_char(rlang::enexpr(eqn))
-  if (!missing(to))     to     <- .expr_to_char(rlang::enexpr(to))
-  if (!missing(from))   from   <- .expr_to_char(rlang::enexpr(from))
-  if (!missing(units))   units   <- .expr_to_char(rlang::enexpr(units))
+  if (!missing(type)) type <- .expr_to_char(rlang::enexpr(type))
+  if (!missing(eqn)) eqn <- .expr_to_char(rlang::enexpr(eqn))
+  if (!missing(to)) to <- .expr_to_char(rlang::enexpr(to))
+  if (!missing(from)) from <- .expr_to_char(rlang::enexpr(from))
+  if (!missing(units)) units <- .expr_to_char(rlang::enexpr(units))
   if (!missing(source)) source <- .expr_to_char(rlang::enexpr(source))
 
-  passed_arg <- setdiff(names(match.call()[-1]), c("sfm", "df"))
+  passed_arg <- setdiff(names(match.call()[-1]), c("object", "df"))
   args <- mget(passed_arg)
   args <- do.call(.validate_build_args, args)
 
@@ -1240,14 +1279,14 @@ build <- function(sfm, name, type = NULL,
   args <- .ensure_length_build_args(args)
 
   # Get current variable names
-  var_names <- sfm[["variables"]][["name"]]
+  var_names <- object[["variables"]][["name"]]
 
   # Find which variables already exist
   idx_exist <- args[["name"]] %in% var_names
 
   # Get rows of existing variables
   if (any(idx_exist)) {
-    var_df <- sfm[["variables"]][match(args[["name"]][idx_exist], var_names), , drop = FALSE]
+    var_df <- object[["variables"]][match(args[["name"]][idx_exist], var_names), , drop = FALSE]
   } else {
     var_df <- data.frame()
   }
@@ -1259,17 +1298,14 @@ build <- function(sfm, name, type = NULL,
     if (any(!idx_exist)) {
       missing_vars <- args[["name"]][!idx_exist]
       cli::cli_abort(c(
-        "{.arg type} not specified and variable{cli::qty(length(missing_vars))}{?s} not found in model.",
         "x" = "{.val {missing_vars}} {?does/do} not exist.",
-        "i" = "To create a new variable, specify its {.arg type}."
+        ">" = "To create a new variable, specify its {.arg type}."
       ))
     }
 
     # If type not specified, get type from existing variables
     args[["type"]] <- var_df[["type"]]
-
   } else {
-
     # Check if existing variables match the specified type
     if (any(idx_exist)) {
       existing_types <- var_df[["type"]]
@@ -1288,14 +1324,13 @@ build <- function(sfm, name, type = NULL,
           # ">" = "To modify a variable, omit the {.arg type}.",
           ">" = "To change the type of an existing variable, use {.fn change_type}."
         ))
-        
       }
     }
   }
 
   # Clean names for new variables
   if (any(!idx_exist)) {
-    all_names <- c(var_names, sfm[["custom_unit"]][["name"]])
+    all_names <- c(var_names, object[["custom_unit"]][["name"]])
     new_names <- clean_name(args[["name"]][!idx_exist], all_names)
     report_name_change(args[["name"]][!idx_exist], new_names)
     args[["name"]][!idx_exist] <- new_names
@@ -1338,14 +1373,14 @@ build <- function(sfm, name, type = NULL,
       } else {
         # Existing lookup: fill in missing xpts or ypts
         idx_var <- which(
-          sfm[["variables"]][["name"]] == i_name &
-            sfm[["variables"]][["type"]] == "lookup"
+          object[["variables"]][["name"]] == i_name &
+            object[["variables"]][["type"]] == "lookup"
         )
         if (is.null(args[["xpts"]])) {
-          args[["xpts"]][[j]] <- sfm[["variables"]][idx_var, "xpts"][[1]]
+          args[["xpts"]][[j]] <- object[["variables"]][idx_var, "xpts"][[1]]
         }
         if (is.null(args[["ypts"]])) {
-          args[["ypts"]][[j]] <- sfm[["variables"]][idx_var, "ypts"][[1]]
+          args[["ypts"]][[j]] <- object[["variables"]][idx_var, "ypts"][[1]]
         }
       }
     }
@@ -1378,18 +1413,15 @@ build <- function(sfm, name, type = NULL,
 
   # Build/update variables in data frame
   for (i in seq_along(args[["name"]])) {
-    
     # Get the ith element of each argument for this variable
     args_ <- lapply(args, `[[`, i)
 
     if (idx_exist[i]) {
-
       # Update existing variable
-      sfm <- do.call(update_variable_row, c(list(sfm = sfm), args_))
-      
+      object <- do.call(update_variable_row, c(list(object = object), args_))
     } else {
       # Add new variable
-      sfm <- do.call(add_variable_row, c(list(sfm = sfm), args_))
+      object <- do.call(add_variable_row, c(list(object = object), args_))
     }
   }
 
@@ -1399,10 +1431,10 @@ build <- function(sfm, name, type = NULL,
     if ("eqn" %in% passed_arg) {
       .validate_func_eqn(args[["eqn"]], args[["name"]])
     }
-    sfm <- invalidate_assemble(sfm, "funcs")
-    sfm <- sanitize_sdbuildR(sfm)
-    validate_sdbuildR(sfm)
-    return(sfm)
+    object <- invalidate_assemble(object, "funcs")
+    object <- sanitize_sdbuildR(object)
+    validate_sdbuildR(object)
+    return(object)
   }
 
   # --- Determine invalidation scope for assembly cache ----------------------
@@ -1412,24 +1444,28 @@ build <- function(sfm, name, type = NULL,
   connectivity_changed <- FALSE
   nonneg_changed <- "non_negative" %in% passed_arg
 
-  if (!is_new_var && !is.null(sfm[["assemble"]][["ordering"]][["deps_by_name"]])) {
-    old_deps <- sfm[["assemble"]][["ordering"]][["deps_by_name"]]
+  if (!is_new_var && !is.null(object[["assemble"]][["ordering"]][["deps_by_name"]])) {
+    old_deps <- object[["assemble"]][["ordering"]][["deps_by_name"]]
 
     # Compute new dependencies for just the modified variables
-    mod_rows <- sfm[["variables"]][match(args[["name"]], sfm[["variables"]][["name"]]), , drop = FALSE]
+    mod_rows <- object[["variables"]][match(args[["name"]], object[["variables"]][["name"]]), , drop = FALSE]
     mod_eqns <- stats::setNames(mod_rows[["eqn"]], mod_rows[["name"]])
     # GFs use source as dependency input
     gf_mask <- mod_rows[["type"]] == "lookup"
     if (any(gf_mask)) {
       mod_eqns[mod_rows[gf_mask, "name"]] <- mod_rows[gf_mask, "source"]
     }
-    new_deps <- dependencies_(sfm, eqns = mod_eqns,
-                                    only_var = TRUE, only_model_var = TRUE)
+    new_deps <- dependencies_(object,
+      eqns = mod_eqns,
+      only_var = TRUE, only_model_var = TRUE
+    )
 
     # Check if any modified variable's dependencies changed
     deps_changed <- !all(vapply(args[["name"]], function(nm) {
-      identical(sort(old_deps[[nm]] %||% character(0)),
-                sort(new_deps[[nm]] %||% character(0)))
+      identical(
+        sort(old_deps[[nm]] %||% character(0)),
+        sort(new_deps[[nm]] %||% character(0))
+      )
     }, logical(1)))
 
     modified_types <- mod_rows[["type"]]
@@ -1437,7 +1473,7 @@ build <- function(sfm, name, type = NULL,
   }
 
   # Prepare model for assembly/simulation
-  sfm <- .prepare_model_for_assembly(sfm,
+  object <- .prepare_model_for_assembly(object,
     modified_names = name,
     sanitize = TRUE,
     is_new_var = is_new_var,
@@ -1447,21 +1483,21 @@ build <- function(sfm, name, type = NULL,
     nonneg_changed = nonneg_changed
   )
 
-  # Pre-assemble components 
-  sfm <- pre_assemble_components(sfm)
+  # Pre-assemble components
+  object <- pre_assemble_components(object)
 
-  sfm
+  object
 }
 
 
 #' Add and/or modify model from data frame
 #'
-#' @inheritParams build
+#' @inheritParams update.sdbuildR
 #'
 #' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR]
 #' @noRd
 #'
-add_from_df <- function(sfm, df) {
+add_from_df <- function(object, df) {
   if (!inherits(df, "data.frame")) {
     cli::cli_abort(c(
       "Invalid {.arg df} argument.",
@@ -1495,7 +1531,7 @@ add_from_df <- function(sfm, df) {
     ))
   }
 
-  # Add each row by calling build
+  # Add each row by calling update.sdbuildR
   for (i in seq_len(nrow(df))) {
     arg <- as.list(df[i, ])
     arg <- arg[!is.na(arg)]
@@ -1503,44 +1539,44 @@ add_from_df <- function(sfm, df) {
     # Only keep appropriate properties for this type
     arg <- arg[names(arg) %in% prop[[arg[["type"]]]]]
 
-    arg[["sfm"]] <- sfm
-    sfm <- do.call(build, arg)
+    arg[["object"]] <- object
+    object <- do.call(update.sdbuildR, arg)
   }
 
-  sfm <- sanitize_sdbuildR(sfm)
-  validate_sdbuildR(sfm)
-  sfm
+  object <- sanitize_sdbuildR(object)
+  validate_sdbuildR(object)
+  object
 }
-
 
 
 #' Change name of variable or model unit
 #'
 #' Change the name of a variable or model unit throughout the model. For variables, this updates the data frame and all references in equations, flow connections, and labels. For model units, this updates the unit data frame and all references in other units' equations and variables' unit specifications.
 #'
-#' @inheritParams build
+#' @inheritParams update.sdbuildR
 #' @param new_name New name. Character vector of the same length as `name`. Must be unique across all existing variable and model unit names.
 #'
 #' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR] with the name changed throughout the model.
 #'
-#' @seealso [build()], [custom_unit()], [discard()]
+#' @seealso [update()], [custom_unit()], [discard()]
 #' @concept build
 #' @export
 #' @examples
 #' sfm <- sdbuildR("SIR")
 #' sfm <- change_name(sfm, c(Susceptible, Infected, Recovered),
-#'                    new_name = c(S, I, R))
+#'   new_name = c(S, I, R)
+#' )
 #' summary(sfm)
-#' 
+#'
 #' # References to old names are updated
 #' as.data.frame(sfm, type = "flow", properties = c("name", "eqn", "to", "from"))
-#' 
-change_name <- function(sfm, name, new_name) {
+#'
+change_name <- function(object, name, new_name) {
   # Basic checks
-  if (missing(sfm)) {
-    missing_arg("sfm")
+  if (missing(object)) {
+    missing_arg("object")
   }
-  check_sdbuildR(sfm)
+  check_sdbuildR(object)
 
   if (missing(name)) {
     missing_arg("name")
@@ -1550,7 +1586,7 @@ change_name <- function(sfm, name, new_name) {
     missing_arg("new_name")
   }
 
-  # NSE: allow bare symbols, e.g. change_name(sfm, old, new_name = new)
+  # NSE: allow bare symbols, e.g. change_name(object, old, new_name = new)
   name_expr <- rlang::enexpr(name)
   .check_name_not_sdbuildR(name_expr, rlang::caller_env())
   name <- .expr_to_char(name_expr)
@@ -1560,13 +1596,13 @@ change_name <- function(sfm, name, new_name) {
 
   # Check new_name length
   if (length(name) != length(new_name)) {
-      cli::cli_abort(c(
-        "x" = "Length of {.arg new_name} must match length of {.arg name}."
-      ))
+    cli::cli_abort(c(
+      "x" = "Length of {.arg new_name} must match length of {.arg name}."
+    ))
   }
 
   # Determine if names are variables or model units
-  entity_types <- find_entity_type(sfm, name)
+  entity_types <- find_entity_type(object, name)
 
   # All names must be the same entity type (can't mix variables and units)
   if (length(unique(entity_types)) > 1) {
@@ -1579,8 +1615,8 @@ change_name <- function(sfm, name, new_name) {
   entity_type <- entity_types[1]
 
   # Ensure new_name is clean and unique across both variables and units
-  var_names <- sfm[["variables"]][["name"]]
-  all_names <- c(var_names, sfm[["custom_unit"]][["name"]])
+  var_names <- object[["variables"]][["name"]]
+  all_names <- c(var_names, object[["custom_unit"]][["name"]])
   chosen_new_name <- new_name
   new_name <- clean_name(new_name, all_names)
   report_name_change(chosen_new_name, new_name)
@@ -1589,26 +1625,25 @@ change_name <- function(sfm, name, new_name) {
     # --- Rename variable ---
 
     # Check if any renamed variables are funcs (for cache invalidation)
-    renamed_types <- sfm[["variables"]][match(name, var_names), "type"]
+    renamed_types <- object[["variables"]][match(name, var_names), "type"]
 
     # If the previous label was the same as the old name, update it to match the new name
     idx_var <- match(name, var_names)
-    old_labels <- sfm[["variables"]][idx_var, "label"]
+    old_labels <- object[["variables"]][idx_var, "label"]
     update_label <- old_labels == name
     new_labels <- ifelse(update_label, new_name, old_labels)
-    sfm[["variables"]][idx_var, "label"] <- new_labels
+    object[["variables"]][idx_var, "label"] <- new_labels
 
     # Update variable name in data frame and all references to it in the model
-    sfm <- .change_name(sfm, name, new_name)
+    object <- .change_name(object, name, new_name)
 
     # Re-prep equations since .change_name() updates eqn via gsub but not eqn_str
-    sfm <- prep_equations_variables(sfm)
-    sfm <- prep_stock_change(sfm)
-    sfm <- invalidate_assemble(sfm, "variables")
+    object <- prep_equations_variables(object)
+    object <- prep_stock_change(object)
+    object <- invalidate_assemble(object, "variables")
     if (any(renamed_types == "func")) {
-      sfm <- invalidate_assemble(sfm, "funcs")
+      object <- invalidate_assemble(object, "funcs")
     }
-
   } else {
     # --- Rename model unit ---
 
@@ -1617,68 +1652,68 @@ change_name <- function(sfm, name, new_name) {
       new_name_i <- new_name[i]
 
       # Update the unit name in the data frame
-      old_idx <- which(sfm[["custom_unit"]][["name"]] == old_name_i)
-      sfm[["custom_unit"]][old_idx, "name"] <- new_name_i
+      old_idx <- which(object[["custom_unit"]][["name"]] == old_name_i)
+      object[["custom_unit"]][old_idx, "name"] <- new_name_i
 
       # Build a replacement dictionary for unit references
       dict <- stats::setNames(new_name_i, paste0("^", old_name_i, "$"))
 
       # Update references in other model units' equations
-      for (j in seq_len(nrow(sfm[["custom_unit"]]))) {
-        if (is_defined(sfm[["custom_unit"]][j, "eqn"])) {
-          sfm[["custom_unit"]][j, "eqn"] <- clean_unit(sfm[["custom_unit"]][j, "eqn"], dict)
+      for (j in seq_len(nrow(object[["custom_unit"]]))) {
+        if (is_defined(object[["custom_unit"]][j, "eqn"])) {
+          object[["custom_unit"]][j, "eqn"] <- clean_unit(object[["custom_unit"]][j, "eqn"], dict)
         }
       }
 
       # Update references in variables' units columns and u() calls in equations
-      for (j in seq_len(nrow(sfm[["variables"]]))) {
-        if (is_defined(sfm[["variables"]][j, "units"])) {
-          sfm[["variables"]][j, "units"] <- clean_unit(sfm[["variables"]][j, "units"], dict)
+      for (j in seq_len(nrow(object[["variables"]]))) {
+        if (is_defined(object[["variables"]][j, "units"])) {
+          object[["variables"]][j, "units"] <- clean_unit(object[["variables"]][j, "units"], dict)
         }
-        if (is_defined(sfm[["variables"]][j, "eqn"])) {
-          sfm[["variables"]][j, "eqn"] <- clean_unit_in_u(sfm[["variables"]][j, "eqn"], dict)
+        if (is_defined(object[["variables"]][j, "eqn"])) {
+          object[["variables"]][j, "eqn"] <- clean_unit_in_u(object[["variables"]][j, "eqn"], dict)
         }
       }
     }
 
     # Invalidate units cache (only relevant for Julia)
-    if (sfm[["sim_specs"]][["language"]] == "Julia") {
-      sfm <- invalidate_assemble(sfm, "units")
+    if (object[["sim_specs"]][["language"]] == "Julia") {
+      object <- invalidate_assemble(object, "units")
     }
   }
 
-  sfm <- sanitize_sdbuildR(sfm)
-  validate_sdbuildR(sfm)
-  sfm
+  object <- sanitize_sdbuildR(object)
+  validate_sdbuildR(object)
+  object
 }
 
 
 #' Change variable type
-#' 
-#' Change the type of a variable in a stock-and-flow model. 
-#' 
-#' @inheritParams build
+#'
+#' Change the type of a variable in a stock-and-flow model.
+#'
+#' @inheritParams update.sdbuildR
 #' @param new_type New variable type; one of 'stock', 'flow', 'constant', 'aux', 'gf', or 'func'. Character vector of the same length as name. If NULL, types will be validated but not changed.
-#' 
+#'
 #' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR()] with the variable type changed throughout the model. Note that changing the type may result in changes to other properties (e.g. a flow must have "to" and/or "from" properties, so these will be added if not already present), and may require changes to the equations of connected variables.
-#' @seealso [build()]
+#' @seealso [update()]
 #' @concept build
 #' @export
 #' @examples
 #' # Change the birth rate of predators from a constant to an auxiliary
 #' sfm <- sdbuildR("predator_prey")
 #' sfm <- change_type(sfm, delta, new_type = aux) |>
-#'        # Use a sin function to introduce seasonality in the birth rate
-#'       build(delta, eqn = 0.025 + 0.01 * sin(2 * pi * t / 12))
+#'   # Use a sin function to introduce seasonality in the birth rate
+#'   update(delta, eqn = 0.025 + 0.01 * sin(2 * pi * t / 12))
 #' sim <- simulate(sfm)
 #' plot(sim)
-#' 
-change_type <- function(sfm, name, new_type) {
+#'
+change_type <- function(object, name, new_type) {
   # Basic checks
-  if (missing(sfm)) {
-    missing_arg("sfm")
+  if (missing(object)) {
+    missing_arg("object")
   }
-  check_sdbuildR(sfm)
+  check_sdbuildR(object)
 
   if (missing(name)) {
     missing_arg("name")
@@ -1688,7 +1723,7 @@ change_type <- function(sfm, name, new_type) {
     missing_arg("new_type")
   }
 
-  # NSE: allow bare symbols, e.g. change_type(sfm, delta, new_type = aux)
+  # NSE: allow bare symbols, e.g. change_type(object, delta, new_type = aux)
   name_expr <- rlang::enexpr(name)
   .check_name_not_sdbuildR(name_expr, rlang::caller_env())
   name <- .expr_to_char(name_expr)
@@ -1697,7 +1732,7 @@ change_type <- function(sfm, name, new_type) {
   new_type <- .validate_type_arg(new_type, arg_name = "new_type")
 
   # Get current variable names
-  var_names <- sfm[["variables"]][["name"]]
+  var_names <- object[["variables"]][["name"]]
   check_var_existence(name, var_names)
 
   # Check new_type
@@ -1709,19 +1744,21 @@ change_type <- function(sfm, name, new_type) {
 
   # Only change type if different from existing type; throw message if type is already the same
   idx_var <- match(name, var_names)
-  existing_type <- sfm[["variables"]][idx_var, "type"]
+  existing_type <- object[["variables"]][idx_var, "type"]
   same_type_names <- name[existing_type == new_type]
   if (length(same_type_names)) {
     cli::cli_inform(c(
       "Variable{?s} already {?has/have} the specified type -- no change needed.",
       "i" = "{.code {same_type_names}} {?is/are} already {.code {new_type[existing_type == new_type][1]}}."
     ))
-    name <- name[existing_type != new_type]
-    new_type <- new_type[existing_type != new_type]
+    keep <- existing_type != new_type
+    name <- name[keep]
+    new_type <- new_type[keep]
+    existing_type <- existing_type[keep]
 
     # If all variables have the same existing and new type, return the original model
     if (!length(name)) {
-      return(sfm)
+      return(object)
     }
   }
 
@@ -1729,38 +1766,59 @@ change_type <- function(sfm, name, new_type) {
   allowed_args <- names(formals(add_variable_row))
 
   for (i in seq_along(name)) {
-
     # Get current variable properties of old type
-    var_properties <- sfm[["variables"]][sfm[["variables"]][["name"]] == name[i], ]
+    var_properties <- object[["variables"]][object[["variables"]][["name"]] == name[i], ]
     var_properties[["type"]] <- new_type[i]
     var_properties <- var_properties[, colnames(var_properties) %in% allowed_args, drop = FALSE]
     var_list <- as.list(var_properties)
 
     # Erase variable from model (including all references to it, except for source references as changing the type can still allow it to be a source for a graphical function)
-    sfm <- .discard(sfm, name[i], remove_references = c("to", "from"))
+    object <- .discard(object, name[i], remove_references = c("to", "from"))
 
     # Add variable back with new type
-    var_list[["sfm"]] <- sfm
-    sfm <- do.call(add_variable_row, var_list)
-
+    var_list[["object"]] <- object
+    object <- do.call(add_variable_row, var_list)
   }
 
   # Re-prep equations and invalidate cache since types changed
-  sfm <- prep_equations_variables(sfm, modified_names = name)
-  sfm <- prep_stock_change(sfm, modified_names = name)
-  sfm <- invalidate_assemble(sfm, "variables")
+  object <- prep_equations_variables(object, modified_names = name)
+  object <- prep_stock_change(object, modified_names = name)
+  object <- invalidate_assemble(object, "variables")
 
-  sanitize_sdbuildR(sfm)
+  # Variables that changed away from stock/constant can no longer be conditions
+  # in unit tests. Strip them from any test conditions.
+  was_cond_type <- existing_type %in% c("stock", "constant")
+  now_cond_type <- new_type %in% c("stock", "constant")
+  lost_cond <- name[was_cond_type & !now_cond_type]
+
+  if (length(lost_cond) > 0L && length(object[["unit_tests"]]) > 0L) {
+    for (i in seq_along(object[["unit_tests"]])) {
+      hit <- intersect(lost_cond, names(object[["unit_tests"]][[i]][["conditions"]]))
+      if (length(hit) > 0L) {
+        object[["unit_tests"]][[i]][["conditions"]][hit] <- NULL
+        if (length(object[["unit_tests"]][[i]][["conditions"]]) == 0L) {
+          object[["unit_tests"]][[i]][["conditions"]] <- list()
+        }
+        cli::cli_warn(c(
+          "Removed {.val {hit}} from conditions of unit test [{i}] {.val {object[['unit_tests']][[i]][['label']]}}.",
+          "i" = "{.val {hit}} {?is/are} no longer {?a stock/stocks} or {?a constant/constants}."
+        ))
+      }
+    }
+    # Invalidate cached test deps (cond_refs changed)
+    object <- invalidate_assemble(object, "unit_tests")
+  }
+
+  sanitize_sdbuildR(object)
 }
 
 #' Check that variable(s) exist in the model
-#' 
+#'
 #' @param name Character vector of variable names to check for existence.
 #' @param var_names Character vector of existing variable names in the model.
 #' @returns Invisibly returns the input name if all variables exist; otherwise, throws an error with the missing variable names.
 #' @noRd
 check_var_existence <- function(name, var_names) {
-
   # Find which variables already exist
   idx_exist <- name %in% var_names
 
@@ -1778,13 +1836,13 @@ check_var_existence <- function(name, var_names) {
 
 #' Find whether names are variables or model units
 #'
-#' @param sfm A stock-and-flow model object
+#' @param object A stock-and-flow model object
 #' @param name Character vector of names to look up
 #' @returns Character vector of `"variable"` or `"unit"` for each name. Errors if any name is not found in either.
 #' @noRd
-find_entity_type <- function(sfm, name) {
-  in_vars <- name %in% sfm[["variables"]][["name"]]
-  in_units <- name %in% sfm[["custom_unit"]][["name"]]
+find_entity_type <- function(object, name) {
+  in_vars <- name %in% object[["variables"]][["name"]]
+  in_units <- name %in% object[["custom_unit"]][["name"]]
 
   not_found <- !in_vars & !in_units
   if (any(not_found)) {
@@ -1803,28 +1861,28 @@ find_entity_type <- function(sfm, name) {
 #'
 #' Remove variable(s) or model unit(s) from a stock-and-flow model. For variables, all references in flow connections and graphical function sources are also removed. A warning will be thrown if any lingering references to the removed name remain in the model.
 #'
-#' @inheritParams build
+#' @inheritParams update.sdbuildR
 #' @param name Name(s) to remove. Accepts bare symbols (e.g., `x`), strings, or vectors via `c()`. Can be variable names or model unit names.
+#' @param remove_references Where to remove references to the discarded variables. By default, references to discarded variables in `"to"`, `"from"`, `"source"`, and `"unit_test"` are removed. Set to `NULL` to keep all references (not recommended). Note that any lingering references in equations will cause errors in simulation and should be removed or updated with `update()` after discarding the variable.
 #' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR()]
 #'
-#' @seealso [build()], [custom_unit()], [change_name()]
+#' @seealso [update()], [custom_unit()], [change_name()]
 #' @export
 #' @examples
 #' sfm <- sdbuildR() |>
-#'  build(x, stock)
+#'   update(x, stock)
 #' as.data.frame(sfm)
 #'
 #' sfm <- discard(sfm, x)
 #' as.data.frame(sfm)
-discard <- function(sfm, name) {
-
-  # NSE: allow bare symbols, e.g. discard(sfm, population)
+discard <- function(object, name, remove_references = c("to", "from", "source", "unit_test")) {
+  # NSE: allow bare symbols, e.g. discard(object, population)
   name_expr <- rlang::enexpr(name)
   .check_name_not_sdbuildR(name_expr, rlang::caller_env())
   name <- .expr_to_char(name_expr)
 
   # Determine if names are variables or model units
-  entity_types <- find_entity_type(sfm, name)
+  entity_types <- find_entity_type(object, name)
 
   # All names must be the same entity type
   if (length(unique(entity_types)) > 1) {
@@ -1834,28 +1892,179 @@ discard <- function(sfm, name) {
     ))
   }
 
+  remove_references <- match.arg(remove_references, several.ok = TRUE)
+
   entity_type <- entity_types[1]
 
   if (entity_type == "variable") {
     # --- Erase variable(s) ---
 
     # Check types before erasing to know what to invalidate
-    discard_types <- sfm[["variables"]][sfm[["variables"]][["name"]] %in% name, "type"]
+    discard_types <- object[["variables"]][object[["variables"]][["name"]] %in% name, "type"]
 
-    sfm <- .discard(sfm, name)
+    object <- .discard(object, name, remove_references = remove_references)
+
+    # Keep sim_specs(vars=...) consistent after variable removal
+    sim_vars <- object[["sim_specs"]][["vars"]]
+    if (!is.null(sim_vars)) {
+      sim_vars <- sim_vars[!(sim_vars %in% name)]
+      if (length(sim_vars) == 0L) {
+        sim_vars <- NULL
+      }
+      object[["sim_specs"]][["vars"]] <- sim_vars
+    }
 
     # Invalidate appropriate cache components
     if (any(discard_types == "func")) {
-      sfm <- invalidate_assemble(sfm, "funcs")
+      object <- invalidate_assemble(object, "funcs")
     }
     if (any(discard_types != "func")) {
-      sfm <- invalidate_assemble(sfm, "variables")
+      object <- invalidate_assemble(object, "variables")
     }
 
+    .warn_lingering_ref(object, name, entity_type = "variable")
+  } else {
+    # --- Erase model unit(s) ---
+
+    object[["custom_unit"]] <- object[["custom_unit"]][!object[["custom_unit"]][["name"]] %in% name, ]
+
+    # Invalidate units cache (only relevant for Julia)
+    if (object[["sim_specs"]][["language"]] == "Julia") {
+      object <- invalidate_assemble(object, "units")
+    }
+
+    .warn_lingering_ref(object, name, entity_type = "unit")
+  }
+
+  # Re-prep equations and invalidate cache
+  object <- prep_equations_variables(object, modified_names = NULL)
+  object <- prep_stock_change(object, modified_names = NULL)
+  object <- invalidate_assemble(object, "variables")
+  object <- sanitize_sdbuildR(object)
+  validate_sdbuildR(object)
+}
+
+
+#' Remove variable from stock-and-flow model
+#'
+#' Internal function to remove a variable and all references to it in the model.
+#'
+#' @inheritParams update.sdbuildR
+#'
+#' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR]
+#' @noRd
+#'
+.discard <- function(object, name, remove_references) {
+  # Remove variables from the data frame
+  object[["variables"]] <- object[["variables"]][!object[["variables"]][["name"]] %in% name, ]
+
+  # Remove references to these variables in 'to', 'from', 'source' columns
+  if (nrow(object[["variables"]])) {
+    if ("to" %in% remove_references) {
+      # Warn if any
+      idx <- object[["variables"]][["to"]] %in% name
+
+      if (any(idx)) {
+        dep <- object[["variables"]][idx, "name"]
+        cli::cli_warn(c(
+          "{cli::qty(length(dep))}Found {?a /}lingering reference{?s} to removed variable{?s} {.code {name}}.",
+          ">" = "Removing {.code {name}} from {.code to} of variable{?s} {.val {dep}}."
+        ))
+      }
+
+      object[["variables"]][idx, "to"] <- ""
+    }
+
+    if ("from" %in% remove_references) {
+      # Warn if any
+      idx <- object[["variables"]][["from"]] %in% name
+
+      if (any(idx)) {
+        dep <- object[["variables"]][idx, "name"]
+        cli::cli_warn(c(
+          "{cli::qty(length(dep))}Found {?a /}lingering reference{?s} from removed variable{?s} {.code {name}}.",
+          ">" = "Removing {.code {name}} from {.code from} of variable{?s} {.val {dep}}."
+        ))
+      }
+
+      object[["variables"]][idx, "from"] <- ""
+    }
+
+    if ("source" %in% remove_references) {
+      # Warn if any
+      idx <- object[["variables"]][["source"]] %in% name
+
+      if (any(idx)) {
+        dep <- object[["variables"]][idx, "name"]
+        cli::cli_warn(c(
+          "{cli::qty(length(dep))}Found {?a /}lingering reference{?s} to removed variable{?s} {.code {name}}.",
+          ">" = "Removing {.code {name}} from {.code source} of variable{?s} {.val {dep}}."
+        ))
+      }
+
+      object[["variables"]][idx, "source"] <- ""
+    }
+
+    if ("unit_test" %in% remove_references && length(object[["unit_tests"]]) > 0) {
+      # Get cached (or freshly computed) unit test dependencies
+      td <- get_test_deps(object)
+      object <- td[["object"]]
+      test_deps <- td[["deps"]]
+
+      # Remove tests whose expr ONLY references the discarded variable(s)
+      keep <- vapply(seq_along(object[["unit_tests"]]), function(i) {
+        er <- test_deps[[i]][["expr_refs"]]
+        length(er) == 0L || !all(er %in% name)
+      }, logical(1))
+
+      removed_tests <- object[["unit_tests"]][!keep]
+      if (length(removed_tests) > 0L) {
+        removed_nrs <- which(!keep)
+        removed_labels <- vapply(removed_tests, function(t) t[["label"]], character(1))
+        removed_info <- paste0("[", removed_nrs, "] ", removed_labels)
+        cli::cli_warn(c(
+          "Removed {length(removed_labels)} unit test{?s} whose expression only referenced {.code {name}}.",
+          ">" = "Removed: {.val {removed_info}}."
+        ))
+      }
+      object[["unit_tests"]] <- object[["unit_tests"]][keep]
+      test_deps <- test_deps[keep]
+
+
+      # In remaining tests: strip discarded variable from conditions
+      for (i in seq_along(object[["unit_tests"]])) {
+        hit <- intersect(name, test_deps[[i]][["cond_refs"]])
+        if (length(hit) > 0L) {
+          object[["unit_tests"]][[i]][["conditions"]][hit] <- NULL
+
+          # If conditions list is now empty, set to empty list (instead of NULL) for easier handling downstream
+          if (length(object[["unit_tests"]][[i]][["conditions"]]) == 0L) {
+            object[["unit_tests"]][[i]][["conditions"]] <- list()
+          }
+
+          cli::cli_warn(c(
+            "Removed {.val {hit}} from conditions of unit test [{i}] {.val {object[['unit_tests']][[i]][['label']]}}."
+          ))
+        }
+      }
+
+      # Invalidate cached test deps (tests may have been removed/modified)
+      object <- invalidate_assemble(object, "unit_tests")
+    }
+  }
+
+  object
+}
+
+
+.warn_lingering_ref <- function(object, name, entity_type = c("variable", "unit")) {
+  entity_type <- match.arg(entity_type)
+
+  if (entity_type == "variable") {
     # Check for lingering references to removed variable in equations
     for (var in name) {
-      idx <- grepl(sfm[["variables"]][["eqn"]], pattern = paste0("\\b", var, "\\b"))
-      dep <- sfm[["variables"]][idx, "name"]
+      idx <- grepl(object[["variables"]][["eqn"]], pattern = paste0("\\b", var, "\\b"))
+      dep <- object[["variables"]][idx, "name"]
       if (any(idx)) {
         cli::cli_warn(c(
           "{cli::qty(length(dep))}Found {?a /}lingering reference{?s} to removed variable {.code {var}}.",
@@ -1864,39 +2073,52 @@ discard <- function(sfm, name) {
       }
     }
 
+    # Check for lingering references in unit test expressions
+    # NOTE: The discarded variable(s) are already removed from get_model_var(),
+    # so we must include them in model_names to detect lingering refs.
+    if (length(object[["unit_tests"]]) > 0L) {
+      full_model_names <- c(get_model_var(object), name)
+
+      for (i in seq_along(object[["unit_tests"]])) {
+        linger <- intersect(
+          name,
+          .ut_expr_vars(object[["unit_tests"]][[i]][["expr_str"]], full_model_names)[["model_refs"]]
+        )
+        if (length(linger) > 0L) {
+          cli::cli_warn(c(
+            "Unit test [{i}] {.val {object[['unit_tests']][[i]][['label']]}} still references removed variable{?s} {.code {linger}}.",
+            ">" = "Update or remove this test with {.fn unit_test} or {.fn discard_unit_test}."
+          ))
+        }
+      }
+    }
   } else {
-    # --- Erase model unit(s) ---
+    # entity_type == "unit"
 
-    sfm[["custom_unit"]] <- sfm[["custom_unit"]][!sfm[["custom_unit"]][["name"]] %in% name, ]
-
-    # Invalidate units cache (only relevant for Julia)
-    if (sfm[["sim_specs"]][["language"]] == "Julia") {
-      sfm <- invalidate_assemble(sfm, "units")
-    }
-
-    # Check for lingering references in other units' equations and variables' units
-    for (unit_name in name) {
-      # Check other model units' equations
-      if (nrow(sfm[["custom_unit"]]) > 0) {
-        for (j in seq_len(nrow(sfm[["custom_unit"]]))) {
-          if (is_defined(sfm[["custom_unit"]][j, "eqn"]) &&
-              grepl(paste0("\\b", unit_name, "\\b"), sfm[["custom_unit"]][j, "eqn"])) {
+    # Check for lingering references in other custom unit equations
+    if (nrow(object[["custom_unit"]]) > 0) {
+      for (unit_name in name) {
+        for (j in seq_len(nrow(object[["custom_unit"]]))) {
+          if (is_defined(object[["custom_unit"]][j, "eqn"]) &&
+            grepl(paste0("\\b", unit_name, "\\b"), object[["custom_unit"]][j, "eqn"])) {
             cli::cli_warn(c(
               "Found lingering reference to removed unit {.code {unit_name}}.",
-              ">" = "Check the equation of model unit {.val {sfm[['custom_unit']][j, 'name']}}."
+              ">" = "Check the equation of model unit {.val {object[['custom_unit']][j, 'name']}}."
             ))
           }
         }
       }
+    }
 
-      # Check variables' units columns
-      if (nrow(sfm[["variables"]]) > 0) {
-        for (j in seq_len(nrow(sfm[["variables"]]))) {
-          if (is_defined(sfm[["variables"]][j, "units"]) &&
-              grepl(paste0("\\b", unit_name, "\\b"), sfm[["variables"]][j, "units"])) {
+    # Check for lingering references in variables' units columns
+    if (nrow(object[["variables"]]) > 0) {
+      for (unit_name in name) {
+        for (j in seq_len(nrow(object[["variables"]]))) {
+          if (is_defined(object[["variables"]][j, "units"]) &&
+            grepl(paste0("\\b", unit_name, "\\b"), object[["variables"]][j, "units"])) {
             cli::cli_warn(c(
               "Found lingering reference to removed unit {.code {unit_name}}.",
-              ">" = "Check the units of variable {.val {sfm[['variables']][j, 'name']}}."
+              ">" = "Check the units of variable {.val {object[['variables']][j, 'name']}}."
             ))
           }
         }
@@ -1904,37 +2126,5 @@ discard <- function(sfm, name) {
     }
   }
 
-  sfm <- sanitize_sdbuildR(sfm)
-  sfm
-}
-
-
-#' Remove variable from stock-and-flow model
-#'
-#' Internal function to remove a variable and all references to it in the model.
-#' 
-#' @inheritParams build
-#'
-#' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR]
-#' @noRd
-#'
-.discard <- function(sfm, name, remove_references = c("to", "from", "source")) {
-  # Remove variables from the data frame
-  sfm[["variables"]] <- sfm[["variables"]][!sfm[["variables"]][["name"]] %in% name, ]
-
-  # Remove references to these variables in 'to', 'from', 'source' columns
-  if (nrow(sfm[["variables"]])) {
-    if ("to" %in% remove_references) {
-      sfm[["variables"]][sfm[["variables"]][["to"]] %in% name, "to"] <- ""
-    }
-    if ("from" %in% remove_references) {
-      sfm[["variables"]][sfm[["variables"]][["from"]] %in% name, "from"] <- ""
-    }
-    if ("source" %in% remove_references) {
-      sfm[["variables"]][sfm[["variables"]][["source"]] %in% name, "source"] <- ""
-    }    
-
-  }
-
-  sfm
+  invisible()
 }

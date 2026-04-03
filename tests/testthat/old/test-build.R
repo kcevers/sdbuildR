@@ -8,24 +8,24 @@ test_that("sdbuildR() works", {
   expect_error(sdbuildR(" "), "  is not an available template. The available templates are")
 })
 
-test_that("build() with only sfm does nothing", {
-  sfm <- sdbuildR() |> build("a", "stock")
-  sfm2 <- expect_no_error(expect_no_message(build(sfm, "a")))
+test_that("update() with only sfm does nothing", {
+  sfm <- sdbuildR() |> update("a", "stock")
+  sfm2 <- expect_no_error(expect_no_message(update(sfm, "a")))
   expect_equal(sfm, sfm2)
 })
 
 
-test_that("type in build()", {
+test_that("type in update()", {
   sfm <- sdbuildR()
-  expect_error(build(sfm, "a", "stockss"), "type needs to be one of 'stock', 'flow', 'constant', 'aux', or 'gf'")
+  expect_error(update(sfm, "a", "stockss"), "type needs to be one of 'stock', 'flow', 'constant', 'aux', or 'gf'")
 
-  sfm1 <- build(sfm, "a", "stocks")
+  sfm1 <- update(sfm, "a", "stocks")
   expect_equal(as.data.frame(sfm1)[["name"]], "a")
 
-  sfm1 <- build(sfm, "a", "flows")
+  sfm1 <- update(sfm, "a", "flows")
   expect_equal(as.data.frame(sfm1)[["name"]], "a")
 
-  sfm1 <- build(sfm, "a", "auxiliary")
+  sfm1 <- update(sfm, "a", "auxiliary")
   expect_equal(as.data.frame(sfm1)[["name"]], "a")
 })
 
@@ -33,27 +33,27 @@ test_that("type in build()", {
 test_that("modify to and from", {
   sfm <- sdbuildR("SIR")
 
-  sfm2 <- expect_silent(build(sfm, "Infection_Rate", from = ""))
+  sfm2 <- expect_silent(update(sfm, "Infection_Rate", from = ""))
   df <- sfm2[["variables"]]
   expect_equal(df[df[["name"]] == "Infection_Rate", "from"], "")
 
-  sfm2 <- expect_silent(build(sfm, "Infection_Rate", from = NULL))
+  sfm2 <- expect_silent(update(sfm, "Infection_Rate", from = NULL))
   df <- sfm2[["variables"]]
   expect_equal(df[df[["name"]] == "Infection_Rate", "from"], "")
 
-  sfm2 <- expect_silent(build(sfm, "Infection_Rate", from = NA))
+  sfm2 <- expect_silent(update(sfm, "Infection_Rate", from = NA))
   df <- sfm2[["variables"]]
   expect_equal(df[df[["name"]] == "Infection_Rate", "from"], "")
 
-  sfm2 <- expect_silent(build(sfm, "Recovery_Rate", to = ""))
+  sfm2 <- expect_silent(update(sfm, "Recovery_Rate", to = ""))
   df <- sfm2[["variables"]]
   expect_equal(df[df[["name"]] == "Recovery_Rate", "to"], "")
 
-  sfm2 <- expect_silent(build(sfm, "Recovery_Rate", to = NULL))
+  sfm2 <- expect_silent(update(sfm, "Recovery_Rate", to = NULL))
   df <- sfm2[["variables"]]
   expect_equal(df[df[["name"]] == "Recovery_Rate", "to"], "")
 
-  sfm2 <- expect_silent(build(sfm, "Recovery_Rate", to = NA))
+  sfm2 <- expect_silent(update(sfm, "Recovery_Rate", to = NA))
   df <- sfm2[["variables"]]
   expect_equal(df[df[["name"]] == "Recovery_Rate", "to"], "")
 })
@@ -62,7 +62,7 @@ test_that("modify to and from", {
 test_that("sim_specs() works", {
   # Ensure that default simulation specifications are with digits
   sfm <- sdbuildR()
-  expect_equal(sfm$sim_specs$start, "0.0")
+  expect_equal(sfm$sim_specs$start, "0")
   expect_equal(sfm$sim_specs$stop, "100.0")
   expect_equal(sfm$sim_specs$dt, "0.01")
   expect_equal(sfm$sim_specs$save_at, "0.01")
@@ -71,7 +71,7 @@ test_that("sim_specs() works", {
   # Check that empty sim_specs() doesn't change anything
   sfm <- sdbuildR()
   sfm <- sfm |> sim_specs()
-  expect_equal(sfm$sim_specs$start, "0.0")
+  expect_equal(sfm$sim_specs$start, "0")
 
   # Check that start and stop are set correctly
   sfm <- sdbuildR()
@@ -172,69 +172,69 @@ test_that("sim_specs() works", {
 
 
 test_that("flow cannot have same stock as to and from", {
-  sfm <- sdbuildR() |> build("a", "stock")
+  sfm <- sdbuildR() |> update("a", "stock")
   expect_error(
-    sfm |> build("b", "flow", to = "a", from = "a", eqn = "1"),
+    sfm |> update("b", "flow", to = "a", from = "a", eqn = "1"),
     "A flow cannot flow to and from the same stock"
   )
 
   # Check that this works with multiple variables
   expect_error(
-    sfm |> build(c("b", "c"), c("flow", "flow"),
+    sfm |> update(c("b", "c"), c("flow", "flow"),
       to = c("a", "d"), from = c("a", "a")
     ),
     "A flow cannot flow to and from the same stock"
   )
   expect_error(
-    sfm |> build(c("b", "c"), c("flow", "flow"),
+    sfm |> update(c("b", "c"), c("flow", "flow"),
       to = c("a", "d"), from = c("a", "d")
     ),
     "A flow cannot flow to and from the same stock"
   )
 
   # Check that this works when adding to or from later
-  sfm <- sdbuildR() |> build("b", "flow", to = "a")
+  sfm <- sdbuildR() |> update("b", "flow", to = "a")
   expect_warning(
-    sfm |> build("b", from = "a"),
+    sfm |> update("b", from = "a"),
     "b is flowing to and from the same variable \\(a\\)"
   )
 
-  sfm <- sdbuildR() |> build("b", "flow", from = "a")
+  sfm <- sdbuildR() |> update("b", "flow", from = "a")
   expect_warning(
-    sfm |> build("b", to = "a"),
+    sfm |> update("b", to = "a"),
     "b is flowing to and from the same variable \\(a\\)"
   )
 
   # Flow cannot flow to itself
   sfm <- sdbuildR()
   expect_error(
-    sfm |> build("b", "flow", to = "b"),
+    sfm |> update("b", "flow", to = "b"),
     "A flow cannot flow to itself"
   )
   expect_error(
-    sfm |> build("b", "flow", from = "b"),
+    sfm |> update("b", "flow", from = "b"),
     "A flow cannot flow from itself"
   )
   expect_error(
-    sfm |> build(c("a", "b", "c"), "flow", to = "b"),
+    sfm |> update(c("a", "b", "c"), "flow", to = "b"),
     "A flow cannot flow to itself"
   )
   expect_error(
-    sfm |> build(c("a", "b", "c"), "flow", from = "b"),
+    sfm |> update(c("a", "b", "c"), "flow", from = "b"),
     "A flow cannot flow from itself"
   )
   expect_no_error(
-    sfm |> build(c("a", "b", "c"), "flow", to = "d")
+    sfm |> update(c("a", "b", "c"), "flow", to = "d")
   )
 })
 
 
-test_that("add and change variable with build() simultaneously", {
+test_that("add and change variable with update() simultaneously", {
   sfm <- sdbuildR() |>
-    build("a", "stock")
+    update("a", "stock")
 
-  expect_error(sfm |> build(c("a", "b"), eqn = 10), "The variable b does not exist in your model")
-  sfm <- expect_no_error(sfm |> build(c("a", "b"), "stock", eqn = 10))
+  expect_error(sfm |> update(c("a", "b"), eqn = 10), "The variable b does not exist in your model")
+  sfm <- expect_no_error(sfm |> update(c("a", "b"), "stock", eqn = 10))
   expect_equal(sort(get_names(sfm)[["name"]]), c("a", "b"))
   expect_equal(sfm$model$variables$stock$a$eqn, "10")
   expect_equal(sfm$model$variables$stock$b$eqn, "10")
@@ -243,9 +243,9 @@ test_that("add and change variable with build() simultaneously", {
 
 test_that("overwriting to and from of a flow works", {
   sfm <- sdbuildR() |>
-    build("a", "stock") |>
-    build("b", "flow", to = "a") |>
-    build("b", to = "c", from = "d")
+    update("a", "stock") |>
+    update("b", "flow", to = "a") |>
+    update("b", to = "c", from = "d")
   expect_equal(sfm$model$variables$flow$b$to, "c")
   expect_equal(sfm$model$variables$flow$b$from, "d")
 })
@@ -254,33 +254,33 @@ test_that("overwriting to and from of a flow works", {
 test_that("incorrect equations throw error", {
   expect_error(
     {
-      sdbuildR() |> build("a", "aux", eqn = "a + (1,")
+      sdbuildR() |> update("a", "aux", eqn = "a + (1,")
     },
     "Parsing equation of \"a\" failed"
   )
   expect_error(
     {
-      sdbuildR() |> build("a", "aux", eqn = "<- (1)")
+      sdbuildR() |> update("a", "aux", eqn = "<- (1)")
     },
     "Parsing equation of \"a\" failed"
   )
 })
 
 
-test_that("change_name and change_type in build()", {
+test_that("change_name and change_type in update()", {
   # Change name
-  sfm <- sdbuildR() |> build("a", "aux", eqn = 10)
-  expect_no_error(sfm |> build("a", change_name = "b"))
-  expect_no_message(sfm |> build("a", change_name = "b"))
-  sfm <- sfm |> build("a", change_name = "b")
+  sfm <- sdbuildR() |> update("a", "aux", eqn = 10)
+  expect_no_error(sfm |> update("a", change_name = "b"))
+  expect_no_message(sfm |> update("a", change_name = "b"))
+  sfm <- sfm |> update("a", change_name = "b")
   expect_equal(names(sfm$model$variables$aux), "b")
   expect_equal(as.data.frame(sfm)$name, "b")
   expect_equal(sfm$model$variables$aux$b$name, "b")
   expect_equal(sfm$model$variables$aux$b$label, "b")
   expect_equal(sfm$model$variables$aux$a, NULL)
 
-  # Check build() with change_name and other modified properties
-  sfm <- sfm |> build("b", change_name = "c", eqn = "100", units = "kg")
+  # Check update() with change_name and other modified properties
+  sfm <- sfm |> update("b", change_name = "c", eqn = "100", units = "kg")
   expect_equal(names(sfm$model$variables$aux), "c")
   expect_equal(sfm$model$variables$aux$b, NULL)
   expect_equal(as.data.frame(sfm)$name, "c")
@@ -288,10 +288,10 @@ test_that("change_name and change_type in build()", {
   expect_equal(sfm$model$variables$aux$c$label, "c")
   expect_equal(sfm$model$variables$aux$c$units, "kg")
 
-  # Check build() with change_type; are the properties copied?
-  sfm <- sdbuildR() |> build("K", "aux", eqn = 100, label = "K", units = "kg")
-  expect_no_error(expect_no_message(sfm |> build("K", change_type = "stock")))
-  sfm <- sfm |> build("K", change_type = "stock")
+  # Check update() with change_type; are the properties copied?
+  sfm <- sdbuildR() |> update("K", "aux", eqn = 100, label = "K", units = "kg")
+  expect_no_error(expect_no_message(sfm |> update("K", change_type = "stock")))
+  sfm <- sfm |> update("K", change_type = "stock")
   expect_equal(sfm$model$variables$aux$K, NULL)
   expect_equal(sfm$model$variables$stock$K$eqn, "100")
   expect_equal(sfm$model$variables$stock$K$label, "K")
@@ -300,9 +300,9 @@ test_that("change_name and change_type in build()", {
   expect_equal(sfm$model$variables$stock$K$to, NULL)
   expect_equal(as.data.frame(sfm)$type, "stock")
 
-  # Check build() with change_type and change_name
-  sfm <- sdbuildR() |> build("H", "flow", eqn = 100)
-  sfm <- sfm |> build("H", change_type = "aux", change_name = "H_new")
+  # Check update() with change_type and change_name
+  sfm <- sdbuildR() |> update("H", "flow", eqn = 100)
+  sfm <- sfm |> update("H", change_type = "aux", change_name = "H_new")
   expect_equal(sfm$model$variables$flow[["H"]], NULL)
   expect_equal(sfm$model$variables$flow[["H_new"]], NULL)
   expect_equal(sfm$model$variables$aux[["H"]], NULL)
@@ -314,43 +314,43 @@ test_that("change_name and change_type in build()", {
 
   # Check that changing type from stock -> aux removes the stock from `to` and `from` properties of flows
   sfm <- sdbuildR() |>
-    build("G", "stock") |>
-    build("to_G", "flow", to = "G")
+    update("G", "stock") |>
+    update("to_G", "flow", to = "G")
   expect_warning(
-    sfm |> build("G", change_type = "aux"),
+    sfm |> update("G", change_type = "aux"),
     "to_G is flowing to a variable which is not a stock \\(G\\)"
   )
   suppressWarnings({
-    sfm <- sfm |> build("G", change_type = "aux")
+    sfm <- sfm |> update("G", change_type = "aux")
   })
   expect_equal(sfm$model$variables$flow$to_G$to, "")
   expect_equal(sfm$model$variables$stock$G, NULL)
-  expect_equal(sfm$model$variables$aux$G$eqn, "0.0")
+  expect_equal(sfm$model$variables$aux$G$eqn, "0")
   expect_equal(sfm$model$variables$aux$G$units, "1")
 
   # Test that properties are not affected if no change is made
   sfm <- sdbuildR() |>
-    build("abc", "aux", eqn = "def") |>
-    build("abc")
+    update("abc", "aux", eqn = "def") |>
+    update("abc")
   expect_equal(sfm$model$variables$aux$abc$eqn, "def")
 
   sfm <- sdbuildR() |>
-    build("abc", "aux", eqn = "def") |>
-    build("abc", "aux")
+    update("abc", "aux", eqn = "def") |>
+    update("abc", "aux")
   expect_equal(sfm$model$variables$aux$abc$eqn, "def")
 
 
   # Check multiple change names
   sfm <- templates("predator_prey")
-  expect_error(sfm |> build("prey", change_name = c("prey1", "prey2")), "You can only change the name of one variable at a time")
-  expect_error(sfm |> build(c("prey", "predator"), change_name = c("prey1", "prey2")), "You can only change the name of one variable at a time")
+  expect_error(sfm |> update("prey", change_name = c("prey1", "prey2")), "You can only change the name of one variable at a time")
+  expect_error(sfm |> update(c("prey", "predator"), change_name = c("prey1", "prey2")), "You can only change the name of one variable at a time")
 
-  expect_error(sfm |> build("prey", change_type = c("stock", "aux")), "You can only change the type of one variable at a time")
-  expect_error(sfm |> build(c("prey", "predator"), change_type = "stock"), "You can only change the type of one variable at a time")
+  expect_error(sfm |> update("prey", change_type = c("stock", "aux")), "You can only change the type of one variable at a time")
+  expect_error(sfm |> update(c("prey", "predator"), change_type = "stock"), "You can only change the type of one variable at a time")
 
   sfm <- sfm |>
-    build("prey", change_name = "frustration") |>
-    build("predator", change_name = "drugs")
+    update("prey", change_name = "frustration") |>
+    update("predator", change_name = "drugs")
   df <- as.data.frame(sfm, type = "stock")
   expect_equal(sort(df$name), c("drugs", "frustration"))
   expect_equal(sort(df$label), c("Predator", "Prey")) # Label is unchanged
@@ -372,50 +372,50 @@ test_that("change_name and change_type in build()", {
 
 
   # Check that no message or warning is thrown
-  sfm <- sdbuildR() |> build("a", "aux")
+  sfm <- sdbuildR() |> update("a", "aux")
 
   expect_no_error(expect_no_warning(expect_no_message(sfm |>
-    build("a", change_type = "flow", from = "b"))))
+    update("a", change_type = "flow", from = "b"))))
 
   # Check that label is retained
-  sfm <- sfm |> build("a", change_type = "flow", label = "B")
+  sfm <- sfm |> update("a", change_type = "flow", label = "B")
   expect_equal(sfm$model$variables$flow$a$label, "B")
 
   # Check that source is updated with change_name
   sfm <- sdbuildR() |>
-    build("a", "lookup", xpts = 1, ypts = 1, source = "b") |>
-    build("b", "stock") |>
-    build("b", change_name = "c")
+    update("a", "lookup", xpts = 1, ypts = 1, source = "b") |>
+    update("b", "stock") |>
+    update("b", change_name = "c")
 
   expect_equal(sfm$model$variables$gf$a$source, "c")
 })
 
 
 test_that("from and to can only be stocks", {
-  sfm <- expect_silent(sdbuildR() |> build("a", "flow", to = "b"))
+  sfm <- expect_silent(sdbuildR() |> update("a", "flow", to = "b"))
   sfm <- expect_warning(
-    sfm |> build("b", "flow"),
+    sfm |> update("b", "flow"),
     "a is flowing to a variable which is not a stock \\(b\\)! Removing b from `to`"
   )
   expect_null(sfm[["variables"]][sfm[["variables"]][["name"]] == "a" & sfm[["variables"]][["type"]] == "flow", "to"][[1]])
 
-  sfm <- expect_no_error(expect_no_message(expect_no_warning(sdbuildR() |> build("a", "flow", from = "b"))))
+  sfm <- expect_no_error(expect_no_message(expect_no_warning(sdbuildR() |> update("a", "flow", from = "b"))))
   sfm <- expect_warning(
-    sfm |> build("b", "flow"),
+    sfm |> update("b", "flow"),
     "a is flowing from a variable which is not a stock \\(b\\)! Removing b from `from`"
   )
   expect_null(sfm[["variables"]][sfm[["variables"]][["name"]] == "a" & sfm[["variables"]][["type"]] == "flow", "from"][[1]])
 
   expect_error(
-    sdbuildR() |> build("a", "flow", from = "b", to = "b"),
+    sdbuildR() |> update("a", "flow", from = "b", to = "b"),
     "A flow cannot flow to and from the same stock"
   )
 })
 
 
-test_that("discard in build() works", {
+test_that("discard in update() works", {
   sfm <- sdbuildR("Lorenz")
-  sfm <- expect_no_error(expect_no_message(sfm |> build("x", discard = TRUE)))
+  sfm <- expect_no_error(expect_no_message(sfm |> update("x", discard = TRUE)))
   expect_equal(sfm$model$variables$stock$x, NULL)
   expect_equal(sfm$model$variables$flow$dx_dt$to, NULL)
   df <- as.data.frame(sfm, type = "stock")
@@ -423,42 +423,42 @@ test_that("discard in build() works", {
 
   # discard while specifying wrong type
   expect_error(
-    sfm |> build("dy_dt", "stock", discard = TRUE),
+    sfm |> update("dy_dt", "stock", discard = TRUE),
     "These variables exist in your model but not as the type specified"
   )
 
   # discard while specifying type and other properties; these should be ignored
-  expect_no_error(expect_no_message(sfm |> build("z", "stock", eqn = "10", units = "kg", discard = TRUE)))
-  sfm <- sfm |> build("sigma", "constant", eqn = "10", units = "kg", discard = TRUE)
+  expect_no_error(expect_no_message(sfm |> update("z", "stock", eqn = "10", units = "kg", discard = TRUE)))
+  sfm <- sfm |> update("sigma", "constant", eqn = "10", units = "kg", discard = TRUE)
   expect_equal(sfm$model$variables$constant$sigma, NULL)
   df <- as.data.frame(sfm)
   expect_equal("sigma" %in% df$name, FALSE)
 
   # discard removes the erased variable source
-  sfm <- build(sfm, "lookup", "lookup", xpts = 1, ypts = 1, source = "y") |>
-    build("y", discard = TRUE)
+  sfm <- update(sfm, "lookup", "lookup", xpts = 1, ypts = 1, source = "y") |>
+    update("y", discard = TRUE)
   expect_equal(sfm$model$variables$gf$gf$source, NULL)
 })
 
 
 test_that("inappropriate properties throw warning", {
   expect_warning(
-    sdbuildR() |> build("c", "aux", from = "a"),
+    sdbuildR() |> update("c", "aux", from = "a"),
     "These properties are not appropriate for the specified type"
   )
-  sfm <- suppressWarnings(sdbuildR() |> build("c", "aux", from = "a"))
+  sfm <- suppressWarnings(sdbuildR() |> update("c", "aux", from = "a"))
   expect_equal(sfm$model$variables$aux$c$from, NULL)
   expect_equal(sfm$model$variables$aux$c$to, NULL)
-  expect_equal(sfm$model$variables$aux$c$eqn, "0.0")
+  expect_equal(sfm$model$variables$aux$c$eqn, "0")
 
   expect_warning(
-    sdbuildR() |> build(c("a", "b", "c"), c("aux", "stock", "flow"),
+    sdbuildR() |> update(c("a", "b", "c"), c("aux", "stock", "flow"),
       eqn = 1,
       from = "d"
     ),
     "These properties are not appropriate for all specified types \\(aux, stock, flow\\):\\n- from\nThese will be ignored"
   )
-  sfm <- suppressWarnings(sdbuildR() |> build(c("a", "b", "c"),
+  sfm <- suppressWarnings(sdbuildR() |> update(c("a", "b", "c"),
     c("aux", "stock", "flow"),
     eqn = 1,
     from = "d"
@@ -473,32 +473,32 @@ test_that("inappropriate properties throw warning", {
 })
 
 
-test_that("Julia equations are added in build()", {
+test_that("Julia equations are added in update()", {
   # Ensure Julia equations are added immediately
-  sfm <- sdbuildR() |> build("c", "aux", eqn = "a")
+  sfm <- sdbuildR() |> update("c", "aux", eqn = "a")
   expect_true("eqn" %in% names(sfm$model$variables$aux$c))
   expect_equal(sfm$model$variables$aux$c$eqn, "a")
 
   # Ensure Julia equation is updated with changed equation
-  sfm <- sfm |> build("c", eqn = "90")
+  sfm <- sfm |> update("c", eqn = "90")
   expect_equal(sfm$model$variables$aux$c$eqn, "90.0")
 
   # Ensure this works with multiple variables
-  sfm <- sdbuildR() |> build(c("a", "b", "c"), c("stock", "flow", "aux"), eqn = c("1", "2", "3"))
+  sfm <- sdbuildR() |> update(c("a", "b", "c"), c("stock", "flow", "aux"), eqn = c("1", "2", "3"))
   expect_equal(sfm$model$variables$stock$a$eqn, "1.0")
   expect_equal(sfm$model$variables$flow$b$eqn, "2.0")
   expect_equal(sfm$model$variables$aux$c$eqn, "3.0")
 
   # Ensure Julia equation is updated with changed equation
-  sfm <- sfm |> build(c("a", "b", "c"), eqn = c("40", "50", "60"))
+  sfm <- sfm |> update(c("a", "b", "c"), eqn = c("40", "50", "60"))
   expect_equal(sfm$model$variables$stock$a$eqn, "40.0")
   expect_equal(sfm$model$variables$flow$b$eqn, "50.0")
   expect_equal(sfm$model$variables$aux$c$eqn, "60.0")
 })
 
 
-test_that("vectorized adding variables works in build()", {
-  sfm <- sdbuildR() |> build(c("a", "b", "c"), c("stock", "flow", "aux"), eqn = c("1", "2", "3"))
+test_that("vectorized adding variables works in update()", {
+  sfm <- sdbuildR() |> update(c("a", "b", "c"), c("stock", "flow", "aux"), eqn = c("1", "2", "3"))
   expect_equal(sfm$model$variables$stock$a$eqn, "1")
   expect_equal(sfm$model$variables$flow$b$eqn, "2")
   expect_equal(sfm$model$variables$aux$c$eqn, "3")
@@ -516,7 +516,7 @@ test_that("vectorized adding variables works in build()", {
 
   # Add some vectorized properties and some single properties, as well as "wrong" properties for that type
   expect_warning(
-    sdbuildR() |> build(c("x", "y", "z"), "stock",
+    sdbuildR() |> update(c("x", "y", "z"), "stock",
       eqn = 300,
       units = c("kilograms", "10 meters", "3 Sec"),
       label = c("X", "Y", "Z"), from = c("a", "b", "c"),
@@ -524,7 +524,7 @@ test_that("vectorized adding variables works in build()", {
     ),
     "These properties are not appropriate for the specified type \\(stock\\):\\n- from, xpts, ypts"
   )
-  sfm <- suppressWarnings(sdbuildR() |> build(c("x", "y", "z"), "stock",
+  sfm <- suppressWarnings(sdbuildR() |> update(c("x", "y", "z"), "stock",
     eqn = 300,
     units = c("kilograms", "10 meters", "3 Sec"),
     label = c("X", "Y", "Z"), from = c("a", "b", "c"),
@@ -549,38 +549,38 @@ test_that("vectorized adding variables works in build()", {
 
 
 test_that("flows always have a from and to property", {
-  sfm <- sdbuildR() |> build("a", "flow")
+  sfm <- sdbuildR() |> update("a", "flow")
   expect_true("from" %in% names(sfm$model$variables$flow$a))
   expect_true("to" %in% names(sfm$model$variables$flow$a))
 
-  sfm <- sdbuildR() |> build("a", "flow", to = "b")
+  sfm <- sdbuildR() |> update("a", "flow", to = "b")
   expect_true("from" %in% names(sfm$model$variables$flow$a))
   expect_true("to" %in% names(sfm$model$variables$flow$a))
 })
 
 
-test_that("build() works", {
-  # Empty build() gives error
+test_that("update() works", {
+  # Empty update() gives error
   expect_error(
     {
-      build()
+      update()
     },
     "No model specified"
   )
   expect_error(
     {
-      sdbuildR() |> build()
+      sdbuildR() |> update()
     },
     "name must be specified"
   )
 
   sfm <- sdbuildR()
-  sfm <- sfm |> build("a", "aux", eqn = 10)
+  sfm <- sfm |> update("a", "aux", eqn = 10)
 
   # Try to add wrong type
   expect_error(
     {
-      sfm |> build("a", "Non")
+      sfm |> update("a", "Non")
     },
     "type needs to be one of 'stock', 'flow', 'constant', 'aux', or 'gf'"
   )
@@ -590,8 +590,8 @@ test_that("build() works", {
   expect_equal(sfm$model$variables$aux$a$eqn, "10")
 
   # Try to modify variable and add new variable simultaneously
-  sfm <- sdbuildR() |> build("a", "stock")
-  sfm <- sfm |> build(c("a", "b"), c("stock", "flow"), eqn = c("100", "1000"), units = "seconds")
+  sfm <- sdbuildR() |> update("a", "stock")
+  sfm <- sfm |> update(c("a", "b"), c("stock", "flow"), eqn = c("100", "1000"), units = "seconds")
 
   expect_equal(sfm$model$variables$stock$a$eqn, "100")
   expect_equal(sfm$model$variables$flow$b$eqn, "1000")
@@ -599,47 +599,47 @@ test_that("build() works", {
   expect_equal(sfm$model$variables$flow$b$units, "s")
 
   # Try to overwrite existing variable whilst specifying the type
-  sfm <- sfm |> build("a", "stock", eqn = "10000")
+  sfm <- sfm |> update("a", "stock", eqn = "10000")
   expect_equal(sfm$model$variables$stock$a$eqn, "10000")
 
   # Try to overwrite existing variable whilst specifying the wrong type
   expect_error(
     {
-      sfm |> build("a", "flow", eqn = "90")
+      sfm |> update("a", "flow", eqn = "90")
     },
     "These variables already exist in your model, but not as the type specified"
   )
   expect_equal(sfm$model$variables$stock$a$eqn, "10000")
 
   # Try to modify non-existing variable
-  expect_error(sdbuildR() |> build("b", change_name = "c"), "b does not exist in your model!")
+  expect_error(sdbuildR() |> update("b", change_name = "c"), "b does not exist in your model!")
 
   # Ensure NULL changes to "0"
-  expect_warning(sdbuildR() |> build("c", "aux", eqn = NULL), "eqn cannot be NULL!")
+  expect_warning(sdbuildR() |> update("c", "aux", eqn = NULL), "eqn cannot be NULL!")
   suppressWarnings({
-    sfm <- sdbuildR() |> build("c", "aux", eqn = NULL)
+    sfm <- sdbuildR() |> update("c", "aux", eqn = NULL)
   })
-  expect_equal(sfm$model$variables$aux$c$eqn, "0.0")
-  expect_equal(sfm$model$variables$aux$c$eqn, "0.0")
+  expect_equal(sfm$model$variables$aux$c$eqn, "0")
+  expect_equal(sfm$model$variables$aux$c$eqn, "0")
 
   # Ensure empty equation changes to "0"
-  expect_warning(sdbuildR() |> build("c", "aux", eqn = ""), "eqn cannot be empty!")
+  expect_warning(sdbuildR() |> update("c", "aux", eqn = ""), "eqn cannot be empty!")
   suppressWarnings({
-    sfm <- sdbuildR() |> build("c", "aux", eqn = "")
+    sfm <- sdbuildR() |> update("c", "aux", eqn = "")
   })
-  expect_equal(sfm$model$variables$aux$c$eqn, "0.0")
-  expect_equal(sfm$model$variables$aux$c$eqn, "0.0")
+  expect_equal(sfm$model$variables$aux$c$eqn, "0")
+  expect_equal(sfm$model$variables$aux$c$eqn, "0")
 
   # Ensure equation with missing brackets throws useful error
   expect_error(
-    sdbuildR() |> build("c", "aux", eqn = "a + (1, "),
+    sdbuildR() |> update("c", "aux", eqn = "a + (1, "),
     "Parsing equation of \"c\" failed"
   )
 
   # Multiple equations but only one name should throw error
   expect_error(
     {
-      sdbuildR() |> build("a", "constant", eqn = c("1", "2"))
+      sdbuildR() |> update("a", "constant", eqn = c("1", "2"))
     },
     "The length of eqn = 1, 2 must be either 1 or equal to the length of name = a."
   )
@@ -835,33 +835,33 @@ test_that("diagnose() works", {
   expect_message(diagnose(sdbuildR()), "Your model has no stocks")
 
   # Detect stocks without inflows or outflows
-  expect_message(diagnose(sdbuildR() |> build("Prey", "stock")), "Your model has no flows.")
+  expect_message(diagnose(sdbuildR() |> update("Prey", "stock")), "Your model has no flows.")
 
   # Detect one stock without inflows or outflows
   sfm <- sdbuildR() |>
-    build("Prey", "stock") |>
-    build("Predator", "stock") |>
-    build("births", "flow", eqn = "0.1 * Predator", to = "Prey")
+    update("Prey", "stock") |>
+    update("Predator", "stock") |>
+    update("births", "flow", eqn = "0.1 * Predator", to = "Prey")
   expect_message(diagnose(sfm), "These stocks are not connected to any flows:\\n- Predator")
 
   # Detect circularities in equation definitions
   expect_message(
     {
-      diagnose(sfm = sdbuildR() |> build("Prey", "stock", eqn = "Predator") |>
-        build("Predator", "stock", eqn = "Prey"))
+      diagnose(sfm = sdbuildR() |> update("Prey", "stock", eqn = "Predator") |>
+        update("Predator", "stock", eqn = "Prey"))
     },
     "Circular dependencies detected involving variables: Predator, Prey"
   )
 
   sfm <- sdbuildR("logistic_model")
   sfm <- sfm |>
-    build("X", change_name = "tasks") |>
-    build("K", label = "Resource") |>
-    build("K", change_type = "stock")
+    update("X", change_name = "tasks") |>
+    update("K", label = "Resource") |>
+    update("K", change_type = "stock")
   expect_message(diagnose(sfm), "These stocks are not connected to any flows:\\n- K")
 
   # Dependency on itself
-  sfm <- sdbuildR() |> build("a", "stock", eqn = "cos(a)")
+  sfm <- sdbuildR() |> update("a", "stock", eqn = "cos(a)")
   expect_warning(
     sim <- simulate(sfm),
     "The variable 'a' is referenced in a\\$eqn but hasn't been defined"
@@ -872,15 +872,15 @@ test_that("diagnose() works", {
 
 test_that("detect_undefined_var() works", {
   # Check that undefined variables are detected
-  sfm <- sdbuildR() |> build("a", "aux", eqn = "b + c")
+  sfm <- sdbuildR() |> update("a", "aux", eqn = "b + c")
   out <- detect_undefined_var(sfm)
   expect_equal(grepl("Define these missing variables or correct any spelling mistakes", out$msg), TRUE)
 
   # Check that no error is thrown for defined variables
   sfm <- sdbuildR() |>
-    build("a", "aux", eqn = "b + c") |>
-    build("b", "aux") |>
-    build("c", "aux")
+    update("a", "aux", eqn = "b + c") |>
+    update("b", "aux") |>
+    update("c", "aux")
   out <- detect_undefined_var(sfm)
   expect_equal(out$issue, FALSE)
 
@@ -890,15 +890,15 @@ test_that("detect_undefined_var() works", {
 
 test_that("detect_undefined_units() works", {
   # Check that undefined variables are detected
-  sfm <- sdbuildR() |> build("a", "aux", units = "BMI")
+  sfm <- sdbuildR() |> update("a", "aux", units = "BMI")
   expect_message(diagnose(sfm), "These units are not defined.* BMI")
 
-  sfm <- sdbuildR() |> build("a", "aux", units = "BMI/year")
+  sfm <- sdbuildR() |> update("a", "aux", units = "BMI/year")
   expect_message(diagnose(sfm), "These units are not defined.* BMI")
 
   # Check that no error is thrown for defined units
   sfm <- sdbuildR() |>
-    build("a", "aux", units = "BMI/year") |>
+    update("a", "aux", units = "BMI/year") |>
     custom_unit("BMI", eqn = "kilograms/meters^2")
   out <- diagnose(sfm)
   expect_false(grepl("These units are not defined", out$problems))
@@ -912,7 +912,7 @@ test_that("as.data.frame(sfm) works", {
   expect_equal(nrow(as.data.frame(sfm)), 0)
 
   # Check that as.data.frame() works with variables
-  sfm <- sfm |> build("a", "aux", eqn = "10")
+  sfm <- sfm |> update("a", "aux", eqn = "10")
   df <- as.data.frame(sfm)
   expect_equal(class(df), "data.frame")
   expect_equal(df[["type"]], "aux")
@@ -1017,7 +1017,7 @@ test_that("macro() works", {
 
   # Default properties
   sfm <- sdbuildR() |> macro("abc")
-  expect_equal(sfm$macro$abc$eqn, "0.0")
+  expect_equal(sfm$macro$abc$eqn, "0")
   expect_equal(sfm$macro$abc$doc, "")
 
   # Test that properties are not affected if no change is made
@@ -1051,7 +1051,7 @@ test_that("macro() works", {
 
   # Translating functions works
   sfm <- sdbuildR() |>
-    build("X", "aux", eqn = "K(t)") |>
+    update("X", "aux", eqn = "K(t)") |>
     macro("K", eqn = "function(x) 1 + x")
   expect_equal(sfm$model$variables$aux$X$eqn, "K(t)")
   expect_equal(sfm$model$variables$aux$X$eqn, "K(t)")
@@ -1068,7 +1068,7 @@ test_that("macro() works", {
   expect_equal(df$name, "xyz")
 
   sfm <- sdbuildR() |>
-    build("X", "aux", eqn = "G(t)") |>
+    update("X", "aux", eqn = "G(t)") |>
     macro("G", eqn = "function(x) 1 + x")
   expect_equal(sfm$model$variables$aux$X$eqn, "G(t)")
   expect_equal(sfm$model$variables$aux$X$eqn, "G(t)")
@@ -1079,7 +1079,7 @@ test_that("macro() works", {
 
   # Check that change_name is changed throughout the model
   sfm <- sdbuildR() |>
-    build("X", "aux", eqn = "F1(t)") |>
+    update("X", "aux", eqn = "F1(t)") |>
     macro("F1", eqn = "function(x) 1 + x") |>
     macro("F1", change_name = "G")
   expect_equal(sfm$model$variables$aux$X$eqn, "G(t)")
@@ -1114,12 +1114,12 @@ test_that("graphical functions are created with correct properties", {
   sfm <- sdbuildR()
 
   # Basic graphical function
-  sfm <- build(sfm, "lookup1", "lookup",
+  sfm <- update(sfm, "lookup1", "lookup",
     xpts = c(0, 5, 10),
     ypts = c(0, 10, 20)
   )
 
-  defaults <- as.list(formals(build))
+  defaults <- as.list(formals(update.sdbuildR))
 
   expect_true("lookup1" %in% names(sfm$model$variables$gf))
   expect_equal(sfm$model$variables$gf$lookup1$xpts, "c(0, 5, 10)")
@@ -1133,17 +1133,17 @@ test_that("graphical functions require both xpts and ypts or neither", {
   sfm <- sdbuildR()
 
   expect_error(
-    build(sfm, "lookup", "lookup"),
+    update(sfm, "lookup", "lookup"),
     "xpts and ypts must be specified"
   )
 
   expect_error(
-    build(sfm, "only_x", "lookup", xpts = c(0, 10)),
+    update(sfm, "only_x", "lookup", xpts = c(0, 10)),
     "ypts must be specified"
   )
 
   expect_error(
-    build(sfm, "only_y", "lookup", ypts = c(0, 100)),
+    update(sfm, "only_y", "lookup", ypts = c(0, 100)),
     "xpts must be specified"
   )
 })
@@ -1153,7 +1153,7 @@ test_that("graphical functions reject mismatched xpts and ypts lengths", {
   sfm <- sdbuildR()
 
   expect_error(
-    build(sfm, "bad_gf", "lookup",
+    update(sfm, "bad_gf", "lookup",
       xpts = c(0, 5, 10),
       ypts = c(0, 10)
     ),
@@ -1165,7 +1165,7 @@ test_that("graphical functions support different interpolation and extrapolation
   sfm <- sdbuildR()
 
   # Linear interpolation
-  sfm <- build(sfm, "linear_gf", "lookup",
+  sfm <- update(sfm, "linear_gf", "lookup",
     xpts = c(0, 10),
     ypts = c(0, 100),
     interpolation = "linear"
@@ -1173,7 +1173,7 @@ test_that("graphical functions support different interpolation and extrapolation
   expect_equal(sfm$model$variables$gf$linear_gf$interpolation, "linear")
 
   # Constant interpolation
-  sfm <- build(sfm, "constant_gf", "lookup",
+  sfm <- update(sfm, "constant_gf", "lookup",
     xpts = c(0, 10),
     ypts = c(0, 100),
     interpolation = "constant"
@@ -1183,7 +1183,7 @@ test_that("graphical functions support different interpolation and extrapolation
   sfm <- sdbuildR()
 
   # Nearest extrapolation
-  sfm <- build(sfm, "nearest_gf", "lookup",
+  sfm <- update(sfm, "nearest_gf", "lookup",
     xpts = c(0, 10),
     ypts = c(0, 100),
     extrapolation = "nearest"
@@ -1191,7 +1191,7 @@ test_that("graphical functions support different interpolation and extrapolation
   expect_equal(sfm$model$variables$gf$nearest_gf$extrapolation, "nearest")
 
   # NA extrapolation
-  sfm <- build(sfm, "na_gf", "lookup",
+  sfm <- update(sfm, "na_gf", "lookup",
     xpts = c(0, 10),
     ypts = c(0, 100),
     extrapolation = "NA"
@@ -1199,7 +1199,7 @@ test_that("graphical functions support different interpolation and extrapolation
   expect_equal(sfm$model$variables$gf$na_gf$extrapolation, "NA")
 
   expect_error(
-    build(sfm, "bad_interp", "lookup",
+    update(sfm, "bad_interp", "lookup",
       xpts = c(0, 10),
       ypts = c(0, 100),
       interpolation = "invalid"
@@ -1208,7 +1208,7 @@ test_that("graphical functions support different interpolation and extrapolation
   )
 
   expect_error(
-    build(sfm, "bad_extrap", "lookup",
+    update(sfm, "bad_extrap", "lookup",
       xpts = c(0, 10),
       ypts = c(0, 100),
       extrapolation = "invalid"
@@ -1220,9 +1220,9 @@ test_that("graphical functions support different interpolation and extrapolation
 
 test_that("graphical functions accept source parameter", {
   sfm <- sdbuildR() |> sim_specs(stop = 5, dt = 1)
-  sfm <- build(sfm, "stock1", "stock", eqn = 10)
+  sfm <- update(sfm, "stock1", "stock", eqn = 10)
 
-  sfm <- build(sfm, "lookup_with_source", "lookup",
+  sfm <- update(sfm, "lookup_with_source", "lookup",
     xpts = c(0, 10),
     ypts = c(0, 100),
     source = "stock1"
@@ -1233,7 +1233,7 @@ test_that("graphical functions accept source parameter", {
   # graphical functions with undefined source throw error at simulation
   sim <- expect_no_error(expect_no_message(simulate(sfm)))
 
-  sfm <- build(sfm, "lookup_with_source", source = "stock2")
+  sfm <- update(sfm, "lookup_with_source", source = "stock2")
 
   expect_warning(
     sim <- simulate(sfm),
@@ -1246,7 +1246,7 @@ test_that("graphical functions reject multiple sources", {
   sfm <- sdbuildR()
 
   expect_error(
-    build(sfm, "multi_source", "lookup",
+    update(sfm, "multi_source", "lookup",
       xpts = c(0, 10),
       ypts = c(0, 100),
       source = c("var1", "var2")
@@ -1260,7 +1260,7 @@ test_that("graphical functions don't support vectorized building", {
   sfm <- sdbuildR()
 
   expect_error(
-    build(sfm, c("gf1", "gf2"), "lookup",
+    update(sfm, c("gf1", "gf2"), "lookup",
       xpts = c(0, 10),
       ypts = c(0, 100)
     ),
@@ -1271,7 +1271,7 @@ test_that("graphical functions don't support vectorized building", {
 test_that("graphical functions handle character string input for pts", {
   sfm <- sdbuildR()
 
-  sfm <- build(sfm, "string_gf", "lookup",
+  sfm <- update(sfm, "string_gf", "lookup",
     xpts = "c(0, 5, 10)",
     ypts = "c(0, 10, 20)"
   )
@@ -1282,7 +1282,7 @@ test_that("graphical functions handle character string input for pts", {
 
 test_that("prep_equations_variables generates correct approxfun for gf", {
   sfm <- sdbuildR()
-  sfm <- build(sfm, "test_gf", "lookup",
+  sfm <- update(sfm, "test_gf", "lookup",
     xpts = c(0, 5, 10),
     ypts = c(0, 50, 100),
     interpolation = "linear",
@@ -1302,7 +1302,7 @@ test_that("prep_equations_variables generates correct approxfun for gf", {
 
 test_that("prep_equations_variables handles NA extrapolation correctly", {
   sfm <- sdbuildR()
-  sfm <- build(sfm, "na_extrap_gf", "lookup",
+  sfm <- update(sfm, "na_extrap_gf", "lookup",
     xpts = c(0, 10),
     ypts = c(0, 100),
     extrapolation = "NA"
@@ -1316,7 +1316,7 @@ test_that("prep_equations_variables handles NA extrapolation correctly", {
 
 test_that("prep_equations_variables handles constant interpolation", {
   sfm <- sdbuildR()
-  sfm <- build(sfm, "const_gf", "lookup",
+  sfm <- update(sfm, "const_gf", "lookup",
     xpts = c(0, 10),
     ypts = c(0, 100),
     interpolation = "constant"
@@ -1331,7 +1331,7 @@ test_that("prep_equations_variables handles constant interpolation", {
 test_that("graphical functions work with units", {
   sfm <- sdbuildR()
 
-  sfm <- build(sfm, "gf_with_units", "lookup",
+  sfm <- update(sfm, "gf_with_units", "lookup",
     xpts = c(0, 10),
     ypts = c(0, 100),
     units = "meters"
@@ -1351,25 +1351,25 @@ test_that("graphical functions work with units", {
 test_that("graphical functions can be modified", {
   sfm <- sdbuildR()
 
-  sfm <- build(sfm, "modify_gf", "lookup",
+  sfm <- update(sfm, "modify_gf", "lookup",
     xpts = c(0, 10),
     ypts = c(0, 100)
   )
 
   # Modify interpolation
-  sfm <- build(sfm, "modify_gf",
+  sfm <- update(sfm, "modify_gf",
     interpolation = "constant"
   )
 
   expect_equal(sfm$model$variables$gf$modify_gf$interpolation, "constant")
 
-  sfm <- build(sfm, "modify_gf",
+  sfm <- update(sfm, "modify_gf",
     xpts = c(10, 20)
   )
 
   expect_equal(sfm$model$variables$gf$modify_gf$xpts, "c(10, 20)")
 
-  expect_error(build(sfm, "modify_gf",
+  expect_error(update(sfm, "modify_gf",
     xpts = c(10, 20, 30)
   ), "For graphical functions, the length of xpts must match that of ypts")
 })

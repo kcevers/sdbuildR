@@ -1,26 +1,218 @@
+#' Install, update, or remove Julia environment
+#'
+#' Instantiate the Julia environment for sdbuildR to run stock-and-flow models using Julia. For more guidance, see [this vignette](https://kcevers.github.io/sdbuildR/articles/julia-setup.html).
+#'
+#' `install_julia_env()` will:
+#' * Start a Julia session
+#' * Activate a Julia environment using sdbuildR's Project.toml
+#' * Install SystemDynamicsBuildR.jl from GitHub (https://github.com/KCEvers/SystemDynamicsBuildR.jl)
+#' * Install all other required Julia packages
+#' * Create Manifest.toml
+#' * Precompile packages for faster subsequent loading
+#' * Stop the Julia session
+#'
+#' Note that this may take 10-25 minutes the first time as Julia downloads and compiles packages.
+#'
+#' @param remove If TRUE, remove Julia environment for sdbuildR. This will delete the Manifest.toml file, as well as the SystemDynamicsBuildR.jl package. All other Julia packages remain untouched.
+#'
+#' @returns Invisibly returns NULL after instantiating the Julia environment.
+#' @export
+#' @seealso [use_julia()]
+#' @concept julia
+#'
+#' @examplesIf Sys.getenv("NOT_CRAN") == "true"
+#' \dontrun{
+#' install_julia_env()
+#'
+#' # Remove Julia environment
+#' install_julia_env(remove = TRUE)
+#' }
+install_julia_env <- function(remove = FALSE) {
+  # Julia should be able to be started; JuliaConnectoR will handle errors if this is not the case
+  is_julia_ok()
+
+  if (remove) {
+    # Find set-up location for sdbuildR in Julia
+    env_path <- system.file(package = "sdbuildR")
+
+    # Activate the Julia environment for sdbuildR; juliaEval() automatically starts Julia
+    julia_cmd <- sprintf("using Pkg; Pkg.activate(\"%s\")", jl_path(env_path))
+    JuliaConnectoR::juliaEval(julia_cmd)
+
+    # Delete SystemDynamicsBuildR.jl, but only if it is installed, to avoid unnecessary warnings
+    status <- is_julia_env_installed(force = TRUE, error = FALSE)
+    if (!isTRUE(status)) {
+      cli::cli_inform("SystemDynamicsBuildR.jl not found in Julia environment; no need to remove.")
+      return(invisible())
+    }
+
+    JuliaConnectoR::juliaEval(sprintf(
+      'Pkg.rm("%s")',
+      P[["jl_pkg_name"]]
+    ))
+
+    manifest_file <- system.file("Manifest.toml", package = "sdbuildR")
+    if (file.exists(manifest_file)) {
+      file.remove(manifest_file)
+    }
+    JuliaConnectoR::juliaEval("Pkg.gc()")
+    status <- is_julia_env_installed(force = TRUE, error = FALSE)
+
+    if (isTRUE(status)) {
+      cli::cli_warn("Failed to remove Julia environment.")
+    } else {
+      cli::cli_inform("Julia environment removed.")
+    }
+  } else {
+
+    # First stop Julia for a clean installation
+    JuliaConnectoR::stopJulia()
+
+    # Run the setup script
+    setup_script <- system.file("setup.jl", package = "sdbuildR")
+    JuliaConnectoR::juliaEval(sprintf(
+      'jl_pkg_version = \"v%s\";',
+      P[["jl_pkg_version"]]
+    ))
+    JuliaConnectoR::juliaEval(sprintf('include("%s")', jl_path(setup_script)))
+    status <- is_julia_env_installed(force = TRUE)
+
+    if (isTRUE(status)) {
+      cli::cli_inform("Julia environment installed.")
+    } else {
+      cli::cli_warn("Failed to install Julia environment.")
+    }
+  }
+
+  # Invalidate cached env check
+  .sdbuildR_env[["jl"]][["env_checked"]] <- FALSE
+
+  # Stop Julia
+  JuliaConnectoR::stopJulia()
+
+  invisible()
+}
+
+
+#' Start Julia and activate environment
+#'
+#' Start Julia session and activate Julia environment to simulate stock-and-flow models. To do so, Julia needs to be installed (see [https://julialang.org/install/](https://julialang.org/install/)) and findable from within R. See [this vignette](https://kcevers.github.io/sdbuildR/articles/julia-setup.html) for guidance. In addition, the Julia environment specifically for sdbuildR needs to have been instantiated. This can be set up with [install_julia_env()].
+#'
+#' Julia supports running stock-and-flow models with units as well as [ensemble simulations][ensemble()].
+#'
+#' In every R session, [use_julia()] needs to be run once (which is done automatically in [`simulate()`][simulate.sdbuildR]), which can take around 30-60 seconds.
+#'
+#' @param stop If `TRUE`, stop active Julia session. Defaults to `FALSE`.
+#' @param force If `TRUE`, force Julia setup to execute again.
+#' @param nthreads If not `NULL`, set the number of threads for Julia to use. This will set the environment variable `JULIA_NUM_THREADS` and restart Julia if it is already running to apply the new thread setting. See [this page](https://docs.julialang.org/en/v1/manual/parallel-computing/#man-parallel-computing) for more details on threading in Julia.
+#'
+#' @returns Returns `NULL` invisibly, used for side effects
+#' @export
+#' @seealso [install_julia_env()]
+#' @concept julia
+#'
+#' @examplesIf is_julia_ready()
+#' # Start a Julia session and activate the Julia environment for sdbuildR
+#' use_julia()
+#'
+#' # Start Julia with 4 threads (if your Julia installation supports threading)
+#' use_julia(nthreads = 4)
+#'
+#' # Stop Julia session
+#' use_julia(stop = TRUE)
+#'
+use_julia <- function(
+  stop = FALSE,
+  force = FALSE,
+  nthreads = NULL
+) {
+  if (stop) {
+    JuliaConnectoR::stopJulia()
+
+    cli::cli_inform("Closed Julia session.")
+    return(invisible())
+  }
+
+  # If use_julia() was already run, no need to do anything, unless force or nthreads is specified
+  if (!is.null(nthreads)) {
+    if (!is.numeric(nthreads) || length(nthreads) != 1 || nthreads < 1) {
+      cli::cli_abort("nthreads must be a single positive integer.")
+    }
+    nthreads <- as.integer(nthreads)
+
+    if (nthreads == 1) {
+      nthreads <- NULL
+      .sdbuildR_env[["jl"]][["use_threads"]] <- FALSE
+      Sys.unsetenv("JULIA_NUM_THREADS")
+    } else {
+      # If nthreads was set, need to restart Julia to apply new thread setting (regardless of whether environment was already initialized, since thread setting applies to Julia session, not environment)
+      JuliaConnectoR::stopJulia()
+      .sdbuildR_env[["jl"]][["use_threads"]] <- TRUE
+      Sys.setenv(JULIA_NUM_THREADS = nthreads)
+    }
+  }
+
+  status <- is_julia_init()
+  if (!force && is.null(nthreads) && status) {
+    return(invisible())
+  }
+
+  if (!status) {
+    run_init_julia_env()
+    status <- is_julia_init()
+  }
+
+  # Check threads were set correctly if nthreads was specified
+  if (!is.null(nthreads) && status) {
+    actual_threads <- as.integer(JuliaConnectoR::juliaEval("string(Threads.nthreads())"))
+    if (actual_threads != nthreads) {
+      cli::cli_warn(c(
+        "Failed to set JULIA_NUM_THREADS to {nthreads}.",
+        "i" = "Julia is running with {actual_threads} threads.",
+        ">" = "Check that your Julia installation supports threading and that JULIA_NUM_THREADS is set correctly in your environment variables."
+      ))
+    } else {
+      cli::cli_inform("Julia environment ready with {nthreads} threads.")
+    }
+  } else if (status) {
+    cli::cli_inform("Julia environment ready.")
+  } else {
+    cli::cli_abort("Julia environment setup failed.")
+  }
+
+  invisible()
+}
 
 
 #' Check if Julia is ready to be used with sdbuildR
-#' 
-#' Check if Julia can be started and if the Julia environment for sdbuildR has been instantiated. 
-#' 
+#'
+#' Check if Julia can be started and if the Julia environment for sdbuildR has been instantiated.
+#'
 #' @return Logical value. `TRUE` if Julia is ready to be used with sdbuildR, `FALSE` otherwise.
-#' @export 
+#' @export
 #' @seealso [install_julia_env()], [use_julia()]
-#' @examples
+#' @examplesIf Sys.getenv("NOT_CRAN") == "true"
+#' # Check if Julia is ready; this automatically opens a Julia session if possible
 #' is_julia_ready()
-is_julia_ready <- function(){
-  if (Sys.getenv("NOT_CRAN") == "true"){
+#' 
+#' # Close Julia session
+#' use_julia(stop = TRUE)
+#' 
+is_julia_ready <- function() {
+  if (Sys.getenv("NOT_CRAN") != "true") {
     return(FALSE)
   }
 
-  tryCatch({
-    suppressWarnings({
-      is_julia_ok() && is_julia_env_installed()
-    })
-  }, error = function(e) {
-    return(FALSE)
-  })
+  tryCatch(
+    {
+      suppressWarnings({
+        is_julia_ok() && is_julia_env_installed()
+      })
+    },
+    error = function(e) {
+      return(FALSE)
+    }
+  )
 }
 
 
@@ -31,34 +223,35 @@ is_julia_ready <- function(){
 #' @returns Logical value
 #' @noRd
 is_julia_init <- function() {
-  tryCatch({
-    vals <- JuliaConnectoR::juliaEval('
+  tryCatch(
+    {
+      vals <- JuliaConnectoR::juliaEval("
       [
         string(isdefined(Main, :SystemDynamicsBuildR)),
         string(isdefined(Main, :init_sdbuildR))
       ]
-    ')
-    isTRUE(vals[1] == "true") && isTRUE(vals[2] == "true")    
-  }, error = function(e) {
-    FALSE
-  })
+    ")
+      isTRUE(vals[1] == "true") && isTRUE(vals[2] == "true")
+    },
+    error = function(e) {
+      FALSE
+    }
+  )
 }
 
 
-
-
-is_julia_ok <- function(){
+is_julia_ok <- function() {
   x <- JuliaConnectoR::juliaEval("0")
-  
+
   # Julia version needs to be correct
   is_julia_version_ok()
 
   invisible(TRUE)
 }
 
-is_julia_version_ok <- function(){
-  v <- JuliaConnectoR::juliaEval("string(VERSION)") 
-  
+is_julia_version_ok <- function() {
+  v <- JuliaConnectoR::juliaEval("string(VERSION)")
+
   # Required Julia version for sdbuildR
   required_jl_version <- P[["jl_required_version"]]
 
@@ -75,7 +268,11 @@ is_julia_version_ok <- function(){
 }
 
 
-is_julia_env_installed <- function(){
+is_julia_env_installed <- function(force = FALSE, error = TRUE) {
+  # Return cached result if available (within same session)
+  if (!force && isTRUE(.sdbuildR_env[["jl"]][["env_checked"]])) {
+    return(invisible(TRUE))
+  }
 
   # Manifest.toml should exist in sdbuildR package to indicate Julia environment was instantiated
   # Check sdbuildR environment files
@@ -87,11 +284,19 @@ is_julia_env_installed <- function(){
   env_instantiated <- file.exists(manifest_file)
 
   if (!env_exists) {
-    cli::cli_abort("sdbuildR {.file Project.toml} not found. Try reinstalling {.pkg sdbuildR}.")
+    if (error) {
+      cli::cli_abort("sdbuildR {.file Project.toml} not found. Try reinstalling {.pkg sdbuildR}.")
+    } else {
+      return(invisible(FALSE))
+    }
   }
 
   if (!env_instantiated) {
-    cli::cli_abort("Julia environment not instantiated. Run {.fn install_julia_env}.")
+    if (error) {
+      cli::cli_abort("Julia environment not instantiated. Run {.fn install_julia_env}.")
+    } else {
+      return(invisible(FALSE))
+    }
   }
 
   # SystemDynamicsBuildR.jl needs to be installed and up to date
@@ -99,12 +304,19 @@ is_julia_env_installed <- function(){
   installed_pkg_version <- find_jl_pkg_version(P[["jl_pkg_name"]])
 
   if (package_version(installed_pkg_version) < package_version(required_pkg_version)) {
-    JuliaConnectoR::stopJulia()
-    cli::cli_abort(c(
-      "Julia packages need updating.",
-      ">" = "Run {.fn install_julia_env}."
-    ))
+    if (error) {
+      JuliaConnectoR::stopJulia()
+      cli::cli_abort(c(
+        "Julia packages need updating.",
+        ">" = "Run {.fn install_julia_env}."
+      ))
+    } else {
+      return(invisible(FALSE))
+    }
   }
+
+  # Cache successful check
+  .sdbuildR_env[["jl"]][["env_checked"]] <- TRUE
 
   invisible(TRUE)
 }
@@ -241,191 +453,11 @@ check_julia_env_for_pkg <- function(pkg_name) {
       )
     },
     error = function(e) {
-      return(result)
+      result
     }
   )
 
   result
-}
-
-
-#' Install, update, or remove Julia environment
-#'
-#' Instantiate the Julia environment for sdbuildR to run stock-and-flow models using Julia. For more guidance, see [this vignette](https://kcevers.github.io/sdbuildR/articles/julia-setup.html).
-#'
-#' `install_julia_env()` will:
-#' * Start a Julia session
-#' * Activate a Julia environment using sdbuildR's Project.toml
-#' * Install SystemDynamicsBuildR.jl from GitHub (https://github.com/KCEvers/SystemDynamicsBuildR.jl)
-#' * Install all other required Julia packages
-#' * Create Manifest.toml
-#' * Precompile packages for faster subsequent loading
-#' * Stop the Julia session
-#'
-#' Note that this may take 10-25 minutes the first time as Julia downloads and compiles packages.
-#'
-#' @param remove If TRUE, remove Julia environment for sdbuildR. This will delete the Manifest.toml file, as well as the SystemDynamicsBuildR.jl package. All other Julia packages remain untouched.
-#'
-#' @returns Invisibly returns NULL after instantiating the Julia environment.
-#' @export
-#' @seealso [use_julia()]
-#' @concept julia
-#'
-#' @examplesIf Sys.getenv("NOT_CRAN") == "true"
-#' \dontrun{
-#' install_julia_env()
-#'
-#' # Remove Julia environment
-#' install_julia_env(remove = TRUE)
-#' }
-install_julia_env <- function(remove = FALSE) {
-  # Julia should be able to be started; JuliaConnectoR will handle errors if this is not the case
-  is_julia_ok()
-
-  # # Start Julia
-  # suppressWarnings({ # There is already a connection to Julia established
-  #   JuliaConnectoR::startJuliaServer()
-  # })
-
-  if (remove) {
-    # Find set-up location for sdbuildR in Julia
-    env_path <- system.file(package = "sdbuildR")
-
-    # Activate the Julia environment for sdbuildR; juliaEval() automatically starts Julia
-    julia_cmd <- sprintf("using Pkg; Pkg.activate(\"%s\")", env_path)
-    JuliaConnectoR::juliaEval(julia_cmd)
-
-    # Delete SystemDynamicsBuildR.jl
-    JuliaConnectoR::juliaEval(sprintf(
-      'Pkg.rm("%s")',
-      P[["jl_pkg_name"]]
-    ))
-
-    manifest_file <- system.file("Manifest.toml", package = "sdbuildR")
-    if (file.exists(manifest_file)) {
-      file.remove(manifest_file)
-    }
-    JuliaConnectoR::juliaEval("Pkg.gc()")
-    status <- is_julia_env_installed()
-
-    if (isTRUE(status)) {
-      cli::cli_warn("Failed to remove Julia environment.")
-    } else {
-      cli::cli_inform("Julia environment removed.")
-    }
-  } else {
-    # Run the setup script
-    setup_script <- system.file("setup.jl", package = "sdbuildR")
-    JuliaConnectoR::juliaEval(sprintf(
-      'jl_pkg_version = \"v%s\";',
-      P[["jl_pkg_version"]]
-    ))
-    JuliaConnectoR::juliaEval(sprintf('include("%s")', setup_script))
-    status <- is_julia_env_installed()
-
-    if (isTRUE(status)) {
-      cli::cli_inform("Julia environment installed.")
-    } else {
-      cli::cli_warn("Failed to install Julia environment.")
-    }
-  }
-
-  # Stop Julia
-  JuliaConnectoR::stopJulia()
-
-  invisible()
-}
-
-
-#' Start Julia and activate environment
-#'
-#' Start Julia session and activate Julia environment to simulate stock-and-flow models. To do so, Julia needs to be installed (see [https://julialang.org/install/](https://julialang.org/install/)) and findable from within R. See [this vignette](https://kcevers.github.io/sdbuildR/articles/julia-setup.html) for guidance. In addition, the Julia environment specifically for sdbuildR needs to have been instantiated. This can be set up with [install_julia_env()].
-#'
-#' Julia supports running stock-and-flow models with units as well as [ensemble simulations][ensemble()].
-#'
-#' In every R session, [use_julia()] needs to be run once (which is done automatically in [simulate()]), which can take around 30-60 seconds.
-#'
-#' @param stop If `TRUE`, stop active Julia session. Defaults to `FALSE`.
-#' @param force If `TRUE`, force Julia setup to execute again.
-#' @param nthreads If not `NULL`, set the number of threads for Julia to use. This will set the environment variable `JULIA_NUM_THREADS` and restart Julia if it is already running to apply the new thread setting. See [this page](https://docs.julialang.org/en/v1/manual/parallel-computing/#man-parallel-computing) for more details on threading in Julia.
-#'
-#' @returns Returns `NULL` invisibly, used for side effects
-#' @export
-#' @seealso [install_julia_env()]
-#' @concept julia
-#'
-#' @examplesIf is_julia_ready()
-#' # Start a Julia session and activate the Julia environment for sdbuildR
-#' use_julia()
-#'
-#' # Start Julia with 4 threads (if your Julia installation supports threading)
-#' use_julia(nthreads = 4)
-#' 
-#' # Stop Julia session
-#' use_julia(stop = TRUE)
-#' 
-use_julia <- function(
-  stop = FALSE,
-  force = FALSE, 
-  nthreads = NULL
-) {
-  if (stop) {
-    JuliaConnectoR::stopJulia()
-
-    cli::cli_inform("Julia session closed")
-    return(invisible())
-  }
-
-  # If use_julia() was already run, no need to do anything, unless force or nthreads is specified
-  if (!is.null(nthreads)) {
-    if (!is.numeric(nthreads) || length(nthreads) != 1 || nthreads < 1) {
-      cli::cli_abort("nthreads must be a single positive integer.")
-    }
-    nthreads <- as.integer(nthreads)
-
-    if (nthreads == 1){
-      nthreads <- NULL
-      .sdbuildR_env[["jl"]][["use_threads"]] <- FALSE
-    } else {
-
-      # If nthreads was set, need to restart Julia to apply new thread setting (regardless of whether environment was already initialized, since thread setting applies to Julia session, not environment)
-      JuliaConnectoR::stopJulia()
-      .sdbuildR_env[["jl"]][["use_threads"]] <- TRUE
-      Sys.setenv(JULIA_NUM_THREADS = nthreads)
-    }
-  }
-
-  status <- is_julia_init()
-  if (!force && is.null(nthreads) && status) {
-    return(invisible())
-  }
-
- 
-  if (!status){
-    run_init_julia_env()
-    status <- is_julia_init()
-  }
-
-  # Check threads were set correctly if nthreads was specified
-  if (!is.null(nthreads) && status) {
-    actual_threads <- as.integer(JuliaConnectoR::juliaEval("string(Threads.nthreads())"))
-    if (actual_threads != nthreads) {
-      cli::cli_warn(c(
-        "Failed to set JULIA_NUM_THREADS to {nthreads}.",
-        "i" = "Julia is running with {actual_threads} threads.",
-        ">" = "Check that your Julia installation supports threading and that JULIA_NUM_THREADS is set correctly in your environment variables."
-      ))
-    } else {
-      cli::cli_inform("Julia environment ready with {nthreads} threads.")
-    }
-  } else if (status) {
-    cli::cli_inform("Julia environment ready.")
-  } else {
-    cli::cli_abort("Julia environment setup failed.")
-  }
-
-  invisible()
-
 }
 
 
@@ -455,6 +487,18 @@ find_jl_pkg_version <- function(pkg_name) {
 }
 
 
+#' Normalize a file path for use in Julia strings
+#'
+#' Ensures forward slashes so Julia doesn't interpret backslashes as escapes.
+#'
+#' @param path File path
+#' @returns Normalized path with forward slashes
+#' @noRd
+jl_path <- function(path) {
+  gsub("\\\\", "/", normalizePath(path, winslash = "/", mustWork = FALSE))
+}
+
+
 #' Set up Julia environment for sdbuildR with init.jl
 #'
 #' @returns NULL
@@ -466,27 +510,26 @@ run_init_julia_env <- function() {
   is_julia_ok()
 
   # Julia environment needs to be have been instantiated with required packages
-  is_julia_env_installed()  
+  is_julia_env_installed()
 
   # Find set-up location for sdbuildR in Julia
   env_path <- system.file(package = "sdbuildR")
 
   # Activate the Julia environment for sdbuildR
-  julia_cmd <- sprintf("using Pkg; Pkg.activate(\"%s\")", env_path)
+  julia_cmd <- sprintf("using Pkg; Pkg.activate(\"%s\")", jl_path(env_path))
   JuliaConnectoR::juliaEval(julia_cmd)
 
-  # Install all dependencies from Project.toml
-  JuliaConnectoR::juliaEval("Pkg.instantiate()")
-  JuliaConnectoR::juliaEval("Pkg.resolve()")
+  # # Install all dependencies from Project.toml
+  # JuliaConnectoR::juliaEval("Pkg.instantiate()")
+  # JuliaConnectoR::juliaEval("Pkg.resolve()")
 
   # Source the init.jl script
   init_file <- system.file("init.jl", package = "sdbuildR")
-  julia_cmd <- sprintf("include(\"%s\")", init_file)
+  julia_cmd <- sprintf("include(\"%s\")", jl_path(init_file))
   JuliaConnectoR::juliaEval(julia_cmd)
 
   invisible(NULL)
 }
-
 
 
 #' Internal function to create initialization file for Julia

@@ -5,6 +5,7 @@ if (!exists(".sdbuildR_env")) {
   .sdbuildR_env <- new.env(parent = emptyenv())
 
   .sdbuildR_env[["jl"]] <- list(
-    use_threads = FALSE
+    use_threads = FALSE,
+    env_checked = FALSE
   )
 }

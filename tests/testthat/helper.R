@@ -67,8 +67,8 @@ expect_plotly <- function(x) {
 #' name conflict with R's FALSE constant.
 make_basic_sfm <- function() {
   sdbuildR() |>
-    build("S", type = "stock", eqn = "1") |>
-    build("Flow1", type = "flow", eqn = "S", to = "S")
+    update("S", type = "stock", eqn = "1") |>
+    update("Flow1", type = "flow", eqn = "S", to = "S")
 }
 
 
@@ -85,11 +85,40 @@ skip_if_no_internet <- function() {
 
 # Local helper: model with stock, flow, constant, language = Julia
 # Validation in ensemble() fails before Julia execution, so no Julia needed
-make_ensemble_sfm <- function() {
+make_ensemble_error_sfm <- function() {
   sdbuildR() |>
-    build("S", type = "stock", eqn = "1") |>
-    build("Flow1", type = "flow", eqn = "S", to = "S") |>
-    build("k", type = "constant", eqn = "0.5") |>
+    update("S", type = "stock", eqn = "1") |>
+    update("Flow1", type = "flow", eqn = "S", to = "S") |>
+    update("k", type = "constant", eqn = "0.5") |>
     sim_specs(language = "Julia")
 }
 
+
+# Helper: standard sfm for method tests
+make_jl_ensemble_sfm <- function() {
+  sdbuildR("Crielaard2022") |>
+    sim_specs(start = 0, stop = 10, dt = 0.1, save_at = 1, language = "Julia")
+}
+
+
+# Helper: small model for R ensemble tests (no Julia required)
+make_r_ensemble_sfm <- function() {
+  sdbuildR("SIR") |>
+    sim_specs(language = "R", start = 0, stop = 10, dt = 0.1, save_at = 1)
+}
+
+make_r_ensemble_random_sfm <- function() {
+  sdbuildR("SIR") |>
+    update("Susceptible", eqn = "runif(1, 900, 1100)") |>
+    sim_specs(language = "R", start = 0, stop = 10, dt = 0.1, save_at = 1)
+}
+
+
+# Helper: a small model with a stock, flow, and constant
+make_verifiable_sfm <- function() {
+  sdbuildR() |>
+    update("S", type = "stock", eqn = "100") |>
+    update("drain", type = "flow", eqn = "rate * S", from = "S") |>
+    update("rate", type = "constant", eqn = "0.1") |>
+    sim_specs(stop = 10, dt = 0.1, save_at = 1)
+}

@@ -4,7 +4,7 @@
 # Test stocks with no flows
 test_that("stocks with no flows work correctly", {
   sfm <- sdbuildR() |>
-    build(name = "IsolatedStock", type = "stock", eqn = "50")
+    update(name = "IsolatedStock", type = "stock", eqn = "50")
 
   sfm_r <- sim_specs(sfm, language = "R", stop = 5)
   sfm_r <- prep_stock_change(sfm_r)
@@ -26,7 +26,7 @@ test_that("stocks with no flows work correctly", {
 # Test empty list columns
 test_that("empty list columns handled correctly", {
   sfm <- sdbuildR() |>
-    build(name = "S", type = "stock", eqn = "100")
+    update(name = "S", type = "stock", eqn = "100")
 
   sfm <- prep_stock_change(sfm)
 
@@ -45,12 +45,12 @@ test_that("empty list columns handled correctly", {
 # Test models with circular dependencies
 test_that("models with circular dependencies work in both languages", {
   sfm <- sdbuildR() |>
-    build(name = "A", type = "stock", eqn = "10") |>
-    build(name = "B", type = "stock", eqn = "20") |>
-    build(name = "rate_a", type = "aux", eqn = "B / 10") |>
-    build(name = "rate_b", type = "aux", eqn = "A / 10") |>
-    build(name = "flow_a", type = "flow", eqn = "rate_a", to = "A") |>
-    build(name = "flow_b", type = "flow", eqn = "rate_b", to = "B") |>
+    update(name = "A", type = "stock", eqn = "10") |>
+    update(name = "B", type = "stock", eqn = "20") |>
+    update(name = "rate_a", type = "aux", eqn = "B / 10") |>
+    update(name = "rate_b", type = "aux", eqn = "A / 10") |>
+    update(name = "flow_a", type = "flow", eqn = "rate_a", to = "A") |>
+    update(name = "flow_b", type = "flow", eqn = "rate_b", to = "B") |>
     sim_specs(stop = 5)
 
   # R simulation
@@ -77,8 +77,8 @@ test_that("models with circular dependencies work in both languages", {
 # Test stock with only inflows (no outflows)
 test_that("stock with only inflows works correctly", {
   sfm <- sdbuildR() |>
-    build(name = "Accumulator", type = "stock", eqn = "0") |>
-    build(name = "constant_in", type = "flow", eqn = "5", to = "Accumulator") |>
+    update(name = "Accumulator", type = "stock", eqn = "0") |>
+    update(name = "constant_in", type = "flow", eqn = "5", to = "Accumulator") |>
     sim_specs(stop = 10, dt = 0.1)
 
   sfm <- prep_stock_change(sfm)
@@ -107,8 +107,8 @@ test_that("stock with only inflows works correctly", {
 # Test stock with only outflows (no inflows)
 test_that("stock with only outflows works correctly", {
   sfm <- sdbuildR() |>
-    build(name = "Draining", type = "stock", eqn = "100") |>
-    build(name = "constant_out", type = "flow", eqn = "2", from = "Draining") |>
+    update(name = "Draining", type = "stock", eqn = "100") |>
+    update(name = "constant_out", type = "flow", eqn = "2", from = "Draining") |>
     sim_specs(stop = 10, dt = 0.1)
 
   sfm <- prep_stock_change(sfm)
@@ -137,12 +137,12 @@ test_that("stock with only outflows works correctly", {
 # Test model with many flows to single stock
 test_that("stock with many flows handles list columns correctly", {
   sfm <- sdbuildR() |>
-    build(name = "Hub", type = "stock", eqn = "100") |>
-    build(name = "in1", type = "flow", eqn = "1", to = "Hub") |>
-    build(name = "in2", type = "flow", eqn = "2", to = "Hub") |>
-    build(name = "in3", type = "flow", eqn = "3", to = "Hub") |>
-    build(name = "out1", type = "flow", eqn = "0.5", from = "Hub") |>
-    build(name = "out2", type = "flow", eqn = "1.5", from = "Hub")
+    update(name = "Hub", type = "stock", eqn = "100") |>
+    update(name = "in1", type = "flow", eqn = "1", to = "Hub") |>
+    update(name = "in2", type = "flow", eqn = "2", to = "Hub") |>
+    update(name = "in3", type = "flow", eqn = "3", to = "Hub") |>
+    update(name = "out1", type = "flow", eqn = "0.5", from = "Hub") |>
+    update(name = "out2", type = "flow", eqn = "1.5", from = "Hub")
 
   sfm <- prep_stock_change(sfm)
 
@@ -164,9 +164,9 @@ test_that("stock with many flows handles list columns correctly", {
 # Test flow between two stocks (both from and to defined)
 test_that("flow between two stocks works correctly", {
   sfm <- sdbuildR() |>
-    build(name = "Source", type = "stock", eqn = "100") |>
-    build(name = "Sink", type = "stock", eqn = "0") |>
-    build(name = "transfer", type = "flow", eqn = "5", from = "Source", to = "Sink") |>
+    update(name = "Source", type = "stock", eqn = "100") |>
+    update(name = "Sink", type = "stock", eqn = "0") |>
+    update(name = "transfer", type = "flow", eqn = "5", from = "Source", to = "Sink") |>
     sim_specs(stop = 10)
 
   sfm <- prep_stock_change(sfm)
@@ -196,8 +196,8 @@ test_that("flow between two stocks works correctly", {
 # Test model with zero initial stock value
 test_that("stock with zero initial value works correctly", {
   sfm <- sdbuildR() |>
-    build(name = "ZeroStart", type = "stock", eqn = "0") |>
-    build(name = "inflow", type = "flow", eqn = "1", to = "ZeroStart") |>
+    update(name = "ZeroStart", type = "stock", eqn = "0") |>
+    update(name = "inflow", type = "flow", eqn = "1", to = "ZeroStart") |>
     sim_specs(stop = 5)
 
   sim <- simulate(sfm)
@@ -212,8 +212,8 @@ test_that("stock with zero initial value works correctly", {
 # Test model with very large initial stock value
 test_that("stock with large initial value works correctly", {
   sfm <- sdbuildR() |>
-    build(name = "LargeStock", type = "stock", eqn = "1e10") |>
-    build(name = "tiny_drain", type = "flow", eqn = "1", from = "LargeStock") |>
+    update(name = "LargeStock", type = "stock", eqn = "1e10") |>
+    update(name = "tiny_drain", type = "flow", eqn = "1", from = "LargeStock") |>
     sim_specs(stop = 5)
 
   sim <- expect_no_error(simulate(sfm))
@@ -228,8 +228,8 @@ test_that("stock with large initial value works correctly", {
 # Test stock with negative initial value
 test_that("stock with negative initial value works correctly", {
   sfm <- sdbuildR() |>
-    build(name = "Debt", type = "stock", eqn = "-50") |>
-    build(name = "payment", type = "flow", eqn = "5", to = "Debt") |>
+    update(name = "Debt", type = "stock", eqn = "-50") |>
+    update(name = "payment", type = "flow", eqn = "5", to = "Debt") |>
     sim_specs(stop = 5)
 
   sim <- simulate(sfm)
@@ -244,9 +244,9 @@ test_that("stock with negative initial value works correctly", {
 # Test model with auxiliary depending on stock
 test_that("auxiliary depending on stock works with prep functions", {
   sfm <- sdbuildR() |>
-    build(name = "S", type = "stock", eqn = "100") |>
-    build(name = "double_s", type = "aux", eqn = "2 * S") |>
-    build(name = "drain", type = "flow", eqn = "double_s * 0.01", from = "S") |>
+    update(name = "S", type = "stock", eqn = "100") |>
+    update(name = "double_s", type = "aux", eqn = "2 * S") |>
+    update(name = "drain", type = "flow", eqn = "double_s * 0.01", from = "S") |>
     sim_specs(stop = 5)
 
   sfm_prep <- prep_stock_change(sfm)
@@ -264,14 +264,14 @@ test_that("auxiliary depending on stock works with prep functions", {
 # Test complex SIR-like model
 test_that("complex model with multiple stocks and flows works", {
   sfm <- sdbuildR() |>
-    build(name = "S", type = "stock", eqn = "900") |>
-    build(name = "I", type = "stock", eqn = "100") |>
-    build(name = "R", type = "stock", eqn = "0") |>
-    build(name = "beta", type = "aux", eqn = "0.5") |>
-    build(name = "gamma", type = "aux", eqn = "0.1") |>
-    build(name = "N", type = "aux", eqn = "S + I + R") |>
-    build(name = "infection", type = "flow", eqn = "beta * S * I / N", from = "S", to = "I") |>
-    build(name = "recovery", type = "flow", eqn = "gamma * I", from = "I", to = "R") |>
+    update(name = "S", type = "stock", eqn = "900") |>
+    update(name = "I", type = "stock", eqn = "100") |>
+    update(name = "R", type = "stock", eqn = "0") |>
+    update(name = "beta", type = "aux", eqn = "0.5") |>
+    update(name = "gamma", type = "aux", eqn = "0.1") |>
+    update(name = "N", type = "aux", eqn = "S + I + R") |>
+    update(name = "infection", type = "flow", eqn = "beta * S * I / N", from = "S", to = "I") |>
+    update(name = "recovery", type = "flow", eqn = "gamma * I", from = "I", to = "R") |>
     sim_specs(stop = 50)
 
   # Prep all stocks

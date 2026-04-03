@@ -1,0 +1,130 @@
+---
+title: "Unit Testing Stock-and-Flow Models"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Unit Testing Stock-and-Flow Models}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  include = TRUE,
+  eval = TRUE,
+  comment = "#>",
+  fig.width = 12, # 1
+  fig.height = 4, # 3
+  fig.align = "center", # Center all figures
+  out.width = "80%" # Display figures at 80% of container width
+)
+```
+
+```{r, echo=TRUE, message=FALSE}
+library(sdbuildR)
+```
+
+Models are only as good as their assumptions and equations. Unit tests are an essential tool for verifying that your model behaves as expected under various conditions. As stock-and-flow models can easily become complex, unexpected behaviours can arise as the model is developed. In this vignette, we will demonstrate how to use `sdbuildR` to create and run unit tests for a simple SIR (Susceptible-Infected-Recovered) model.
+
+## Load the model
+
+We start by loading the SIR model and plotting its structure.
+
+```{r}
+sfm <- sdbuildR("SIR")
+plot(sfm)
+```
+
+A quick simulation shows the model's behaviour.
+
+```{r}
+sim <- simulate(sfm)
+plot(sim)
+```
+
+```{r}
+diagnose(sfm)
+```
+
+`diagnose()` is a useful checkpoint before testing because it catches common
+model definition issues early.
+
+## Add simple unit tests
+
+`unit_test()` adds one test at a time. A test expression should evaluate to
+`TRUE` when the model behaves as expected.
+
+Below we add three basic checks:
+
+1. Susceptible population never becomes negative.
+2. Recovered population should not decrease over time.
+3. Total population remains constant in this closed SIR model.
+
+```{r}
+sfm <- sfm |>
+  unit_test(
+    expr = all(Susceptible >= 0),
+    label = "Susceptible is non-negative"
+  ) |>
+  unit_test(
+    expr = all(diff(Recovered) >= 0),
+    label = "Recovered does not decrease"
+  ) |>
+  unit_test(
+    expr = all(abs(Susceptible + Infected + Recovered - Total_Population) < 1e-8),
+    label = "Population is conserved"
+  )
+```
+
+You can inspect all defined tests with `unit_tests()`.
+
+```{r}
+unit_tests(sfm)
+```
+
+## Verify model behavior
+
+Run all active tests with `verify()`.
+
+```{r}
+verify(sfm)
+```
+
+If a test fails, check whether the equation is wrong, the test is too strict,
+or your model assumptions need to be revised. 
+
+## Test behaviour under a condition
+
+You can also test behaviour under a specific parameter setting using
+`conditions`. Here, we set `Beta = 0`, so no new infections should occur.
+Under this condition, the infected stock should not increase.
+
+```{r}
+sfm <- sfm |>
+  unit_test(
+    expr = all(diff(Infected) <= 0),
+    label = "Infected does not increase when Beta is zero",
+    conditions = list(Beta = 0)
+  )
+
+verify(sfm)
+```
+
+
+**explain == is usually fragile
+
+## Update or remove tests
+
+During model development, you may want to remove outdated tests. Use
+`discard_unit_test()` by label or by number.
+
+```{r}
+sfm <- discard_unit_test(sfm, nr = 1)
+unit_tests(sfm)
+```
+
+Unit tests are most useful when kept small, readable, and tied to a specific
+model expectation.

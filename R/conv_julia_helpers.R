@@ -1,4 +1,3 @@
-
 #' Get indices of digits in string
 #'
 #' @inheritParams convert_equations_julia
@@ -232,4 +231,3 @@ vector_to_square_brackets_julia <- function(eqn, var_names) {
 
   return(eqn)
 }
-

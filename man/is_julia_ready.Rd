@@ -13,7 +13,13 @@ Logical value. \code{TRUE} if Julia is ready to be used with sdbuildR, \code{FAL
 Check if Julia can be started and if the Julia environment for sdbuildR has been instantiated.
 }
 \examples{
+\dontshow{if (Sys.getenv("NOT_CRAN") == "true") withAutoprint(\{ # examplesIf}
+# Check if Julia is ready; this automatically opens a Julia session if possible
 is_julia_ready()
+
+# Close Julia session
+use_julia(stop = TRUE)
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 \code{\link[=install_julia_env]{install_julia_env()}}, \code{\link[=use_julia]{use_julia()}}

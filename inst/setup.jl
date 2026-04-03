@@ -1,6 +1,6 @@
 # setup.jl - One-time setup script for sdbuildR Julia environment
 
-println("Setting up Julia environment for sdbuildR...")
+println("Setting up Julia environment for sdbuildR...\n\n")
 
 using Pkg
 
@@ -8,12 +8,13 @@ using Pkg
 # This should be the sdbuildR package installation directory
 env_path = @__DIR__
 
-println("Activating environment at: ", env_path)
+# println("Activating environment at: ", env_path, "\n")
 Pkg.activate(env_path)
 
 # Install SystemDynamicsBuildR from GitHub
 println("\nInstalling SystemDynamicsBuildR.jl from GitHub...")
-Pkg.add(url="https://github.com/KCEvers/SystemDynamicsBuildR.jl", rev=jl_pkg_version)
+# Pkg.add(url="https://github.com/KCEvers/SystemDynamicsBuildR.jl", rev=jl_pkg_version)
+Pkg.add(url="https://github.com/KCEvers/SystemDynamicsBuildR.jl", rev="dev")
 
 # Install all other dependencies from Project.toml
 println("\nInstalling dependencies from Project.toml...")

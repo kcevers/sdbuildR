@@ -1,19 +1,21 @@
 #' Simulate stock-and-flow model in R
 #'
-#' @inheritParams simulate
+#' @inheritParams simulate.sdbuildR
 #'
 #' @returns List with variables created in the simulation script
 #' @noRd
 #'
-simulate_r <- function(sfm,
+simulate_r <- function(object,
                        verbose,
-                       only_stocks) {
-  # Compile script without plot - returns list with script and modified sfm
-  result <- compile(sfm,
-    only_stocks = only_stocks
+                       only_stocks,
+                       vars = NULL) {
+  # Compile script without plot - returns list with script and modified object
+  result <- compile(object,
+    only_stocks = only_stocks,
+    vars = vars
   )
   script <- result$script
-  sfm <- result$sfm # Get updated sfm with cache populated
+  object <- result$object # Get updated object with cache populated
 
   # Evaluate script
   sim <- tryCatch(
@@ -28,16 +30,20 @@ simulate_r <- function(sfm,
       end_t <- Sys.time()
 
       if (verbose) {
-        message(paste0("Simulation took ", round(end_t - start_t, 4), " seconds"))
+        elapsed <- round(as.numeric(end_t) - as.numeric(start_t), 4)
+        cli::cli_inform(c(
+          "v" = "Simulation completed in {.val {elapsed}} seconds."
+        ))
       }
 
       df <- envir[[P[["sim_df_name"]]]]
+      df <- filter_sim_df_vars(df, vars)
       init <- unlist(envir[[P[["initial_value_name"]]]])
-      constants <- unlist(envir[[P[["parameter_name"]]]])
+      constants <- unlist(Filter(Negate(is.function), envir[[P[["parameter_name"]]]]))
 
       new_simulate_sdbuildR(
         success = TRUE,
-        sfm = sfm, # Return sfm with cache
+        object = object, # Return object with cache
         df = df,
         init = init,
         constants = constants,
@@ -52,7 +58,7 @@ simulate_r <- function(sfm,
         success = FALSE,
         error_message = e[["message"]],
         script = script,
-        sfm = sfm
+        object = object
       )
     }
   )
@@ -63,15 +69,15 @@ simulate_r <- function(sfm,
 
 #' Compile script for enabling destructuring assignment in R
 #'
-#' @inheritParams build
+#' @inheritParams update.sdbuildR
 #' @inheritParams compile_ode
 #'
 #' @returns List with necessary scripts
 #' @noRd
 #'
-compile_destructuring_assign <- function(sfm, static) {
+compile_destructuring_assign <- function(object, static) {
   # Add package for destructuring assignment in case it was used
-  eqns <- c(static, sfm[["variables"]][["eqn"]])
+  eqns <- c(static, object[["variables"]][["eqn"]])
 
   if (any(stats::na.omit(stringr::str_detect(eqns, stringr::fixed("%<-%"))))) {
     script <- "\n# Add package for destructuring assignment\nif (!require('zeallot')) install.packages('zeallot'); library(zeallot)\n"

@@ -3,14 +3,15 @@
 #' Simulate a stock-and-flow model with simulation specifications defined by [sim_specs()]. If `sim_specs(language = "julia")`, the Julia environment will first be set up with [use_julia()]. If any problems are detected by [diagnose()], the model cannot be simulated.
 #'
 #' @inheritParams insightmaker_to_sfm
-#' @inheritParams build
-#' @param verbose If TRUE, print duration of simulation. Defaults to FALSE.
-#' @param only_stocks If TRUE, only return stocks in output, discarding flows and auxiliaries. If FALSE, flows and auxiliaries are saved, which slows down the simulation. Defaults to FALSE.
-#' @param ... Optional arguments passed to [sim_specs()]; these can be used to override the simulation specifications set in the model object. 
+#' @inheritParams update.sdbuildR
+#' @inheritParams sim_specs
+#' @param nsim Number of simulations to run (currently unused; see [ensemble()] for running multiple simulations).
+#' @param verbose If `TRUE`, print duration of simulation. Defaults to `FALSE`.
+#' @param ... Optional arguments passed to [sim_specs()]; these can be used to override the simulation specifications set in the model object.
 #'
-#' @returns Object of class [`simulate_sdbuildR`][simulate()], a list containing:
+#' @returns Object of class [`simulate_sdbuildR`][simulate.sdbuildR()], a list containing:
 #' \describe{
-#'   \item{sfm}{Stock-and-flow model object of class [`sdbuildR`][sdbuildR]}
+#'   \item{object}{Stock-and-flow model object of class [`sdbuildR`][sdbuildR]}
 #'   \item{df}{Data frame: simulation results (time, variable, value)}
 #'   \item{init}{Named vector: initial stock values}
 #'   \item{constants}{Named vector: constant parameters}
@@ -24,8 +25,10 @@
 #'
 #'
 #' @export
+#' @importFrom stats simulate
+#' @method simulate sdbuildR
 #' @concept simulate
-#' @seealso [build()], [sdbuildR()], [diagnose()], [sim_specs()], [use_julia()]
+#' @seealso [update()], [sdbuildR()], [diagnose()], [sim_specs()], [use_julia()]
 #'
 #' @examples
 #' sfm <- sdbuildR("SIR")
@@ -33,10 +36,10 @@
 #' plot(sim)
 #'
 #' # Obtain all model variables
-#' sim <- simulate(sfm, only_stocks = FALSE)
+#' sim <- simulate(sim_specs(sfm, only_stocks = FALSE))
 #' plot(sim, add_constants = TRUE)
 #'
-#' @examplesIf is_julia_ready()
+#' @examplesIf Sys.getenv("NOT_CRAN") == "true" && is_julia_ready()
 #' # Use Julia for models with units
 #' sfm <- sim_specs(sdbuildR("coffee_cup"), language = "Julia")
 #' sim <- simulate(sfm)
@@ -45,20 +48,22 @@
 #' # Close Julia session
 #' use_julia(stop = TRUE)
 #'
-simulate <- function(sfm,
-                     only_stocks = TRUE,
-                     verbose = FALSE,
-                     ...) {
-  check_sdbuildR(sfm)
+simulate.sdbuildR <- function(
+  object,
+  nsim = 1, seed = NULL,
+  verbose = FALSE,
+  ...
+) {
+  check_sdbuildR(object)
 
   # First assess whether the model is valid
-  if (is.null(sfm[["assemble"]][["diagnose"]])) {
-    sfm[["assemble"]][["diagnose"]] <- diagnose(sfm)
+  if (is.null(object[["assemble"]][["diagnose"]])) {
+    object[["assemble"]][["diagnose"]] <- diagnose(object)
   }
-  debug_result <- sfm[["assemble"]][["diagnose"]]
+  debug_result <- object[["assemble"]][["diagnose"]]
   errors <- Filter(function(c) c$problem == "error", debug_result)
   if (length(errors) > 0) {
-    n      <- length(errors)
+    n <- length(errors)
     labels <- vapply(names(errors), .problem_label, character(1))
     names(labels) <- rep("x", n)
     cli::cli_abort(c(
@@ -69,21 +74,35 @@ simulate <- function(sfm,
 
   # Override sim_specs with any arguments passed via ...
   varargs <- list(...)
+  # Add seed if seed was passed
+  if (!missing(seed)) {
+    varargs <- c(list(seed = seed), varargs)
+  }
   if (length(varargs) > 0) {
-    sfm <- do.call(sim_specs, c(list(sfm), varargs))
+    object <- do.call(sim_specs, c(list(object), varargs))
   }
 
-  if (tolower(sfm[["sim_specs"]][["language"]]) == "julia") {
-    return(simulate_julia(sfm,
+  only_stocks <- object[["sim_specs"]][["only_stocks"]]
+  vars <- object[["sim_specs"]][["vars"]]
+
+  if (!is.null(vars)) {
+    vars <- validate_sim_vars(object, vars)
+    stock_names <- get_variables_by_type(object, "stock")[["name"]]
+    only_stocks <- all(vars %in% stock_names)
+  }
+
+  if (tolower(object[["sim_specs"]][["language"]]) == "julia") {
+    return(simulate_julia(object,
       only_stocks = only_stocks,
+      vars = vars,
       verbose = verbose
     ))
-  } else if (tolower(sfm[["sim_specs"]][["language"]]) == "r") {
+  } else if (tolower(object[["sim_specs"]][["language"]]) == "r") {
     # Check model for unit strings
-    if (is.null(sfm[["assemble"]][["unit_strings"]])) {
-      sfm[["assemble"]][["unit_strings"]] <- find_unit_strings(sfm)
+    if (is.null(object[["assemble"]][["unit_strings"]])) {
+      object[["assemble"]][["unit_strings"]] <- find_unit_strings(object)
     }
-    eqn_units <- sfm[["assemble"]][["unit_strings"]]
+    eqn_units <- object[["assemble"]][["unit_strings"]]
 
     # Stop if equations contain unit strings
     if (length(eqn_units) > 0) {
@@ -99,15 +118,16 @@ simulate <- function(sfm,
       return(new_simulate_sdbuildR(
         success = FALSE,
         error_message = txt,
-        sfm = sfm
+        object = object
       ))
     }
 
-    return(simulate_r(sfm,
+    return(simulate_r(object,
       only_stocks = only_stocks,
+      vars = vars,
       verbose = verbose
     ))
-  } 
+  }
   # else {
   #   txt <- "Simulation language not supported.\nPlease run either sim_specs(sfm, language = 'Julia') (recommended) or sim_specs(sfm, language = 'R') (no unit or ensemble support)."
   #   cli::cli_warn(c(
@@ -117,30 +137,27 @@ simulate <- function(sfm,
   #   return(new_simulate_sdbuildR(
   #     success = FALSE,
   #     error_message = txt,
-  #     sfm = sfm
+  #     object = object
   #   ))
   # }
 }
 
 
-#' Create new object of class [`simulate_sdbuildR`][simulate()]
-#'
-#' @returns A simulation of a stock-and-flow model of class [`simulate_sdbuildR`][simulate()]
+#' Create new object of class [`simulate_sdbuildR`][simulate.sdbuildR()]
 #' @noRd
-#'
 new_simulate_sdbuildR <- function(success = FALSE,
-                             error_message = NULL,
-                             sfm = NULL,
-                             df = NULL,
-                             init = NULL,
-                             constants = NULL,
-                             script = NULL,
-                             duration = NULL,
-                             ...) {
+                                  error_message = NULL,
+                                  object = NULL,
+                                  df = NULL,
+                                  init = NULL,
+                                  constants = NULL,
+                                  script = NULL,
+                                  duration = NULL,
+                                  ...) {
   obj <- list(
     success = success,
     error_message = error_message,
-    sfm = sfm,
+    object = object,
     df = df,
     init = init,
     constants = constants,
@@ -153,9 +170,9 @@ new_simulate_sdbuildR <- function(success = FALSE,
 }
 
 
-#' Check class [`simulate_sdbuildR`][simulate()]
+#' Check class [`simulate_sdbuildR`][simulate.sdbuildR()]
 #'
-#' @param x A simulation of a stock-and-flow model of class [`simulate_sdbuildR`][simulate()]
+#' @param x A simulation of a stock-and-flow model of class [`simulate_sdbuildR`][simulate.sdbuildR()]
 #'
 #' @returns Invisible x if valid, otherwise an error is thrown
 #' @noRd
@@ -214,21 +231,19 @@ check_simulate_sdbuildR <- function(x) {
 }
 
 
-
-
 # Internal helper: compute model properties including nonlinearity score
-model_properties <- function(sfm) {
-  vars <- sfm[["variables"]]
+model_properties <- function(object) {
+  vars <- object[["variables"]]
 
   by_type <- function(t) vars[vars[["type"]] == t, , drop = FALSE]
-  stocks    <- by_type("stock")
-  flows     <- by_type("flow")
-  auxs      <- by_type("aux")
+  stocks <- by_type("stock")
+  flows <- by_type("flow")
+  auxs <- by_type("aux")
   constants <- by_type("constant")
-  lookups   <- by_type("lookup")
+  lookups <- by_type("lookup")
 
   dynamic_names <- c(stocks[["name"]], flows[["name"]], auxs[["name"]])
-  lookup_names  <- lookups[["name"]]
+  lookup_names <- lookups[["name"]]
 
   # Variables whose equations we scan (everything except lookups and funcs)
   eqn_vars <- vars[!vars[["type"]] %in% c("lookup", "func"), , drop = FALSE]
@@ -255,7 +270,7 @@ model_properties <- function(sfm) {
   if (nrow(eqn_vars) > 0 && length(lookup_names) > 0) {
     for (i in seq_len(nrow(eqn_vars))) {
       eqn <- eqn_vars[i, "eqn"]
-      nm  <- eqn_vars[i, "name"]
+      nm <- eqn_vars[i, "name"]
       if (is.na(eqn) || eqn == "") next
       if (any(sapply(lookup_names, function(lk) grepl(lk, eqn, fixed = TRUE)))) {
         n_lookup_refs <- n_lookup_refs + 1L
@@ -267,7 +282,7 @@ model_properties <- function(sfm) {
   if (nrow(eqn_vars) > 0) {
     for (i in seq_len(nrow(eqn_vars))) {
       eqn <- eqn_vars[i, "eqn"]
-      nm  <- eqn_vars[i, "name"]
+      nm <- eqn_vars[i, "name"]
       if (is.na(eqn) || eqn == "") next
 
       if (grepl(nonlinear_fn_pattern, eqn, perl = TRUE)) {
@@ -286,11 +301,11 @@ model_properties <- function(sfm) {
   }
 
   list(
-    n_stocks    = nrow(stocks),
-    n_flows     = nrow(flows),
-    n_aux       = nrow(auxs),
+    n_stocks = nrow(stocks),
+    n_flows = nrow(flows),
+    n_aux = nrow(auxs),
     n_constants = nrow(constants),
-    n_lookups   = nrow(lookups),
+    n_lookups = nrow(lookups),
     nonlinearity = list(
       score                    = n_lookup_refs + n_nonlinear_fns + n_multiplicative_dynamic,
       n_lookup_refs            = n_lookup_refs,
@@ -321,9 +336,9 @@ model_properties <- function(sfm) {
 #'     \item{`sim_specs_diff`}{Simulation settings that differ.}
 #'     \item{`properties`}{Per-model counts and nonlinearity scores.}
 #'   }
-#' @seealso [simulate()], [summary.sdbuildR()]
+#' @seealso [`simulate()`][simulate.sdbuildR()], [`summary()`][summary.sdbuildR()]
 #' @concept build
-#' @export 
+#' @export
 #' @examples
 #' sfm1 <- sdbuildR("SIR")
 #' sfm2 <- stock(sfm1, "Susceptible", eqn = 0.5)
@@ -344,7 +359,7 @@ compare_models <- function(sfm1, sfm2) {
 
   only_in_2 <- setdiff(names2, names1)
   only_in_1 <- setdiff(names1, names2)
-  in_both   <- intersect(names1, names2)
+  in_both <- intersect(names1, names2)
 
   # Variables added / removed
   make_var_df <- function(vars, nms) {
@@ -352,7 +367,7 @@ compare_models <- function(sfm1, sfm2) {
     rownames(rows) <- NULL
     rows
   }
-  added   <- make_var_df(v2, only_in_2)
+  added <- make_var_df(v2, only_in_2)
   removed <- make_var_df(v1, only_in_1)
 
   # Changes among shared variables
@@ -363,7 +378,7 @@ compare_models <- function(sfm1, sfm2) {
   v2s <- v2s[order(match(v2s[["name"]], in_both)), , drop = FALSE]
 
   type_changed <- data.frame(
-    name   = in_both[v1s[["type"]] != v2s[["type"]]],
+    name = in_both[v1s[["type"]] != v2s[["type"]]],
     type_1 = v1s[["type"]][v1s[["type"]] != v2s[["type"]]],
     type_2 = v2s[["type"]][v1s[["type"]] != v2s[["type"]]],
     stringsAsFactors = FALSE
@@ -373,7 +388,7 @@ compare_models <- function(sfm1, sfm2) {
   eqn2 <- ifelse(is.na(v2s[["eqn"]]), "", v2s[["eqn"]])
   eqn_diff_idx <- eqn1 != eqn2
   eqn_changed <- data.frame(
-    name  = in_both[eqn_diff_idx],
+    name = in_both[eqn_diff_idx],
     eqn_1 = eqn1[eqn_diff_idx],
     eqn_2 = eqn2[eqn_diff_idx],
     stringsAsFactors = FALSE
@@ -383,15 +398,17 @@ compare_models <- function(sfm1, sfm2) {
   u2 <- ifelse(is.na(v2s[["units"]]), "", v2s[["units"]])
   u_diff_idx <- u1 != u2
   units_changed <- data.frame(
-    name    = in_both[u_diff_idx],
+    name = in_both[u_diff_idx],
     units_1 = u1[u_diff_idx],
     units_2 = u2[u_diff_idx],
     stringsAsFactors = FALSE
   )
 
   # Sim specs diff
-  spec_fields <- c("start", "stop", "dt", "save_at", "save_type", "save_n",
-                   "time_units", "method", "seed", "language")
+  spec_fields <- c(
+    "start", "stop", "dt", "save_at", "save_type", "save_n",
+    "time_units", "method", "seed", "language", "only_stocks"
+  )
   s1 <- sfm1[["sim_specs"]]
   s2 <- sfm2[["sim_specs"]]
   sim_specs_diff <- Filter(
@@ -402,9 +419,13 @@ compare_models <- function(sfm1, sfm2) {
         val2 <- s2[[f]]
         # Treat NULL and NA as equal to themselves
         both_null <- is.null(val1) && is.null(val2)
-        if (both_null) return(NULL)
+        if (both_null) {
+          return(NULL)
+        }
         vals_equal <- isTRUE(all.equal(val1, val2))
-        if (vals_equal) return(NULL)
+        if (vals_equal) {
+          return(NULL)
+        }
         list(sfm1 = val1, sfm2 = val2)
       }),
       spec_fields
@@ -412,14 +433,14 @@ compare_models <- function(sfm1, sfm2) {
   )
 
   result <- list(
-    labels        = c(label1, label2),
-    added         = added,
-    removed       = removed,
-    type_changed  = type_changed,
-    eqn_changed   = eqn_changed,
+    labels = c(label1, label2),
+    added = added,
+    removed = removed,
+    type_changed = type_changed,
+    eqn_changed = eqn_changed,
     units_changed = units_changed,
     sim_specs_diff = sim_specs_diff,
-    properties    = list(
+    properties = list(
       sfm1 = model_properties(sfm1),
       sfm2 = model_properties(sfm2)
     )
@@ -449,11 +470,11 @@ print.compare_sdbuildR <- function(x, ...) {
   # ── Structural Differences ──────────────────────────────────────
   cli::cli_h2("Structural Differences")
 
-  n_added   <- nrow(x[["added"]])
+  n_added <- nrow(x[["added"]])
   n_removed <- nrow(x[["removed"]])
-  n_type    <- nrow(x[["type_changed"]])
-  n_eqn     <- nrow(x[["eqn_changed"]])
-  n_units   <- nrow(x[["units_changed"]])
+  n_type <- nrow(x[["type_changed"]])
+  n_eqn <- nrow(x[["eqn_changed"]])
+  n_units <- nrow(x[["units_changed"]])
   total_struct <- n_added + n_removed + n_type + n_eqn + n_units
 
   if (total_struct == 0L) {
@@ -515,24 +536,34 @@ print.compare_sdbuildR <- function(x, ...) {
   }
 
   cli::cli_text(
-    paste0("  ", formatC("", width = 24, flag = "-"),
-           formatC(l1, width = 8), formatC(l2, width = 8))
+    paste0(
+      "  ", formatC("", width = 24, flag = "-"),
+      formatC(l1, width = 8), formatC(l2, width = 8)
+    )
   )
   cli::cli_text(paste0("  ", strrep("-", 40)))
-  row("Stocks",         p1[["n_stocks"]],    p2[["n_stocks"]])
-  row("Flows",          p1[["n_flows"]],     p2[["n_flows"]])
-  row("Auxiliaries",    p1[["n_aux"]],       p2[["n_aux"]])
-  row("Constants",      p1[["n_constants"]], p2[["n_constants"]])
-  row("Lookups",        p1[["n_lookups"]],   p2[["n_lookups"]])
+  row("Stocks", p1[["n_stocks"]], p2[["n_stocks"]])
+  row("Flows", p1[["n_flows"]], p2[["n_flows"]])
+  row("Auxiliaries", p1[["n_aux"]], p2[["n_aux"]])
+  row("Constants", p1[["n_constants"]], p2[["n_constants"]])
+  row("Lookups", p1[["n_lookups"]], p2[["n_lookups"]])
   cli::cli_text(paste0("  ", strrep("-", 40)))
-  row("Nonlinearity score",   p1[["nonlinearity"]][["score"]],
-                              p2[["nonlinearity"]][["score"]])
-  row("  Lookup refs",        p1[["nonlinearity"]][["n_lookup_refs"]],
-                              p2[["nonlinearity"]][["n_lookup_refs"]])
-  row("  Nonlinear fns",      p1[["nonlinearity"]][["n_nonlinear_fns"]],
-                              p2[["nonlinearity"]][["n_nonlinear_fns"]])
-  row("  Multiplicative",     p1[["nonlinearity"]][["n_multiplicative_dynamic"]],
-                              p2[["nonlinearity"]][["n_multiplicative_dynamic"]])
+  row(
+    "Nonlinearity score", p1[["nonlinearity"]][["score"]],
+    p2[["nonlinearity"]][["score"]]
+  )
+  row(
+    "  Lookup refs", p1[["nonlinearity"]][["n_lookup_refs"]],
+    p2[["nonlinearity"]][["n_lookup_refs"]]
+  )
+  row(
+    "  Nonlinear fns", p1[["nonlinearity"]][["n_nonlinear_fns"]],
+    p2[["nonlinearity"]][["n_nonlinear_fns"]]
+  )
+  row(
+    "  Multiplicative", p1[["nonlinearity"]][["n_multiplicative_dynamic"]],
+    p2[["nonlinearity"]][["n_multiplicative_dynamic"]]
+  )
 
   invisible(x)
 }
@@ -569,8 +600,8 @@ compare_sim <- function(sim1, sim2, tolerance = .00001) {
       nrow = nrow(sim[[P[["sim_df_name"]]]]),
       ncol = ncol(sim[[P[["sim_df_name"]]]]),
       n_pars = length(sim[[P[["parameter_name"]]]]),
-      language = sim[["sfm"]][["sim_specs"]][["language"]],
-      method = sim[["sfm"]][["sim_specs"]][["method"]]
+      language = sim[["object"]][["sim_specs"]][["language"]],
+      method = sim[["object"]][["sim_specs"]][["method"]]
     )
   }
 
@@ -623,7 +654,7 @@ compare_sim <- function(sim1, sim2, tolerance = .00001) {
         )
       }
     )
-  ) 
+  )
 
   list(
     equal = all(as.logical(as.numeric(df[["equal"]]))),
@@ -645,9 +676,6 @@ compare_sim <- function(sim1, sim2, tolerance = .00001) {
 }
 
 
-
-
-
 #' Create data frame of simulation results
 #'
 #' Convert simulation results to a data.frame.
@@ -662,7 +690,7 @@ compare_sim <- function(sim1, sim2, tolerance = .00001) {
 #'   For \code{direction = "wide"}, the data frame has columns \code{time} followed by
 #'   one column per variable.
 #' @export
-#' @seealso [simulate()], [sdbuildR()]
+#' @seealso [`simulate()`][simulate.sdbuildR()], [sdbuildR()]
 #' @concept build
 #' @method as.data.frame simulate_sdbuildR
 #'
@@ -677,8 +705,8 @@ compare_sim <- function(sim1, sim2, tolerance = .00001) {
 #' head(df_wide)
 #'
 as.data.frame.simulate_sdbuildR <- function(x,
-                                       row.names = NULL, optional = FALSE,
-                                       direction = "long", ...) {
+                                            row.names = NULL, optional = FALSE,
+                                            direction = "long", ...) {
   check_simulate_sdbuildR(x)
 
   direction <- trimws(tolower(direction))
@@ -721,17 +749,17 @@ as.data.frame.simulate_sdbuildR <- function(x,
 
 
 #' Print first rows of a simulation
-#' 
+#'
 #' Print the first rows of a simulation data frame of a stock-and-flow model. This is a wrapper around [head()] that first converts the simulation results to a data frame using [as.data.frame()][as.data.frame.simulate_sdbuildR()].
-#' 
+#'
 #' @inheritParams as.data.frame.simulate_sdbuildR
 #' @param n Number of rows to print. Defaults to 6.
 #' @param ... Other arguments passed to [as.data.frame.simulate_sdbuildR()].
-#' 
+#'
 #' @returns A data.frame with the first rows of the simulation results.
 #' @export
 #' @importFrom utils head
-#' @examples 
+#' @examples
 #' sfm <- sdbuildR("SIR")
 #' sim <- simulate(sfm)
 #' head(sim)
@@ -744,9 +772,9 @@ head.simulate_sdbuildR <- function(x, n = 6L, ...) {
 
 
 #' Print last rows of a simulation
-#' 
+#'
 #' Print the last rows of a simulation data frame of a stock-and-flow model. This is a wrapper around [tail()] that first converts the simulation results to a data frame using [as.data.frame()][as.data.frame.simulate_sdbuildR()].
-#' 
+#'
 #' @inheritParams as.data.frame.simulate_sdbuildR
 #' @param n Number of rows to print. Defaults to 6.
 #' @param ... Other arguments passed to [as.data.frame.simulate_sdbuildR()].
@@ -765,13 +793,11 @@ tail.simulate_sdbuildR <- function(x, n = 6L, ...) {
 }
 
 
-
-
 #' Generate code to build stock-and-flow model
 #'
 #' Create R code to rebuild an existing stock-and-flow model. This may help to understand how a model is built, or to modify an existing one.
 #'
-#' @inheritParams build
+#' @inheritParams update.sdbuildR
 #'
 #' @returns String with code to build stock-and-flow model from scratch.
 #' @concept build
@@ -781,19 +807,23 @@ tail.simulate_sdbuildR <- function(x, n = 6L, ...) {
 #' sfm <- sdbuildR("SIR")
 #' cat(get_build_code(sfm))
 #'
-get_build_code <- function(sfm) {
-  check_sdbuildR(sfm)
+get_build_code <- function(object) {
+  check_sdbuildR(object)
 
   # Simulation specifications — filter out defaults
-  sim_specs_list <- sfm[["sim_specs"]]
+  sim_specs_list <- object[["sim_specs"]]
   ss_defaults <- formals(sim_specs)
-  ss_defaults <- ss_defaults[!names(ss_defaults) %in% c("sfm", "save_at", "save_n")]
+  ss_defaults <- ss_defaults[!names(ss_defaults) %in% c("object", "save_at", "save_n")]
 
   sim_specs_list <- sim_specs_list[vapply(names(sim_specs_list), function(nm) {
     val <- sim_specs_list[[nm]]
     # Omit save_type = "all" (the default) and NULL save_at/save_n
-    if (nm == "save_type") return(!identical(val, "all"))
-    if (nm %in% c("save_at", "save_n")) return(!is.null(val))
+    if (nm == "save_type") {
+      return(!identical(val, "all"))
+    }
+    if (nm %in% c("save_at", "save_n")) {
+      return(!is.null(val))
+    }
     !nm %in% names(ss_defaults) || !identical(val, ss_defaults[[nm]])
   }, logical(1))]
 
@@ -805,15 +835,15 @@ get_build_code <- function(sfm) {
   }
 
   # Model units — name and eqn are NSE in custom_unit() (bare expressions, no quotes)
-  if (nrow(sfm[["custom_unit"]]) > 0) {
+  if (nrow(object[["custom_unit"]]) > 0) {
     cu_defaults <- formals(custom_unit)
-    cu_defaults <- cu_defaults[!names(cu_defaults) %in% c("sfm", "name")]
-    cu_default_eqn <- as.character(cu_defaults[["eqn"]])  # "1"
-    cu_default_doc <- cu_defaults[["doc"]]                # ""
+    cu_defaults <- cu_defaults[!names(cu_defaults) %in% c("object", "name")]
+    cu_default_eqn <- as.character(cu_defaults[["eqn"]]) # "1"
+    cu_default_doc <- cu_defaults[["doc"]] # ""
 
-    custom_unit_str <- apply(sfm[["custom_unit"]], 1, function(row) {
+    custom_unit_str <- apply(object[["custom_unit"]], 1, function(row) {
       row <- as.list(row)
-      unit_name <- row[["name"]]  # bare expression, no quotes
+      unit_name <- row[["name"]] # bare expression, no quotes
 
       args <- character(0)
       # eqn: unquoted bare expression; skip if default
@@ -834,17 +864,17 @@ get_build_code <- function(sfm) {
   }
 
   # Funcs (custom functions) — name is NSE (bare symbol, no quotes)
-  func_df <- get_funcs(sfm)
+  func_df <- get_funcs(object)
   if (nrow(func_df) > 0) {
     func_cols <- intersect(c("name", "eqn", "units", "doc"), names(func_df))
     func_df <- func_df[, func_cols, drop = FALSE]
 
     cf_defaults <- formals(custom_func)
-    cf_defaults <- cf_defaults[!names(cf_defaults) %in% c("sfm", "name", "label")]
+    cf_defaults <- cf_defaults[!names(cf_defaults) %in% c("object", "name", "label")]
 
     func_str <- vapply(seq_len(nrow(func_df)), function(i) {
       row <- as.list(func_df[i, , drop = FALSE])
-      func_name <- row[["name"]]  # bare symbol, no quotes
+      func_name <- row[["name"]] # bare symbol, no quotes
       row[["name"]] <- NULL
 
       # Filter out defaults
@@ -855,8 +885,11 @@ get_build_code <- function(sfm) {
       args_str <- vapply(names(row), function(nm) {
         val <- row[[nm]]
         # eqn is NSE in custom_func() — emit unquoted
-        if (nm == "eqn" || !is.character(val)) paste0(nm, " = ", val)
-        else paste0(nm, " = \"", val, "\"")
+        if (nm == "eqn" || !is.character(val)) {
+          paste0(nm, " = ", val)
+        } else {
+          paste0(nm, " = \"", val, "\"")
+        }
       }, character(1))
 
       paste0("custom_func(", paste(c(func_name, args_str), collapse = ", "), ")")
@@ -869,10 +902,10 @@ get_build_code <- function(sfm) {
   }
 
   # Meta-information string
-  h <- sfm[["meta"]]
+  h <- object[["meta"]]
   defaults_meta <- formals(meta)
   defaults_meta <- defaults_meta[!names(defaults_meta) %in%
-    c("sfm", "created", "...")]
+    c("object", "created", "...")]
 
   # Find which elements in h are identical to those in defaults_meta
   h <- h[vapply(names(h), function(name) {
@@ -898,7 +931,7 @@ get_build_code <- function(sfm) {
 
   # Variables — use type-specific helpers; name/to/from/source are NSE (bare symbols)
   # func-type variables are handled above via custom_func(), so exclude them here
-  vars_df <- sfm[["variables"]]
+  vars_df <- object[["variables"]]
   vars_df <- vars_df[vars_df[["type"]] != "func", , drop = FALSE]
 
   if (nrow(vars_df) > 0) {
@@ -915,10 +948,10 @@ get_build_code <- function(sfm) {
     # Args stored as list columns containing numeric vectors
     vec_args <- c("xpts", "ypts")
 
-    # Pre-compute defaults for each helper (exclude sfm, name, label, vec args)
+    # Pre-compute defaults for each helper (exclude object, name, label, vec args)
     helper_defaults_list <- lapply(type_to_func, function(fn) {
       d <- formals(get(fn))
-      d[!names(d) %in% c("sfm", "name", "label", vec_args, "...")]
+      d[!names(d) %in% c("object", "name", "label", vec_args, "...")]
     })
 
     keep_prop <- get_building_block_prop()
@@ -959,11 +992,14 @@ get_build_code <- function(sfm) {
           val <- z[[nm]]
           if (nm %in% vec_args) {
             if (is.list(val)) val <- val[[1]]
-            formatted <- if (length(val) == 1) as.character(val)
-                         else paste0("c(", paste(val, collapse = ", "), ")")
+            formatted <- if (length(val) == 1) {
+              as.character(val)
+            } else {
+              paste0("c(", paste(val, collapse = ", "), ")")
+            }
             paste0(nm, " = ", formatted)
           } else if (nm %in% c(nse_skip, nse_expr)) {
-            paste0(nm, " = ", val)         # bare expression, no quotes
+            paste0(nm, " = ", val) # bare expression, no quotes
           } else if (is.character(val)) {
             paste0(nm, " = \"", val, "\"")
           } else {
@@ -985,5 +1021,3 @@ get_build_code <- function(sfm) {
 
   paste0(script, "\n")
 }
-
-
