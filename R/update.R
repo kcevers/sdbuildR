@@ -34,6 +34,12 @@
     return(rlang::as_name(expr))
   }
 
+  # If a function object (closure) was injected via `!!`, deparse the
+  # function object to a single string representation.
+  if (is.function(expr) || typeof(expr) == "closure") {
+    return(paste(deparse(expr), collapse = "\n"))
+  }
+
   if (rlang::is_call(expr)) {
     fn <- rlang::call_name(expr)
 
@@ -43,8 +49,10 @@
       return(unlist(lapply(args, .expr_to_char), use.names = FALSE))
     }
 
-    # General expression: deparse to string
-    return(rlang::expr_deparse(expr, width = 500L))
+    # General expression: deparse to string. Collapse multi-line deparse
+    # results into a single element so callers that expect length 1 (e.g.
+    # function definitions) do not trigger length-mismatch errors.
+    return(paste(rlang::expr_deparse(expr, width = 500L), collapse = "\n"))
   }
 
   # Fallback
@@ -138,18 +146,23 @@
 #' @param type Character vector of types
 #' @param arg_name Name of argument for error messages (default: "type")
 #' @return Validated, cleaned type vector (invisibly valid, or error raised)
+#' @param only_model_var Logical. If TRUE (default), validates against core model types
+#'   (stock, flow, constant, aux, lookup, func). If FALSE, also allows custom_unit.
 #' @noRd
-.validate_type_arg <- function(type, arg_name = "type") {
+.validate_type_arg <- function(type, arg_name = "type", only_model_var = TRUE) {
   if (is.null(type)) {
     return(type)
   }
 
   type <- clean_type(type)
+  allowed_types <- .sdbuildR_types(only_model_var = only_model_var)
 
-  if (!all(type %in% c("stock", "flow", "constant", "aux", "lookup", "func"))) {
+  if (!all(type %in% allowed_types)) {
+    types_display <- paste0("'", allowed_types, "'", collapse = ", ")
+    x_msg <- paste0("The {.arg {arg_name}} must be one of: ", types_display, ".")
     cli::cli_abort(c(
       "Invalid {.arg {arg_name}} argument.",
-      "x" = "The {.arg {arg_name}} must be one of: {.code 'stock'}, {.code 'flow'}, {.code 'constant'}, {.code 'aux'}, {.code 'lookup'}, or {.code 'func'}."
+      "x" = x_msg
     ))
   }
 
@@ -1825,8 +1838,8 @@ check_var_existence <- function(name, var_names) {
   if (any(!idx_exist)) {
     missing_vars <- name[!idx_exist]
     cli::cli_abort(c(
-      "Variable{?s} not found in model.",
-      "x" = "{.code {missing_vars}} {?does/do} not exist."
+      "Variable{cli::qty(length(missing_vars))}{?s} not found in model.",
+      "x" = "{.code {missing_vars}} {cli::qty(length(missing_vars))}{?does/do} not exist."
     ))
   }
 

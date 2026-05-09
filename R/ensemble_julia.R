@@ -1,4 +1,3 @@
-
 # ==============================================================================
 # Julia ensemble backend
 # ==============================================================================
@@ -16,7 +15,6 @@
 ensemble_julia <- function(object, n, return_sims, conditions, cross,
                            quantiles, only_stocks, vars = NULL, verbose,
                            n_conditions, total_sims) {
-
   # Create ensemble parameters
   ensemble_pars <- list(
     n = n,
@@ -54,15 +52,18 @@ ensemble_julia <- function(object, n, return_sims, conditions, cross,
 
   use_julia()
 
-  on.exit({
-    # Ensure files are deleted even if an error occurs
-    paths <- c(filepath, ensemble_pars[["filepath_df"]], ensemble_pars[["filepath_summary"]])
-    for (path in paths) {
-      if (file.exists(path)) {
-        file.remove(path)
+  on.exit(
+    {
+      # Ensure files are deleted even if an error occurs
+      paths <- c(filepath, ensemble_pars[["filepath_df"]], ensemble_pars[["filepath_summary"]])
+      for (path in paths) {
+        if (file.exists(path)) {
+          file.remove(path)
+        }
       }
-    }
-  }, add = TRUE)
+    },
+    add = TRUE
+  )
 
   # Evaluate script
   sim <- tryCatch(
@@ -107,17 +108,15 @@ ensemble_julia <- function(object, n, return_sims, conditions, cross,
 
       # Read the simulation results
       if (return_sims) {
- 
         # First check whether files exist
         if (!file.exists(ensemble_pars[["filepath_df"]][["df"]]) ||
-            !file.exists(ensemble_pars[["filepath_df"]][["constants"]]) ||
-            !file.exists(ensemble_pars[["filepath_df"]][["init"]])) {
+          !file.exists(ensemble_pars[["filepath_df"]][["constants"]]) ||
+          !file.exists(ensemble_pars[["filepath_df"]][["init"]])) {
           cli::cli_abort(c(
             "x" = "Julia simulation failed to store output files.",
             ">" = "Try running a smaller ensemble to see if the issue persists."
           ))
         } else {
-
           # Read the simulation results
           df <- as.data.frame(data.table::fread(
             ensemble_pars[["filepath_df"]][["df"]],
@@ -130,16 +129,14 @@ ensemble_julia <- function(object, n, return_sims, conditions, cross,
           init_out[["df"]] <- as.data.frame(data.table::fread(
             ensemble_pars[["filepath_df"]][["init"]],
             na.strings = c("", "NA")
-          ))        
+          ))
 
           # Filter to stocks only if requested
           if (only_stocks) {
             df <- df[df[["variable"]] %in% stock_names, , drop = FALSE]
           }
           df <- filter_sim_df_vars(df, vars)
-
         }
-
       } else {
         df <- NULL
       }

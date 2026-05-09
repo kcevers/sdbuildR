@@ -83,8 +83,9 @@
 #' sfm <- sdbuildR(predator_prey)
 #'
 #' # Set random initial conditions
-#' sfm <- update(sfm, c(predator, prey), 
-#'               eqn = runif(1, min = 20, max = 80))
+#' sfm <- update(sfm, c(predator, prey),
+#'   eqn = runif(1, min = 20, max = 80)
+#' )
 #'
 #' # For ensemble simulations, it is highly recommended to reduce the
 #' # returned output. For example, to save only 100 values per simulation:
@@ -106,11 +107,11 @@
 #'
 #' @examplesIf Sys.getenv("NOT_CRAN") == "true"
 #' # For larger ensembles, we can use parallelization with future
-#' if (requireNamespace("future", quietly = TRUE) && 
-#'    requireNamespace("future.apply", quietly = TRUE)) {
-#'  future::plan(future::multisession, workers = 4)
+#' if (requireNamespace("future", quietly = TRUE) &&
+#'   requireNamespace("future.apply", quietly = TRUE)) {
+#'   future::plan(future::multisession, workers = 4)
 #' }
-#' 
+#'
 #' # Ensembles can also be run with exact values for the initial conditions
 #' # and parameters. Below, we vary the initial values of the predator and the
 #' # birth rate of the predators (delta). We generate a hundred samples per
@@ -139,13 +140,13 @@
 #' plot(sims, nrows = 3)
 #'
 #' # Stop parallelization after use
-#' if (requireNamespace("future", quietly = TRUE) && 
-#'    requireNamespace("future.apply", quietly = TRUE)) {
-#'  future::plan(future::sequential) 
+#' if (requireNamespace("future", quietly = TRUE) &&
+#'   requireNamespace("future.apply", quietly = TRUE)) {
+#'   future::plan(future::sequential)
 #' }
-#' 
+#'
 #' @examplesIf Sys.getenv("NOT_CRAN") == "true" && is_julia_ready()
-#' 
+#'
 #' # Run simulation in parallel (Julia)
 #' use_julia(nthreads = 4)
 #' sfm <- sfm |> sim_specs(language = "Julia")

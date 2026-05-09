@@ -80,7 +80,6 @@ summarise_by <- function(df, by, quantiles, q_names) {
 ensemble_r <- function(object, n, return_sims, conditions, cross,
                        quantiles, only_stocks, vars = NULL, verbose,
                        n_conditions, total_sims) {
-
   # Check model for unit strings (not supported in R)
   if (is.null(object[["assemble"]][["unit_strings"]])) {
     object[["assemble"]][["unit_strings"]] <- find_unit_strings(object)

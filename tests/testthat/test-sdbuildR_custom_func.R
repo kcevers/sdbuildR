@@ -153,8 +153,8 @@ test_that("logistic() computes at midpoint", {
 
 test_that("logistic() respects upper asymptote", {
   # Values should be bounded by upper
-  expect_true(logistic(100, upper = 1) < 1)
-  expect_true(logistic(100, upper = 10) < 10)
+  expect_true(logistic(100, upper = 1) <= 1)
+  expect_true(logistic(100, upper = -10) <= -10)
 })
 
 test_that("logistic() handles slope parameter", {
@@ -165,6 +165,8 @@ test_that("logistic() handles slope parameter", {
 
 test_that("sigmoid() is alias for logistic()", {
   expect_equal(sigmoid(0), logistic(0))
+  expect_equal(sigmoid(-10), logistic(-10))
+  expect_equal(sigmoid(1 / 3), logistic(1 / 3))
   expect_equal(
     sigmoid(1, slope = 2, midpoint = 1, upper = 5),
     logistic(1, slope = 2, midpoint = 1, upper = 5)

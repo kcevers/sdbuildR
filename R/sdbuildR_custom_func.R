@@ -645,23 +645,23 @@ logistic <- function(x, slope = 1, midpoint = 0, upper = 1) {
     ))
   }
 
-  # Use numerically stable computation
-  # For large positive z: result ≈ upper
-  # For large negative z: result ≈ 0
-  # Avoid underflow by using pmin/pmax to keep result strictly between 0 and upper
-  z <- slope * (x - midpoint)
+  # # Use numerically stable computation
+  # # For large positive z: result ≈ upper
+  # # For large negative z: result ≈ 0
+  # # Avoid underflow by using pmin/pmax to keep result strictly between 0 and upper
+  # z <- slope * (x - midpoint)
 
-  # Compute logistic with numerical stability
-  # When z is very large, exp(-z) underflows to 0, so we use upper directly
-  # When z is very small, exp(z) might overflow, so we handle carefully
-  result <- upper / (1 + exp(-pmin(pmax(z, -500), 500)))
+  # # Compute logistic with numerical stability
+  # # When z is very large, exp(-z) underflows to 0, so we use upper directly
+  # # When z is very small, exp(z) might overflow, so we handle carefully
+  # result <- upper / (1 + exp(-pmin(pmax(z, -500), 500)))
 
-  # Ensure result is strictly less than upper and greater than 0 (no exact bounds)
-  # Use nextafter equivalent: subtract smallest positive float to ensure strict inequality
-  result <- pmin(result, upper * (1 - .Machine$double.eps))
-  result <- pmax(result, upper * .Machine$double.eps)
-
-  result
+  # # Ensure result is strictly less than upper and greater than 0 (no exact bounds)
+  # # Use nextafter equivalent: subtract smallest positive float to ensure strict inequality
+  # result <- pmin(result, upper * (1 - .Machine$double.eps))
+  # result <- pmax(result, upper * .Machine$double.eps)
+  # result
+  upper / (1 + exp(-slope * (x - midpoint)))
 }
 
 

@@ -15,7 +15,7 @@ script_template <- function() {
 # Simulation time unit (smallest time scale in your model)
 %(time_units_name)s = '%(time_units)s'
 ",
-    times_julia = "\n\n# Simulation time unit (smallest time scale in your model)\n%(time_units_name)s = u\"%(time_units)s\"\n# Define time sequence\n%(times_name)s = (%(start)s, %(stop)s)%(times_unit_mult)s\n# Initialize time (only necessary if constants use t)\n%(time_name)s = %(times_name)s[1]\n# Time step\n%(timestep_name)s = %(dt)s%(dt_unit_mult)s\n# Define saving time sequence\n%(tstops_name)s = %(times_name)s[1]:%(timestep_name)s:%(times_name)s[2]\n%(saveat_name)s = %(saveat_expr)s\n",
+    times_julia = "\n\n# Simulation time unit (smallest time scale in your model)\n%(time_units_name)s = %(time_units_value)s\n# Define time sequence\n%(times_name)s = (%(start)s, %(stop)s)%(times_unit_mult)s\n# Initialize time (only necessary if constants use t)\n%(time_name)s = %(times_name)s[1]\n# Time step\n%(timestep_name)s = %(dt)s%(dt_unit_mult)s\n# Define saving time sequence\n%(tstops_name)s = %(times_name)s[1]:%(timestep_name)s:%(times_name)s[2]\n%(saveat_name)s = %(saveat_expr)s\n",
 
     # -- compile_nonneg_stocks -------------------------------------------------
 
@@ -60,7 +60,7 @@ attributes(%(sim_df_name)s)$valroot
     # -- compile_static ----------------------------------------------------
 
     static_r = "\n\n# Define parameters, initial conditions, and functions in correct order\n%(static_str)s%(constants_def)s%(init_def)s",
-    static_julia = "\n\n# Define parameters, initial conditions, and functions in correct order\n%(model_setup_name)s = let\n%(ensemble_iter_code)s%(intermediary_names_str)s%(static_str)s%(pars_def)s%(init_def)s%(init_names_str)s%(init_idx)s%(intermediary_names_correct)s\n\t(%(parameter_name)s = %(parameter_name)s, %(initial_value_name)s = %(initial_value_name)s, %(initial_value_names)s = %(initial_value_names)s, %(intermediary_names)s = %(intermediary_names)s%(delay_idx_return)s)\nend\n",
+    static_julia = "\n\n# Define parameters, initial conditions, and functions in correct order\n%(model_setup_name)s = let\n%(ensemble_iter_code)s%(intermediary_names_str)s%(static_str)s%(pars_def)s%(init_def)s%(init_names_str)s%(init_idx)s%(intermediary_names_correct)s\n\t(%(parameter_name)s = %(parameter_name)s, %(initial_value_name)s = %(initial_value_name)s, %(initial_value_names)s = %(initial_value_names)s, %(intermediary_names)s = %(intermediary_names)s)\nend\n",
 
     # -- compile_ode -----------------------------------------------------------
 

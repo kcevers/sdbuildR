@@ -333,59 +333,6 @@ find_matching_regex <- function(x, regex_units) {
 }
 
 
-#' Get delayN and smoothN from stock-and-flow model
-#'
-#' @inheritParams update.sdbuildR
-#'
-#' @returns Vector with delayN and smoothN functions
-#' @noRd
-get_delay <- function(object, type = c("delayN_smoothN", "past")) {
-  type <- match.arg(type)
-
-  result <- c()
-
-  # Search through equations for delay functions
-  if (nrow(object[["variables"]]) > 0) {
-    # Get all equations
-    eqn <- object[["variables"]][["eqn"]]
-    var_names <- object[["variables"]][["name"]]
-
-    if (type == "past") {
-      # Look for past() or delay() functions
-      idx <- grepl("\\bpast\\s*\\(|\\bdelay\\s*\\(", eqn)
-    } else if (type == "delayN_smoothN") {
-      # Look for delayN(), smoothN() functions
-      idx <- grepl("\\bdelay[0-9]+\\s*\\(|\\bsmooth[0-9]+\\s*\\(", eqn)
-    }
-
-    if (any(idx)) {
-      result <- var_names[idx]
-    }
-
-    # for (i in seq_len(nrow(object[["variables"]]))) {
-    #   var_name <- object[["variables"]][i, "name"]
-    #   var_eqn <- object[["variables"]][i, "eqn"]
-
-    #   if (!is.na(var_eqn) && nzchar(var_eqn)) {
-    #     if (type == "past") {
-    #       # Look for past() or delay() functions
-    #       if (grepl("\\bpast\\s*\\(|\\bdelay\\s*\\(", var_eqn)) {
-    #         result[[var_name]] <- var_eqn
-    #       }
-    #     } else if (type == "delayN_smoothN") {
-    #       # Look for delayN(), smoothN() functions
-    #       if (grepl("\\bdelay[0-9]+\\s*\\(|\\bsmooth[0-9]+\\s*\\(", var_eqn)) {
-    #         result[[var_name]] <- var_eqn
-    #       }
-    #     }
-    #   }
-    # }
-  }
-
-  result
-}
-
-
 #' Check whether object is of class [`sdbuildR`][sdbuildR]
 #'
 #' @inheritParams update.sdbuildR
@@ -699,10 +646,10 @@ get_building_block_prop <- function() {
 #' Create a data frame with properties of all model variables, model units, and funcs. Specify the variable types, variable names, and/or properties to get a subset of the data frame.
 #'
 #' @inheritParams plot.sdbuildR
-#' @param type Variable types to retain in the data frame. Must be one or more of 'stock', 'flow', 'constant', 'aux', 'gf', 'func', or 'custom_unit'. Defaults to NULL to include all types.
-#' @param name Variable names to retain in the data frame. Defaults to NULL to include all variables.
-#' @param properties Variable properties to retain in the data frame. Defaults to NULL to include all properties.
-#' @param row.names NULL or a character vector giving the row names for the data frame. Missing values are not allowed.
+#' @param name Variable names to retain in the data frame. Defaults to `NULL` to include all variables.
+#' @param type Variable types to retain in the data frame. Must be one or more of 'stock', 'flow', 'constant', 'aux', 'gf', 'func', or 'custom_unit'. Defaults to `NULL` to include all types.
+#' @param properties Variable properties to retain in the data frame. Defaults to `NULL` to include all properties.
+#' @param row.names `NULL` or a character vector giving the row names for the data frame. Missing values are not allowed.
 #' @param optional Ignored parameter.
 #'
 #' @returns A data.frame with one row per model component (variable, unit definition, or func).
@@ -726,37 +673,42 @@ get_building_block_prop <- function() {
 #'
 as.data.frame.sdbuildR <- function(x,
                                    row.names = NULL, optional = FALSE,
-                                   type = NULL, name = NULL,
+                                   name = NULL, type = NULL,
                                    properties = NULL, ...) {
   check_sdbuildR(x)
   sfm <- x
   rm(x)
 
-  # Only keep specified types
+  # Check for mutually exclusive parameters
+  if (!is.null(name) && !is.null(type)) {
+    cli::cli_warn("Both {.arg name} and {.arg type} specified; ignoring {.arg type} and using {.arg name} only.")
+    type <- NULL
+  }
+
+  # Validate and clean parameters
+  if (!is.null(name)) {
+    .validate_name_arg(name, arg_name = "name")
+  }
+
+  # Only keep specified types (allow custom_unit in query context)
   if (!is.null(type)) {
-    type <- clean_type(type)
+    type <- .validate_type_arg(type, arg_name = "type", only_model_var = FALSE)
 
     if (length(type) == 0) {
       cli::cli_abort("At least one {.arg type} must be specified")
-    }
-
-    if (!all(type %in% c("stock", "flow", "constant", "aux", "lookup", "func", "custom_unit"))) {
-      cli::cli_abort(c(
-        "Invalid {.arg type} value.",
-        "x" = "Must be one or more of {.code 'stock'}, {.code 'flow'}, {.code 'constant'}, {.code 'aux'}, {.code 'lookup'}, {.code 'func'}, or {.code 'custom_unit'}."
-      ))
     }
   }
 
   df <- data.frame()
 
-  # Add model variables - already in data frame format!
-  if ((is.null(type) || any(c("stock", "flow", "constant", "aux", "lookup", "func") %in% type)) && nrow(sfm[["variables"]]) > 0) {
+  # Add model variables to data frame - already in data frame format!
+  core_types <- .sdbuildR_types(only_model_var = TRUE)
+  if ((is.null(type) || any(core_types %in% type)) && nrow(sfm[["variables"]]) > 0) {
     var_df <- sfm[["variables"]]
 
     # Filter by type if specified
     if (!is.null(type)) {
-      var_types <- type[type %in% c("stock", "flow", "constant", "aux", "lookup", "func")]
+      var_types <- type[type %in% core_types]
       var_df <- var_df[var_df[["type"]] %in% var_types, , drop = FALSE]
     }
 
@@ -802,8 +754,8 @@ as.data.frame.sdbuildR <- function(x,
     if (!all(idx_exist)) {
       missing_names <- name[!idx_exist]
       cli::cli_abort(c(
-        "Variable{?s} not found in model.",
-        "x" = "{.code {missing_names}} {?does/do} not exist."
+        "Variable{cli::qty(length(missing_names))}{?s} not found in model.",
+        "x" = "{.code {missing_names}} {cli::qty(length(missing_names))}{?does/do} not exist."
       ))
     }
     df <- df[df[["name"]] %in% name, , drop = FALSE]

@@ -144,6 +144,8 @@ find_newly_defined_var <- function(eqn) {
 #' Find which other variables each variable is dependent on.
 #'
 #' @inheritParams update.sdbuildR
+#' @param name Variable names to find dependencies for. Defaults to `NULL` to include all variables.
+#' @param type Variable types to find dependencies for. Must be one or more of 'stock', 'flow', 'constant', 'aux', 'gf', 'func', or 'custom_unit'. Defaults to `NULL` to include all types.
 #' @param reverse If FALSE, list for each variable X which variables Y it depends on for its equation definition. If TRUE, don't show dependencies but dependents. This reverses the dependencies, such that for each variable X, it lists what other variables Y depend on X.
 #'
 #' @returns List, with for each model variable what other variables it depends on, or if \code{reverse = TRUE}, which variables depend on it
@@ -154,11 +156,61 @@ find_newly_defined_var <- function(eqn) {
 #' sfm <- sdbuildR("SIR")
 #' dependencies(sfm)
 #'
-dependencies <- function(object, reverse = FALSE) {
+dependencies <- function(object, name = NULL, type = NULL, reverse = FALSE) {
+  check_sdbuildR(object)
+
+  # Check for mutually exclusive parameters
+  if (!is.null(name) && !is.null(type)) {
+    cli::cli_warn("Both {.arg name} and {.arg type} specified; ignoring {.arg type} and using {.arg name} only.")
+    type <- NULL
+  }
+
+  # Validate parameters
+  if (!is.null(name)) {
+    .validate_name_arg(name, arg_name = "name")
+  }
+
+  if (!is.null(type)) {
+    type <- .validate_type_arg(type, arg_name = "type", only_model_var = FALSE)
+
+    if (length(type) == 0) {
+      cli::cli_abort("At least one {.arg type} must be specified")
+    }
+  }
+
   dep <- dependencies_(object, eqns = NULL, only_var = TRUE, only_model_var = TRUE)
 
   if (reverse) {
     dep <- reverse_dep(dep)
+  }
+
+  # Filter by name if specified
+  if (!is.null(name)) {
+    # Clean names
+    name <- Filter(nzchar, unique(name))
+
+    if (length(name) == 0) {
+      cli::cli_abort("At least one {.arg name} must be specified")
+    }
+
+    # Check if names exist
+    idx_exist <- name %in% names(dep)
+    if (!all(idx_exist)) {
+      missing_names <- name[!idx_exist]
+      cli::cli_abort(c(
+        "Variable{cli::qty(length(missing_names))}{?s} not found in model.",
+        "x" = "{.code {missing_names}} {cli::qty(length(missing_names))}{?does/do} not exist."
+      ))
+    }
+    dep <- dep[name]
+  }
+
+  # Filter by type if specified
+  if (!is.null(type)) {
+    # Get types of all variables in dep
+    var_types <- object[["variables"]][object[["variables"]][["name"]] %in% names(dep), c("name", "type")]
+    vars_to_keep <- var_types[var_types[["type"]] %in% type, "name"]
+    dep <- dep[names(dep) %in% vars_to_keep]
   }
 
   dep
@@ -215,7 +267,8 @@ reverse_dep <- function(dep) {
 #' @noRd
 #'
 dependencies_ <- function(object, eqns = NULL, only_var = TRUE, only_model_var = TRUE) {
-  var_names <- unique(get_model_var(object))
+  var_names <- get_model_var(object)
+  # var_names <- unique(get_model_var(object))
 
   # Funcs and graphical functions can be functions
   gf_names <- object[["variables"]][object[["variables"]][["type"]] == "lookup", "name"]
@@ -306,17 +359,7 @@ order_equations <- function(object, print_msg = TRUE) {
     ))
   }
 
-  # Add .outflow to detect delayed variables
   var_names <- unique(get_model_var(object))
-  idx_delay <- grepl(paste0(
-    P[["delayN_suffix"]], "[0-9]+$|",
-    P[["smoothN_suffix"]], "[0-9]+$"
-  ), var_names)
-  delay_var <- var_names[idx_delay]
-  delay_pattern <- paste0(
-    var_names[idx_delay],
-    stringr::str_escape(P[["outflow_suffix"]])
-  )
 
   # Exclude func-type variables from ordering (they compile separately in the preamble)
   vars_to_order <- object[["variables"]][object[["variables"]][["type"]] != "func", ]
@@ -328,17 +371,6 @@ order_equations <- function(object, print_msg = TRUE) {
         d <- unlist(dependencies_(object, x[["eqn"]],
           only_var = TRUE, only_model_var = TRUE
         ))
-
-        # For delay family variables, check if they're referenced in the equation
-        # The .outflow suffix is Julia-specific, so we check for the base variable name in eqn
-        if (length(delay_var) > 0) {
-          # Create pattern to match delay variable names in R equations
-          delay_var_pattern <- paste0("\\b", delay_var, "\\b")
-          idx <- vapply(delay_var_pattern, function(pat) {
-            stringr::str_detect(x[["eqn"]], pat)
-          }, logical(1))
-          d <- c(d, delay_var[idx])
-        }
       } else {
         d <- c()
       }

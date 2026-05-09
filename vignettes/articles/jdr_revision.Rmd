@@ -29,6 +29,7 @@ To follow the entire tutorial, it is necessary to install Julia as well as set u
 
 ```{r libraries, results='hide', message=FALSE}
 library(sdbuildR)
+library(kableExtra)
 ```
 
 ```{r eval = TRUE, include=FALSE}
@@ -45,6 +46,7 @@ sprintf_arg <- function(template, values) {
   return(template)
 }
 font_family <- "Times New Roman"
+# font_family <- "Lato"
 
 if (recreate_figs) {
   # Plotting parameters
@@ -53,31 +55,164 @@ if (recreate_figs) {
 
   dir.create(filepath_figs)
 
-  VARS <- c("E", "P", "X", "D", "R", "r_X_D")
+  VARS <- c("engagement", "performance", "energy", "demands", "resources", "effort_rate")
   PALETTE <- c("Geyser", "Temps", "Spectral", "Zissou 1", "Roma")[5]
   COLORS <- grDevices::hcl.colors(n = 50, palette = PALETTE)
 
-  COLORS <- COLORS[c(36, 9, 30, 1, 47, 17)]
+  flow_col1 <- adjustcolor(COLORS[17], alpha.f = 1)
+  flow_col2 <- adjustcolor(COLORS[9], alpha.f = 1)
+
+  COLORS_alpha <- adjustcolor(COLORS, alpha.f = .25)
+
+  COLORS <- COLORS[c(37, 9, 32, 1, 47, 17)]
   stock_col <- adjustcolor(COLORS[1], alpha.f = .75)
   flow_col <- COLORS[6]
 
   health_path <- adjustcolor(COLORS[4], alpha.f = .75)
   motivation_path <- adjustcolor(COLORS[1], alpha.f = .85)
-  health_path_fill <- adjustcolor(COLORS[4], alpha.f = 1)
-  motivation_path_fill <- adjustcolor(COLORS[1], alpha.f = 1)
+  health_path_fill <- adjustcolor(COLORS[4], alpha.f = .25)
+  motivation_path_fill <- adjustcolor(COLORS[1], alpha.f = .25)
   performance_path <- adjustcolor(COLORS[2], alpha.f = .75)
-  performance_path_fill <- adjustcolor(COLORS[2], alpha.f = 1)
+  performance_path_fill <- adjustcolor(COLORS[2], alpha.f = .25)
 
   font_size <- 16
   font_size_xlab <- round(font_size * 1.4)
   font_size_legend <- round(font_size * 1.1)
-  font_size_subplot <- round(font_size * 1.5)
+  font_size_subplot <- font_size #round(font_size * 1.5)
   xlab <- "Time (days)"
 
   # Finer-grained simulation
   dt <- .1
+
+  # Annotation template
+  annot <- list(xanchor = "center", yanchor = "middle", showarrow = FALSE, xref = "paper", yref = "paper", font = list(size = font_size_subplot, family = font_family))
+  annot_font <-list(family = font_family, size = font_size)
+  annot_legend <- list(
+        orientation = "h", # orientation
+        x = 0.5, # Center horizontally
+        y = -0.15, # Below the plot
+        xanchor = "center",
+        yanchor = "top",
+        # traceorder = "normal",
+        # tracegroupgap = 0,
+        # itemwidth = 15,
+        font = list(size = font_size_legend)
+      )
+  annot_xlab <- list(
+          text = xlab,
+          font = list(
+            family = font_family,
+            size = font_size_xlab
+          ),
+          xref = "paper",
+          yref = "paper",
+          xanchor = "center", 
+          yanchor = "top",
+          x = 0.5, y = -.1,
+          showarrow = FALSE
+        )
+
+  rm_grid <- function(pl){
+    plotly::layout(pl,
+      xaxis = list(showgrid = FALSE, showline = TRUE),
+      yaxis = list(showgrid = FALSE, showline = TRUE)
+    )
+  }
+
 }
 ```
+
+
+
+```{r include=FALSE}
+if (recreate_figs) {
+  sfm <- sdbuildR() |>
+    stock(Stock, label = "Stock", eqn = 1) |>
+    constant(pulse_func1, eqn = pulse(times, start = 20, height = .1, width = 5)) |>
+    constant(pulse_func2, eqn = pulse(times, start = 40, height = .1, width = 5)) |>
+    constant(pulse_func3, eqn = pulse(times, start = 60, height = -.1, width = 5)) |>
+    constant(pulse_func4, eqn = pulse(times, start = 80, height = -.1, width = 5)) |>
+    flow(Inflow, to = Stock, eqn = 1 + pulse_func1(t) + pulse_func3(t)) |>
+    flow(Outflow, from = Stock, eqn = 1 + pulse_func2(t) + pulse_func4(t))
+
+  pl <- plot(sfm,
+    wrap_width = 9.5,
+    font_size = 20, minlen = 1.5,
+    stock_col = stock_col,
+    flow_col = flow_col,
+    font_family = font_family,
+    show_constants = FALSE, show_aux = FALSE, show_dependencies = FALSE
+  )
+  pl
+
+  export_plot(pl, file.path(filepath_figs, "sfm.pdf"))
+
+  # Simulation
+  sim <- simulate(sfm, save_at = .01, only_stocks = FALSE)
+  pl_sim <- plot(sim,
+    vars = rev(c("Stock", "Inflow", "Outflow")),
+    xlab = "", main = "",
+    colors = rev(c(stock_col, flow_col1, flow_col2)),
+    font_family = font_family,
+    font_size = font_size_subplot,
+    showlegend = TRUE
+  ) |>
+    plotly::layout(
+      font = annot_font,
+      legend = utils::modifyList(annot_legend, list(
+        y = -0.2)
+    ) |>
+    plotly::layout(
+      annotations = list(
+        utils::modifyList(annot_xlab, list(x = 0.5))
+      )
+    ) |> rm_grid()
+  pl_sim
+  
+  export_plot(pl_sim, file.path(filepath_figs, "sfm_sim.pdf"),
+    width = 4, height = 3
+  )
+
+}
+```
+
+
+# Step 1b. Key Variables
+
+```{r}
+def_table <- data.frame(
+  Variable = c(
+    "Job Demands", "Job Resources", "Work Engagement", "Exhaustion", "Proactive Behaviour", "Self-Undermining Behaviour", "Job Performance"
+  ),
+  Definition = c(
+"The physical, psychological, social, or organizational aspects of the job that require sustained physical, cognitive, and/or emotional effort and are therefore associated with certain physiological and/or psychological costs", 
+"The physical, psychological, social, or organizational aspects of the job that have motivating potential, that are functional in achieving work goals, that regulate the impact of job demands, and that stimulate learning and personal growth",
+"a positive, fulfilling, work-related state of mind that is characterized by vigor, dedication, and absorption. Vigor refers to high levels of energy and mental resilience while working, the willingness to invest effort in one’s work, and persistence even in the face of difficulties. Dedication implies being strongly involved in one’s work and experiencing a sense of significance, enthusiasm, and challenge. Absorption refers to being fully concentrated and happily engrossed in one’s work, whereby time passes quickly. Thus, work engagement is characterized by a high level of energy and strong identification with one’s work, whereas burnout is characterized by the opposite: a low level of energy and poor identification with one’s work",
+"Depletion of energy resources; also used interchangeable or as part of job strain",
+"Also called job crafting; employees’ personal initiative to change their job demands and job resources in order to better align the design of the job with their own abilities and preferences",
+"Employees’ dysfunctional behaviors (e.g., poor communication, conflict behaviors) that create obstacles and may undermine performance.",
+"Undefined in the literature; refers to the extent to which an individual performs well at their job (e.g., fulfilling responsibilities)"
+
+  )
+)
+
+kableExtra::kbl(def_table,
+  format = "markdown",
+  col.names = c("Variable", "Definition"),
+  caption = "Definition of key variables in Job-Demands Resources Theory from Bakker et al. (2025)"
+) |>
+  kableExtra::kable_styling()
+```
+
+# Step 3b. Formulating a Stock-and-Flow Diagram
+
+
+
+
+% **gaps revealed
+% **
+% We can immediately see that engagement only has an inflow that can increase engagement, namely motivation.
+
 
 ```{r}
 {
@@ -106,7 +241,7 @@ digraph flowchart {
         arrowsize = 0.6]
 
   # --- DECISION NODES (rounded boxes with border) ---
-  q1 [label = 'Can the variable be represented\\nas a continuous quantity that\\ncan increase and decrease?',
+  q1 [label = 'Can the variable be represented\\nas a continuous quantity that\\nbe lower or higher?',
       shape = box, style = 'filled,rounded',
       fillcolor = '#e8f4f3', fontcolor = '#0f5c5a',
       color = '#0f5c5a',
@@ -227,35 +362,10 @@ pl
 ```
 
 
+## Stock-and-Flow Models
 
+### Single stock example
 
-## full
-```{r}
-sfm <- sdbuildR() |>
-  meta(name = "Burnout") |>
-  sim_specs(stop = 16, time_units = "weeks", only_stocks = FALSE) |>
-  stock(energy, eqn = .3, label = "Energy") |>
-  flow(working, 
-  eqn = .3 * energy,
-  # eqn = .4 * energy / (.2 + energy),
-  from = energy) |>
-  stock(recovery_rate, eqn = 1, label = "Recovery Rate") |>
-  flow(erosion, 
-  eqn = recovery_rate * working, 
-  # eqn = recovery_rate * working / (1 + energy), 
-  from = recovery_rate, label = "Erosion") |>
-  flow(recovery,
-  #  eqn = recovery_rate * energy, 
-   eqn = recovery_rate, 
-   to = energy) 
-
-sim <- simulate(sfm)
-plot(sim)
-
-```
-
-
-## step by step
 ```{r}
 sfm <- sdbuildR() |>
   meta(name = "Burnout") |>
@@ -270,37 +380,75 @@ sim <- simulate(sfm)
 plot(sim)
 ```
 
+
+```{r include=FALSE}
+if (recreate_figs) {
+  sfm_list <- list()
+  sfm_list[["A"]] <- sfm
+}
+```
+
+
+
+```{r}
+diagnose(sfm)
+```
+
+
 ```{r}
 sfm <- sfm |>
-  constant(work_rate, eqn = .3)
+  constant(work_rate, eqn = .5)
 ```
 
 ```{r}
 sfm <- sfm |>
-  flow(working, eqn = work_rate,
+  flow(work, eqn = work_rate,
   from = energy, label = "Depletion from work")
 
 sim <- simulate(sfm)
 plot(sim)
 ```
 
+
+```{r include=FALSE}
+if (recreate_figs) {
+  sfm_list[["B"]] <- sfm
+}
+```
+
+
 ```{r}
 sfm <- sfm |>
-  update(working, eqn = work_rate * energy)
+  update(work, eqn = work_rate * energy)
 
 sim <- simulate(sfm)
 plot(sim)
 ```
 
+
+
+```{r include=FALSE}
+if (recreate_figs) {
+  sfm_list[["C"]] <- sfm
+}
+```
+
 ```{r}
 sfm <- sfm |>
-  constant(recovery_rate, eqn = .1) |>
+  constant(recovery_rate, eqn = .3, label = "Recovery Rate") |>
   flow(recovery, eqn = recovery_rate, to = energy, label = "Recovery")
 
 sim <- simulate(sfm)
 plot(sim)
 ```
 
+
+
+```{r include=FALSE}
+if (recreate_figs) {
+  sfm_list[["D"]] <- sfm
+}
+```
 
 What if the ability to recover is not static, but erodes over time?
 
@@ -313,314 +461,20 @@ sfm <- sfm |>
 ```{r}
 sfm <- sfm |>
   update(recovery_rate, eqn = 1) |>
-  flow(erosion, eqn = recovery_rate * working, 
-    # eqn = capacity * working / (1 + energy), 
+  flow(erosion, eqn = recovery_rate * work, 
+    # eqn = capacity * work / (1 + energy), 
   from = recovery_rate, label = "Erosion")
 
 sim <- simulate(sfm)
 plot(sim)
 ```
 
-Counterintuitively, as restoration capacity erodes, energy first increases. This is because recovery first still exceeds energy depletion from work. 
 
-
-```{r include=FALSE}
-if (recreate_figs) {
-  sfm <- sdbuildR() |>
-    stock(Stock, label = "Stock A", eqn = Constant) |>
-    constant(Constant, eqn = 10) |>
-    auxiliary(Auxiliary, eqn = Constant * 2) |>
-    flow(Inflow, to = Stock, eqn = Auxiliary) |>
-    flow(Outflow, from = Stock, eqn = Stock) |>
-    stock(StockB, label = "Stock B") |>
-    flow(InflowB,
-      from = Stock, to = StockB, eqn = Auxiliary,
-      label = "Outflow"
-    )
-
-  pl <- plot(sfm,
-    wrap_width = 9.5,
-    font_size = 20, minlen = 1.5,
-    stock_col = stock_col,
-    flow_col = flow_col,
-    font_family = font_family,
-    show_constants = TRUE, show_aux = TRUE, show_dependencies = TRUE
-  )
-  pl
-
-  export_plot(pl, file.path(filepath_figs, "sfm.pdf"))
-}
-```
-
-
-```{r include=FALSE}
-if (recreate_figs) {
-
-  {
-    viz_str <- "
-  digraph JDR_Model {
-
-    # Graph attributes
-    graph [layout = neato,
-           rankdir = TB,
-           bgcolor = white,
-           overlap = true,
-           outputorder='nodesfirst']
-
-    # Default node attributes
-    node [shape = circle,
-          style = 'filled',
-          fontcolor = 'white',
-          color = none,
-          font_family = '%(font_family)s',
-          width = 1.4,
-          height = 1.4, fixedsize = true,
-          fontsize = 16,
-          penwidth = 1.5]
-
-    edge [fontsize = 22, labeldistance = 3.35]
-
-    # Motivation path
-    'proactive_behaviour' [label = 'Proactive\\nBehaviour', fillcolor = '%(motivation_path)s', pos = '0,2!']
-    'node1' [label = '', fillcolor = '%(motivation_path)s', pos = '1.8,2!', width = .0001, height = .0001]
-    'node2' [label = '', fillcolor = '%(health_path)s', pos = '4.2,2!', width = .0001, height = .0001]
-    'resources' [label = 'Job\\nResources', fillcolor = '%(motivation_path)s', pos = '1.8,3.5!']
-    'engagement' [label = 'Work\\nEngagement', fillcolor = '%(motivation_path)s', pos = '1.8,0.5!']
-    'performance' [label = 'Job\\nPerformance', fillcolor = '%(performance_path)s', pos = '3,-1.45!']
-
-    # Health deterioriation path
-    'demands' [label = 'Job\\nDemands', fillcolor = '%(health_path)s', pos = '4.2,3.5!']
-    'exhaustion' [label = 'Exhaustion', fillcolor = '%(health_path)s', pos = '4.2,0.5!']
-    'undermining' [label = 'Self-\\nundermining', fillcolor = '%(health_path)s', pos = '6,2!']
-
-    # Edges
-    'proactive_behaviour' -> 'resources' [color = '%(motivation_path)s', fillcolor = '%(motivation_path_fill)s', penwidth = 2, headlabel = '+', fontcolor = '%(motivation_path)s', labeldistance = 4.4]
-      'resources' -> 'node1' [arrowhead=none, color = '%(motivation_path)s', fillcolor = '%(motivation_path_fill)s', penwidth = 2, headlabel = '', fontcolor = '%(motivation_path)s']
-      'node1' -> 'engagement' [color = '%(motivation_path)s', fillcolor = '%(motivation_path_fill)s', penwidth = 2, taillabel = '+', fontcolor = '%(motivation_path)s', labeldistance = 3.6]
-    'engagement' -> 'performance' [color = '%(motivation_path)s', fillcolor = '%(motivation_path_fill)s', penwidth = 2, taillabel = '+', fontcolor = '%(motivation_path)s', labeldistance = 3]
-    'engagement' -> 'proactive_behaviour' [color = '%(motivation_path)s', fillcolor = '%(motivation_path_fill)s', penwidth = 2, headlabel = '+', fontcolor = '%(motivation_path)s', labeldistance = 4.25]
-    'proactive_behaviour' -> 'demands' [color = '%(motivation_path)s', fillcolor = '%(motivation_path_fill)s', penwidth = 2, headlabel = '−', fontcolor = '%(motivation_path)s', tailport='e', labeldistance = 3]
-
-    'resources' -> 'node2' [color = '%(motivation_path)s', fillcolor = '%(motivation_path_fill)s', penwidth = 2, headlabel = '−', fontcolor = '%(motivation_path)s', labeldistance = 3]
-    'demands' -> 'node1' [color = '%(health_path)s', fillcolor = '%(health_path_fill)s', penwidth = 2, headlabel = '+', fontcolor = '%(health_path)s']
-    'demands' -> 'node2' [arrowhead=none, color = '%(health_path)s', fillcolor = '%(health_path_fill)s', penwidth = 2, headlabel = '', fontcolor = '%(health_path)s']
-    'node2' -> 'exhaustion' [color = '%(health_path)s', fillcolor = '%(health_path_fill)s', penwidth = 2, headlabel = '+', fontcolor = '%(health_path)s', labeldistance = 2.9]
-    'undermining' -> 'demands' [color = '%(health_path)s', fillcolor = '%(health_path_fill)s', penwidth = 2, taillabel = '+', fontcolor = '%(health_path)s', labeldistance = 3.75]
-
-    'exhaustion' -> 'undermining' [color = '%(health_path)s', fillcolor = '%(health_path_fill)s', penwidth = 2, labeldistance = 3.75, taillabel = '+', fontcolor = '%(health_path)s']
-    'exhaustion' -> 'engagement' [color = '%(health_path)s', fillcolor = '%(health_path_fill)s', penwidth = 2, labeldistance = 3.75, taillabel = '−', fontcolor = '%(health_path)s']
-    'exhaustion' -> 'performance' [color = '%(health_path)s', fillcolor = '%(health_path_fill)s', penwidth = 2, headlabel = '−', fontcolor = '%(health_path)s', labeldistance = 3.75]
-
-  }
-  "
-  }
-  viz_str <- sprintf_arg(
-    viz_str,
-    list(
-      health_path = health_path,
-      motivation_path = motivation_path,
-      health_path_fill = health_path_fill,
-      motivation_path_fill = motivation_path_fill,
-      performance_path = performance_path,
-      performance_path_fill = performance_path_fill,
-      font_family = font_family # "Georgia"
-    )
-  )
-
-
-  pl <- DiagrammeR::grViz(viz_str)
-  pl
-
-  export_plot(pl, file.path(filepath_figs, "JDR.pdf"))
-}
-```
-
-
-```{r} 
-sfm <- sdbuildR() |>
-stock(c("E", "R", "D", "X"), label = c("Engagement", "Job Resources", "Job Demands", "Energy")) |>
-flow("E_R", to = "E", label = "Motivation", eqn = R * D) |>#  "Boost hypothesis: Job demands amplify the impact of job resources on work engagement (and more generally on work motivation)."
-flow("A_to_R", to = "R", label = "Proactive Behaviour", eqn = E) |> # "Engaged employees are intrinsically motivated to stay engaged and therefore start to proactively optimize their job (increase resources and optimize demands)"
-flow("A_from_D", from = "D", label = "Proactive Behaviour", eqn = E) |> # "Engaged employees are intrinsically motivated to stay engaged and therefore start to proactively optimize their job (increase resources and optimize demands)"
-flow("to_D", to = "D", label = "Undermining", eq = D - X) |> # "Proposition 8: Job demands and strain may lead to maladaptive self-regulation cognitions and behaviors (self-undermining)"
-flow("X_X", from = "X", label = "Effort", eqn = D - R) |> # "Buffer hypothesis: Job resources weaken the impact of job demands on strain."
-flow("E_X", from = "E", label = "Depletion", eqn = -X) |> 
-aux(P, label = "Job Performance", eqn = E + X) 
-
-plot(sfm, show_constants = TRUE, show_aux = TRUE, show_dependencies = TRUE)
-```
-
-## Simulating Stock-and-Flow Models in R
-
-
-** why this value
-b contrls slope
-setting a = b gives same height
+Counterintuitively, as recovery capacity erodes, energy first increases. This is because recovery first still exceeds energy depletion from work. 
 
 ```{r}
-
-
-a = .01; plot(x, a / (a + x), type = "l", col = "red", ylim = c(0, 1))
-a = .05; lines(x, a / (a + x), type = "l", col = "orange")
-a = .1; lines(x, a / (a + x), type = "l", col = "green")
-a = .2; lines(x, a / (a + x), type = "l", col = "yellow")
-a = .5; lines(x, a / (a + x), type = "l", col = "blue")
-a = 1; lines(x, a / (a + x), type = "l", col = "purple")
-
-```
-
-```{r}
-sfm <- sdbuildR() |>
-  meta(name = "Job Resources and Demands Theory") |>
-  # Add a seed for reproducibility:
-  sim_specs(seed = 123) |>
-  sim_specs(time_units = day, stop = 365 / 2, 
-  only_stocks = FALSE) |>
-  # Make save_at larger to reduce image file size
-  sim_specs(save_at = .1, dt  =.01)
-```
-
-```{r, fig.width = 1, fig.height=1}
 sfm <- sfm |>
-  stock(E, .5, label = "Engagement") |>
-  stock(R, .7, label = "Job Resources")
-
-plot(sfm)
-```
-
-```{r eval=FALSE, include=FALSE}
-if (recreate_figs) {
-  {
-    viz_str <- "digraph sfm {
-
-      graph [layout = dot, rankdir = LR, center=true, outputorder='edgesfirst', pad=.1, nodesep= .3]
-
-      # Rank groupings
-  {rank=same; E; R}
-
-     		'R' [label='Job Resources',tooltip = 'eqn = 0.7',shape=box,style=filled,fillcolor='#35B7ADBF',fontsize=18,fontname='Times New Roman']
-
-		'E' [label='Engagement',tooltip = 'eqn = 0.5',shape=box,style=filled,fillcolor='#35B7ADBF',fontsize=18,fontname='Times New Roman']
-
-    }"
-  }
-  pl <- DiagrammeR::grViz(viz_str)
-  pl
-
-
-  export_plot(pl, file.path(filepath_figs, "sfm_JDR_A.pdf"))
-}
-```
-
-```{r build-jdr-a, fig.width = 1, fig.height = 3}
-sim <- simulate(sfm)
-plot(sim)
-```
-
-```{r include=FALSE}
-if (recreate_figs) {
-  sfm_list <- list()
-  sfm_list[["A"]] <- sfm
-}
-```
-
-```{r}
-diagnose(sfm)
-```
-
-```{r build-jdr-b}
-sfm <- sfm |>
-  constant(r_E_R, 
-  eqn = 1.25, 
-  label = "Motivation Rate") |>
-  flow(E_R, r_E_R * R, to = E, label = "Motivation")
-
-sim <- simulate(sfm)
-plot(sim)
-```
-
-```{r include=FALSE}
-if (recreate_figs) {
-  sfm_list[["B"]] <- sfm
-}
-```
-
-```{r}
-
-micmen <- function(x, a = 2, b = 1) {
- a * x/(b + x)
-}
-
-hill <- function(x, a = 2, b = 1) {
- x^a/(b + x^a)
-}
-
-curve(hyperbolic(x), from = 0, to = 5, ylim = c(0, 2))
-curve(micmen(x), add = T, col = "blue")
-
-
-```
-
-
-```{r build-jdr-c}
-sfm <- sfm |>
-  flow(E_R,
-  eqn = r_E_R * R * exp(-3 * E),
-  #  eqn = r_E_R * R / (r_E_R + E)
-   ) |>
-    constant(r_E_X,
-  eqn = 0.1,
-  #  eqn = 0.2, 
-   label = "Disengagement Rate") |>
-   flow(from_E, eqn = r_E_X * E, from = E, label = "Decay")
-
-sim <- simulate(sfm)
-plot(sim)
-```
-
-```{r include=FALSE}
-if (recreate_figs) {
-  sfm_list[["C"]] <- sfm
-}
-```
-
-```{r build-jdr-d}
-sfm <- sfm |>
-  constant(c(r_A, K_R),
-    eqn = c(0.2, 1),
-    label = c("Proactive Behaviour Rate", "Resource Capacity")
-  ) |>
-  flow(A_to_R,
-    eqn = r_A * E * (1 - R / K_R), to = R,
-    label = "Proactive Behaviour"
-  )
-
-sim <- simulate(sfm)
-plot(sim)
-```
-
-```{r include=FALSE}
-if (recreate_figs) {
-  sfm_list[["D"]] <- sfm
-}
-```
-
-
-<!-- **jdr specifies resources decay due to effort -->
-<!-- ```{r build-jdr-e}
-sfm <- sfm |>
-  constant(r_R, eqn = 0.05, label = "Resource Decay Rate") |>
-  flow(from_R, eqn = r_R * R, from = R, label = "Decay")
-
-sim <- simulate(sfm)
-plot(sim)
-``` -->
-
-```{r build-jdr-e}
-sfm <- sfm |>
-  stock(D, eqn = .2, label = "Job Demands") |>
-  stock(X, eqn = .5, label = "Energy") |>
-  aux(P, eqn = E + X, label = "Job Performance")
+  aux(net_change, eqn = recovery - work, label = "Net change in energy")
 
 sim <- simulate(sfm)
 plot(sim)
@@ -633,209 +487,6 @@ if (recreate_figs) {
 }
 ```
 
-<!-- code not included in paper -->
-
-** Michaelis-Menten function: f(x) = ax/(b + x)
-
-```{r build-jdr-f}
-sfm <- sfm |>
-  constant(r_X_D,
-    eqn = 0.4,
-    label = "Fatigue from Demand Rate"
-  ) |>
-  constant(K_X, eqn = 1, label = "Energy Capacity") |>
-  flow(X_D,
-    eqn = r_X_D * X * D / (1 + R),
-    from = X, label = "Effort", doc = "Buffer Hypothesis: Job resources weaken the impact of job demands on energy"
-  ) |>
-  flow(E_R,
-    eqn = r_E_R * X * R * (1 + D) * (1 - E / K_E),
-    doc = "Boost Hypothesis: Job demands amplify the impact of job resources on work engagement; made dependent on energy levels as engagement is partially defined as vigour"
-  )
-
-
-sim <- simulate(sfm, only_stocks = FALSE)
-
-# Specify variables to plot
-vars <- c("E", "D", "R", "X", "P")
-plot(sim, vars = vars)
-```
-
-```{r include=FALSE}
-if (recreate_figs) {
-  sfm_list[["F"]] <- sfm
-}
-```
-
-```{r build-jdr-g}
-sfm <- sfm |>
-  constant(r_R, eqn = 0.05, label = "Resource Decay Rate") |>
-  flow(from_R, eqn = r_R * R * (1 - X/K_X), from = R, label = "Decay from low energy") |>
-
-  constant(r_X_X, eqn = 0.15, label = "Restoration Rate") |>
-  flow(X_X,
-    eqn = r_X_X * X * (1 - X / K_X),
-    to = X, label = "Restoration"
-  ) |>
-  constant(r_E_X, eqn = 0.1, label = "Disengagement Rate") |>
-  flow(E_X,
-    eqn = r_E_X * E * (1 - X / K_X), from = E,
-    label = "Disengagement from Exhaustion"
-  )
-
-sim <- simulate(sfm, only_stocks = FALSE)
-plot(sim, vars = vars)
-```
-
-```{r include=FALSE}
-if (recreate_figs) {
-  sfm_list[["G"]] <- sfm
-}
-```
-
-
-```{r build-jdr-h}
-sfm <- sfm |>
-  constant(r_U, eqn = 0.15, label = "Self-undermining Rate") |>
-  constant(K_D, eqn = 1, label = "Demand Capacity") |>
-  flow(A_from_D,
-    eqn = r_A * E * D, from = D,
-    label = "Proactive Behaviour"
-  ) |>
-  flow(U,
-    eqn = r_U * (1 - X / K_X), to = D,
-    label = "Self-undermining"
-  )
-
-sim <- simulate(sfm, only_stocks = FALSE)
-plot(sim, vars = vars)
-```
-
-```{r include=FALSE}
-if (recreate_figs) {
-  sfm_list[["H"]] <- sfm
-}
-```
-
-
-```{r build-jdr-i}
-sfm <- sfm |>
-  constant(r_D, eqn = 0.2, label = "Demand Regulation Rate") |>
-  flow(D_D,
-    eqn = r_D * (1 - D / K_D), to = D,
-    label = "Demand Regulation"
-  )
-
-sim <- simulate(sfm, only_stocks = FALSE)
-plot(sim, vars = vars)
-```
-
-```{r include=FALSE}
-if (recreate_figs) {
-  sfm_list[["I"]] <- sfm
-}
-```
-
-```{r}
-plot(sfm, minlen = 1.5, font_size = 22)
-```
-
-```{r eval=FALSE, include=FALSE}
-if (recreate_figs) {
-  {
-    viz_str <- "digraph sfm {
-
-      graph [layout = dot, rankdir = LR, center=true, outputorder='edgesfirst', pad=.1, nodesep= .3]
-
-      # Rank groupings
-  {rank=same; X; P}
-
-
-      # Define auxiliary nodes
-      'P' [label='Job Performance',tooltip = 'eqn = E + X',shape=plaintext,fontsize=20,fontname='Times New Roman', width=0.6, height=0.3]
-
-      # Define stock nodes
-      'X' [label='Energy',tooltip = 'eqn = 0.5',shape=box,style=filled,fillcolor='#35B7ADBF',fontsize=22,fontname='Times New Roman']
-
-		'E' [label='Engagement',tooltip = 'eqn = 0.5',shape=box,style=filled,fillcolor='#35B7ADBF',fontsize=22,fontname='Times New Roman']
-
-		'R' [label='Job Resources',tooltip = 'eqn = 0.7',shape=box,style=filled,fillcolor='#35B7ADBF',fontsize=22,fontname='Times New Roman']
-
- 		'D' [label='Job Demands',tooltip = 'eqn = 0.2',shape=box,style=filled,fillcolor='#35B7ADBF',fontsize=22,fontname='Times New Roman']
-
-
-      # Define flow nodes (intermediate nodes for flows)
-      'flow_E_R' [label='Motivation', tooltip = 'eqn = r_E_R * X * R * (1 + D) * (1 - E/K_E)', shape = plaintext, fontsize=20, fontname='Times New Roman', width=0.6, height=0.3]
-		'flow_A_to_R' [label='Proactive Behaviour', tooltip = 'eqn = r_A * E * (K_R - R)/K_R', shape = plaintext, fontsize=20, fontname='Times New Roman', width=0.6, height=0.3]
-		'flow_from_R' [label='Decay', tooltip = 'eqn = r_R * R', shape = plaintext, fontsize=20, fontname='Times New Roman', width=0.6, height=0.3]
-		'flow_X_D' [label='Effort', tooltip = 'eqn = r_X_D * X * D / (1 + R)', shape = plaintext, fontsize=20, fontname='Times New Roman', width=0.6, height=0.3]
-		'flow_X_X' [label='Restoration', tooltip = 'eqn = r_X_X * X * (1 - X/K_X)', shape = plaintext, fontsize=20, fontname='Times New Roman', width=0.6, height=0.3]
-		'flow_E_X' [label='Disengagement from Exhaustion', tooltip = 'eqn = r_E_X * E * (1 - X/K_X)', shape = plaintext, fontsize=20, fontname='Times New Roman', width=0.6, height=0.3]
-		'flow_A_from_D' [label='Proactive Behaviour', tooltip = 'eqn = r_A * E * D', shape = plaintext, fontsize=20, fontname='Times New Roman', width=0.6, height=0.3]
-		'flow_U' [label='Self-undermining', tooltip = 'eqn = r_U * (1 - X/K_X)', shape = plaintext, fontsize=20, fontname='Times New Roman', width=0.6, height=0.3]
-		'flow_D_D' [label='Demand Regulation', tooltip = 'eqn = r_D * (1 - D/K_D)', shape = plaintext, fontsize=20, fontname='Times New Roman', width=0.6, height=0.3]
-
-      # Define external cloud nodes
-      'Cloud1' [label='', tooltip = 'Unspecified source',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
-		'Cloud2' [label='', tooltip = 'Unspecified source',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
-		'Cloud3' [label='', tooltip = 'Unspecified source',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
-		'Cloud4' [label='', tooltip = 'Unspecified source',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
-		'Cloud5' [label='', tooltip = 'Unspecified sink',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
-		'Cloud6' [label='', tooltip = 'Unspecified sink',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
-		'Cloud7' [label='', tooltip = 'Unspecified sink',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
-		'Cloud8' [label='', tooltip = 'Unspecified sink',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
-		'Cloud9' [label='', tooltip = 'Unspecified sink',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
-
-      # Define flow edges (stock -> flow_node -> stock)
-      'Cloud5' -> 'flow_E_R' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
-		'flow_E_R' -> 'E' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
-		'Cloud6' -> 'flow_A_to_R' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
-		'flow_A_to_R' -> 'R' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
-		'R' -> 'flow_from_R' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
-		'flow_from_R' -> 'Cloud1' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
-		'X' -> 'flow_X_D' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
-		'flow_X_D' -> 'Cloud2' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
-		'Cloud7' -> 'flow_X_X' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
-		'flow_X_X' -> 'X' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
-		'E' -> 'flow_E_X' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
-		'flow_E_X' -> 'Cloud3' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
-		'D' -> 'flow_A_from_D' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
-		'flow_A_from_D' -> 'Cloud4' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
-		'Cloud8' -> 'flow_U' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
-		'flow_U' -> 'D' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
-		'Cloud9' -> 'flow_D_D' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
-		'flow_D_D' -> 'D' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
-
-      # Define dependency edges
-      'E' -> 'P' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-		'X' -> 'P' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-		'X' -> 'flow_E_R' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-		'R' -> 'flow_E_R' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-		'D' -> 'flow_E_R' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-		'E' -> 'flow_E_R' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-		'E' -> 'flow_A_to_R' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-		'R' -> 'flow_A_to_R' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-		'R' -> 'flow_R_X' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-		'X' -> 'flow_X_D' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-		'D' -> 'flow_X_D' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-		'R' -> 'flow_X_D' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-		'X' -> 'flow_X_X' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-		'E' -> 'flow_E_X' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-		'X' -> 'flow_E_X' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-		'E' -> 'flow_A_from_D' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-		'D' -> 'flow_A_from_D' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-		'X' -> 'flow_U' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-		'D' -> 'flow_D_D' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-
-
-    }"
-  }
-  pl <- DiagrammeR::grViz(viz_str)
-  pl
-
-  export_plot(pl, file.path(filepath_figs, "sfm_JDR_I.pdf"))
-}
-```
 
 
 ```{r include=FALSE}
@@ -843,83 +494,989 @@ if (recreate_figs) {
   # Create subplot figure
   pl_list <- list()
   max_letter <- max(names(sfm_list))
+  VARS_example <- c("energy", "work", "recovery", "recovery_rate", "net_change")
+
+  # COLORS_example <- grDevices::hcl.colors(n = 50, palette = PALETTE)
+  COLORS_example <- COLORS[seq_along(VARS_example)]
+
+  titles <- paste0(
+    paste0("<i>", LETTERS[seq_along(sfm_list)], ". ", 
+    c("Static stock", 
+    "Constant outflow", 
+    "Stock-dependent<br>outflow", 
+    "Constant inflow",
+    "Erosion of recovery rate" 
+    # "Auxiliary variable tracking net change in energy"
+    ), "</i>")
+  )
+  titles <- stats::setNames(titles, names(sfm_list))
+
   for (letter in names(sfm_list)) {
-    sim <- simulate(sfm_list[[letter]] |> sim_specs(save_at = .01),
-      only_stocks = FALSE
+    sim <- simulate(sfm_list[[letter]], 
+    save_at = .01, only_stocks = FALSE
     )
 
-    vars_in_sim <- intersect(vars, unique(sim$df$variable))
+    # vars_in_sim <- intersect(vars, unique(sim$df$variable))
+    vars_in_sim <- unique(sim$df$variable)
 
-    vars_ <- VARS[VARS %in% vars_in_sim]
-    colors_ <- COLORS[VARS %in% vars_in_sim]
+    vars_ <- VARS_example[VARS_example %in% vars_in_sim] |> rev()
+    colors_ <- COLORS_example[VARS_example %in% vars_in_sim] |> rev()
+
+    pl_list[[letter]] <- plot(sim,
+      vars = vars_,
+      colors = colors_,
+      main = "", 
+      # ylim = ylim,
+      showlegend = (letter == max_letter)
+    ) |> rm_grid() |>
+    plotly::layout(yaxis = list(
+      nticks = 3
+      ), xaxis = list(
+      tickvals = list(0, 7.5, 15)
+      ))
+  }
+
+  # x1 <- 0.18
+  # x2 <- 0.8
+  # x3 <- .5
+  # y1 <- 1.03
+  # y2 <- 0.77
+  # y3 <- 0.45
+
+  x1 <- 0.1
+  x2 <- 0.37
+  x3 <- .8
+  y1 <- 1.08
+  y2 <- 0.49
+  # y3 <- 0.45
+
+  annot_ <- utils::modifyList(annot, list(
+    font = list(size = font_size_subplot + 4, family = font_family))
+  )
+
+  pl <- plotly::subplot(
+    plotly::subplot(pl_list[1:4],
+    nrows = 2,
+    shareX = TRUE,
+    shareY = FALSE,
+    titleY = FALSE,
+    titleX = FALSE,
+    margin = 0.075
+  ), plotly::subplot(pl_list[5]), 
+  nrows = 1,
+    # shareX = TRUE
+    # shareY = FALSE,
+    # titleY = FALSE,
+    # titleX = FALSE,
+    margin = 0.03
+  ) |>
+    plotly::layout(
+      font = annot_font,
+      # legend = annot_legend,
+      # legend = utils::modifyList(annot_legend, list(x = 1.4, y = 0.8)),
+      legend = utils::modifyList(annot_legend, list(y = -.2, 
+      font = list(size = font_size_legend))),
+      annotations = list(
+        utils::modifyList(annot_xlab, list(x = 0.5, y = -0.075))
+      )
+    ) |>
+    plotly::layout(annotations = list(
+      utils::modifyList(annot_, list(x = x1, y = y1, text = titles[["A"]])),
+      utils::modifyList(annot_, list(x = x2, y = y1, text = titles[["B"]])),
+      utils::modifyList(annot_, list(x = x1, y = y2, text = titles[["C"]])),
+      utils::modifyList(annot_, list(x = x2, y = y2, text = titles[["D"]])),
+      utils::modifyList(annot_, list(x = x3, y = y1, text = titles[["E"]]))
+    ))
+
+  pl
+
+  export_plot(pl, file.path(filepath_figs, "build_sfm.pdf"),
+    width = 7, height = 4.5
+  )
+}
+```
+
+
+
+```{r} 
+sfm <- sdbuildR() |>
+  stock(c("E", "R", "D", "X"), label = c("Engagement", "Job Resources", "Job Demands", "Energy")) |>
+  flow("motivation", to = "E", label = "Motivation", eqn = R * D) |>#  "Boost hypothesis: Job demands amplify the impact of job resources on work engagement (and more generally on work motivation)."
+  flow("proactive_R", to = "R", label = "Proactive Behaviour", eqn = E) |> # "Engaged employees are intrinsically motivated to stay engaged and therefore start to proactively optimize their job (increase resources and optimize demands)"
+  flow("proactive_D", from = "D", label = "Proactive Behaviour", eqn = E) |> # "Engaged employees are intrinsically motivated to stay engaged and therefore start to proactively optimize their job (increase resources and optimize demands)"
+  flow("undermining", to = "D", label = "Undermining", eq = D - X) |> # "Proposition 8: Job demands and strain may lead to maladaptive self-regulation cognitions and behaviors (self-undermining)"
+  flow("effort", from = "X", label = "Effort", eqn = D - R) |> # "Buffer hypothesis: Job resources weaken the impact of job demands on strain."
+  flow("R_X", from = "R", label = "Depletion from Exhaustion", eqn = -X) |> 
+  flow("E_X", from = "E", label = "Depletion from Exhaustion", eqn = -X) |> 
+  aux(P, label = "Job Performance", eqn = E + X) 
+
+plot(sfm, show_constants = TRUE, show_aux = TRUE, show_dependencies = TRUE)
+```
+
+## Simulating Stock-and-Flow Models in R
+
+```{r}
+sfm <- sdbuildR() |>
+  meta(name = "Job Demands and Resources (JD-R) Theory") |>
+  # Add a seed for reproducibility:
+  sim_specs(seed = 123) |>
+  sim_specs(time_units = day, stop = 365 / 2, 
+  only_stocks = FALSE) |>
+  # Make save_at larger to reduce image file size
+  sim_specs(save_at = .1, dt  =.01)
+```
+
+```{r, fig.width = 1, fig.height=1}
+sfm <- sfm |>
+  stock(engagement, eqn = .7, label = "Work Engagement") |>
+  stock(resources, eqn = .5, label = "Job Resources")
+```
+
+Both stocks should remain static.
+
+```{r, fig.width = 1, fig.height = 3}
+sim <- simulate(sfm)
+plot(sim)
+```
+
+We now implement the positive feedback loop between engagement and job resources. As a first functional form, we try a linear effect of resources on motivation, and of motivation on engagement:
+
+```{r, fig.width = 1, fig.height=1}
+sfm <- sfm |> 
+  constant(motivation_rate, eqn = .3, label = "Motivation Rate") |>
+  flow(motivation, motivation_rate * resources, to = engagement, label = "Motivation") |>
+  constant(proactive_rate, eqn = 0.2, label = "Proactive Behaviour Rate") |>
+  flow(proactive, eqn = proactive_rate * engagement, to = resources,
+   label = "Proactive behaviour" )
+
+sim <- simulate(sfm)
+plot(sim)
+```
+
+
+```{r include=FALSE}
+if (recreate_figs) {
+  func_form_list <- list()
+  func_form_list[["A"]] <- sfm
+}
+```
+
+Both resources and engagement grow exponentially to extremely high levels, which is not very realistic. We could add a negative feedback loop to limit this growth, for example by adding a (linear) decay flow from engagement and resources:
+
+```{r, fig.width = 1, fig.height=1}
+sfm <- sfm |> 
+  constant(engagement_decay_rate, eqn = 0.2, label = "Engagement Decay Rate") |>
+  flow(engagement_decay, eqn = engagement_decay_rate * engagement, from = engagement, label = "Decay") |>
+  constant(resource_decay_rate, eqn = 0.1, label = "Resource Decay Rate") |>
+  flow(resource_decay, eqn = resource_decay_rate * resources, from = resources, label = "Decay")
+```
+
+
+```{r}
+plot(sfm)
+```
+
+```{r} 
+sim <- simulate(sfm)
+plot(sim)
+```
+
+
+```{r include=FALSE}
+if (recreate_figs) {
+  func_form_list[["B"]] <- sfm
+}
+```
+
+However, the two negative feedback loops are not sufficient to counter the exponential growth in resources and engagement. The linear inflows represents the idea that motivation and proactive behaviour are proportional to the level of resources and engagement, respectively. There is no upper limit to their beneficial effects. 
+
+Instead, we can implement a more realistic functional form which follows an S-curve, such as a Hill function. This function has two parameters: the slope, which determines how steeply the function increases, and the midpoint, which determines at what level of the cause variable the effect is half of its maximum. With a slope $>1$, the function is S-shaped, which captures the idea that low levels of the cause variable have neglible effects, and its effect saturates at high levels. The Hill function is only defined for positive values of the cause variable.
+
+
+```{r, echo=FALSE}
+# Functional forms
+linear <- function(x, a) {a * x}
+hill <- function(x, midpoint, slope) {x^slope / (midpoint^slope + x^slope)}
+x <- seq(0, 1, by = .01)
+
+# Linear function
+slopes <- c(0.1, 0.5, 1)
+df_linear <- data.frame(
+  x = rep(x, length(slopes)),
+  value = unlist(lapply(slopes, function(a) linear(x, a = a))),
+  type = rep(slopes, each = length(x))
+)
+
+# Order legend increasingly by slope
+df_linear$type <- factor(df_linear$type, levels = as.character(sort(slopes)))
+
+# Hill function
+midpoint <- 0.5
+slopes <- c(1, 3, 10)
+df_hill <- data.frame(
+  x = rep(x, length(slopes)),
+  value = unlist(lapply(slopes, function(slope) hill(x, midpoint = midpoint, slope = slope))),
+  type = rep(slopes, each = length(x))
+)
+
+# Order legend increasingly by slope
+df_hill$type <- factor(df_hill$type, levels = as.character(sort(slopes)))
+
+# Pick colours for linear and hill functional form
+colors_linear <- grDevices::hcl.colors(n = 50, palette = "Roma")[c(20, 15, 8)]
+colors_hill <- grDevices::hcl.colors(n = 50, palette = "Roma")[c(45, 35, 28)]
+
+# Plot functional form
+pl1 <- plotly::plot_ly() |>
+  plotly::add_trace(
+    data = df_linear, x = ~x,
+    y = ~value,
+    colors = colors_linear,
+    color = ~type,
+    legendgroup = ~type,
+    type = "scatter",
+    mode = "lines"
+  )
+
+pl2 <- plotly::plot_ly() |>
+  plotly::add_trace(
+    data = df_hill, x = ~x,
+    y = ~value,
+    colors = colors_hill,
+    color = ~type,
+    legendgroup = ~type,
+    type = "scatter",
+    mode = "lines"
+  )
+
+pl_func_form <- plotly::subplot(pl1, pl2, 
+      nrows = 1,
+    shareX = TRUE,
+    shareY = TRUE,
+    titleY = TRUE,
+    titleX = TRUE,
+    margin = c(0.1, 0.05, 0.05, 0.05)
+) |>
+  plotly::layout(title = "", 
+  yaxis = list(title = "Effect on receiving variable"),
+  font = annot_font,
+  legend = utils::modifyList(annot_legend, list(
+        y = -0.2, 
+        title = list(text = "Slope", font = list(size = font_size_legend)),
+        traceorder = "normal",
+        tracegroupgap = 0,
+        itemwidth = 15,
+        font = list(size = font_size_legend)
+      )),
+      annotations = list(
+        utils::modifyList(annot_xlab, 
+        list(text = "Influencing variable", y = -.05)
+        )
+      )
+    )
+pl_func_form
+
+```
+
+
+```{r, include=FALSE}
+# Functional forms
+logistic_eq <- function(x, midpoint, slope) {slope * x * (1 - x / midpoint)}
+probit <- function(x, mean, sd) {pnorm(x, mean = mean, sd = sd)}
+hill <- function(x, midpoint, slope) {x^slope / (midpoint^slope + x^slope)}
+x <- seq(0, 1, by = .01)
+midpoint <- 0.5
+ylim <- c(-0.3, 1.1)
+
+# Logistic function
+slopes <- c(1, 5, 8)
+df_logistic <- data.frame(
+  x = rep(x, length(slopes)),
+  value = unlist(lapply(slopes, function(a) logistic_eq(x, midpoint = midpoint, slope = a))),
+  type = rep(slopes, each = length(x))
+)
+
+# Order legend increasingly by slope
+df_logistic$type <- factor(df_logistic$type, levels = as.character(sort(slopes)))
+
+# Probit function
+slopes <- c(0.1, 0.3, 1)
+df_probit <- data.frame(
+  x = rep(x, length(slopes)),
+  value = unlist(lapply(slopes, function(sd) probit(x, mean = midpoint, sd = sd))),
+  type = rep(slopes, each = length(x))
+)
+
+# Order legend increasingly by slope
+df_probit$type <- factor(df_probit$type, levels = as.character(sort(slopes)))
+
+# Hill function
+slopes <- c(1, 3, 10)
+df_hill <- data.frame(
+  x = rep(x, length(slopes)),
+  value = unlist(lapply(slopes, function(slope) hill(x, midpoint = midpoint, slope = slope))),
+  type = rep(slopes, each = length(x))
+)
+
+# Order legend increasingly by slope
+df_hill$type <- factor(df_hill$type, levels = as.character(sort(slopes)))
+
+# Simulate three models with different functional forms
+sfm0_rev <- sdbuildR() |> stock(Stock, eqn = 0.1) |> sim_specs(only_stocks = FALSE, stop = 10)
+sfm1_rev <- sfm0_rev |> flow(Inflow, eqn = 1 * Stock * (1 - Stock / 0.5), to = Stock)
+sfm2_rev <- sfm0_rev |> flow(Inflow, eqn = pnorm(Stock, mean = 0.5, sd = 0.3), to = Stock)
+sfm3_rev <- sfm0_rev |> flow(Inflow, eqn = Stock^3 / (0.5^3 + Stock^3), to = Stock)
+vars <- c("Stock", "Inflow")
+
+pl1 <- plot(simulate(sfm1_rev), vars = vars)
+pl2 <- plot(simulate(sfm2_rev), showlegend = FALSE, vars = vars)
+pl3 <- plot(simulate(sfm3_rev), showlegend = FALSE, vars = vars)
+pl_sim_rev <- plotly::subplot(pl1, pl2, pl3, nrows = 1, shareX = TRUE, shareY = FALSE)
+
+
+# Pick colours for linear and hill functional form
+colors_logistic <- grDevices::hcl.colors(n = 100, palette = "Roma")[c(1, 15, 30)]
+colors_probit <- grDevices::hcl.colors(n = 100, palette = "Roma")[c(40, 55, 68)]
+colors_hill <- grDevices::hcl.colors(n = 100, palette = "Roma")[c(72, 83, 100)]
+
+# cl <- grDevices::hcl.colors(n = 100, palette = "Roma")
+# scales::show_col(cl)
+
+titles_top <- paste0("<i>", c("Logistic function", "Probit function", "Hill function"), "</i>")
+titles_bottom <- paste0("<i>", c(
+  "Inflow =<br>s * Stock * (1 - Stock / K)<br>s (slope) = 1, K = 0.5",
+  "Inflow =<br>pnorm(Stock, mu, s)<br>s (slope) = 0.3, mu = 0.5",
+  "Inflow =<br>Stock^s / (K^s + Stock^s)<br>s (slope) = 3, K = 0.5"
+), "</i>")
+
+x1 <- 0.16
+x2 <- 0.50
+x3 <- 0.86
+y1 <- 1.15
+y2 <- 0.42
+
+annot <- list(
+  size = font_size_subplot - 4,
+  xanchor = "center",
+  yanchor = "middle",
+  showarrow = FALSE,
+  xref = "paper",
+  yref = "paper"
+)
+
+# Plot functional form
+pl1 <- plotly::plot_ly() |>
+  plotly::add_trace(
+    data = df_logistic, x = ~x,
+    y = ~value,
+    colors = colors_logistic,
+    color = ~type,
+    legendgroup = ~type,
+    type = "scatter",
+    mode = "lines"
+  ) |>
+  plotly::layout(
+    yaxis = list(range = ylim)
+    # margin = list(t = 0, b = 0, l = 0, r = 0)
+  )
+
+pl2 <- plotly::plot_ly() |>
+  plotly::add_trace(
+    data = df_probit, x = ~x,
+    y = ~value,
+    colors = colors_probit,
+    color = ~type,
+    legendgroup = ~type,
+    type = "scatter",
+    mode = "lines"
+  ) |>
+  plotly::layout(
+    yaxis = list(range = ylim)
+    # margin = list(t = 0, b = 0, l = 0, r = 0)
+  )
+
+pl3 <- plotly::plot_ly() |>
+  plotly::add_trace(
+    data = df_hill, x = ~x,
+    y = ~value,
+    colors = colors_hill,
+    color = ~type,
+    legendgroup = ~type,
+    type = "scatter",
+    mode = "lines"
+  ) |>
+  plotly::layout(
+    yaxis = list(range = ylim)
+    # margin = list(t = 0, b = 0, l = 0, r = 0)
+  )
+
+sim1_rev <- plot(simulate(sfm1_rev), vars = vars,
+ xlab = "", showlegend = TRUE, main = "")
+sim2_rev <- plot(simulate(sfm2_rev), vars = vars, xlab = "", showlegend = FALSE, main = "")
+sim3_rev <- plot(simulate(sfm3_rev), vars = vars, xlab = "", showlegend = FALSE, main = "")
+
+# Route bottom row traces to legend2
+sim1_rev <- plotly::style(sim1_rev, legend = "legend2")
+sim2_rev <- plotly::style(sim2_rev, legend = "legend2")
+sim3_rev <- plotly::style(sim3_rev, legend = "legend2")
+
+pl_func_form_rev <- plotly::subplot(pl1, pl2, pl3,
+      nrows = 1,
+    shareX = TRUE,
+    shareY = TRUE,
+    titleY = TRUE,
+    titleX = FALSE,
+    margin = c(0.05, 0.05, 0.05, 0.05)
+) |>
+  plotly::layout(title = "", yaxis = list(title = "Effect on receiving variable")) |>
+    plotly::layout(
+      font = list(family = font_family, size = font_size),
+      legend = list(
+        orientation = "h",
+        x = 0.5, y = 0,
+        xanchor = "center",
+        yanchor = "top",
+        traceorder = "normal",
+        tracegroupgap = 0,
+        itemwidth = 15,
+        title = list(text = "Slope", font = list(size = font_size_legend)),
+        font = list(size = font_size_legend)
+      )
+    ) |>
+    plotly::layout(annotations = list(
+      utils::modifyList(annot, list(x = x1, y = y1, text = titles_top[[1]])),
+      utils::modifyList(annot, list(x = x2, y = y1, text = titles_top[[2]])),
+      utils::modifyList(annot, list(x = x3, y = y1, text = titles_top[[3]]))
+    ))
+
+pl_bottom_rev <- plotly::subplot(
+  sim1_rev, sim2_rev, sim3_rev,
+  nrows = 1,
+  shareX = TRUE,
+  shareY = FALSE,
+  titleY = FALSE,
+  titleX = FALSE,
+  margin = c(0.05, 0.05, 0.05, 0.05)
+) |>
+  plotly::layout(title = "", yaxis = list(title = "Value"))
+
+pl_spacer_rev <- plotly::plot_ly(
+  x = 0,
+  y = 0,
+  type = "scatter",
+  mode = "markers",
+  visible = FALSE,
+  showlegend = FALSE,
+  hoverinfo = "skip"
+) |>
+  plotly::layout(
+    xaxis = list(
+      visible = FALSE,
+      showgrid = FALSE,
+      zeroline = FALSE,
+      showticklabels = FALSE
+    ),
+    yaxis = list(
+      visible = FALSE,
+      showgrid = FALSE,
+      zeroline = FALSE,
+      showticklabels = FALSE
+    )
+    # margin = c(0.05, 0.05, 0.05, 0.05)
+  )
+
+pl_final_rev <- plotly::subplot(
+  pl_spacer_rev,
+  pl_func_form_rev,
+  pl_spacer_rev,
+  pl_bottom_rev,
+  pl_spacer_rev,
+  nrows = 5,
+  titleY = TRUE,
+  heights = c(0.001, 0.35, 0.25, 0.35, 0.01),
+  margin = c(0.05, 0.05, 0.05, 0.05)
+) |>
+  plotly::layout(
+    font = list(family = font_family, size = font_size),
+    legend = list(
+      orientation = "v",
+      x = 1.02,
+      y = 1,
+      xanchor = "left",
+      yanchor = "top",
+      traceorder = "normal",
+      tracegroupgap = 0,
+      itemwidth = 15,
+      title = list(text = "Slope", font = list(size = font_size_legend)),
+      font = list(size = font_size_legend)
+    ),
+    legend2 = list(
+      orientation = "v",
+      x = 1.02,
+      y = y2 - .25,
+      xanchor = "left",
+      yanchor = "center",
+      traceorder = "normal",
+      tracegroupgap = 0,
+      itemwidth = 15,
+      font = list(size = font_size_legend)
+    ),
+    annotations = list(
+      utils::modifyList(annot, list(
+        text = "<i>Functional forms</i>",
+        x = 0.5,
+        y = 1.03,
+        yanchor = "top",
+        font = list(size = font_size_xlab)
+      )),
+      utils::modifyList(annot, list(
+        text = "<i>Timeseries</i>",
+        x = 0.5,
+        y = y2 + 0.06,
+        yanchor = "bottom",
+        font = list(size = font_size_xlab)
+      )),
+      utils::modifyList(annot, list(x = x1, y = y2, text = titles_bottom[[1]])),
+      utils::modifyList(annot, list(x = x2, y = y2, text = titles_bottom[[2]])),
+      utils::modifyList(annot, list(x = x3, y = y2, text = titles_bottom[[3]])),
+      utils::modifyList(annot, list(
+        text = "Influencing variable",
+        x = 0.5,
+        y = y2 + 0.2,
+        yanchor = "top",
+        font = list(size = font_size_xlab - 2)
+      )),
+      utils::modifyList(annot, list(
+        text = "Time",
+        x = 0.5,
+        y = 0.03,
+        yanchor = "top",
+        font = list(size = font_size_xlab - 2)
+      ))
+    )
+  )
+pl_final_rev
+
+
+export_plot(pl_final_rev, file.path(filepath_figs, "revision_functional_forms.pdf"),
+  width = 6, height = 5
+)
+```
+
+
+```{r, fig.width = 1, fig.height=1}
+sfm <- sfm |> 
+  custom_func(hill, label = "Hill function", 
+    eqn = "function(x, slope, midpoint = 0.5) {x^slope / (midpoint^slope + x^slope)}",
+    doc = "S-shaped functional form used to capture saturation effects. The midpoint determines the inflection point of the curve where the function reaches half its maximum value. The slope determines the steepness of the curve, where slope > 1 creates an S-shaped curve.") |>
+  constant(m_slope, eqn = 3, label = "Medium Slope") |>
+  update(motivation, eqn = motivation_rate * hill(resources, m_slope)) |>
+  update(proactive, eqn = proactive_rate * hill(engagement, m_slope))
+
+sim <- simulate(sfm)
+plot(sim)
+```
+
+
+```{r include=FALSE}
+if (recreate_figs) {
+  func_form_list[["D"]] <- sfm
+}
+```
+
+
+However, this formalization of the positive feedback loop still requires the outflows from resources and engagement in order to stabilize at a steady state.
+
+
+```{r, fig.width = 1, fig.height=1}
+sfm2 <- sfm |> 
+  discard(c(engagement_decay, resource_decay))
+
+sim <- simulate(sfm2)
+plot(sim)
+```
+
+
+
+```{r include=FALSE}
+if (recreate_figs) {
+  func_form_list[["C"]] <- sfm2
+  # Sort list by name
+  func_form_list <- func_form_list[order(names(func_form_list))]
+}
+```
+
+
+
+```{r include=FALSE}
+if (recreate_figs) {
+  # Create subplot figure
+  pl_list <- list()
+  max_letter <- max(names(func_form_list))
+  VARS_example <- c("engagement", "resources")
+
+  # COLORS_example <- grDevices::hcl.colors(n = 50, palette = PALETTE)
+  COLORS_example <- COLORS[seq_along(VARS_example)]
+
+  titles <- paste0("<i>",
+    paste0(LETTERS[1:6], ". ", c(
+      "Linear functional form", 
+      "Linear feedback loop", 
+       "Add outflows", 
+      "S-shaped functional form", 
+      "S-shaped feedback loop", 
+      "Add outflows"
+    )), "</i>"
+  )
+
+
+  for (letter in names(func_form_list)) {
+    sim <- simulate(func_form_list[[letter]], 
+    save_at = .01, only_stocks = FALSE
+    )
+
+    vars_in_sim <- unique(sim$df$variable)
+    vars_ <- VARS_example[VARS_example %in% vars_in_sim]
+    colors_ <- COLORS_example[VARS_example %in% vars_in_sim]
 
     pl_list[[letter]] <- plot(sim,
       vars = vars_,
       colors = colors_,
       main = "",
+      # ylim = ylim,
       showlegend = (letter == max_letter)
-    )
+    ) |> plotly::layout(xaxis = list(
+      # nticks = 3
+      tickvals = list(0, 150)
+      ))
+
   }
 
-  x1 <- 0.14
-  x2 <- 0.5
-  x3 <- .86
-  y1 <- 1.05
-  y2 <- 0.67
-  y3 <- .2775
+  # Route simulation traces to legend2 and fix margins/automargin for equal widths
+  pl_list <- lapply(pl_list, function(p) {
+    plotly::style(p, legend = "legend2") |>
+      plotly::layout(
+        margin = list(t = 0, b = 0, l = 0, r = 0),
+        yaxis = list(automargin = FALSE)
+      ) |> rm_grid()
+  })
 
-  pl <- plotly::subplot(pl_list,
-    nrows = 3,
+  x1 <- 0.22
+  x2 <- 0.1
+  x3 <- 0.37
+  x4 <- 0.78
+  x5 <- 0.62
+  x6 <- 0.88
+  y1 <- 1
+  y2 <- 0.28
+
+  annot <- list(size = font_size_subplot - 4, xanchor = "center", yanchor = "middle", showarrow = FALSE, xref = "paper", yref = "paper")
+
+  inner_pl <- plotly::subplot(pl_list,
+    nrows = 1,
     shareX = TRUE,
     shareY = FALSE,
     titleY = FALSE,
     titleX = FALSE,
-    margin = c(0, 0.05, 0.05, 0)
+    margin = c(0.05, 0.05, 0.05, 0.05),
+    widths = c(1/4, 1/4, 1/4, 1/4)
+  ) 
+
+  pl <- plotly::subplot(
+    pl_func_form,
+    inner_pl,
+    nrows = 2, titleY = TRUE,
+    # heights = c(1/3, 2/3),
+    heights = c(2/3, 1/3),
+    # heights = c(6/10, 4/10),
+    # heights = c(0.5,0.5),
+    margin = c(0.1, 0.1, 0.1, 0.1)
+  ) |>
+  plotly::layout(
+    font = list(family = font_family, size = font_size),
+    legend = list(
+      orientation = "h",
+      x = 0.5, y = 0.32,
+      xanchor = "center",
+      yanchor = "top",
+      traceorder = "normal",
+      tracegroupgap = 0,
+      itemwidth = 15,
+      title = list(text = "Slope", font = list(size = font_size_legend)),
+      font = list(size = font_size_legend)
+    ),
+    legend2 = list(
+      orientation = "h",
+      x = 0.5, y = -0.16,
+      xanchor = "center",
+      yanchor = "top",
+      font = list(size = font_size_legend)
+    )
   ) |>
     plotly::layout(
-      font = list(family = font_family, size = font_size),
-      legend = list(
-        orientation = "h", # orientation
-        x = 0.5, # Center horizontally
-        y = -0.16, # Below the plot
-        xanchor = "center",
-        yanchor = "top",
-        font = list(size = font_size_legend)
-      )
-    ) |>
-    plotly::layout(
       annotations = list(
-        list(
-          text = xlab,
-          font = list(
-            family = font_family,
-            size = font_size_xlab
-          ),
-          xref = "paper",
-          yref = "paper",
-          xanchor = "center", yanchor = "top",
-          x = 0.5, y = -.075,
-          showarrow = FALSE
-        )
+        utils::modifyList(annot_xlab, list(y = -0.075))
       )
     ) |>
     plotly::layout(annotations = list(
-      list(x = x1, y = y1, text = "A", size = font_size_subplot, showarrow = FALSE, xref = "paper", yref = "paper"),
-      list(x = x2, y = y1, text = "B", size = font_size_subplot, showarrow = FALSE, xref = "paper", yref = "paper"),
-      list(x = x3, y = y1, text = "C", size = font_size_subplot, showarrow = FALSE, xref = "paper", yref = "paper"),
-      list(x = x1, y = y2, text = "D", size = font_size_subplot, showarrow = FALSE, xref = "paper", yref = "paper"),
-      list(x = x2, y = y2, text = "E", size = font_size_subplot, showarrow = FALSE, xref = "paper", yref = "paper"),
-      list(x = x3, y = y2, text = "F", size = font_size_subplot, showarrow = FALSE, xref = "paper", yref = "paper"),
-      list(x = x1, y = y3, text = "G", size = font_size_subplot, showarrow = FALSE, xref = "paper", yref = "paper"),
-      list(x = x2, y = y3, text = "H", size = font_size_subplot, showarrow = FALSE, xref = "paper", yref = "paper"),
-      list(x = x3, y = y3, text = "I", size = font_size_subplot, showarrow = FALSE, xref = "paper", yref = "paper")
+      utils::modifyList(annot, list(x = x1, y = y1, text = titles[[1]])),
+      utils::modifyList(annot, list(x = x2, y = y2, text = titles[[2]])),
+      utils::modifyList(annot, list(x = x3, y = y2, text = titles[[3]])),
+      utils::modifyList(annot, list(x = x4, y = y1, text = titles[[4]])),
+      utils::modifyList(annot, list(x = x5, y = y2, text = titles[[5]])),
+      utils::modifyList(annot, list(x = x6, y = y2, text = titles[[6]]))
     ))
 
   pl
 
-  export_plot(pl, file.path(filepath_figs, "build_JDR.pdf"),
-    width = 5.1, height = 5
+  export_plot(pl, file.path(filepath_figs, "JDR_feedback_loop.pdf"),
+    width = 6, height = 5
   )
+}
+```
+
+To implement the health impairment pathway, we add two stocks -- job demands and energy -- as well as an auxiliary for job performance. 
+
+```{r }
+sfm <- sfm |>
+  stock(demands, eqn = .2, label = "Job Demands") |>
+  stock(energy, eqn = .7, label = "Energy") |>
+  aux(performance, eqn = engagement + energy, label = "Job Performance")
+
+sim <- simulate(sfm)
+plot(sim)
+```
+
+We next implement the boost and buffer hypothesis.
+
+```{r }
+sfm <- sfm |>
+  constant(effort_rate, eqn = 0.5, label = "Effort Rate") |>
+  flow(effort, 
+  eqn = effort_rate / (1 + engagement) * energy * demands / (1 + resources),
+    from = energy, label = "Effort", 
+    doc = "Decreases in energy are induced by job demands, but buffered by resources (i.e., buffer hypothesis). Additionally, engaged employees optimize job demands, so the effect of demands on energy is smaller when engagement is higher. These effects are multiplied by energy to avoid depleting energy past zero."
+  ) |>
+  flow(motivation,
+    eqn = motivation_rate * energy * hill(resources, m_slope) * demands,
+    doc = "Resources are motivating such that they increase engagement. This effect is amplified by job demands (i.e., boost hypothesis), which is multiplicative according to Bakker et al. (2025). Furthermore, the effect is multiplied by energy because engagement is partially defined as vigour, and we suppose energy is required to sustain motivation."
+  )
+
+sim <- simulate(sfm)
+
+# Specify variables to plot
+vars <- c("engagement", "demands", "resources", "energy", "performance")
+plot(sim, vars = vars)
+```
+
+
+Now that energy has been added to the model, we can implement the draining effect of exhaustion on resources and engagement. To do so, we modify the outflow from resources and engagement to get larger when energy is low:
+
+```{r}
+sfm <- sfm |>
+  flow(resource_decay, eqn = resource_decay_rate * resources / (1 + energy),
+  doc = "Resource decay is larger when energy is low, reflecting the idea that exhaustion depletes resources"
+  ) |> 
+  flow(engagement_decay,
+     eqn = engagement_decay_rate * engagement / (1 + energy),
+     doc = "Disengagement is larger when energy is low, reflecting the idea that exhaustion depletes engagement"
+  ) 
+  
+sim <- simulate(sfm)
+plot(sim, vars = vars)
+```
+  
+
+JD-R theory only specifies how energy can be depleted, not how it can recover. This omission leaves a substantial gap in our understanding of burnout, as sufficient recovery could counter the energy-depleting effects of job demands, thereby preventing burnout.
+
+We next allow energy to recover with a new inflow:
+
+```{r}  
+sfm <- sfm |>
+  constant(recovery_rate, eqn = 0.5, label = "Restoration Rate") |>
+  constant(s_slope, eqn = 5, label = "Steep Slope") |>
+  flow(recovery, eqn = recovery_rate * energy * exp(-s_slope * energy), 
+    to = energy, label = "Restoration",
+    doc = "Energy is restored as a Ricker function, meaning that energy recovery is zero when energy is zero (some energy is needed to recover), recovery is highest at mid-levels of energy, and drops off at higher levels of energy (where recovery is not needed)"
+  ) 
+
+sim <- simulate(sfm)
+plot(sim, vars = vars)
+```
+
+
+```{r}
+sfm <- sfm |>
+  constant(work_rate, eqn = 0.5, label = "Demand Reduction Rate") |>
+  flow(work, eqn = work_rate * energy * demands * (1 + engagement), 
+    from = demands,
+    label = "Work",
+    doc = "Job demands are reduced by expending energy. Engaged employees optimize job demands and are thus more effective at reducing demands. However, by specifying (1 + engagement), it captures the idea that engagement is not *necessary* for reducing demands (whereas * engagement would turn the outflow from demands to zero when engagement is zero). The effect is multiplied by demands to prevent reducing demands past zero."
+  ) |>
+  # constant(e_slope, eqn = 10, label = "Extreme Slope") |>
+  constant(e_slope, eqn = 10, label = "Extreme Slope") |>
+  constant(undermining_rate, 
+  # eqn = 5, 
+  eqn = 4,
+  label = "Self-undermining Rate") |>
+  flow(undermining, eqn = undermining_rate * energy * exp(-e_slope * energy), to = demands,
+    label = "Self-undermining",
+    doc = "Self-undermining behaviour is implemented as a steep Ricker function: it is zero when energy is zero (some energy is needed to self-undermine), increases steeply at low levels of energy where self-undermining is highest, and drops off quickly to represent the idea that only exhausted individuals self-undermine. The effect is independent of demands because self-undermining behaviour creates new demands even when there are no existing demands."
+  )
+
+sim <- simulate(sfm)
+plot(sim, vars = vars)
+```
+
+As of now, job resources are only cultivated through proactive behaviour, and job demands are only created by self-undermining behaviour. However, JD-R theory implies that both job resources and demands are partially exogenously driven. Both are defined as "physical, psychological, social, or organizational aspects of the job" (Bakker et al., 2025, p. 32). We capture these exogenous drivers with a new inflow to job resources and demands. As a functional form, we suppose that exogenously provided resources (demands) drop off exponentially at higher levels of resources (demands):
+
+```{r }
+sfm <- sfm |>
+  constant(exo_resource_rate, eqn = .1, label = "New resource rate") |>
+  flow(exo_resources,
+    eqn = exo_resource_rate * exp(-s_slope * resources),
+    to = resources,
+    label = "Exogenous support",
+    doc = "Exogenously provided resources drop off exponentially at higher levels of resources, reflecting the idea that employers are less likely to provide resources when employees are already well-resourced"
+  )
+
+sim <- simulate(sfm)
+plot(sim)
+```
+
+In the absence of more information about the functional form of exogenous demands, we use the same functional form as for exogenous resources:
+
+```{r}
+sfm <- sfm |>
+  constant(exo_demand_rate, eqn = .1, label = "New task rate") |>
+  flow(exo_demands, eqn = exo_demand_rate * exp(-s_slope * demands), to = demands,
+    label = "Exogenous tasks",
+    doc = "Exogenously provided demands drop off exponentially at higher levels of demands, reflecting the idea that employers are less likely to assign new tasks when employees are already at high workloads"
+  )
+
+sim <- simulate(sfm)
+plot(sim, vars = vars)
+```
+
+We have now implemented the first iteration of the full model, which includes both the health impairment and motivational pathways, as well as the boost and buffer hypotheses.
+
+
+```{r include=FALSE}
+if (recreate_figs) {
+  sfm_list <- list()
+  sfm_list[["A"]] <- sfm
+}
+```
+
+
+```{r}
+plot(sfm, minlen = 1.5, font_size = 22)
+```
+
+```{r eval=FALSE, include=FALSE}
+if (recreate_figs) {
+# copy cat(viz_str) from plot.sdbuildR() with minlen=1.5
+  {
+    viz_str <- "
+    
+    digraph sfm {
+
+      graph [layout = dot, rankdir = LR, center=true, outputorder='edgesfirst', pad=.1, nodesep= .3]
+
+      # Rank groupings
+{rank=same; E; P; X; R; D}
+
+# Enforce top-to-bottom order
+E -> P -> X -> R -> D [style=invis]
+
+      # Define stock + auxiliary nodes
+       'R' [id='R',label='Job Resources',tooltip = 'eqn = runif(1, 0.01, 2)',shape=box,style=filled,fillcolor='#35B7ADBF',fontsize=18,fontname='Times New Roman']
+       'D' [id='D',label='Job Demands',tooltip = 'eqn = runif(1, 0.01, 2)',shape=box,style=filled,fillcolor='#35B7ADBF',fontsize=18,fontname='Times New Roman']  
+       'P' [id='P',label='Job Performance',tooltip = 'eqn = E + X',shape=plaintext,fontsize=16,fontname='Times New Roman', width=0.6, height=0.3]
+       'X' [id='X',label='Energy',tooltip = 'eqn = runif(1, 0.01, 2)',shape=box,style=filled,fillcolor='#35B7ADBF',fontsize=18,fontname='Times New Roman']
+      'E' [id='E',label='Engagement',tooltip = 'eqn = runif(1, 0.01, 2)',shape=box,style=filled,fillcolor='#35B7ADBF',fontsize=18,fontname='Times New Roman']   
+                
+      'E' -> 'P' [color='#999999', arrowsize=0.8, penwidth=1, splines=false, constraint=false, tailport='_']
+      'X' -> 'P' [color='#999999', arrowsize=0.8, penwidth=1, splines=false, constraint=false, tailport='_']
+
+
+      # Define flow nodes (intermediate nodes for flows)
+      'motivation' [id='motivation',label='Motivation', tooltip = 'eqn = motivation_rate * X * hill(R, m_slope) * D', shape = plaintext, fontsize=16, fontname='Times New Roman', width=0.6, height=0.3]
+                'proactive' [id='proactive',label='Proactive behaviour', tooltip = 'eqn = proactive_rate * hill(E, m_slope)', shape = plaintext, fontsize=16, fontname='Times New Roman', width=0.6, height=0.3]
+                'engagement_decay' [id='engagement_decay',label='Decay', tooltip = 'eqn = engagement_decay_rate * E / (1 + X)', shape = plaintext, fontsize=16, fontname='Times New Roman', width=0.6, height=0.3]
+                'resource_decay' [id='resource_decay',label='Decay', tooltip = 'eqn = resource_decay_rate * R / (1 + X)', shape = plaintext, fontsize=16, fontname='Times New Roman', width=0.6, height=0.3]
+                'effort' [id='effort',label='Effort', tooltip = 'eqn = effort_rate / (1 + E) * X * D / (1 + R)', shape = plaintext, fontsize=16, fontname='Times New Roman', width=0.6, height=0.3]
+                'X_X' [id='X_X',label='Restoration', tooltip = 'eqn = r_X_X * X * exp(-s_slope * X)', shape = plaintext, fontsize=16, fontname='Times New Roman', width=0.6, height=0.3]
+                'work' [id='work',label='Work', tooltip = 'eqn = r_D_E * X * D * (1 + E)', shape = plaintext, fontsize=16, fontname='Times New Roman', width=0.6, height=0.3]
+                'U' [id='U',label='Self-undermining', tooltip = 'eqn = r_U * X * exp(-e_slope * X)', shape = plaintext, fontsize=16, fontname='Times New Roman', width=0.6, height=0.3]
+                'R_R' [id='R_R',label='Exogenous support', tooltip = 'eqn = r_R_new * exp(-s_slope * R)', shape = plaintext, fontsize=16, fontname='Times New Roman', width=0.6, height=0.3]
+                'D_D' [id='D_D',label='Exogenous tasks', tooltip = 'eqn = r_D * exp(-s_slope * D)', shape = plaintext, fontsize=16, fontname='Times New Roman', width=0.6, height=0.3]
+
+      # Define external cloud nodes
+      'Cloud1' [label='', tooltip = 'Unspecified source',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
+                'Cloud2' [label='', tooltip = 'Unspecified source',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
+                'Cloud3' [label='', tooltip = 'Unspecified source',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
+                'Cloud4' [label='', tooltip = 'Unspecified source',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
+                'Cloud5' [label='', tooltip = 'Unspecified sink',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
+                'Cloud6' [label='', tooltip = 'Unspecified sink',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
+                'Cloud7' [label='', tooltip = 'Unspecified sink',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
+                'Cloud8' [label='', tooltip = 'Unspecified sink',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
+                'Cloud9' [label='', tooltip = 'Unspecified sink',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
+                'Cloud10' [label='', tooltip = 'Unspecified sink',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
+
+      # Define flow edges (stock -> flow_node -> stock)
+      'Cloud5' -> 'motivation' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
+      'motivation' -> 'E' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
+      'Cloud6' -> 'proactive' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
+      'proactive' -> 'R' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
+      'E' -> 'engagement_decay' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
+      'engagement_decay' -> 'Cloud1' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
+      'R' -> 'resource_decay' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
+      'resource_decay' -> 'Cloud2' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
+      'X' -> 'effort' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
+      'effort' -> 'Cloud3' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
+      'Cloud7' -> 'X_X' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
+      'X_X' -> 'X' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
+      'D' -> 'work' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
+      'work' -> 'Cloud4' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
+      'Cloud8' -> 'U' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
+      'U' -> 'D' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
+      'Cloud9' -> 'R_R' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
+      'R_R' -> 'R' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
+      'Cloud10' -> 'D_D' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
+      'D_D' -> 'D' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
+
+      # Define dependency edges
+      'X' -> 'motivation' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'R' -> 'motivation' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'D' -> 'motivation' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'E' -> 'proactive' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'E' -> 'engagement_decay' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'X' -> 'engagement_decay' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'R' -> 'resource_decay' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'X' -> 'resource_decay' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+
+      'E' -> 'effort' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'X' -> 'effort' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'D' -> 'effort' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'R' -> 'effort' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'X' -> 'X_X' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'X' -> 'work' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'D' -> 'work' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'E' -> 'work' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'X' -> 'U' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'R' -> 'R_R' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'D' -> 'D_D' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+
+    }
+    "
+  
+
+  pl <- DiagrammeR::grViz(viz_str)
+  pl
+  }
+
+  export_plot(pl, file.path(filepath_figs, "sfm_JDR_full.pdf"))
 }
 ```
 
@@ -931,8 +1488,10 @@ sfm0 <- sfm |> sim_specs(save_at = .1)
 
 Note that this is identical to the version stored in the model library, which can be loaded using `sdbuildR()`:
 
+**uncomment
+
 ```{r}
-sfm0 <- sdbuildR("JDR") |> sim_specs(save_at = .1)
+# sfm0 <- sdbuildR("JDR") |> sim_specs(save_at = .1)
 ```
 
 
@@ -940,7 +1499,7 @@ To assess the dependence of the burnout phenomenon on the model's initial condit
 
 ```{r}
 sfm <- sfm0 |>
-  update(c(D, R, E, X), eqn = runif(1, 0.01, 1)) |>
+  update(c(demands, resources, energy, engagement), eqn = runif(1, 0.01, 2)) |>
   sim_specs(only_stocks = FALSE)
 
 sim1 <- simulate(sfm, seed = 1)
@@ -949,16 +1508,104 @@ pl1 <- plot(sim1, vars = vars)
 sim2 <- simulate(sfm, seed = 2)
 pl2 <- plot(sim2, vars = vars, showlegend = FALSE)
 
-sim3 <- simulate(sfm, seed = 3)
+sim3 <- simulate(sfm, seed = 6)
 pl3 <- plot(sim3, vars = vars, showlegend = FALSE)
 
-sim4 <- simulate(sfm, seed = 4)
-pl4 <- plot(sim4, vars = vars, showlegend = FALSE)
-
-pl <- plotly::subplot(pl1, pl2, pl3, pl4, nrows = 2)
+pl <- plotly::subplot(pl1, pl2, pl3, nrows = 1)
 pl
 ```
 
+
+
+
+```{r include=FALSE}
+if (recreate_figs) {
+  sfm_list[["B"]] <- sim_specs(sfm, seed = 1)
+  sfm_list[["C"]] <- sim_specs(sfm, seed = 2)
+  sfm_list[["D"]] <- sim_specs(sfm, seed = 6)
+}
+```
+
+
+
+
+```{r include=FALSE}
+if (recreate_figs) {
+  # Create subplot figure
+  pl_list <- list()
+  min_letter <- min(names(sfm_list))
+  max_letter <- max(names(sfm_list))
+  VARS_example <- vars
+  COLORS_example <- COLORS[seq_along(VARS_example)]
+
+  for (letter in names(sfm_list)) {
+    sim <- simulate(sfm_list[[letter]], 
+    save_at = .01, only_stocks = FALSE
+    )
+
+    vars_in_sim <- unique(sim$df$variable)
+    vars_ <- VARS_example[VARS_example %in% vars_in_sim]
+    colors_ <- COLORS_example[VARS_example %in% vars_in_sim]
+
+    pl_list[[letter]] <- plot(sim,
+      vars = vars_,
+      colors = colors_,
+      main = "",
+      # ylim = ylim,
+      showlegend = (letter == max_letter)
+    ) |> rm_grid()
+
+    if (letter != min_letter) {
+      # Remove x-axis labels and ticks
+      pl_list[[letter]] <- pl_list[[letter]] |> 
+      plotly::layout(xaxis = list(
+        tickvals = list(0, 150),
+        showticklabels = FALSE
+      )) |> rm_grid()
+    }
+
+  }
+  inner_pl <- plotly::subplot(pl_list[c(2,3,4)],
+    nrows = 1,
+    shareX = TRUE,
+    shareY = TRUE,
+    titleY = FALSE,
+    titleX = FALSE,
+    margin = c(0.025, 0.025, 0.025, 0.025)
+  ) 
+
+  pl <- plotly::subplot(
+    inner_pl,
+    plotly::subplot(pl_list[1]),
+    nrows = 2, titleY = TRUE, shareY = TRUE,
+    heights = c(1/3, 2/3),
+    margin = c(0.025, 0.025, 0.025, 0.025)
+  ) |>
+    plotly::layout(
+      font = annot_font,
+      legend = utils::modifyList(annot_legend, list(
+        y = -0.15,
+        traceorder = "normal",
+        tracegroupgap = 0,
+        itemwidth = 8,
+        entrywidth = 100,          # removes left/right padding between entries
+        entrywidthmode = "pixels",
+        borderpad = 0           # removes padding inside legend border
+      ))
+    ) |> 
+    plotly::layout(
+      annotations = list(
+        utils::modifyList(annot_xlab, list(y = -.075))
+      )
+    ) 
+
+  pl
+
+  export_plot(pl, file.path(filepath_figs, "sim_JDR_full.pdf"),
+    width = 5, height = 5.5
+  )
+}
+```
 
 
 ## Interrogating Your Model
@@ -969,27 +1616,27 @@ pl
 sfm <- sfm0
 
 # Job demands and energy should negatively correlate
-sfm <- unit_test(sfm, expr = cor(D, X) < -.2)
+sfm <- unit_test(sfm, expr = cor(demands, energy) < -.2)
 verify(sfm)
 
 # Job resources and energy should positive correlate
-sfm <- unit_test(sfm, expr = cor(R, X) > .2)
+sfm <- unit_test(sfm, expr = cor(resources, energy) > .2)
 verify(sfm)
 
 # Job performance and work engagement should positively correlate
-sfm <- unit_test(sfm, expr = cor(E, P) > .2)
+sfm <- unit_test(sfm, expr = cor(engagement, performance) > .2)
 verify(sfm)
 
 # Job performance and energy should positively correlate
-sfm <- unit_test(sfm, expr = cor(P, X) > .2)
+sfm <- unit_test(sfm, expr = cor(performance, energy) > .2)
 verify(sfm)
 ```
 
 ```{r}
 # Behaviours should always be positive
-sfm <- unit_test(sfm, expr = all(U >= 0))
-sfm <- unit_test(sfm, expr = all(A_to_R >= 0))
-sfm <- unit_test(sfm, expr = all(A_from_D >= 0))
+sfm <- unit_test(sfm, expr = all(undermining >= 0))
+sfm <- unit_test(sfm, expr = all(proactive >= 0))
+sfm <- unit_test(sfm, expr = all(work >= 0))
 verify(sfm)
 ```
 
@@ -1001,12 +1648,20 @@ verify(sfm)
 
 ```
 
-
-With zero job demands, engagement, energy, we would expect job performance to be low.
+With conditions:
 
 ```{r}
-sfm <- unit_test(sfm, expr = mean(P) < 0.2, 
-                conditions = list(D = 0, r_D = 0, r_U = 0))
+sfm <- unit_test(sfm, expr = all(motivation == 0),
+                conditions = list(motivation_rate = 0))
+verify(sfm)
+```
+
+
+With zero job demands, we would expect job performance to be low.
+
+```{r}
+sfm <- unit_test(sfm, expr = mean(performance) < 0.2, 
+                conditions = list(demands = 0, exo_demand_rate = 0, undermining_rate = 0))
 verify(sfm)
 ```
 
@@ -1016,7 +1671,7 @@ Counterintuitively, when job demands are set to zero, energy rises, which leads 
 v <- verify(sfm, return_sims = TRUE)
 v$sim_index
 plot(v$sims[[2]])
-# sfm2 <- sfm0 |> update(c(D, r_D, r_U), eqn = 0)
+# sfm2 <- sfm0 |> update(c(demands, r_D, undermining_rate), eqn = 0)
 
 # sim <- simulate(sfm2, only_stocks = FALSE)
 # plot(sim, vars = vars)
@@ -1025,7 +1680,7 @@ plot(v$sims[[2]])
 Adjust model to make job performance dependent on demands:
 
 ```{r}
-sfm <- sfm |> update(P, eqn = D * (E + X))
+sfm <- sfm |> update(performance, eqn = demands * (engagement + energy))
 ```
 
 Rerun unit tests:
@@ -1037,17 +1692,17 @@ verify(sfm)
 Update saved model:
 
 ```{r}
-sfm0 <- sfm0 |> update(P, eqn = D * (E + X))
+sfm0 <- sfm0 |> update(performance, eqn = demands * (engagement + energy))
 ```
 
 We include some additional verification tests checks that are omitted from the paper for brevity. First, we would expect that when resources are zero, engagement decays to zero, which is indeed what we find.
 
 ```{r}
-sfm <- unit_test(sfm, expr = tail(E, 1) < 0.01, 
-  conditions = list(R = 0, r_A = 0))
+sfm <- unit_test(sfm, expr = tail(engagement, 1) < 0.01, 
+  conditions = list(resources = 0, exo_resource_rate = 0))
 verify(sfm)
 
-sfm2 <- sfm0 |> update(c(R, r_A), eqn = 0)
+sfm2 <- sfm0 |> update(c(resources, exo_resource_rate), eqn = 0)
 
 sim <- simulate(sfm2, only_stocks = FALSE)
 plot(sim, vars = vars)
@@ -1056,11 +1711,11 @@ plot(sim, vars = vars)
 When engagement is zero, job performance is not necessarily zero (see beginning peak).
 
 ```{r}
-sfm <- unit_test(sfm, expr = all(head(P, 100) > 0.2), 
-  conditions = list(E = 0, r_E_R = 0))
+sfm <- unit_test(sfm, expr = all(head(performance, 100) > 0.2), 
+  conditions = list(engagement = 0, motivation_rate = 0))
 verify(sfm)
 
-sfm2 <- sfm0 |> update(c(E, r_E_R), eqn = 0)
+sfm2 <- sfm0 |> update(c(engagement, motivation_rate), eqn = 0)
 
 sim <- simulate(sfm2, only_stocks = FALSE)
 plot(sim, vars = vars)
@@ -1069,14 +1724,14 @@ plot(sim, vars = vars)
 Similarly, when energy is set to zero, job performance is not necessarily zero (see beginning peak).
 
 ```{r}
-sfm <- unit_test(sfm, expr = all(head(P, 100) > 0.2), 
-  conditions = list(X = 0, r_E_X = 0), 
+sfm <- unit_test(sfm, expr = all(head(performance, 100) > 0.2), 
+  conditions = list(energy = 0, engagement_decay_rate = 0), 
   label = "Performance should not be zero in the beginning when energy is zero")
 verify(sfm)
 
 
 # Set energy to zero
-sfm2 <- sfm0 |> update(c(X, r_E_R), eqn = 0)
+sfm2 <- sfm0 |> update(c(energy, engagement_decay_rate), eqn = 0)
 
 sim <- simulate(sfm2, only_stocks = FALSE)
 plot(sim, vars = vars)
@@ -1085,7 +1740,7 @@ plot(sim, vars = vars)
 As an extreme condition test, we can initialize all stocks at zero. In this case, only job demands rises.
 
 ```{r}
-sfm2 <- sfm0 |> update(c(E, R, X, D), eqn = 0)
+sfm2 <- sfm0 |> update(c(engagement, resources, energy, demands), eqn = 0)
 
 sim <- simulate(sfm2, only_stocks = FALSE)
 plot(sim, vars = vars)
@@ -1094,11 +1749,11 @@ plot(sim, vars = vars)
 As a robustness check, we initialize all stocks at high values, which the model is able to handle.
 
 ```{r}
-sfm <- unit_test(sfm, expr = all(is.finite(c(E, R, X, D))), 
-  conditions = list(E = 5, R = 5, X = 5, D = 5))
+sfm <- unit_test(sfm, expr = all(is.finite(c(engagement, resources, energy, demands))), 
+  conditions = list(engagement = 5, resources = 5, energy = 5, demands = 5))
 verify(sfm)
 
-sfm2 <- sfm0 |> update(c(E, R, X, D),
+sfm2 <- sfm0 |> update(c(engagement, resources, energy, demands),
   eqn = 5
 )
 
@@ -1107,146 +1762,12 @@ plot(sim, vars = vars)
 ```
 
 <!-- 
-### Interpretability
-
-To add units, the Julia environment needs to be set up:
-
-```{r, eval = FALSE}
-use_julia()
-```
-
-Change the simulation engine to Julia:
-
-```{r}
-sfm <- sim_specs(sfm0, language = "Julia")
-```
-
-```{r}
-sfm <- custom_unit(sfm, "UWES", doc = "Utrecht Work Engagement Scale") |>
-  update(E, units = "UWES")
-```
-
-```{r}
-sfm <- discard(sfm, "UWES") |>
-  custom_unit("uE") |>
-  update(E, units = "uE")
-```
-
-We can add similar placeholder units for all other stocks, as well as for performance:
-
-```{r}
-sfm <- custom_unit(sfm, c("uE", "uR", "uX", "uD", "uP"),
-  doc = c(
-    "Engagement", "Job Resources", "Energy",
-    "Job Demands", "Job Performance"
-  )
-) |>
-  update(c(R, X, D, P), units = c("uR", "uX", "uD", "uP"))
-```
-
-### Dimensional Consistency
-
-To ensure dimensional consistency, we add units for all other variables in the model.
-
-```{r, eval = FALSE}
-sfm <- update(sfm, r_E_R, units = "uE/uR/day") |>
-  update(E_R, units = "uE/day") |>
-  update(K_E, units = "uE") |>
-  update(c(r_A, K_R), units = c("uR/uE/day", "uR")) |>
-  update(A_to_R, units = "uR/day") |>
-  update(r_R, units = "1/day") |>
-  update(R_X, units = "uR/day") |>
-  update(r_X_D, units = "1/day") |>
-  update(K_X, units = "uX") |>
-  update(X_D, units = "uX/day") |>
-  update(r_X_X, units = "1/day") |>
-  update(X_X, units = "uX/day") |>
-  update(r_E_X, units = "1/day") |>
-  update(E_X, units = "uE/day") |>
-  update(r_U, units = "uD/day") |>
-  update(K_D, units = "uD") |>
-  update(A_from_D, units = "uD/day") |>
-  update(U, units = "uD/day") |>
-  update(c(r_D, D_D), units = "uD/day")
-```
-
-Some equations need to be adjusted. In order to make job performance dimensionally consistent, two new constants are added:
-
-```{r, eval = FALSE}
-sfm <- sfm |>
-  constant(sfm, r_P_E,
-    eqn = 1,
-    label = "Influence Engagement on Performance", units = "uP/(uE*uD)"
-  ) |>
-  constant(r_P_X,
-    eqn = 1,
-    label = "Influence Energy on Performance", units = "uP/(uX*uD)"
-  ) |>
-  update(P, eqn = D * (r_P_E * E + r_P_X * X))
-```
-
-In order to give $r_{X_D}$ the unit $\frac{1}{\text{day}}$, we need to add an additional factor, $r_{R_D}$ with the units $\frac{uR}{uD}$, indicating how many unit resources are needed per unit demand to buffer energy depletion.
-
-```{r, eval = FALSE}
-sfm <- sfm |> constant(r_R_D,
-  eqn = 1,
-  label = "Resources Needed per Unit Demand for Buffer", units = "uR/uD"
-)
-```
-
-We use the unit function `u()` to add one to resources:
-
-```{r, eval = FALSE}
-sfm <- update(sfm, X_D, eqn = r_X_D * r_R_D * X * D / (u("1uR") + R))
-```
-
-Proactive behaviour now increases resources and decreases demands with the same constant $r_A$, creating dimensional inconsistency. We create a new constant for the outflow from job demands:
-
-```{r, eval = FALSE}
-sfm <- sfm |>
-  constant(r_A_D,
-    eqn = .1,
-    label = "Proactive Behaviour Rate", units = "1/(day*uE)"
-  ) |>
-  flow(A_from_D, eqn = r_A_D * E * D)
-```
-
-We verify whether our model is dimensionally consistent by simulation:
-
-```{r}
-sim <- simulate(sfm, only_stocks = FALSE)
-plot(sim, vars = vars)
-```
-
-Because units can slow down simulations, we only modify our original model with the missing variables identified by the dimensional consistency test:
-
-```{r, eval = FALSE}
-sfm0 <- sfm0 |>
-  constant(r_P_E, eqn = 1, label = "Influence Engagement on Performance") |>
-  constant(r_P_X, eqn = 1, label = "Influence Energy on Performance") |>
-  update(P, eqn = D * (r_P_E * E + r_P_X * X)) |>
-  constant(r_R_D,
-    eqn = 1,
-    label = "Resources Needed per Unit Demand for Buffer"
-  ) |>
-  update(X_D, eqn = r_X_D * r_R_D * X * D / (1 + R)) |>
-  constant(r_A_D, eqn = .1, label = "Proactive Behaviour Rate") |>
-  flow(A_from_D, eqn = r_A_D * E * D)
-
-# Check that simulation runs without errors
-sim <- simulate(sfm0)
-```
-
- -->
-
 ### Robustness to Functional Form Differences
 
 ```{r}
 # Grab parameter values from dataframe
 df <- as.data.frame(sfm)
-r_E_X <- as.numeric(df[df[["name"]] == "r_E_X", "eqn"])
-
-  #  flow(from_E, eqn = r_E_X * E, from = E, label = "Decay")
+engagement_decay_rate <- as.numeric(df[df[["name"]] == "engagement_decay_rate", "eqn"])
 
 # Range of engagement to evaluate functional form over
 E <- seq(0, 1, by = .01)
@@ -1256,12 +1777,12 @@ df <- rbind(
   data.frame(
     E = E,
     # Add a minus sign as it is an outflow
-    value = r_E_X * E,
+    value = engagement_decay_rate * E,
     type = "Linear"
   ),
   data.frame(
     E = E,
-    value = r_E_X * E / (r_E_X + E),
+    value = engagement_decay_rate * E / (engagement_decay_rate + E),
     type = ""
   )
 )
@@ -1298,18 +1819,18 @@ Simulate two different models.
 
 ```{r} 
 sfm2 <- sfm0 |> update(from_E,
-  eqn = r_E_X * E / (r_E_X + E)
+  eqn = engagement_decay_rate * E / (engagement_decay_rate + E)
 )
 
 sim1 <- simulate(sfm0, only_stocks = FALSE)
 pl1 <- plot(sim1, 
 # xlim = c(0, 100), 
-vars = c("D", "E", "P"), showlegend = FALSE)
+vars = c("demands", "engagement", "performance"), showlegend = FALSE)
 
 sim2 <- simulate(sfm2, only_stocks = FALSE)
 pl2 <- plot(sim2, 
 # xlim = c(0, 100), 
-vars = c("D", "E", "P"))
+vars = c("demands", "engagement", "performance"))
 
 pl <- plotly::subplot(pl1, pl2, nrows = 1) |>
   plotly::layout(title = "Linear versus Exponential Functional Form")
@@ -1353,19 +1874,19 @@ if (recreate_figs) {
         font = list(size = font_size)
       ),
       font = list(family = font_family, size = font_size_xlab * 2)
-    )
+    ) |> rm_grid()
   pl_func
 
-  show_vars <- c("D", "E", "X", "P")
+  show_vars <- c("demands", "engagement", "energy", "performance")
   vars_ <- VARS[VARS %in% show_vars]
   colors_ <- COLORS[VARS %in% show_vars]
 
   pl1 <- plot(sim1,
     xlim = c(0, 65), vars = vars_, colors = colors_,
     showlegend = FALSE, main = "", xlab = ""
-  )
+  ) |> rm_grid()
 
-  pl2 <- plot(sim2, xlim = c(0, 65), vars = vars_, colors = colors_, main = "", xlab = "")
+  pl2 <- plot(sim2, xlim = c(0, 65), vars = vars_, colors = colors_, main = "", xlab = "") |> rm_grid()
 
   pl <- plotly::subplot(pl_func,
     plotly::subplot(pl1, pl2,
@@ -1420,64 +1941,54 @@ if (recreate_figs) {
   pl
 
 
-  export_plot(pl,
-    file.path(filepath_figs, "functional_forms_JDR.pdf"),
-    width = 4.3, height = 5
-  )
+  # export_plot(pl,
+  #   file.path(filepath_figs, "functional_forms_JDR.pdf"),
+  #   width = 4.3, height = 5
+  # )
 }
 ```
-
+ -->
 
 ### Uncertainty
 
-We implement a Cox–Ingersoll–Ross model for job demands:
+
+
+
+
+To illustrate the impact of aleatory uncertainty in our JD-R model, we substitute the deterministic formulation of demand influx for a stochastic process. This more closely aligns with JD-R theory, which posits job demands may fluctuate rapidly on a daily basis due to environmental volatility \parencite{Bakker2024JobQuestions, Downes2021IncorporatingMeta-Analysis}. To implement this, we adopt the Cox-Ingersoll-Ross model \parencite{cox_theory_1985}, a classical stochastic process. It consists of both a deterministic and stochastic component. The former ensures `D` reverts to its mean `D_mean` with a rate `r_D`. The latter adds normally distributed noise at each step, and scales this with the amount of demands. As long as `r_D` and `D_mean` are positive, this ensures that the inflow to demands cannot become negative, as noise is reduced to zero when demands are zero.
 
 ```{r}
 sfm <- sfm0 |>
-    constant(D_mean, eqn = 0.5) |>
-    constant(D_sigma, eqn = 1) |>
-    aux(D_deterministic, eqn = r_D * (D_mean - D)) |>
-    aux(D_stochastic, eqn = D_sigma * sqrt(D) * rnorm(1)) |>
-    update(D_D, eqn = D_deterministic + D_stochastic)
+    constant(demand_mean, eqn = 1) |>
+    constant(demand_sigma, eqn = 1) |>
+    constant(exo_demand_rate, eqn = .25) |>
+    aux(D_deterministic, eqn = exo_demand_rate * (demand_mean - demands)) |>
+    aux(D_stochastic, eqn = demand_sigma * sqrt(demands) * rnorm(1)) |>
+    update(exo_demands, eqn = D_deterministic + D_stochastic)
 
-sim <- simulate(sfm, only_stocks = FALSE, seed = 123)
+sim <- simulate(sfm, only_stocks = FALSE, seed = 123, save_at = .1)
 plot(sim, vars = vars)
 ```
 
 
 ```{r include=FALSE}
 if (recreate_figs) {
-  show_vars <- c("E", "R", "X", "D", "P")
+  show_vars <- c("engagement", "resources", "energy", "demands", "performance")
   vars_ <- VARS[VARS %in% show_vars]
   colors_ <- COLORS[VARS %in% show_vars]
 
-  pl <- plot(sim, vars = vars_, colors = colors_, xlab = "", main = "")
+  pl <- plot(sim, vars = vars_, colors = colors_, xlab = "", main = "") |>    
+    rm_grid()
 
   pl <- pl |>
     plotly::layout(
-      legend = list(
-        orientation = "h", # orientation
-        x = 0.5, # Center horizontally
-        y = -0.16, # Below the plot
-        xanchor = "center",
-        yanchor = "top",
-        font = list(size = font_size_legend)
-      )
+      legend = utils::modifyList(annot_legend, list(
+        y = -0.16
+      ))
     ) |>
     plotly::layout(
       annotations = list(
-        list(
-          text = xlab,
-          font = list(
-            family = font_family,
-            size = font_size_xlab
-          ),
-          xref = "paper",
-          yref = "paper",
-          xanchor = "center", yanchor = "top",
-          x = 0.5, y = -0.075,
-          showarrow = FALSE
-        )
+        utils::modifyList(annot_xlab, list(y = -0.075))
       )
     )
   pl
@@ -1491,18 +2002,15 @@ if (recreate_figs) {
 
 ### Removing Variables
 
-**undermining is crucial
-
 ```{r}
 sim1 <- simulate(sfm0)
 pl1 <- plot(sim1)
 
-sfm2 <- discard(sfm0, U)
+sfm2 <- discard(sfm0, undermining)
 sim2 <- simulate(sfm2)
 pl2 <- plot(sim2, showlegend = FALSE)
 
-pl <- plotly::subplot(pl1, pl2, nrows = 1,
-shareY = TRUE)
+pl <- plotly::subplot(pl1, pl2, nrows = 1, shareY = TRUE)
 pl
 ```
 
@@ -1510,26 +2018,36 @@ pl
 
 ### Challenging the Model Boundary
 
-As job performance is defined by `D * (E + X)`, we update `E_R` by replacing the terms `D` and `X`.
-We replace **
+As of now, job performance is merely an output of the model. Job performance depends on other variables:
+
+```{r}
+dependencies(sfm0, name = "performance")
+```
+
+But no other variable depends on job performance:
+
+```{r}
+dependencies(sfm0, name = "performance", reverse = TRUE)
+```
+
+However, it is plausible that job performance also feeds back into work engagement (e.g., through feelings of pride). We can easily test this by adding a feedback loop from job performance to work engagement.
 
 ```{r, fig.height=3}
 # Make performance feedback to the system
 sfm2 <- sfm0 |>
-  constant(r_P, eqn = 1, label = "Effect Job Performance on Work Engagement") |>
-  # flow(motivation_feedback, eqn = r_P * P, to = E) 
-  # update(E_R, eqn = (r_P * P + r_E_R * X * R * (1 + D)) * (K_E - E) / K_E) **
-    # eqn = r_E_R * X * R * (1 + D) * (1 - E / K_E),
-    # update(E_R, eqn = r_E_R * R * r_P * P * (1 - E / K_E))
-    flow(P_to_E, eqn = r_P * P * exp(-3 * E), to = E)
+  constant(performance_effect, eqn = .1, 
+  label = "Effect Job Performance on Work Engagement") |>
+  flow(pride, eqn = performance_effect * performance, to = engagement) #|>
+# ** 
+  # update(c(demands, resources, engagement, energy), eqn = c(0.2, 0.5, 0.7, 0.7))
 
-sim1 <- simulate(sfm0, only_stocks = FALSE)
+sim1 <- simulate(sfm0, stop = 500, only_stocks = FALSE)
 pl1 <- plot(sim1, vars = vars)
 
-sim2 <- simulate(sfm2, only_stocks = FALSE)
+sim2 <- simulate(sfm2, stop = 500, only_stocks = FALSE)
 pl2 <- plot(sim2, vars = vars, showlegend = FALSE)
 
-pl <- plotly::subplot(pl1, pl2, nrows = 1, shareY = TRUE) |>
+pl <- plotly::subplot(pl1, pl2, nrows = 2, shareY = TRUE) |>
   plotly::layout(title = "Model Boundary")
 pl
 ```
@@ -1538,131 +2056,23 @@ pl
 
 ```{r include=FALSE}
 if (recreate_figs) {
-  {
-    viz_str <- "
-  digraph JDR_Model {
-
-    # Graph attributes
-    graph [layout = neato,
-           rankdir = TB,
-           bgcolor = white,
-           overlap = true,
-           outputorder='nodesfirst']
-
-    # Default node attributes
-    node [shape = circle,
-          style = 'filled',
-          fontcolor = 'white',
-          color = none,
-          font_family = '%(font_family)s',
-          width = 1.4,
-          height = 1.4, fixedsize = true,
-          fontsize = 16,
-          penwidth = 1.5]
-
-    edge [fontsize = 22, labeldistance = 3.35]
-
-    'engagement' [label = 'Work\\nEngagement', fillcolor = '%(motivation_path)s', pos = '0,0!']
-    'performance' [label = 'Job\\nPerformance', fillcolor = '%(performance_path)s', pos = '3, 0!']
-
-    # Edges
-    'engagement' -> 'performance' [color = '%(motivation_path)s', fillcolor = '%(motivation_path_fill)s', penwidth = 2, headlabel = '+', fontcolor = '%(motivation_path)s', labeldistance = 3]
-
-  }
-  "
-  }
-  viz_str <- sprintf_arg(
-    viz_str,
-    list(
-      health_path = health_path,
-      motivation_path = motivation_path,
-      health_path_fill = health_path_fill,
-      motivation_path_fill = motivation_path_fill,
-      performance_path = performance_path,
-      performance_path_fill = performance_path_fill,
-      font_family = font_family # "Georgia"
-    )
-  )
-
-
-  pl <- DiagrammeR::grViz(viz_str)
-  pl
-
-  export_plot(pl, file.path(filepath_figs, "feedback_loop_A_JDR.pdf"))
-
-
-  {
-    viz_str <- "
-  digraph JDR_Model {
-
-    # Graph attributes
-    graph [layout = neato,
-           rankdir = TB,
-           bgcolor = white,
-           overlap = true,
-           outputorder='nodesfirst']
-
-    # Default node attributes
-    node [shape = circle,
-          style = 'filled',
-          fontcolor = 'white',
-          color = none,
-          font_family = '%(font_family)s',
-          width = 1.4,
-          height = 1.4, fixedsize = true,
-          fontsize = 16,
-          penwidth = 1.5]
-
-    edge [fontsize = 22, labeldistance = 3.35]
-
-    'engagement' [label = 'Work\\nEngagement', fillcolor = '%(motivation_path)s', pos = '0,0!']
-    'performance' [label = 'Job\\nPerformance', fillcolor = '%(performance_path)s', pos = '3, 0!']
-
-    # Edges
-    'engagement' -> 'performance' [color = '%(motivation_path)s', fillcolor = '%(motivation_path_fill)s', penwidth = 2, headlabel = '+', fontcolor = '%(motivation_path)s', labeldistance = 3]
-    'performance' -> 'engagement' [color = '%(performance_path)s', fillcolor = '%(performance_path_fill)s', penwidth = 2, headlabel = '+', fontcolor = '%(performance_path)s', labeldistance = 3]
-
-  }
-  "
-  }
-  viz_str <- sprintf_arg(
-    viz_str,
-    list(
-      health_path = health_path,
-      motivation_path = motivation_path,
-      health_path_fill = health_path_fill,
-      motivation_path_fill = motivation_path_fill,
-      performance_path = performance_path,
-      performance_path_fill = performance_path_fill,
-      font_family = font_family # "Georgia"
-    )
-  )
-
-
-  pl <- DiagrammeR::grViz(viz_str)
-  pl
-
-  export_plot(pl, file.path(filepath_figs, "feedback_loop_B_JDR.pdf"))
-}
-```
-
-
-```{r include=FALSE}
-if (recreate_figs) {
   # Model boundary
-  show_vars <- c("E", "R", "X", "D", "P")
+  # show_vars <- c("engagement", "resources", "energy", "demands", "performance")
+  show_vars <- c("engagement", "demands", "performance")
   vars_ <- VARS[VARS %in% show_vars]
   colors_ <- COLORS[VARS %in% show_vars]
 
-  sim1 <- simulate(sfm0 |> sim_specs(save_at = dt), only_stocks = FALSE)
+  sim1 <- simulate(sfm0, save_at = dt, 
+  stop = 500, only_stocks = FALSE)
   pl1 <- plot(sim1, vars = vars_, colors = colors_, main = "")
 
-  sim2 <- simulate(sfm2 |> sim_specs(save_at = dt), only_stocks = FALSE)
+  sim2 <- simulate(sfm2, save_at = dt, 
+  stop = 500, only_stocks = FALSE)
   pl2 <- plot(sim2, vars = vars_, colors = colors_, main = "", showlegend = FALSE)
 
 
   pl_boundary <- plotly::subplot(pl1, pl2,
-    nrows = 1,
+    nrows = 2,
     shareX = TRUE,
     shareY = TRUE,
     titleY = FALSE,
@@ -1670,57 +2080,93 @@ if (recreate_figs) {
     margin = c(0, 0.05, 0.05, 0)
   ) |>
     plotly::layout(
-      margin = list(t = 150, b = 50, l = 50, r = 50),
-      font = list(family = font_family, size = font_size),
-      legend = list(
-        orientation = "h", # orientation
-        x = 0.5, # Center horizontally
-        y = -0.3, # Below the plot
-        xanchor = "center",
-        yanchor = "top",
-        font = list(size = font_size_legend)
-      )
-    ) |>
-    plotly::layout(
+      margin = list(t = 50, b = 50, l = 50, r = 50),
+      font = annot_font,
+      legend = utils::modifyList(annot_legend, list(y = -0.2)),
       annotations = list(
-        list(
-          text = xlab,
-          font = list(
-            family = font_family,
-            size = font_size_xlab
-          ),
-          xref = "paper",
-          yref = "paper",
-          xanchor = "center", yanchor = "top",
-          x = 0.5, y = -.14,
-          showarrow = FALSE
-        )
+        utils::modifyList(annot_xlab, list(y = -0.12))
       )
+    ) |> rm_grid() |>
+    # Remove grid lines
+    plotly::layout(
+      xaxis2 = list(showgrid = FALSE, showline = TRUE),
+      yaxis2 = list(showgrid = FALSE, showline = TRUE)
     )
 
   pl_boundary
 
   export_plot(pl_boundary,
-    file.path(filepath_figs, "boundary_ts_JDR.pdf"),
-    width = 4.8, height = 4
+    file.path(filepath_figs, "challenging_boundary_ts_JDR.pdf"),
+    width = 4.8, height = 5
   )
 }
 ```
 
 
+```{r include=FALSE}
+if (recreate_figs) {
+  # Model boundary
+  # show_vars <- c("engagement", "resources", "energy", "demands", "performance")
+  show_vars <- c("engagement", "demands", "performance")
+  vars_ <- VARS[VARS %in% show_vars]
+  colors_ <- COLORS[VARS %in% show_vars]
+
+  sim1 <- simulate(sfm0, save_at = dt, 
+  stop = 500, only_stocks = FALSE)
+  pl1 <- plot(sim1, vars = vars_, colors = colors_, main = "", xlab = "")
+
+  sim2 <- simulate(sfm2, save_at = dt, 
+  stop = 500, only_stocks = FALSE)
+  pl2 <- plot(sim2, vars = vars_, colors = colors_, main = "", xlab = "")
+
+  plot_func <- function(pl){
+    pl |>
+    plotly::layout(
+      margin = list(autoexpand = FALSE, t = 0, b = 100, l = 50, r = 0),
+      margin = c(0, 0, 0, 0), 
+      font = annot_font,
+      legend = utils::modifyList(annot_legend, list(y = -0.35,
+      margin = list(t = 0, b = 0, l = 0, r = 0, pad = 0), # remove legend margins
+      font = list(size = font_size_legend + 1),
+  tracegroupgap = 0,    # remove gap between legend items
+  # itemwidth = 30,        # shrink the line swatch width (default 30)
+  entrywidth = 0,
+  entrywidthmode = "pixels",
+  x = 0.5
+    )),
+      annotations = list(
+        utils::modifyList(annot_xlab, list(y = -0.14))
+      )
+    ) |> rm_grid()
+  }
+  
+  export_plot(plot_func(pl1),
+    file.path(filepath_figs, "challenging_boundary_ts_JDR_A.pdf"),
+    width = 4.75, height = 2.5
+  )
+
+  export_plot(plot_func(pl2),
+    file.path(filepath_figs, "challenging_boundary_ts_JDR_B.pdf"),
+    width = 4.75, height = 2.5
+  )
+}
+```
+
 
 ## Learning From Your Model
+
+### Parallelization
 
 If resources allow, set up threaded simulation:
 
 ```{r, eval = FALSE}
-use_julia(nthreads = 4)
+use_julia(nthreads = parallelly::availableCores() - 1)
 ```
 
 or: 
 
 ```{r}
-future::plan(future::multisession, workers = 16)
+# future::plan(future::multisession, workers = parallelly::availableCores() - 1)
 ```
 
 If not possible, regular simulation can still be used for the analyses below, albeit with longer runtimes.
@@ -1729,60 +2175,118 @@ If not possible, regular simulation can still be used for the analyses below, al
 
 ```{r, fig.height=4}
 # Simulation study
-sfm0 <- sfm0 |> sim_specs(save_n = 100, language = "R",
-   seed = NULL) |>
+sfm0 <- sfm0 |> sim_specs(save_n = 100, 
+language = "julia",
+   seed = 123) |>
   # Random initial conditions
-  update(c(D, R, E, X), eqn = runif(1, 0.01, 1))
+  update(c(demands, resources, engagement, energy), eqn = runif(1, 0.01, 2))
 sfm <- sfm0
 
 sims <- ensemble(sfm, n = 1000)
-plot(sims, vars = c("E", "D"))
+plot(sims, vars = c("engagement", "demands"))
 ```
 
 #### Parameter Variation
 
-Vary $r_{X_D}$: the rate of energy depletion from demand.
+Vary `effort_rate`: the rate of energy depletion from demand.
 
 ```{r, fig.height = 8}
-n <- 100
-sims <- ensemble(sfm,
+n <- 250
+# effort_rates <- c(0.6, 0.325, 0.1)
+# effort_rates <- c(0.6, 0.35, 0.1)
+# effort_rates <- c(0.65, 0.325, 0.32, 0.31, 0.1)
+# effort_rates <- c(0.65, 0.325, 0.1)
+# effort_rates <- c(0.65, 0.35, 0.1)
+effort_rates <- c(0.65, 0.35, 0.1)
+sims <- ensemble(sfm0,
   n = n,
-  # conditions = list(r_X_D = c(0.175, 0.1, 0.05)),
-  # conditions = list(r_X_D = c(0.2, 0.175, 0.125)),
-  # conditions = list(r_X_X = c(1, 0.5, 0.1)),
-  conditions = list(r_U = c(3, 2, 1)),
-  return_sims = TRUE
+  conditions = list(effort_rate = effort_rates),
+  return_sims = TRUE, seed = 123
 )
 
 plot(sims,
-  type = "sims", i = i:n, alpha = .25,
+  type = "sims", i = 1:n, alpha = .25,
   nrows = 1, central_tendency = FALSE, 
-  vars = c("E", "D")
+  vars = c("engagement", "demands")
 )
 ```
+
+
+
+```{r, fig.height = 8}
+# n <- 100
+# effort_rates <- c(0.36, 0.35, 0.34, 0.33, 0.32, 0.31, .3)
+# effort_rates <- c(0.31, .3, .305, .29, .28, .27, .25, .2)
+# # effort_rates <- c(.25, .225, .2)
+# effort_rates <- c(0.38, .36, .35, .34, .325, .31, 3)
+# # # effort_rates <- c(0.275)
+# # effort_rates <- c(0.5)
+# sims <- ensemble(sfm0 |> 
+# update(undermining_rate, eqn = 3) |>
+# # update(motivation_rate, eqn = 0.25) |>
+# # update(exo_demand_rate, eqn = .1) |>
+# # update(recovery_rate, eqn = 0.5) |> 
+# # update(work_rate, eqn = .5) |>
+# update(e_slope, eqn = 10),
+#   n = n,
+#   conditions = list(effort_rate = effort_rates
+#   # recovery_rate = c(0.4, 0.5, 0.6),
+#   # undermining_rate = c(1, 1.5, 1.75)
+#   ),
+#   return_sims = TRUE, seed = 123, stop = 500, save_at = 100
+# )
+
+# plot(sims,
+#   type = "sims",
+#    i = 1:n,
+#    alpha = .25,
+#   # j = 1:9,
+#   # j = 10:18,
+#   # j = 19:27,
+#   # j = 2, 
+#   # i = 1:10,
+#   nrows = 3, 
+#   central_tendency = FALSE, 
+#   vars = c("engagement", "demands")
+# )
+
+# sims$conditions
+
+
+
+
+# undermining_rate = 4
+#  [5,]  5        0.34              0.5                4
+
+#  [17,] 17        0.34              0.6                5'
+# [27,] 27        0.10              0.6                6
+```
+
+
+
 
 
 ```{r include=FALSE}
 if (recreate_figs) {
   sfm_ens_par <- sfm
+  n_ens_par <- n
 }
 ```
 
 ### "What If" Scenarios: Developing Interventions
 
 ```{r}
-# Early intervention
 sfm <- sfm0 |>
-  constant(start, eqn = 21) |> # **14
+  constant(start, eqn = 21) |>
   constant(input, eqn = pulse(times, start,
-  #  height = .1,  #**
-   height = .025,
-   width = 14)) |>
-  change_type(r_X_D, new_type = stock) |>
-  flow(intervention, from = r_X_D, eqn = r_X_D * input(t), label = "Intervention")
+   height = .1, width = 14)) |>
+  change_type(effort_rate, new_type = stock) |>
+  flow(intervention, from = effort_rate, 
+  eqn = effort_rate * input(t), 
+  label = "Intervention")
 
 # Specify seed, as not all initial conditions will show improvement from intervention
-sim <- simulate(sfm, seed = 123)
+sim <- simulate(sfm, seed = 12345)
 plot(sim)
 ```
 
@@ -1792,7 +2296,7 @@ n <- 100
 sims <- ensemble(sfm, n = n, return_sims = TRUE)
 plot(sims,
   type = "sims", i = 1:n, alpha = .25, central_tendency = FALSE,
-  vars = c("E", "D", "r_X_D")
+  vars = c("energy", "demands", "effort_rate")
 )
 ```
 
@@ -1804,9 +2308,10 @@ if (recreate_figs) {
 ```
 
 
+
 ```{r eval=FALSE, include=FALSE}
 if (recreate_figs) {
-  show_vars <- c("E", "D")
+  show_vars <- c("engagement", "demands")
   vars_ <- VARS[VARS %in% show_vars]
   colors_ <- COLORS[VARS %in% show_vars]
 
@@ -1818,29 +2323,31 @@ if (recreate_figs) {
     vars = vars_, colors = colors_,
     showlegend = FALSE,
     main = "", sub = ""
-  )
+  ) |> rm_grid()
 
   # Parameter variation
-  show_vars <- c("E", "D")
+  show_vars <- c("engagement", "demands")
   vars_ <- VARS[VARS %in% show_vars]
   colors_ <- COLORS[VARS %in% show_vars]
 
   sims <- ensemble(sfm,
-    n = 100,
-    conditions = list(r_X_D = c(0.175, 0.15, 0.1)), return_sims = TRUE
+    n = n_ens_par,
+    conditions = list(effort_rate = effort_rates),
+     return_sims = TRUE
   )
 
   pl_par <- plot(sims,
-    type = "sims", i = 1:100,
+    type = "sims", i = 1:n_ensemble,
     vars = vars_, colors = colors_, alpha = .25,
     main = "", sub = "",
     nrows = 3, central_tendency = FALSE,
     showlegend = FALSE, j_labels = FALSE, xlab = ""
-  )
+  ) |>    
+    rm_grid()
   pl_par
 
   # Intervention
-  show_vars <- c("E", "D", "r_X_D")
+  show_vars <- c("engagement", "demands", "effort_rate")
   vars_ <- VARS[VARS %in% show_vars]
   colors_ <- COLORS[VARS %in% show_vars]
 
@@ -1848,18 +2355,20 @@ if (recreate_figs) {
   sims <- ensemble(sfm, n = 100, only_stocks = FALSE, return_sims = TRUE)
 
   pl_int <- plot(sims,
-    type = "sims", i = 1:100,
-    vars = vars_, colors = colors_, alpha = .25,
-    main = "", sub = "", central_tendency = FALSE,
+    # type = "sims", i = 1:100,alpha = .25,central_tendency = FALSE,
+    type = "summary",
+    vars = vars_, colors = colors_, 
+    main = "", sub = "", 
     wrap_width = 40
-  )
+  ) |> rm_grid()
+    
   pl_int
 
-  # Plot thicker line for r_X_D
-  col_ <- COLORS[VARS == "r_X_D"]
+  # Plot thicker line for effort_rate
+  col_ <- COLORS[VARS == "effort_rate"]
   pl_int <- pl_int |>
     plotly::add_trace(
-      data = sims$df[sims$df$variable == "r_X_D", , drop = FALSE],
+      data = sims$df[sims$df$variable == "effort_rate", , drop = FALSE],
       x = ~time,
       y = ~value,
       line = list(
@@ -1882,29 +2391,14 @@ if (recreate_figs) {
       nrows = 2
     ) |>
       plotly::layout(annotations = list(
-        list(
-          x = 0.325, y = 1.05, text = "(A) Ensemble", size = font_size_subplot,
-          showarrow = FALSE, xref = "paper", yref = "paper"
-        ),
-        list(
-          x = 0.325, y = 0.49, text = "(E) Intervention", size = font_size_subplot,
-          showarrow = FALSE, xref = "paper", yref = "paper"
-        )
+        utils::modifyList(annot, list(x = .325, y = 1.05, text = "<i>A. Ensemble</i>")),
+        utils::modifyList(annot, list(x = .325, y = .47, text = "<i>E. Intervention</i>"))
       )),
     pl_par |>
       plotly::layout(annotations = list(
-        list(
-          x = .725, y = 1.05, text = "(B) Burnout",
-          size = font_size_subplot, showarrow = FALSE, xref = "paper", yref = "paper"
-        ),
-        list(
-          x = .725, y = 0.69, text = "(C) Bistability",
-          size = font_size_subplot, showarrow = FALSE, xref = "paper", yref = "paper"
-        ),
-        list(
-          x = .725, y = 0.3, text = "(D) Healthy",
-          size = font_size_subplot, showarrow = FALSE, xref = "paper", yref = "paper"
-        )
+        utils::modifyList(annot, list(x = .725, y = 1.05, text = "<i>B. Burnout</i>")),
+        utils::modifyList(annot, list(x = .725, y = 0.69, text = "<i>C. Bistability</i>")),
+        utils::modifyList(annot, list(x = .725, y = 0.3, text = "<i>D. Healthy</i>"))
       )),
     shareX = TRUE,
     shareY = TRUE,
@@ -1915,30 +2409,12 @@ if (recreate_figs) {
   ) |>
     plotly::layout(
       title = list(text = ""),
-      font = list(family = font_family, size = font_size),
-      legend = list(
-        orientation = "h", # orientation
-        x = 0.5, # Center horizontally
-        y = -0.12, # Below the plot
-        xanchor = "center",
-        yanchor = "top",
-        font = list(size = font_size_legend)
-      )
+      font = annot_font,
+      legend = utils::modifyList(annot_legend, list(y = -0.12)),
     ) |>
     plotly::layout(
       annotations = list(
-        list(
-          text = xlab,
-          font = list(
-            family = font_family,
-            size = font_size_xlab
-          ),
-          xref = "paper",
-          yref = "paper",
-          xanchor = "center", yanchor = "top",
-          x = 0.5, y = -0.06,
-          showarrow = FALSE
-        )
+        utils::modifyList(annot_xlab, list(y = -0.06))
       )
     )
   pl
@@ -1953,6 +2429,152 @@ if (recreate_figs) {
 ```
 
 
+
+
+```{r eval=FALSE, include=FALSE}
+if (recreate_figs) {
+  show_vars <- c("engagement", "demands")
+  vars_ <- VARS[VARS %in% show_vars]
+  colors_ <- COLORS[VARS %in% show_vars]
+
+plot_func <- function(pl){ 
+    rm_grid(pl) |>
+    plotly::layout(
+      title = list(text = ""),
+      font = annot_font
+    )
+  }
+
+  # Ensemble
+  sfm <- sfm_ens_par |> sim_specs(save_at = dt)
+  sims <- ensemble(sfm, n = 1000)
+
+  pl_ens <- plot(sims,
+    vars = vars_, colors = colors_,
+    showlegend = FALSE,
+    main = "", sub = ""
+  )
+  
+  export_plot(plot_func(pl_ens), file.path(filepath_figs, "learning_JDR_A.pdf"),
+    width = 5, height = 5
+  )
+
+  # Parameter variation
+  show_vars <- c("engagement", "demands")
+  vars_ <- VARS[VARS %in% show_vars]
+  colors_ <- COLORS[VARS %in% show_vars]
+
+for (k in 1:3){
+  sims <- ensemble(sfm,
+    n = n_ens_par,
+    conditions = list(effort_rate = effort_rates[k]),
+     return_sims = TRUE
+  )
+
+  pl_par <- plot(sims,
+    type = "sims", i = 1:n_ensemble,
+    vars = vars_, colors = colors_, alpha = .25,
+    main = "", sub = "",
+    nrows = 1,
+    central_tendency = FALSE,
+    showlegend = FALSE, j_labels = FALSE, xlab = ""
+  ) 
+  pl_par
+
+   
+  export_plot(plot_func(pl_int), file.path(filepath_figs, sprintf("learning_JDR_%s.pdf", LETTERS[1 + k])),
+    width = 5, height = 5
+  )
+}
+
+
+  # Intervention
+  show_vars <- c("engagement", "demands", "effort_rate")
+  vars_ <- VARS[VARS %in% show_vars]
+  colors_ <- COLORS[VARS %in% show_vars]
+
+  sfm <- sfm_int |> sim_specs(save_at = dt)
+  sims <- ensemble(sfm, n = 100, only_stocks = FALSE, return_sims = TRUE)
+
+  pl_int <- plot(sims,
+    # type = "sims", i = 1:100,alpha = .25,central_tendency = FALSE,
+    type = "summary",
+    vars = vars_, colors = colors_, 
+    main = "", sub = "", 
+    wrap_width = 40
+  ) 
+  
+  # Plot thicker line for effort_rate
+  col_ <- COLORS[VARS == "effort_rate"]
+  pl_int <- pl_int |>
+    plotly::add_trace(
+      data = sims$df[sims$df$variable == "effort_rate", , drop = FALSE],
+      x = ~time,
+      y = ~value,
+      line = list(
+        color = col_,
+        linewidth = 7
+      ),
+      showlegend = FALSE,
+      split = ~ interaction(variable, i), # ensures each line is treated separately
+      type = "scatter",
+      mode = "lines"
+    ) 
+  
+  export_plot(plot_func(pl_int), file.path(filepath_figs, "learning_JDR_E.pdf"),
+    width = 5, height = 5
+  )
+
+ pl_legend <- plot_func(pl_int) |>
+    plotly::layout(
+      legend = utils::modifyList(annot_legend, list(y = -0.12))
+    ) |>
+    plotly::layout(
+      annotations = list(
+        utils::modifyList(annot_xlab, list(y = -0.06))
+      )
+    )
+  export_plot(plot_func(pl_legend), file.path(filepath_figs, "learning_JDR_F.pdf"),
+    width = 5, height = 5
+  )
+
+
+  # pl <- plotly::subplot(
+  #   plotly::subplot(pl_ens, pl_int,
+  #     shareX = TRUE,
+  #     shareY = TRUE,
+  #     titleY = FALSE,
+  #     titleX = FALSE,
+  #     margin = c(0.025, 0.05, 0.025, 0.025),
+  #     nrows = 2
+  #   ) |>
+  #     plotly::layout(annotations = list(
+  #       utils::modify_list(annot, list(x = .325, y = 1.05, text = "A. Ensemble")),
+  #       utils::modify_list(annot, list(x = .325, y = .47, text = "E. Intervention"))
+  #     )),
+  #   pl_par |>
+  #     plotly::layout(annotations = list(
+  #       utils::modify_list(annot, list(x = .725, y = 1.05, text = "B. Burnout")),
+  #       utils::modify_list(annot, list(x = .725, y = 0.69, text = "C. Bistability")),
+  #       utils::modify_list(annot, list(x = .725, y = 0.3, text = "D. Healthy"))
+  #     )),
+  #   shareX = TRUE,
+  #   shareY = TRUE,
+  #   titleY = FALSE,
+  #   titleX = FALSE,
+  #   margin = c(0.05, 0.025, 0.025, 0.025),
+  #   nrows = 1, widths = c(.5, .5)
+  # ) 
+  # pl
+
+
+
+  sfm <- sfm |> sim_specs(save_at = 1)
+}
+```
+
+
+
 We increase the simulation length and only save the last timepoint to compute the effectiveness of the intervention.
 
 ```{r}
@@ -1960,130 +2582,312 @@ n <- 1000
 sfm <- sfm |> sim_specs(stop = 1000, save_n = 1)
 sims <- ensemble(sfm, n = n, return_sims = TRUE)
 df <- as.data.frame(sims, direction = "wide", type = "sims")
-tab <- table(round(df$X, 4)) |>
+tab <- table(round(df$energy, 4)) |>
   prop.table() |>
   as.data.frame()
 colnames(tab) <- c("Energy", "Proportion")
 print(tab)
 ```
 
-A later intervention is not effective.
+A later intervention is not as effective.
 
 ```{r}
 sfm <- update(sfm, "start", eqn = 28)
 sims <- ensemble(sfm, n = n, return_sims = TRUE)
 df <- as.data.frame(sims, direction = "wide", type = "sims")
-tab <- table(round(df$X, 4)) |>
+tab <- table(round(df$energy, 4)) |>
   prop.table() |>
   as.data.frame()
 colnames(tab) <- c("Energy", "Proportion")
 print(tab)
 ```
 
+### Informing Experimental and Statistical Design
 
-### Deriving Testable Hypotheses
+Fit cross-lagged panel model to simulated data.
 
 ```{r}
-# What treatment works after burnout has occurred?
-sfm <- sfm0 |>
-  # Prolong simulation to see long-term effects of treatment
-  sim_specs(stop = 500) |>
-  constant(start, eqn = 200) |>
-  constant(input, eqn = step(times, start))
+library(dplyr)
+library(tidyr)
+library(lavaan)
+library(semPlot)
 
-sfm1 <- sfm |> flow(reduce_demands, from = D, eqn = D * input(t))
-sfm2 <- sfm |> flow(add_resources, to = R, eqn = .1 * input(t)) # ** prev: .05 * input(t)
-sfm3 <- sfm |> flow(add_engagement, to = E, eqn = .1 * input(t))
-sfm4 <- sfm |> flow(add_energy, to = X, eqn = .3 * input(t))
+vars0 <- c("energy", "demands", "engagement", "resources", "performance")
 
-sim1 <- simulate(sfm1)
-sim2 <- simulate(sfm2)
-sim3 <- simulate(sfm3)
-sim4 <- simulate(sfm4)
+# View constant values
+as.data.frame(sfm, type = "constant", properties = "eqn")
 
-pl1 <- plot(sim1)
-pl2 <- plot(sim2, showlegend = FALSE)
-pl3 <- plot(sim3, showlegend = FALSE)
-pl4 <- plot(sim4, showlegend = FALSE)
+# Simulation study
+sfm <- sfm0 |> 
+  # Bistable parameters
+  update(effort_rate, eqn = runif(1, 0.05, 0.6)) |>
+  update(motivation_rate, eqn = runif(1, .2, 1)) |>
+  update(m_slope, eqn = runif(1, 2, 4)) |>
+  update(engagement_decay_rate, eqn = runif(1, 0.05, 0.3)) |>
+  update(proactive_rate, eqn = runif(1, 0.1, 0.5)) |>
+  update(resource_decay_rate, eqn = runif(1, 0.1, 0.4)) |>
+  update(exo_resource_rate, eqn = runif(1, 0.01, 0.2)) |>
+  update(recovery_rate, eqn = runif(1, 0.3, 0.7)) |>
+  update(s_slope, eqn = runif(1, 4, 6)) |>
+  update(work_rate, eqn = runif(1, 0.25, .75)) |>
+  update(e_slope, eqn = runif(1, 8, 12)) |>
+  update(exo_demand_rate, eqn = runif(1, 0.05, 0.2)) |>
+  update(undermining_rate, eqn = runif(1, 3, 7)) |>
 
-pl <- plotly::subplot(pl1, pl2, pl3, pl4,
-  nrows = 2,
-  margin = c(0.05, 0.1, 0.05, 0.05)
-)
-pl
+  sim_specs(
+    save_at = 1,
+    # save_at = c(20, 60, 100), stop = 100,
+    # save_at = seq(0, 200, by = 1),
+     stop = 200,
+  language = "julia", only_stocks = FALSE,
+  # language = "R",
+    seed = 123 # ensemble seed
+    ) |>
+  # Random initial conditions
+  update(c(demands, resources, engagement, energy), eqn = runif(1, 0.01, 2))
+
+n <- 10000
+
+sims <- ensemble(sfm, n = n, return_sims = TRUE)
+plot(sims, vars = vars0, type = "sims", i = 1:100)
 ```
 
 
-```{r include=FALSE}
-if (recreate_figs) {
-  # Create subplot figure
-  sim1 <- simulate(sfm1 |> sim_specs(save_at = 1), only_stocks = FALSE)
-  sim2 <- simulate(sfm2 |> sim_specs(save_at = 1), only_stocks = FALSE)
-  sim3 <- simulate(sfm3 |> sim_specs(save_at = 1), only_stocks = FALSE)
-  sim4 <- simulate(sfm4 |> sim_specs(save_at = 1), only_stocks = FALSE)
+```{r}
+# Run cross-lagged panel analysis between X and D for different lags
+wave1 <- 20
+lags <- seq(10, as.numeric(sfm$sim_specs$stop) - wave1, by = 1)
+df <- as.data.frame(sims, direction = "wide", type = "sims")
+dfX <- df[, c("i", "time", "energy")] 
+dfD <- df[, c("i", "time", "demands")] 
+dfX_wave1 <- dfX[dfX$time == wave1, setdiff(names(dfX), "time")]
+colnames(dfX_wave1) <- gsub("energy", "energy_wave1", colnames(dfX_wave1))
+dfD_wave1 <- dfD[dfD$time == wave1, setdiff(names(dfD), "time")]
+colnames(dfD_wave1) <- gsub("demands", "demands_wave1", colnames(dfD_wave1))
 
-  show_vars <- c("E", "R", "X", "D", "P")
-  vars_ <- VARS[VARS %in% show_vars]
-  colors_ <- COLORS[VARS %in% show_vars]
+model <- '
+  # wave 1 -> wave 2
+  energy_wave2  ~ 1 + energy_wave1 + demands_wave1
+  demands_wave2  ~ 1 + energy_wave1 + demands_wave1
 
-  pl1 <- plot(sim1, vars = vars_, colors = colors_, main = "")
-  pl2 <- plot(sim2, vars = vars_, colors = colors_, main = "", showlegend = FALSE)
-  pl3 <- plot(sim3, vars = vars_, colors = colors_, main = "", showlegend = FALSE)
-  pl4 <- plot(sim4, vars = vars_, colors = colors_, main = "", showlegend = FALSE)
+  # concurrent covariances
+  energy_wave1  ~~ demands_wave1
+  energy_wave2  ~~ demands_wave2
+'
+```
 
-  x1 <- .25
-  y1 <- 1.04
-  x2 <- .78
-  y2 <- .495
 
-  pl <- plotly::subplot(pl1, pl2, pl3, pl4,
-    nrows = 2,
-    shareX = TRUE,
-    shareY = TRUE,
-    titleY = FALSE,
-    titleX = FALSE,
-    margin = c(0.05, 0.05, 0.05, 0.05)
+```{r}
+# Plot SEM plot for one lag
+lag <- chosen_lag <- 90
+
+# Create wide format data for lavaan
+dfX_wave2 <- dfX[dfX$time == (wave1 + lag), setdiff(names(dfX), "time")]
+colnames(dfX_wave2) <- gsub("energy", "energy_wave2", colnames(dfX_wave2))
+dfD_wave2 <- dfD[dfD$time == (wave1 + lag), setdiff(names(dfD), "time")]
+colnames(dfD_wave2) <- gsub("demands", "demands_wave2", colnames(dfD_wave2))
+
+data_wide <- dfX_wave1 |>
+  dplyr::left_join(dfX_wave2, by = "i") |>
+  dplyr::left_join(dfD_wave1, by = "i") |>
+  dplyr::left_join(dfD_wave2, by = "i")
+
+# Fit lavaan model
+m1 <- lavaan::sem(model, data = data_wide, 
+# robust to non-normality
+estimator = "MLR")
+          
+# # summary(m1, standardized = TRUE) 
+# parameterEstimates(m1, standardized = TRUE, boot.ci.type = "bca.simple")
+
+# # Fit statistics:
+# fitMeasures(m1, c("chisq", "df", "pvalue", "cfi", "rmsea", "srmr", "bic"))
+
+# # chisq should be non-significant, but is often significant in large samples
+# # rmsea < 0.01, 0.05, and 0.08 to indicate excellent, good, and mediocre fit, respectively.
+# # srmr < .08 is good, < .10 is acceptable
+# # lower bic is better
+
+
+# modificationindices(m1) %>%
+#   as_tibble() %>%
+#   filter(mi>4) %>%
+#   arrange(-mi)
+
+# # Plot
+# semPaths(m1, whatLabels = "std",
+# #  layout = "spring", 
+# #  edge.color = "black", sizeMan = 5, sizeLat = 7, nCharNodes = 0
+# )
+
+
+# Standardized parameter estimates (with standardized SEs/tests/CIs)
+m1_est <- chosen_lag_est <- lavaan::standardizedSolution(
+  m1,
+  type = "std.all",
+  se = TRUE,
+  pvalue = TRUE,
+  ci = TRUE
+)
+
+label_col <- "est.std"
+label_digits <- 2
+
+semPlot::semPaths(m1,
+  whatLabels = "std",
+  edge.label.cex = 1.2,
+  edge.color = "black",
+  sizeMan = 5, sizeLat = 7, nCharNodes = 0
+  # layout = "spring"
+)
+
+```
+
+```{r}
+# Storage
+results <- vector("list", length(lags))
+
+# Loop over lags
+for (lag in lags) {
+
+  # Create wide format data for lavaan
+  dfX_wave2 <- dfX[dfX$time == (wave1 + lag), setdiff(names(dfX), "time")] 
+  colnames(dfX_wave2) <- gsub("energy", "energy_wave2", colnames(dfX_wave2))
+  dfD_wave2 <- dfD[dfD$time == (wave1 + lag), setdiff(names(dfD), "time")]
+  colnames(dfD_wave2) <- gsub("demands", "demands_wave2", colnames(dfD_wave2))
+
+  data_wide <- dfX_wave1 |>
+    dplyr::left_join(dfX_wave2, by = "i") |>
+    dplyr::left_join(dfD_wave1, by = "i") |>
+    dplyr::left_join(dfD_wave2, by = "i")
+
+  # Fit lavaan model
+  m1 <- lavaan::sem(model, data = data_wide, estimator = "MLR", # robust to non-normality
+          #  se = "bootstrap", bootstrap = 5000
+           )
+  # summary(m1, standardized = TRUE) 
+
+  # Store standardized parameter estimates (including standardized SEs and CIs)
+  out <- lavaan::standardizedSolution(
+    m1,
+    type = "std.all",
+    se = TRUE,
+    pvalue = TRUE,
+    ci = TRUE
+  ) 
+  out <- out[out[["op"]] == "~", c("lhs", "rhs", 
+  "est.std", "se", "ci.lower", "ci.upper")]
+  out[["lag"]] <- lag
+  out[["est"]] <- out[["est.std"]]
+  out[["est.std"]] <- NULL
+  out <- out[, c("lhs", "rhs", "est", "se", "ci.lower", "ci.upper", "lag")]
+  results[[as.character(lag)]] <- out
+
+}
+
+# Plot
+results_df <- as.data.frame(do.call(rbind, results))
+results_df[["path"]] <- paste(results_df[["lhs"]], results_df[["rhs"]], sep = " ~ ")
+results_df <- results_df[, c("path", "est", "se", "ci.lower", "ci.upper", "lag")]
+rownames(results_df) <- NULL
+head(results_df, n = 10)
+```
+
+```{r}
+# colors <- c("energy_wave2 ~ energy_wave1" = "#1b9e77", 
+# "energy_wave2 ~ demands_wave1" = "#d95f02", 
+# "demands_wave2 ~ energy_wave1" = "#7570b3", 
+# "demands_wave2 ~ demands_wave1" = "#e7298a")
+
+# Relabel dataframe
+label_map <- c(
+  "demands_wave2 ~ energy_wave1" = "Demands (wave 2) ~ Energy (wave 1)",
+  "energy_wave2 ~ demands_wave1" = "Energy (wave 2) ~ Demands (wave 1)",
+  "demands_wave2 ~ demands_wave1" = "Demands (wave 2) ~ Demands (wave 1)",
+  "energy_wave2 ~ energy_wave1" = "Energy (wave 2) ~ Energy (wave 1)"
+)
+
+results_df$path <- as.factor(label_map[results_df$path])
+
+# Sort paths for maximum lag
+results_max_lag <- results_df[results_df$lag == max(results_df$lag), ]
+results_max_lag[order(results_max_lag$est, decreasing = TRUE), ]
+
+# Chosen lag
+results_df[results_df$lag == chosen_lag, ]
+chosen_lag_est
+
+# colors <- c("Energy (wave 2) ~ Energy (wave 1)" = "#1b9e77", 
+# "Energy (wave 2) ~ Demands (wave 1)" = "#d95f02", 
+# "Demands (wave 2) ~ Energy (wave 1)" = "#7570b3",
+# "Demands (wave 2) ~ Demands (wave 1)" = "#e7298a")
+
+colors <- c("Energy (wave 2) ~ Energy (wave 1)" = COLORS[VARS == "effort_rate"],
+"Energy (wave 2) ~ Demands (wave 1)" = COLORS[VARS == "performance"], 
+"Demands (wave 2) ~ Energy (wave 1)" = COLORS[VARS == "engagement"],
+"Demands (wave 2) ~ Demands (wave 1)" = COLORS[VARS == "resources"]
+) |> rev()
+
+# colors <- COLORS[1:4]
+
+# Plot lag-dependent parameter estimates with confidence intervals
+pl <- plotly::plot_ly(results_df, x = ~lag, y = ~est, 
+color = ~path, split = ~path, legendgroup = ~path,
+    colors = colors,
+    type = 'scatter', mode = 'lines',
+        line = list(),
+        showlegend = TRUE) |> plotly::layout(
+  shapes = list(
+    list(
+      type = "rect",
+      x0 = chosen_lag - 0.5, x1 = chosen_lag + 0.5,
+      y0 = 0, y1 = 1,
+      yref = "paper",
+       fillcolor = "#DDD9C3",
+      # opacity = 0.7,
+      line = list(width = 0),
+        layer = "below"
+      # line = list(color = COLORS[VARS == "demands"], 
+      # width = 2
+      # dash = "dash"
+      )
+    )
   ) |>
+   plotly::add_ribbons(x = ~lag, ymin = ~ci.lower, 
+   ymax = ~ci.upper, color = ~path, split = ~path,
+    line = list(color = 'transparent'),
+            showlegend = FALSE) |>
     plotly::layout(
-      font = list(family = font_family, size = font_size),
-      legend = list(
-        orientation = "h", # orientation
-        x = 0.5, # Center horizontally
-        y = -0.16, # Below the plot
-        xanchor = "center",
-        yanchor = "top",
-        font = list(size = font_size_legend)
-      )
-    ) |>
+      showlegend = TRUE,
+      title = "",
+      xaxis = list(
+        title = "Time between waves (days)",
+        font = list(size = font_size)
+      ),
+      yaxis = list(
+        title = "Parameter estimate (standardized)",
+        font = list(size = font_size)
+      ),
+      font = annot_font
+    ) |> rm_grid() |>
     plotly::layout(
-      annotations = list(
-        list(
-          text = xlab,
-          font = list(
-            family = font_family,
-            size = font_size_xlab
-          ),
-          xref = "paper",
-          yref = "paper",
-          xanchor = "center", yanchor = "top",
-          x = 0.5, y = -.075,
-          showarrow = FALSE
-        )
-      )
-    ) |>
-    plotly::layout(annotations = list(
-      list(x = x1, y = y1, text = "(A) Reducing job demands", size = font_size_subplot, showarrow = FALSE, xref = "paper", yref = "paper", xanchor = "center", yanchor = "middle"),
-      list(x = x2, y = y1, text = "(B) Increasing job resources", size = font_size_subplot, showarrow = FALSE, xref = "paper", yref = "paper", xanchor = "center", yanchor = "middle"),
-      list(x = x1, y = y2, text = "(C) Increasing work engagement", size = font_size_subplot, showarrow = FALSE, xref = "paper", yref = "paper", xanchor = "center", yanchor = "middle"),
-      list(x = x2, y = y2, text = "(D) Increasing energy", size = font_size_subplot, showarrow = FALSE, xref = "paper", yref = "paper", xanchor = "center", yanchor = "middle")
-    ))
-  pl
+      xaxis = list(tickvals = list(10, 50, 90, 130, 170)),
+      font = annot_font,
+      # legend = utils::modifyList(annot_legend, list(x = 0.5, y = -0.2))
+      legend = utils::modifyList(annot_legend, list(x = 1.7, y = 0.6))
+    )  
 
 
-  export_plot(pl, file.path(filepath_figs, "hypotheses_JDR.pdf"),
-    width = 4.8, height = 5
+pl
+
+if (recreate_figs) {
+  export_plot(pl,
+    file.path(filepath_figs, "JDR_SEM_across_lags.pdf"),
+    width = 6, height = 3
+    # width = 5, height = 5
   )
 }
+
 ```
 
 ## Session Information

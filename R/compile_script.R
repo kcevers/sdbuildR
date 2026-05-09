@@ -167,6 +167,7 @@ compile_times <- function(object, language) {
   } else if (language == "Julia") {
     keep_unit <- ss[["keep_unit"]]
     unit_mult <- function(op) if (keep_unit) paste0(" ", op, " ", P[["time_units_name"]]) else ""
+    time_units_value <- if (keep_unit) paste0('u"', ss[["time_units"]], '"') else "1.0"
 
     save_type <- ss[["save_type"]] %||% "all"
     save_at <- ss[["save_at"]]
@@ -181,16 +182,19 @@ compile_times <- function(object, language) {
         # Scalar interval: Julia range evaluated natively
         sprintf(
           "%s[1]:%s%s:%s[2]",
-          P[["times_name"]], save_at, unit_mult("*"), P[["times_name"]]
+          P[["times_name"]], save_at,
+          unit_mult("*"), P[["times_name"]]
         )
       } else {
         # Explicit vector: broadcast-multiply with time units
-        um <- if (keep_unit) paste0(" .* ", P[["time_units_name"]]) else ""
+        # um <- if (keep_unit) paste0(" .* ", P[["time_units_name"]]) else ""
+        um <- ""
         str <- paste(save_at, collapse = ", ")
         sprintf("[%s]%s", str, um)
       },
       "save_n" = {
-        um <- if (keep_unit) paste0(" .* ", P[["time_units_name"]]) else ""
+        # um <- if (keep_unit) paste0(" .* ", P[["time_units_name"]]) else ""
+        um <- ""
         if (as.integer(save_n) == 1L) {
           # Only save the final time point
           sprintf("[%s[2]]", P[["times_name"]])
@@ -205,9 +209,10 @@ compile_times <- function(object, language) {
     )
 
     script <- fmt_script("times", "julia", ss,
-      times_unit_mult = unit_mult(".*"),
-      dt_unit_mult    = unit_mult("*"),
-      saveat_expr     = saveat_expr
+      times_unit_mult  = unit_mult(".*"),
+      dt_unit_mult     = unit_mult("*"),
+      saveat_expr      = saveat_expr,
+      time_units_value = time_units_value
     )
   }
 
@@ -341,46 +346,10 @@ compile_static <- function(object, language,
       pars_def <- paste0("\n\n# Define empty parameters\n", P[["parameter_name"]], " = ()\n")
     }
 
-    # # Check for delayN() and smoothN() functions
-    # delayN_smoothN <- get_delay(object, type = "delayN_smoothN")
-
-    # if (length(delayN_smoothN) > 0) {
-    #   delay_names <- names(unlist(unname(delayN_smoothN), recursive = FALSE))
-
-    #   # Preserve order of stocks but wrap delayN and smoothN stocks in values() and keys()
-    #   x <- y <- names(stock_eqn)
-    #   idx <- names(stock_eqn) %in% delay_names
-    #   x[idx] <- paste0("values(", x[idx], ")")
-    #   y[!idx] <- paste0(":", y[!idx])
-    #   y[idx] <- paste0("keys(", y[idx], ")...")
-
-    #   init_def_stocks <- paste0(x, collapse = ", ")
-    #   init_names <- paste0(y, collapse = ", ")
-
-    #   # Find indices of names in vector
-    #   init_idx <- paste0(
-    #     "\n", P[["delay_idx_name"]], " = (",
-    #     paste0(paste0(
-    #       delay_names, " = ",
-    #       "findall(n -> occursin(r\"", delay_names, P[["acc_suffix"]], "[0-9]+$\", string(n)), ",
-    #       P[["initial_value_names"]], ")"
-    #     ), collapse = ",\n\t"),
-    #     ",)\n"
-    #   )
-
-
-    #   # Make sure that any .outflow references are replaced with first(values(variable))
-    #   dict <- stringr::fixed(stats::setNames(
-    #     paste0("first(values(", delay_names, "))"),
-    #     paste0(delay_names, P[["outflow_suffix"]])
-    #   ))
-    #   static_str <- stringr::str_replace_all(static_str, dict)
-    # } else {
     init_def_stocks <- paste0(names(stock_eqn), collapse = ", ")
     # Symbols are faster than characters
     init_names <- paste0(paste0(":", names(stock_eqn)), collapse = ", ")
     init_idx <- ""
-    # }
 
     # Put initial states together in (unnamed) vector
     init_def <- paste0(
@@ -423,12 +392,6 @@ compile_static <- function(object, language,
       intermediary_names_correct <- ""
     }
 
-
-    delay_idx_return <- ifelse(nzchar(init_idx),
-      paste0(", ", P[["delay_idx_name"]], " = ", P[["delay_idx_name"]]),
-      ""
-    )
-
     script <- fmt_script("static", "Julia",
       ensemble_iter_code = ensemble_iter,
       intermediary_names_str = intermediary_names,
@@ -437,8 +400,7 @@ compile_static <- function(object, language,
       init_def = init_def,
       init_names_str = init_names,
       init_idx = init_idx,
-      intermediary_names_correct = intermediary_names_correct,
-      delay_idx_return = delay_idx_return
+      intermediary_names_correct = intermediary_names_correct
     )
   }
 
@@ -818,36 +780,10 @@ compile_ode <- function(object,
       )
     }
 
-    # # If delayN() and smoothN() were used, state has to be unpacked differently
-    # delayN_smoothN <- get_delay(object, type = "delayN_smoothN")
-
-    # if (length(delayN_smoothN) > 0) {
-    #   delay_names <- names(unlist(unname(delayN_smoothN), recursive = FALSE))
-
-    #   # Unpack non delayN stocks
-    #   unpack_nondelayN <- paste0(
-    #     paste0(setdiff(names(stock_change), delay_names), collapse = ", "), ", = ", P[["state_name"]], "[findall(n -> !occursin(r\"", P[["delayN_suffix"]], "[0-9]+", P[["acc_suffix"]], "[0-9]+$|",
-    #     P[["smoothN_suffix"]], "[0-9]+", P[["acc_suffix"]], "[0-9]+$\", string(n)), ", P[["model_setup_name"]], ".", P[["initial_value_names"]], ")]"
-    #   )
-
-    #   # Unpack each delayN or smoothN stock separately
-    #   unpack_delayN <- lapply(
-    #     seq_len(nrow(stock_vars_df)),
-    #     function(i) {
-    #       x <- as.list(stock_vars_df[i, ])
-    #       if (is_defined(x[["unpack_state"]])) {
-    #         return(paste0(x[["name"]], " = ", x[["unpack_state"]]))
-    #       }
-    #     }
-    #   ) |> compact_()
-
-    #   unpack_state_str <- paste0(unpack_nondelayN, "\n\t", paste0(unpack_delayN, collapse = "\n\t"))
-    # } else {
     unpack_state_str <- paste0(
       paste0(names(stock_change), collapse = ", "),
       ", = ", P[["state_name"]]
     )
-    # }
 
     # Unpack parameters string
     if (length(static[["par_names"]])) {

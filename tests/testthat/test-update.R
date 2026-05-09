@@ -517,8 +517,9 @@ test_that("change_type() strips conditions for variables that are no longer stoc
   sfm <- make_verifiable_sfm() |>
     unit_test(label = "test", expr = all(S >= 0), conditions = list(rate = 0))
 
-  expect_warning(sfm <- 
-    change_type(sfm, "rate", new_type = "aux"),
+  expect_warning(
+    sfm <-
+      change_type(sfm, "rate", new_type = "aux"),
     regexp = "Removed.*rate.*conditions"
   )
 
@@ -540,8 +541,10 @@ test_that("change_type() does not strip conditions for stock-to-constant change"
   sfm <- make_verifiable_sfm() |>
     unit_test(label = "test", expr = all(S >= 0), conditions = list(S = 50))
 
-  expect_warning(sfm2 <- change_type(sfm, "S", new_type = "constant"), 
-  "lingering reference")
+  expect_warning(
+    sfm2 <- change_type(sfm, "S", new_type = "constant"),
+    "lingering reference"
+  )
 
   # S is still a valid condition target (now constant instead of stock)
   expect_equal(names(sfm2[["unit_tests"]][[1]][["conditions"]]), "S")

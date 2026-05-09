@@ -398,7 +398,8 @@ clean_language <- function(language) {
     language <- stringr::str_to_title(language)
     language <- ifelse(language == "Jl", "Julia", language)
   }
-  return(language)
+
+  language
 }
 
 
@@ -505,24 +506,25 @@ clean_name <- function(new, protected = NULL) {
   new_names <- stringr::str_replace_all(new_names, "\\.", "_")
   new_names <- make.names(new_names, unique = TRUE)[-seq_along(protected_names)] # Remove protected names
 
-  # If any names end in a suffix used by sdbuildR, add _
-  pattern <- paste0(
-    # e.g. names cannot end with _delay[0-9]+$ or _delay[0-9]+_acc[0-9]+$
-    P[["conveyor_suffix"]], "$|", P[["delay_suffix"]],
-    "[0-9]+$|", P[["past_suffix"]], "[0-9]+$|",
-    P[["fix_suffix"]], "$|",
-    P[["fix_length_suffix"]], "$|",
-    P[["conveyor_suffix"]], "$|",
-    P[["delayN_suffix"]], "[0-9]+",
-    P[["acc_suffix"]], "[0-9]+$|",
-    P[["smoothN_suffix"]], "[0-9]+",
-    P[["acc_suffix"]], "[0-9]+$"
-  )
-
-  idx <- grepl(new_names, pattern = pattern)
-  new_names[idx] <- paste0(new_names[idx], "_")
-
   new_names
+}
+
+
+#' Get allowed variable types for sdbuildR model
+#'
+#' @param only_model_var Logical. If TRUE (default), returns core model variable types
+#'   (stock, flow, constant, aux, lookup, func). If FALSE, also includes custom_unit
+#'   for use in query/filter contexts.
+#'
+#' @returns Character vector of allowed type names.
+#' @noRd
+.sdbuildR_types <- function(only_model_var = TRUE) {
+  core_types <- c("stock", "flow", "constant", "aux", "lookup", "func")
+  if (only_model_var) {
+    core_types
+  } else {
+    c(core_types, "custom_unit")
+  }
 }
 
 
@@ -573,18 +575,6 @@ get_names <- function(object) {
 }
 
 
-#' Get names of time-varying variables in simulation output
-#'
-#' @inheritParams update.sdbuildR
-#'
-#' @returns Character vector with names of stock, flow, and aux variables.
-#' @noRd
-get_sim_output_var_names <- function(object) {
-  names_df <- get_names(object)
-  names_df[names_df[["type"]] %in% c("stock", "flow", "aux"), "name", drop = TRUE]
-}
-
-
 #' Validate vars argument for simulation output selection
 #'
 #' @inheritParams update.sdbuildR
@@ -616,7 +606,8 @@ validate_sim_vars <- function(object, vars) {
     ))
   }
 
-  allowed <- get_sim_output_var_names(object)
+  names_df <- get_names(object)
+  allowed <- names_df[names_df[["type"]] %in% c("stock", "flow", "aux"), "name", drop = TRUE]
   idx <- !(vars %in% allowed)
   if (any(idx)) {
     cli::cli_abort(c(

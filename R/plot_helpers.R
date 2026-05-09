@@ -247,12 +247,19 @@ validate_vars_in_model <- function(vars, names_df, df = NULL, context = "model")
   # Check whether specified variables exist in names_df
   idx <- !(vars %in% names_df[["name"]])
   if (any(idx)) {
-    cli::cli_abort(paste0(
-      paste0(vars[idx], collapse = ", "),
-      ifelse(sum(idx) == 1, " is not a variable", " are not variables"),
-      " in the ", context, "! Model variables: ",
-      paste0(names_df[["name"]], collapse = ", ")
-    ))
+    cli::cli_abort(
+      c(
+        "!" = paste0(
+          paste0(vars[idx], collapse = ", "),
+          ifelse(sum(idx) == 1, " is not a variable", " are not variables"),
+          " in the ", context, "."
+        ),
+        "i" = paste0(
+          "Model variables: ",
+          paste0(sort(names_df[["name"]]), collapse = ", ")
+        )
+      )
+    )
   }
 
   # Check whether variables are in the data frame (if provided)

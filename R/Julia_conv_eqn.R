@@ -38,7 +38,7 @@ convert_equations_julia_wrapper <- function(object, regex_units) {
     }
   }
 
-  #  Because delay and past functions are currently unsupported, no variables to add
+
   # # Add accumulated auxiliary and graphical function variables to the model
   if (nrow(accumulated_add_vars)) {
     # Some Insight Maker columns may be missing, e.g. eqn_insightmaker
@@ -595,10 +595,7 @@ get_syntax_julia <- function() {
       "ramp", "make_ramp", "syntax1", P[["time_units_name"]], "", FALSE,
       "seasonal", "make_seasonal", "syntax1", P[["timestep_name"]], "", FALSE,
       "length_IM", "length", "syntax1", "", "", FALSE,
-      # "delay", "retrieve_delay", "delay", "", "", FALSE,
-      # "past", "retrieve_past", "past", "", "", FALSE,
-      # "delayN", "compute_delayN", "delayN", "", "", FALSE,
-      # "smoothN", "compute_smoothN", "smoothN", "", "", FALSE,
+
       # Random Number Functions (13)
       "runif", "rand", "syntaxD", "Distributions.Uniform", "", FALSE,
       "rnorm", "rand", "syntaxD", "Distributions.Normal", "", FALSE,
@@ -867,196 +864,6 @@ convert_builtin_functions_julia <- function(type, name, eqn, var_names) {
             idx_func[["add_second_arg"]],
             ifelse(nzchar(idx_func[["add_second_arg"]]) & nzchar(arg), ", ", "")
           )
-          # } else if (idx_func[["syntax"]] == "delay") {
-          #   if (type %in% c("stock", "gf", "constant", "macro")) {
-          #     cli::cli_abort(paste0(
-          #       "Adjust equation of ", name,
-          #       ": delay() cannot be used for a ", type, "."
-          #     ), call. = FALSE)
-          #   }
-
-          #   # Check arguments
-          #   arg[2] <- trimws(arg[2])
-          #   if (arg[2] == "0" || arg[2] == "0.0" || arg[2] == "0L") {
-          #     cli::cli_abort(paste0(
-          #       "Adjust equation of ", name,
-          #       ": the delay length in delay() must be greater than 0."
-          #     ), call. = FALSE)
-          #   }
-
-          #   func_name <- paste0(name, P[["delay_suffix"]], length(add_code[["func"]][[idx_func[["syntax"]]]]) + 1)
-          #   arg3 <- ifelse(length(arg) > 2, arg[3], "nothing")
-
-          #   replacement <- paste0(
-          #     idx_func[["julia"]], "(",
-          #     arg[1], ", ",
-          #     arg[2], ", ",
-          #     arg3, ", ",
-          #     P[["time_name"]],
-          #     # Symbols are faster
-          #     ", :", arg[1],
-          #     ", ",
-          #     P[["intermediaries"]], ", ",
-          #     P[["model_setup_name"]], ".",
-          #     P[["intermediary_names"]], ")"
-          #   )
-
-          #   add_code[["func"]][[idx_func[["syntax"]]]][[func_name]] <- list(
-          #     var = arg[1],
-          #     length = arg[2],
-          #     initial = arg3
-          #   )
-          # } else if (idx_func[["syntax"]] == "past") {
-          #   if (type %in% c("stock", "gf", "constant", "macro")) {
-          #     cli::cli_abort(paste0(
-          #       "Adjust equation of ", name,
-          #       ": past() cannot be used for a ", type, "."
-          #     ), call. = FALSE)
-          #   }
-
-          #   # Check arguments
-          #   arg[2] <- trimws(arg[2])
-          #   if (arg[2] == "0" || arg[2] == "0.0" || arg[2] == "0L") {
-          #     cli::cli_abort(paste0(
-          #       "Adjust equation of ", name,
-          #       ": the past interval in past() must be greater than 0."
-          #     ), call. = FALSE)
-          #   }
-
-          #   arg2 <- ifelse(length(arg) > 1, arg[2], "nothing")
-          #   func_name <- paste0(name, P[["past_suffix"]], length(add_code[["func"]][[idx_func[["syntax"]]]]) + 1)
-          #   replacement <- paste0(
-          #     idx_func[["julia"]], "(",
-          #     arg[1], ", ",
-          #     arg2, ", nothing, ",
-          #     P[["time_name"]],
-          #     # Symbols are faster
-          #     ", :", arg[1],
-          #     ", ",
-          #     P[["intermediaries"]], ", ",
-          #     P[["model_setup_name"]], ".",
-          #     P[["intermediary_names"]], ")"
-          #   )
-          #   add_code[["func"]][[idx_func[["syntax"]]]][[func_name]] <- list(
-          #     var = arg[1],
-          #     length = arg2
-          #   )
-          # } else if (idx_func[["syntax"]] == "delayN") {
-          #   if (type %in% c("stock", "gf", "constant", "macro")) {
-          #     cli::cli_abort(paste0(
-          #       "Adjust equation of ", name,
-          #       ": delayN() cannot be used for a ", type, "."
-          #     ), call. = FALSE)
-          #   }
-
-          #   # Check arguments
-          #   arg[2] <- trimws(arg[2])
-          #   if (arg[2] == "0" || arg[2] == "0.0" || arg[2] == "0L") {
-          #     cli::cli_abort(paste0(
-          #       "Adjust equation of ", name,
-          #       ": the delay length in delayN() must be greater than 0."
-          #     ), call. = FALSE)
-          #   }
-
-          #   if (arg[3] == "0" || arg[3] == "0.0" || arg[3] == "0L") {
-          #     cli::cli_abort(paste0(
-          #       "Adjust equation of ", name,
-          #       ": the delay order in delayN() must be greater than 0."
-          #     ), call. = FALSE)
-          #   }
-
-          #   arg4 <- ifelse(length(arg) > 3, arg[4], arg[1])
-
-          #   # Number delayN() as there may be multiple
-          #   func_name <- paste0(
-          #     name, P[["delayN_suffix"]],
-          #     length(add_code[["func"]][[idx_func[["syntax"]]]]) + 1
-          #   )
-
-          #   replacement <- paste0(func_name, P[["outflow_suffix"]])
-          #   setup <- paste0(
-          #     "setup_delayN(", arg4, ", ", arg[2], ", ", arg[3],
-          #     # Symbols are faster
-          #     ", :", func_name, ")"
-          #   )
-          #   compute <- paste0(
-          #     idx_func[["julia"]], "(",
-          #     arg[1], ", ",
-          #     func_name, ", ",
-          #     arg[2], ", ",
-          #     arg[3], ")"
-          #   )
-
-          #   update <- paste0(func_name, ".update")
-
-          #   add_code[["func"]][[idx_func[["syntax"]]]][[func_name]] <- list(
-          #     name = name,
-          #     setup = setup,
-          #     compute = compute,
-          #     update = update,
-          #     type = idx_func[["julia"]],
-          #     var = arg[1],
-          #     length = arg[2],
-          #     order = arg[3],
-          #     initial = arg4
-          #   )
-          # } else if (idx_func[["syntax"]] == "smoothN") {
-          #   if (type %in% c("stock", "gf", "constant", "macro")) {
-          #     cli::cli_abort(paste0(
-          #       "Adjust equation of ", name,
-          #       ": smoothN() cannot be used for a ", type, "."
-          #     ), call. = FALSE)
-          #   }
-
-          #   # Check arguments
-          #   arg[2] <- trimws(arg[2])
-          #   if (arg[2] == "0" || arg[2] == "0.0" || arg[2] == "0L") {
-          #     cli::cli_abort(paste0(
-          #       "Adjust equation of ", name,
-          #       ": the smoothing time in smoothN() must be greater than 0."
-          #     ), call. = FALSE)
-          #   }
-
-          #   arg[3] <- trimws(arg[3])
-          #   if (arg[3] == "0" || arg[3] == "0.0" || arg[3] == "0L") {
-          #     cli::cli_abort(paste0(
-          #       "Adjust equation of ", name,
-          #       ": the smoothing order in smoothN() must be greater than 0."
-          #     ), call. = FALSE)
-          #   }
-
-          #   arg4 <- ifelse(length(arg) > 3, arg[4], arg[1])
-
-          #   # Number smoothN() as there may be multiple
-          #   func_name <- paste0(name, P[["smoothN_suffix"]], length(add_code[["func"]][[idx_func[["syntax"]]]]) + 1)
-
-          #   replacement <- paste0(func_name, P[["outflow_suffix"]])
-          #   setup <- paste0(
-          #     "setup_smoothN(", arg4, ", ", arg[2], ", ", arg[3],
-          #     # Symbols are faster
-          #     ", :", func_name, ")"
-          #   )
-          #   compute <- paste0(
-          #     idx_func[["julia"]], "(",
-          #     arg[1], ", ",
-          #     func_name, ", ",
-          #     arg[2], ", ",
-          #     arg[3], ")"
-          #   )
-
-          #   update <- paste0(func_name, ".update")
-
-          #   add_code[["func"]][[idx_func[["syntax"]]]][[func_name]] <- list(
-          #     name = name,
-          #     setup = setup,
-          #     compute = compute,
-          #     update = update,
-          #     type = idx_func[["julia"]],
-          #     var = arg[1],
-          #     length = arg[2],
-          #     order = arg[3],
-          #     initial = arg4
-          #   )
         } else if (idx_func[["syntax"]] == "syntaxD") {
           # Convert random number generation
           replacement <- conv_distribution(

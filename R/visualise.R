@@ -3,11 +3,13 @@
 #' Save a plot of a stock-and-flow diagram or a simulation to a specified file path. Note that saving plots requires additional packages to be installed (see below).
 #'
 #' @param pl Plot object.
-#' @param file File path to save plot to, including a file extension. For plotting a stock-and-flow model, the file extension can be one of png, pdf, svg, ps, eps, webp. For plotting a simulation, the file extension can be one of png, pdf, jpg, jpeg, webp. If no file extension is specified, it will default to png.
+#' @param file File path to save plot to, including a file extension. For plotting a stock-and-flow model, the file extension can be one of png, pdf, svg, ps, eps, webp. For plotting a simulation, the file extension can be one of png, pdf, jpg, jpeg, webp. For plotting a qgraph graph, the file extension can be one of png, pdf, svg, ps, eps, jpg, jpeg, tiff, bmp. If no file extension is specified, it will default to png.
 #' @param width Width of image in units.
 #' @param height Height of image in units.
 #' @param units Units in which width and height are specified. Either "cm", "in", or "px".
 #' @param dpi Resolution of image. Only used if units is not "px".
+#' @param font_family Font family used for qgraph exports. For PDF/PS/EPS exports,
+#'   this is applied when the graphics device is opened.
 #'
 #' @returns Returns `NULL` invisibly, called for side effects.
 #' @export
@@ -40,51 +42,150 @@
 #'   file.remove(file)
 #' }
 #' }
-export_plot <- function(pl, file, width = 3, height = 4, units = "cm", dpi = 300) {
+export_plot <- function(pl, file, width = 3, height = 4, units = "cm", dpi = 300, font_family = "") {
   # Auto-detect format
   format <- tolower(tools::file_ext(file))
 
+  if (!nzchar(format)) {
+    # Default to png
+    format <- "png"
+    file <- paste0(file, ".", format)
+  }
+
+  width_px <- width
+  height_px <- height
+
   # Convert dimensions to pixels
   if (units == "in") {
-    width <- width * dpi
-    height <- height * dpi
+    width_px <- width * dpi
+    height_px <- height * dpi
   } else if (units == "cm") {
-    width <- width * dpi / 2.54
-    height <- height * dpi / 2.54
+    width_px <- width * dpi / 2.54
+    height_px <- height * dpi / 2.54
   }
 
   if ("grViz" %in% class(pl)) {
-    if (!nzchar(format)) {
-      # stop("No file extension specified! Choose one of png, pdf, svg, ps, eps, webp.")
-      # Default to png
-      format <- "png"
-      file <- paste0(file, ".", format)
-    }
-
     export_diagram(pl, file, format,
-      width = width, height = height
+      width = width_px, height = height_px
     )
   } else if ("plotly" %in% class(pl)) {
-    if (!nzchar(format)) {
-      # stop("No file extension specified! Choose one of png, pdf, jpg, jpeg, webp.")
-      # Default to png
-      format <- "png"
-      file <- paste0(file, ".", format)
-    }
-
     export_plotly(pl, file,
       format = format,
-      width = width, height = height
+      width = width_px, height = height_px
+    )
+  } else if ("qgraph" %in% class(pl) || is.function(pl)) {
+    export_qgraph(pl, file,
+      format = format,
+      width = width_px,
+      height = height_px,
+      dpi = dpi,
+      font_family = font_family
     )
   } else {
     cli::cli_abort(c(
       "Unsupported plot object class.",
       "x" = "The {.fn export_plot} function does not support plot objects of class {.cls {class(pl)}}.",
-      ">" = "Use a {.cls grViz} or {.cls plotly} object."
+      ">" = "Use a {.cls grViz}, {.cls plotly}, or {.cls qgraph} object."
     ))
   }
 
   return(invisible())
+}
+
+
+#' Export qgraph object
+#'
+#' @inheritParams export_plot
+#' @param format Output format.
+#'
+#' @returns Returns `NULL` invisibly.
+#' @noRd
+#'
+export_qgraph <- function(pl, file, format, width, height, dpi, font_family = "") {
+  rlang::check_installed("qgraph", reason = "to export qgraph visualizations to image files.")
+
+  width_in <- width / dpi
+  height_in <- height / dpi
+  family <- trimws(font_family)
+
+  resolve_pdf_ps_family <- function(family_name) {
+    if (!nzchar(family_name)) {
+      return("")
+    }
+
+    if (family_name %in% names(grDevices::pdfFonts())) {
+      return(family_name)
+    }
+
+    if (identical(family_name, "Times New Roman")) {
+      return("Times")
+    }
+
+    return("")
+  }
+
+  if (format == "png") {
+    grDevices::png(file, width = width, height = height, units = "px", res = dpi)
+  } else if (format %in% c("jpg", "jpeg")) {
+    grDevices::jpeg(file, width = width, height = height, units = "px", res = dpi)
+  } else if (format == "tiff") {
+    grDevices::tiff(file, width = width, height = height, units = "px", res = dpi)
+  } else if (format == "bmp") {
+    grDevices::bmp(file, width = width, height = height, units = "px", res = dpi)
+  } else if (format == "pdf") {
+    if (capabilities("cairo")) {
+      if (nzchar(family)) {
+        grDevices::cairo_pdf(file, width = width_in, height = height_in, family = family)
+      } else {
+        grDevices::cairo_pdf(file, width = width_in, height = height_in)
+      }
+    } else {
+      pdf_family <- resolve_pdf_ps_family(family)
+      if (nzchar(pdf_family)) {
+        grDevices::pdf(file, width = width_in, height = height_in, family = pdf_family)
+      } else {
+        grDevices::pdf(file, width = width_in, height = height_in)
+      }
+    }
+  } else if (format == "svg") {
+    grDevices::svg(file, width = width_in, height = height_in)
+  } else if (format == "ps") {
+    ps_family <- resolve_pdf_ps_family(family)
+    if (nzchar(ps_family)) {
+      grDevices::postscript(file, width = width_in, height = height_in, horizontal = FALSE, family = ps_family)
+    } else {
+      grDevices::postscript(file, width = width_in, height = height_in, horizontal = FALSE)
+    }
+  } else if (format == "eps") {
+    ps_family <- resolve_pdf_ps_family(family)
+    if (nzchar(ps_family)) {
+      grDevices::postscript(file,
+        width = width_in, height = height_in,
+        horizontal = FALSE, onefile = FALSE, paper = "special", family = ps_family
+      )
+    } else {
+      grDevices::postscript(file,
+        width = width_in, height = height_in,
+        horizontal = FALSE, onefile = FALSE, paper = "special"
+      )
+    }
+  } else {
+    cli::cli_abort(c(
+      "Unsupported {.arg format} value.",
+      "x" = "The format {.val {format}} is not supported for qgraph export.",
+      ">" = "Use one of: {.code c('png', 'pdf', 'svg', 'ps', 'eps', 'jpg', 'jpeg', 'tiff', 'bmp')}."
+    ))
+  }
+
+  on.exit(grDevices::dev.off(), add = TRUE)
+
+  if (is.function(pl)) {
+    pl()
+  } else {
+    plot(pl)
+  }
+
+  invisible()
 }
 
 
@@ -142,6 +243,14 @@ export_plotly <- function(pl, file, format, width, height) {
 
   # Create temporary HTML file
   temp_html <- tempfile(fileext = ".html")
+  on.exit(
+    {
+      if (file.exists(temp_html)) {
+        file.remove(temp_html)
+      }
+    },
+    add = TRUE
+  )
   htmlwidgets::saveWidget(pl, temp_html, selfcontained = TRUE)
 
   # Set webshot2 parameters based on format
@@ -179,9 +288,6 @@ export_plotly <- function(pl, file, format, width, height) {
 
   # Convert to specified format
   do.call(webshot2::webshot, webshot_params)
-
-  # Cleanup
-  file.remove(temp_html)
 
   return(invisible())
 }
@@ -607,7 +713,357 @@ plot.sdbuildR <- function(x,
 
   pl <- DiagrammeR::grViz(viz_str)
 
-  return(pl)
+  pl
+}
+
+
+#' Plot stock-and-flow diagram with qgraph
+#'
+#' Visualize a stock-and-flow diagram using the R package qgraph. This function
+#' is a static-graphics alternative to [plot.sdbuildR()], preserving core
+#' filtering and labeling behavior while using a deterministic hierarchical
+#' layout.
+#'
+#' @param x A stock-and-flow model object of class [`sdbuildR`][sdbuildR].
+#' @param vars Variables to plot. Defaults to NULL to plot all variables.
+#' @param format_label If TRUE, apply default formatting (removing periods and underscores) to labels if labels are the same as variable names.
+#' @param wrap_width Width of text wrapping for labels. Must be an integer. Defaults to 20.
+#' @param font_size Font size. Defaults to 18.
+#' @param font_family Font name. Defaults to "Times New Roman".
+#' @param stock_col Colour of stocks. Defaults to "#83d3d4".
+#' @param flow_col Colour of flows. Defaults to "#f48153".
+#' @param dependency_col Colour of dependency arrows. Defaults to "#999999".
+#' @param show_dependencies If TRUE, show dependencies between variables. Defaults to TRUE.
+#' @param show_constants If TRUE, show constants. Defaults to FALSE.
+#' @param show_aux If TRUE, show auxiliary variables. Defaults to TRUE.
+#' @param layout_algo Layout algorithm. One of "sugiyama" (structured, default) or "fr".
+#' @param level_spacing Horizontal spacing multiplier between layout levels.
+#' @param node_spacing Vertical spacing multiplier between nodes.
+#' @param show_eqn If TRUE, attach equations as metadata attribute on the returned object.
+#' @param ... Optional arguments reserved for future extensions.
+#'
+#' @returns qgraph object.
+#' @export
+#' @concept build
+#' @seealso [plot.sdbuildR()], [export_plot()]
+#'
+#' @examples
+#' \dontrun{
+#' sfm <- sdbuildR("SIR")
+#' pl <- plot_sdbuildR2(sfm)
+#' export_plot(pl, tempfile(fileext = ".pdf"))
+#' }
+plot_sdbuildR2 <- function(x,
+                           vars = NULL,
+                           format_label = TRUE,
+                           wrap_width = 20,
+                           font_size = 18,
+                           font_family = "Times New Roman",
+                           stock_col = "#83d3d4",
+                           flow_col = "#f48153",
+                           dependency_col = "#999999",
+                           show_dependencies = TRUE,
+                           show_constants = FALSE,
+                           show_aux = TRUE,
+                           layout_algo = c("sugiyama", "fr"),
+                           level_spacing = 1.25,
+                           node_spacing = 1,
+                           show_eqn = FALSE,
+                           ...) {
+  rlang::check_installed("qgraph", reason = "to plot stock-and-flow diagrams with qgraph.")
+
+  sfm <- x
+  rm(x)
+  check_sdbuildR(sfm)
+
+  layout_algo <- match.arg(layout_algo)
+
+  validate_plot_params(
+    vars = vars,
+    font_family = font_family,
+    font_size = font_size,
+    wrap_width = wrap_width
+  )
+
+  if (!is.logical(show_dependencies) || length(show_dependencies) != 1) {
+    cli::cli_abort("{.arg show_dependencies} must be TRUE or FALSE.")
+  }
+  if (!is.logical(show_constants) || length(show_constants) != 1) {
+    cli::cli_abort("{.arg show_constants} must be TRUE or FALSE.")
+  }
+  if (!is.logical(show_aux) || length(show_aux) != 1) {
+    cli::cli_abort("{.arg show_aux} must be TRUE or FALSE.")
+  }
+
+  df <- as.data.frame(sfm, properties = c("type", "name", "label", "eqn"))
+
+  if (nrow(df) == 0) {
+    cli::cli_warn(c(
+      "i" = "Model contains no variables.",
+      ">" = "Add variables using {.fn update} before plotting."
+    ))
+    return(invisible(NULL))
+  }
+
+  dep <- dependencies(sfm)
+  flow_df <- get_flow_df(sfm)
+
+  if (!is.null(vars)) {
+    vars <- unique(vars)
+    validate_vars_in_model(vars, df, context = "model")
+
+    df <- df[df[["name"]] %in% vars, , drop = FALSE]
+    dep <- dep[names(dep) %in% vars]
+    flow_df <- flow_df[flow_df[["name"]] %in% vars, , drop = FALSE]
+
+    flow_df[["to"]][!flow_df[["to"]] %in% vars] <- ""
+    flow_df[["from"]][!flow_df[["from"]] %in% vars] <- ""
+
+    if (any(vars %in% df[df[["type"]] == "aux", "name"])) {
+      show_aux <- TRUE
+    }
+    if (any(vars %in% df[df[["type"]] == "constant", "name"])) {
+      show_constants <- TRUE
+    }
+  }
+
+  if (format_label) {
+    df[["label"]] <- ifelse(df[["name"]] == df[["label"]],
+      stringr::str_replace_all(df[["label"]], c("_" = " ", "\\." = " ", "  " = " ")),
+      df[["label"]]
+    )
+  }
+
+  df <- prepare_labels(df, wrap_width = wrap_width, format_label = FALSE, deduplicate = FALSE)
+  dict <- stats::setNames(df[["label"]], df[["name"]])
+  dict_eqn <- stats::setNames(stringr::str_replace_all(df[["eqn"]], c("'" = "", "\"" = "")), df[["name"]])
+
+  stock_names <- df[df[["type"]] == "stock", "name"]
+  flow_names <- df[df[["type"]] == "flow", "name"]
+  aux_names <- df[df[["type"]] == "aux", "name"]
+  const_names <- df[df[["type"]] == "constant", "name"]
+
+  if (!show_constants) const_names <- character(0)
+  if (!show_aux) aux_names <- character(0)
+
+  node_names <- c(stock_names, flow_names, aux_names, const_names)
+  node_types <- c(
+    rep("stock", length(stock_names)),
+    rep("flow", length(flow_names)),
+    rep("aux", length(aux_names)),
+    rep("constant", length(const_names))
+  )
+
+  nodes_df <- data.frame(
+    name = node_names,
+    type = node_types,
+    label = unname(dict[node_names]),
+    eqn = unname(dict_eqn[node_names]),
+    stringsAsFactors = FALSE
+  )
+
+  all_edges <- data.frame(
+    from = character(0),
+    to = character(0),
+    kind = character(0),
+    directed = logical(0),
+    stringsAsFactors = FALSE
+  )
+
+  if (nrow(flow_df) > 0) {
+    flow_df[["from"]] <- ifelse(flow_df[["from"]] %in% stock_names, flow_df[["from"]], "")
+    flow_df[["to"]] <- ifelse(flow_df[["to"]] %in% stock_names, flow_df[["to"]], "")
+
+    missing_from <- which(flow_df[["from"]] == "")
+    missing_to <- which(flow_df[["to"]] == "")
+
+    if (length(missing_from) > 0) {
+      from_clouds <- paste0("CloudSrc", seq_along(missing_from))
+      flow_df[["from"]][missing_from] <- from_clouds
+      nodes_df <- rbind(
+        nodes_df,
+        data.frame(
+          name = from_clouds,
+          type = rep("cloud", length(from_clouds)),
+          label = rep("", length(from_clouds)),
+          eqn = rep("Unspecified source", length(from_clouds)),
+          stringsAsFactors = FALSE
+        )
+      )
+    }
+
+    if (length(missing_to) > 0) {
+      to_clouds <- paste0("CloudSink", seq_along(missing_to))
+      flow_df[["to"]][missing_to] <- to_clouds
+      nodes_df <- rbind(
+        nodes_df,
+        data.frame(
+          name = to_clouds,
+          type = rep("cloud", length(to_clouds)),
+          label = rep("", length(to_clouds)),
+          eqn = rep("Unspecified sink", length(to_clouds)),
+          stringsAsFactors = FALSE
+        )
+      )
+    }
+
+    flow_edges_in <- data.frame(
+      from = flow_df[["from"]],
+      to = flow_df[["name"]],
+      kind = rep("flow", nrow(flow_df)),
+      directed = rep(FALSE, nrow(flow_df)),
+      stringsAsFactors = FALSE
+    )
+
+    flow_edges_out <- data.frame(
+      from = flow_df[["name"]],
+      to = flow_df[["to"]],
+      kind = rep("flow", nrow(flow_df)),
+      directed = rep(TRUE, nrow(flow_df)),
+      stringsAsFactors = FALSE
+    )
+
+    all_edges <- rbind(all_edges, flow_edges_in, flow_edges_out)
+  }
+
+  if (show_dependencies) {
+    plot_var <- nodes_df$name[nodes_df$type != "cloud"]
+    dep <- lapply(dep, function(x) intersect(x, plot_var))
+    dep <- dep[names(dep) %in% plot_var]
+
+    if (length(dep) > 0) {
+      dep_edges <- do.call(rbind, lapply(names(dep), function(x) {
+        if (length(dep[[x]]) == 0) {
+          return(NULL)
+        }
+        data.frame(
+          from = dep[[x]],
+          to = rep(x, length(dep[[x]])),
+          kind = rep("dependency", length(dep[[x]])),
+          directed = rep(TRUE, length(dep[[x]])),
+          stringsAsFactors = FALSE
+        )
+      }))
+
+      if (!is.null(dep_edges) && nrow(dep_edges) > 0) {
+        all_edges <- rbind(all_edges, dep_edges)
+      }
+    }
+  }
+
+  nodes_df <- nodes_df[!duplicated(nodes_df$name), , drop = FALSE]
+
+  if (nrow(all_edges) > 0) {
+    keep <- all_edges$from %in% nodes_df$name & all_edges$to %in% nodes_df$name
+    all_edges <- all_edges[keep, , drop = FALSE]
+  }
+
+  graph_df <- if (nrow(all_edges) > 0) {
+    all_edges[, c("from", "to"), drop = FALSE]
+  } else {
+    data.frame(from = character(0), to = character(0), stringsAsFactors = FALSE)
+  }
+
+  graph <- igraph::graph_from_data_frame(
+    d = graph_df,
+    directed = TRUE,
+    vertices = data.frame(name = nodes_df$name, stringsAsFactors = FALSE)
+  )
+
+  layout <- if (layout_algo == "sugiyama") {
+    igraph::layout_with_sugiyama(graph)$layout
+  } else {
+    igraph::layout_with_fr(graph)
+  }
+
+  layout <- layout[match(nodes_df$name, igraph::V(graph)$name), , drop = FALSE]
+  layout[, 1] <- layout[, 1] * level_spacing
+  layout[, 2] <- layout[, 2] * node_spacing
+
+  stock_idx <- which(nodes_df$type == "stock")
+  if (length(stock_idx) > 0) {
+    stock_x <- mean(layout[stock_idx, 1])
+    layout[, 1] <- layout[, 1] - stock_x
+    layout[stock_idx, 1] <- 0
+  }
+
+  labels <- nodes_df$label
+
+  shape <- ifelse(nodes_df$type == "stock", "rectangle", "circle")
+  vsize <- ifelse(
+    nodes_df$type == "stock", 13,
+    ifelse(nodes_df$type == "flow", 2.2,
+      ifelse(nodes_df$type == "cloud", 3, 1.8)
+    )
+  )
+  vsize2 <- ifelse(nodes_df$type == "stock", 8.2, vsize)
+
+  node_color <- ifelse(nodes_df$type == "stock", stock_col, "#FFFFFF")
+  border_color <- ifelse(
+    nodes_df$type == "stock", "#222222",
+    ifelse(nodes_df$type == "flow", flow_col,
+      ifelse(nodes_df$type == "cloud", "#555555", "#FFFFFF")
+    )
+  )
+  border_width <- ifelse(
+    nodes_df$type == "stock", 1.8,
+    ifelse(nodes_df$type == "flow", 0,
+      ifelse(nodes_df$type == "cloud", 1.2, 0)
+    )
+  )
+  borders <- border_width > 0
+  border_width <- pmax(border_width, 0.01)
+
+  base_cex <- max(0.55, font_size / 16)
+  label_cex <- ifelse(nodes_df$type == "stock", base_cex, base_cex * 0.82)
+  label_font <- ifelse(nodes_df$type == "constant", 3, 1)
+  label_color <- rep("black", nrow(nodes_df))
+
+  edge_mat <- if (nrow(all_edges) > 0) {
+    cbind(
+      match(all_edges$from, nodes_df$name),
+      match(all_edges$to, nodes_df$name)
+    )
+  } else {
+    matrix(numeric(0), ncol = 2)
+  }
+
+  edge_color <- ifelse(all_edges$kind == "dependency", dependency_col, flow_col)
+  edge_width <- ifelse(all_edges$kind == "dependency", 1, 3.8)
+  arrow_size <- ifelse(all_edges$kind == "dependency", 2.2, 4.8)
+
+  old_par <- graphics::par(no.readonly = TRUE)
+  on.exit(graphics::par(old_par), add = TRUE)
+  graphics::par(family = font_family)
+
+  pl <- qgraph::qgraph(
+    input = edge_mat,
+    nNodes = nrow(nodes_df),
+    labels = labels,
+    layout = layout,
+    shape = shape,
+    vsize = vsize,
+    vsize2 = vsize2,
+    color = node_color,
+    borders = borders,
+    border.color = border_color,
+    border.width = border_width,
+    label.cex = label_cex,
+    label.font = label_font,
+    label.color = label_color,
+    edge.color = edge_color,
+    edge.width = edge_width,
+    directed = all_edges$directed,
+    asize = arrow_size,
+    mar = c(2.5, 2.5, 2.5, 2.5)
+  )
+
+  attr(pl, "node_metadata") <- nodes_df[, c("name", "type", "eqn"), drop = FALSE]
+  if (isTRUE(show_eqn)) {
+    attr(pl, "equations") <- stats::setNames(nodes_df$eqn, nodes_df$name)
+  }
+
+  pl
 }
 
 

@@ -1219,7 +1219,7 @@ convert_builtin_functions_IM <- function(type, name, eqn, var_names) {
         "Unsupported Insight Maker functions were detected in equation of ",
         name, ", and won't be translated: "
       )
-      cli::cli_inform(paste0(syntax5[idx5, "insightmaker"], collapse = ", "))
+      cli::cli_inform(paste0(syntax5[idx5, "insightmaker"], ")"))
     }
   }
 
@@ -1282,7 +1282,6 @@ extract_prefunc_args <- function(eqn, var_names, start_func, names_with_brackets
 #'
 #' Lookup() is a linear interpolation function, equivalent to R's approx().
 #'
-#' @inheritParams conv_delayN
 #' @inheritParams convert_equations_IM
 #'
 #' @returns Transformed eqn
@@ -1337,127 +1336,6 @@ check_only_primitive <- function(eqn) {
 }
 
 
-#' Convert Insight Maker's Delay() to R
-#'
-#' @inheritParams conv_past_values
-#' @noRd
-#'
-#' @returns List with transformed eqn and additional R code needed to make the eqn function
-conv_delay <- function(func, arg, name) {
-  # Fixed delays are treated the same as PastValues()
-  replacement <- sprintf(
-    "delay(%s, %s%s)",
-    arg[1],
-    arg[2],
-    ifelse(length(arg) == 3, paste0(", ", arg[3]), "")
-  )
-  return(
-    list(
-      replacement = replacement,
-      add_var = data.frame()
-    )
-  )
-}
-
-
-#' Convert Insight Maker's PastValues and friends to R
-#'
-#'
-#' @noRd
-#' @returns List with transformed eqn and additional R code needed to make the eqn function
-#' @inheritParams convert_equations_IM
-#' @inheritParams conv_delayN
-#'
-conv_past_values <- function(func, arg, name) {
-  # If there is one, get the function that is applied to PastValues, e.g. min in PastMin()
-  applied_func <- func |> stringr::str_replace("past", "")
-  if (applied_func == "stddev") {
-    applied_func <- "sd"
-  } else if (applied_func == "correlation") {
-    applied_func <- "cor"
-  } else if (applied_func == "values") {
-    # No applied function, pastvalues simply retrieves all past values
-    applied_func <- ""
-  }
-
-  # The optional second (third in case of PastCorrelation()) argument is how long we need to look back in history
-  arg_nr_past_length <- ifelse(applied_func == "cor", 3, 2)
-  if (length(arg) < arg_nr_past_length) {
-    past_length <- ""
-  } else {
-    past_length <- arg[arg_nr_past_length]
-  }
-
-  # Construct replacement
-  if (applied_func == "cor") {
-    replacement <- sprintf(
-      "%s(past(%s%s), past(%s%s))",
-      applied_func,
-      arg[1],
-      ifelse(nzchar(past_length), paste0(", ", past_length), ""),
-      arg[2],
-      ifelse(nzchar(past_length), paste0(", ", past_length), "")
-    )
-  } else {
-    replacement <- sprintf(
-      "%spast(%s%s)%s",
-      ifelse(nzchar(applied_func), paste0(applied_func, "("), ""),
-      arg[1],
-      ifelse(nzchar(past_length), paste0(", ", past_length), ""),
-      ifelse(nzchar(applied_func), ")", "")
-    )
-  }
-
-  return(
-    list(
-      replacement = replacement,
-      add_var = data.frame()
-    )
-  )
-}
-
-
-#' Convert Insight Maker's DelayN() and SmoothN() family
-#'
-#' @param func String with name of Insight Maker function
-#' @param arg Arguments passed to Insight Maker function
-#'
-#' @noRd
-#' @returns List with transformed eqn and additional R code needed to make the eqn function
-#' @importFrom rlang .data
-#'
-conv_delayN <- function(func, arg) {
-  # Get order of delay
-  if (func == "smooth" || func == "delay1") {
-    delay_order <- "1"
-    delay_0 <- ifelse(length(arg) == 3, arg[3], "")
-  } else if (func == "delay3") {
-    delay_order <- "3"
-    delay_0 <- ifelse(length(arg) == 3, arg[3], "")
-  } else {
-    delay_order <- arg[3]
-    delay_0 <- ifelse(length(arg) == 4, arg[4], "")
-  }
-  delay_length <- arg[2]
-
-  func_name <- ifelse(grepl("smooth", func), "smooth", "delay")
-
-  replacement <- sprintf(
-    "%sN(%s, %s, %s%s)",
-    func_name,
-    arg[1], delay_length, delay_order,
-    ifelse(nzchar(delay_0), paste0(", ", delay_0), "")
-  )
-
-  return(
-    list(
-      replacement = replacement,
-      add_var = data.frame()
-    )
-  )
-}
-
-
 #' Convert Insight Maker's Step() function to R
 #'
 #' @param h_step Height of step, defaults to 1
@@ -1465,7 +1343,6 @@ conv_delayN <- function(func, arg) {
 #'
 #' @returns List with transformed eqn and list with additional R code needed to make the eqn function
 #' @noRd
-#' @inheritParams conv_delayN
 #' @inheritParams convert_equations_IM
 #'
 conv_step <- function(func, arg, match_idx, name, # Default settings of Insight Maker

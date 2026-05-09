@@ -116,6 +116,11 @@ verify(sfm)
 
 **explain == is usually fragile
 
+** show how to view simulations
+
+**show sim_index
+
+
 ## Update or remove tests
 
 During model development, you may want to remove outdated tests. Use

@@ -330,27 +330,7 @@ prep_stock_change <- function(object, modified_names = NULL) {
     row <- object[["variables"]][i, ]
     stock_position <- which(stock_names == row[["name"]])
 
-    # Check for delayed stock (delayN indicates it's a delay accumulator)
-    # if (!is.null(row[["delayN"]]) && is_defined(row[["delayN"]])) {
-    #   object[["variables"]][i, "sum_name"] <- lang$format_delay_sum_name(row)
-    #   object[["variables"]][i, "sum_eqn"] <- ""
-
-    #   # Set unpack_state for Julia
-    #   unpack <- lang$format_unpack_state(row, stock_position, stock_names)
-    #   if (!is.null(unpack)) {
-    #     object[["variables"]][i, "unpack_state"] <- unpack
-    #   }
-
-    #   # Set sum_units for R
-    #   sum_units <- lang$format_sum_units(row, keep_unit)
-    #   if (!is.null(sum_units)) {
-    #     object[["variables"]][i, "sum_units"] <- sum_units
-    #   }
-    # } else {
     object[["variables"]][i, "sum_name"] <- lang$format_sum_name(row, stock_position, stock_names)
-
-    # Set unpack_state for Julia (non-delay stocks don't set this in Julia)
-    # Only delay stocks set unpack_state in Julia
 
     # Build sum equation from inflows and outflows
     inflow_def <- object[["variables"]][i, "inflow"]
@@ -379,14 +359,6 @@ prep_stock_change <- function(object, modified_names = NULL) {
     }
     sum_eqn <- paste0(inflow, outflow)
     object[["variables"]][i, "sum_eqn"] <- lang$format_sum_eqn(sum_eqn, row, keep_unit)
-    # }
-
-    # # Set sum_units for R
-    # sum_units <- lang$format_sum_units(row, keep_unit)
-    # if (!is.null(sum_units)) {
-    #   object[["variables"]][i, "sum_units"] <- sum_units
-    # }
-    # }
   }
 
   object
@@ -531,15 +503,8 @@ gather_stock_changes <- function(object, assign_op, language) {
   stock_vars <- get_variables_by_type(object, "stock")
 
   if (language == "R") {
-    # # Filter out any stocks with delayN (if that column exists)
-    # if ("delayN" %in% colnames(stock_vars)) {
-    #   stock_vars <- stock_vars[is.na(stock_vars[["delayN"]]) | stock_vars[["delayN"]] == "", ]
-    # }
     paste0(stock_vars[["sum_name"]], " ", assign_op, " ", stock_vars[["sum_eqn"]])
   } else if (language == "Julia") {
-    # # Ensure derivatives carry 1/time_units (even when keep_unit is FALSE)
-    # set_units_on_flow <- TRUE
-
     stock_change <- lapply(
       stock_vars[["name"]],
       function(stock_name) {
@@ -552,8 +517,6 @@ gather_stock_changes <- function(object, assign_op, language) {
         # }
         paste(
           x[["sum_name"]],
-          # Broadcast assignment for delayed variables
-          # ifelse(x[["type"]] == "delayN_smoothN", ".=", "="),
           "=",
           sum_expr
         )

@@ -4,12 +4,20 @@
 \alias{export_plot}
 \title{Save plot to a file}
 \usage{
-export_plot(pl, file, width = 3, height = 4, units = "cm", dpi = 300)
+export_plot(
+  pl,
+  file,
+  width = 3,
+  height = 4,
+  units = "cm",
+  dpi = 300,
+  font_family = ""
+)
 }
 \arguments{
 \item{pl}{Plot object.}
 
-\item{file}{File path to save plot to, including a file extension. For plotting a stock-and-flow model, the file extension can be one of png, pdf, svg, ps, eps, webp. For plotting a simulation, the file extension can be one of png, pdf, jpg, jpeg, webp. If no file extension is specified, it will default to png.}
+\item{file}{File path to save plot to, including a file extension. For plotting a stock-and-flow model, the file extension can be one of png, pdf, svg, ps, eps, webp. For plotting a simulation, the file extension can be one of png, pdf, jpg, jpeg, webp. For plotting a qgraph graph, the file extension can be one of png, pdf, svg, ps, eps, jpg, jpeg, tiff, bmp. If no file extension is specified, it will default to png.}
 
 \item{width}{Width of image in units.}
 
@@ -18,6 +26,9 @@ export_plot(pl, file, width = 3, height = 4, units = "cm", dpi = 300)
 \item{units}{Units in which width and height are specified. Either "cm", "in", or "px".}
 
 \item{dpi}{Resolution of image. Only used if units is not "px".}
+
+\item{font_family}{Font family used for qgraph exports. For PDF/PS/EPS exports,
+this is applied when the graphics device is opened.}
 }
 \value{
 Returns \code{NULL} invisibly, called for side effects.
@@ -28,7 +39,7 @@ Save a plot of a stock-and-flow diagram or a simulation to a specified file path
 \examples{
 
 # Only if dependencies are installed
-if (requireNamespace("DiagrammeRsvg", quietly = TRUE) &
+if (requireNamespace("DiagrammeRsvg", quietly = TRUE) &&
   requireNamespace("rsvg", quietly = TRUE)) {
   sfm <- sdbuildR("SIR")
   file <- tempfile(fileext = ".png")
@@ -42,7 +53,7 @@ if (requireNamespace("DiagrammeRsvg", quietly = TRUE) &
 \dontrun{
 # requires internet
 # Only if dependencies are installed
-if (requireNamespace("htmlwidgets", quietly = TRUE) &
+if (requireNamespace("htmlwidgets", quietly = TRUE) &&
   requireNamespace("webshot2", quietly = TRUE)) {
   # Requires Chrome to save plotly plot:
   sim <- simulate(sfm)

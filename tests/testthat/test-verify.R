@@ -40,7 +40,7 @@ test_that("unit_test() auto-generates label from expression", {
 })
 
 
-test_that("unit_test() auto-generates unique labels for similar expressions", { 
+test_that("unit_test() auto-generates unique labels for similar expressions", {
   sfm <- make_verifiable_sfm() |>
     unit_test(expr = mean(S >= 0)) |>
     unit_test(expr = mean(S) >= 0)
@@ -141,7 +141,7 @@ test_that("unit_test() requires explicit label when auto-generated label collide
     unit_test(expr = all(S >= 0))
 
   expect_error(
-    unit_test(sfm, expr = all(S >=  0)),
+    unit_test(sfm, expr = all(S >= 0)),
     regexp = "Auto-generated label.*already exists|identical expression already exists"
   )
 })
@@ -246,7 +246,7 @@ test_that("verify result includes expr_str, conditions, and outcome for passing 
 
   result <- silence(verify(sfm))
   res_entry <- result[["results"]][[1]]
-  
+
   expect_equal(res_entry[["expr_str"]], "all(S >= 0)")
   expect_equal(res_entry[["conditions"]], list())
   expect_equal(res_entry[["outcome"]], TRUE)
@@ -267,7 +267,7 @@ test_that("verify result includes outcome = FALSE for failing test", {
 
   result <- silence(verify(sfm))
   res_entry <- result[["results"]][[1]]
-  
+
   expect_equal(res_entry[["expr_str"]], "all(S == 0)")
   expect_equal(res_entry[["conditions"]], list())
   expect_equal(res_entry[["outcome"]], FALSE)
@@ -297,7 +297,7 @@ test_that("verify result includes outcome and conditions for error status", {
 
   result <- silence(verify(sfm))
   res_entry <- result[["results"]][[1]]
-  
+
   expect_equal(res_entry[["expr_str"]], "mean(S > 0.2)")
   expect_equal(res_entry[["conditions"]], list())
   expect_null(res_entry[["outcome"]])
@@ -324,12 +324,11 @@ test_that("verify.sdbuildR() works with conditions", {
 
   result <- silence(verify(sfm))
   res_entry <- result[["results"]][[1]]
-  
+
   expect_equal(res_entry[["expr_str"]], "all(diff(S) >= -1e-10)")
   expect_equal(res_entry[["conditions"]], list(rate = 0))
   expect_equal(res_entry[["outcome"]], TRUE)
   expect_equal(res_entry[["status"]], "pass")
-
 })
 
 test_that("verify.sdbuildR() errors when no tests defined", {
@@ -372,7 +371,7 @@ test_that("verify() deduplicates sims: two tests sharing conditions map to the s
     unit_test(label = "S ends positive", expr = tail(S, 1) > 0) |>
     unit_test(
       label = "S constant at zero rate",
-      expr  = all(diff(S) == 0),
+      expr = all(diff(S) == 0),
       conditions = list(rate = 0)
     )
   result <- silence(verify(sfm, return_sims = TRUE))
@@ -431,7 +430,7 @@ test_that("verify.simulate_sdbuildR() skips tests with non-matching conditions",
 })
 
 test_that("verify.simulate_sdbuildR() runs tests whose conditions match current model", {
-  rate_value <- 0.1 
+  rate_value <- 0.1
   sfm <- make_verifiable_sfm() |>
     update(rate, type = "constant", eqn = !!rate_value) |>
     unit_test(
@@ -464,7 +463,7 @@ test_that("verify result for skipped test includes expr_str, conditions, and out
   sim <- simulate(sfm)
   result <- silence(verify(sim))
   res_entry <- result[["results"]][[1]]
-  
+
   expect_equal(res_entry[["expr_str"]], "all(S >= 0)")
   expect_equal(res_entry[["conditions"]], list())
   expect_null(res_entry[["outcome"]])
@@ -478,7 +477,7 @@ test_that("verify result for skipped test includes error_type = NA", {
   sim <- simulate(sfm)
   result <- silence(verify(sim))
   res_entry <- result[["results"]][[1]]
-  
+
   expect_true(is.na(res_entry[["error_type"]]))
   expect_equal(res_entry[["status"]], "skipped")
 })
@@ -489,7 +488,7 @@ test_that("verify result for passing test includes error_type = NA", {
 
   result <- silence(verify(sfm))
   res_entry <- result[["results"]][[1]]
-  
+
   expect_true(is.na(res_entry[["error_type"]]))
   expect_equal(res_entry[["status"]], "pass")
 })
@@ -500,21 +499,21 @@ test_that("verify result for failing test includes error_type = NA", {
 
   result <- silence(verify(sfm))
   res_entry <- result[["results"]][[1]]
-  
+
   expect_true(is.na(res_entry[["error_type"]]))
   expect_equal(res_entry[["status"]], "fail")
 })
 
 test_that("error_type = 'expr_syntax' when expression has parse error", {
   sfm <- make_verifiable_sfm() |>
-    unit_test(label = "syntax error", expr = all(S >= 0))  # Will be modified after
-  
+    unit_test(label = "syntax error", expr = all(S >= 0)) # Will be modified after
+
   # Manually inject a broken expression that fails parsing
-  sfm[["unit_tests"]][[1]][["expr_str"]] <- "all(S >= 0"  # missing closing paren
+  sfm[["unit_tests"]][[1]][["expr_str"]] <- "all(S >= 0" # missing closing paren
 
   result <- silence(verify(sfm))
   res_entry <- result[["results"]][[1]]
-  
+
   expect_equal(res_entry[["error_type"]], "expr_syntax")
   expect_equal(res_entry[["status"]], "error")
   expect_match(res_entry[["message"]], "Could not parse")
@@ -526,7 +525,7 @@ test_that("error_type = 'expr_result' when expression returns numeric instead of
 
   result <- silence(verify(sfm))
   res_entry <- result[["results"]][[1]]
-  
+
   expect_equal(res_entry[["error_type"]], "expr_result")
   expect_equal(res_entry[["status"]], "error")
   expect_match(res_entry[["message"]], "logical scalar")
@@ -538,7 +537,7 @@ test_that("error_type = 'expr_result' when expression returns logical vector ins
 
   result <- silence(verify(sfm))
   res_entry <- result[["results"]][[1]]
-  
+
   expect_equal(res_entry[["error_type"]], "expr_result")
   expect_equal(res_entry[["status"]], "error")
   expect_match(res_entry[["message"]], "logical scalar")
@@ -546,14 +545,14 @@ test_that("error_type = 'expr_result' when expression returns logical vector ins
 
 test_that("error_type = 'expr_eval' when expression references undefined variable", {
   sfm <- make_verifiable_sfm() |>
-    unit_test(label = "undefined var", expr = all(S >= 0))  # Will be modified
-  
+    unit_test(label = "undefined var", expr = all(S >= 0)) # Will be modified
+
   # Inject an expression that references undefined variable
   sfm[["unit_tests"]][[1]][["expr_str"]] <- "all(undefined_var >= 0)"
 
   result <- silence(verify(sfm))
   res_entry <- result[["results"]][[1]]
-  
+
   expect_equal(res_entry[["error_type"]], "expr_eval")
   expect_equal(res_entry[["status"]], "error")
   expect_match(res_entry[["message"]], "not found|undefined")
@@ -567,10 +566,11 @@ test_that("verify().results always includes error_type field", {
     unit_test(label = "type error", expr = mean(S > 0.2), active = FALSE)
 
   result <- silence(verify(sfm))
-  
+
   for (res_entry in result[["results"]]) {
-    expect_true("error_type" %in% names(res_entry), 
-                info = paste("Missing error_type in result:", res_entry[["label"]]))
+    expect_true("error_type" %in% names(res_entry),
+      info = paste("Missing error_type in result:", res_entry[["label"]])
+    )
   }
 })
 
@@ -610,9 +610,12 @@ test_that("discard() removes unit test that only references the discarded variab
   sfm <- make_verifiable_sfm() |>
     unit_test(label = "S only", expr = all(S >= 0))
 
-  expect_warning(expect_warning(expect_warning(
-    sfm <- discard(sfm, "S"), "Removed 1 unit test"), 
-    "lingering reference"), "lingering reference")
+  expect_warning(expect_warning(
+    expect_warning(
+      sfm <- discard(sfm, "S"), "Removed 1 unit test"
+    ),
+    "lingering reference"
+  ), "lingering reference")
   expect_equal(length(sfm[["unit_tests"]]), 0L)
 })
 
@@ -630,7 +633,8 @@ test_that("discard() warns when removing a unit test", {
     unit_test(label = "S only", expr = all(S >= 0))
 
   expect_warning(expect_warning(expect_warning(
-    discard(sfm, "S"), "Removed 1 unit test"), "lingering reference"), "lingering reference")
+    discard(sfm, "S"), "Removed 1 unit test"
+  ), "lingering reference"), "lingering reference")
 })
 
 test_that("discard() strips removed variable from conditions", {

@@ -297,9 +297,7 @@ templates <- function(template) {
       update("beta", "constant", eqn = "28", label = "Parameter beta") |>
       update("m0", "constant", eqn = "-1.143", label = "Nonlinear slope m0") |>
       update("m1", "constant", eqn = "-0.714", label = "Nonlinear slope m1")
-      
   } else if (template == "JDR") {
-
     object <- sdbuildR() |>
       sim_specs(method = "euler", start = "0.0", stop = "182.5", dt = "0.01", save_at = "0.1", seed = "123", time_units = "d", language = "R") |>
       meta(
@@ -327,7 +325,6 @@ templates <- function(template) {
       update(name = "A_to_R", type = "flow", eqn = "r_A * E * (1 - R/K_R)", to = "R", label = "Proactive Behaviour") |>
       # update(name = "R_X", type = "flow", eqn = "r_R_X * R", from = "R", label = "Decay") |>
       update(name = "from_R", type = "flow", eqn = "r_R * R * (1 - X/K_X)", from = "R", label = "Decay from effort") |>
-
       update(name = "X_D", type = "flow", eqn = "r_X_D * X * D / (1 + R)", from = "X", label = "Effort", doc = "Buffer of resources") |>
       update(name = "X_X", type = "flow", eqn = "r_X_X * X * (1 - X/K_X)", to = "X", label = "Restoration") |>
       update(name = "E_X", type = "flow", eqn = "r_E_X * E * (1 - X/K_X)", from = "E", label = "Energy-Based Disengagement") |>
@@ -338,7 +335,7 @@ templates <- function(template) {
 
 
   # Compile the model to populate the assemble cache
-  
+
 
   object
 }

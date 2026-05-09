@@ -159,10 +159,13 @@ check_no_keyword_arg <- function(object, var_names) {
 
     if (any(named_idxs)) {
       cli::cli_abort(
-        paste0(
-          "The following variables were used as functions with named arguments in the Julia translated equation: ",
-          paste0(names(named_idxs)[unname(named_idxs)], collapse = ", "), ".\n",
-          "This is not allowed in Julia. Please use arguments without naming them."
+        c(
+          "!" = paste0(
+            "The following variables were used as functions with named arguments in the Julia translated equation: ",
+            paste0(names(named_idxs)[unname(named_idxs)], collapse = ", "), ".\n",
+            "This is not allowed in Julia when using positional arguments."
+          ),
+          ">" = "Modify the equation(s) to not use named arguments, ensuring arguments are ordered correctly."
         ),
         call. = FALSE
       )
@@ -202,113 +205,6 @@ prep_ensemble_conditions <- function(object, ensemble_pars) {
 }
 
 
-#' Prepare model for delayN and smoothN
-#'
-#' @inheritParams update.sdbuildR
-#' @param delayN_smoothN List with delayN and smoothN functions
-#'
-#' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR]
-#' @noRd
-prep_delayN_smoothN <- function(object, delayN_smoothN) {
-  # If delayN() and smoothN() were used, add these to the model
-  if (length(delayN_smoothN) > 0) {
-    # Order alphabetically
-    delayN_smoothN <- delayN_smoothN[sort(names(delayN_smoothN))]
-
-    names_df <- get_names(object)
-    allowed_delay_var <- names_df[names_df[["type"]] %in% c("stock", "flow", "aux", "lookup"), "name"]
-    delayN_smoothN <- unlist(unname(delayN_smoothN), recursive = FALSE)
-
-    # Create new delay stocks and auxiliaries as data frame rows instead of nested lists
-    new_stocks_data <- list()
-    new_aux_data <- list()
-
-    for (i in seq_along(delayN_smoothN)) {
-      x <- delayN_smoothN[[i]]
-      name <- names(delayN_smoothN)[i]
-
-      # In rare cases, the delayed variable is a graphical function, and in that case the unit of that variable cannot be found
-      bare_var <- sub("\\(.*", "", x[["var"]])
-
-      # Check whether the variable is in the model
-      if (!bare_var %in% names_df[["name"]]) {
-        cli::cli_abort(paste0(
-          "The variable '", bare_var,
-          "' used in delayN() or smoothN() is not defined in the model."
-        ), call. = FALSE)
-      }
-
-      # Check whether variable is either a stock, flow, aux, or gf
-      if (!bare_var %in% allowed_delay_var) {
-        cli::cli_abort(paste0(name, " attempts to delay a constant ('", bare_var, "') in a delayN() or smoothN() function. Please only use dynamic variables (stock, flow, aux, or gf) in delayN() or smoothN()."), call. = FALSE)
-      }
-
-      # Unit is the same as the delayed variable
-      unit_val <- names_df[names_df[["name"]] == bare_var, ][["units"]]
-
-      # Create stock row
-      # Note: For delayN/smoothN, store Julia code directly in eqn since it's Julia-specific
-      new_stocks_data[[i]] <- data.frame(
-        name = name,
-        type = "delayN_smoothN",
-        eqn = x[["setup"]], # Store Julia code directly
-        units = unit_val,
-        label = name,
-        doc = "",
-        non_negative = FALSE,
-        to = NA,
-        from = NA,
-        source = NA,
-        interpolation = NA,
-        extrapolation = NA,
-        xpts = NA,
-        ypts = NA,
-        inflow = list(x[["update"]]),
-        outflow = NA,
-        delayN = NULL,
-        stringsAsFactors = FALSE
-      )
-
-      # Create auxiliary row
-      # Note: For delayN/smoothN, store Julia code directly in eqn since it's Julia-specific
-      new_aux_data[[i]] <- data.frame(
-        name = name,
-        type = "delayN_smoothN",
-        eqn = x[["compute"]], # Store Julia code directly
-        units = unit_val,
-        label = name,
-        doc = "",
-        non_negative = FALSE,
-        to = NA,
-        from = NA,
-        source = NA,
-        interpolation = NA,
-        extrapolation = NA,
-        xpts = NA,
-        ypts = NA,
-        inflow = NA,
-        outflow = NA,
-        delayN = NULL,
-        stringsAsFactors = FALSE
-      )
-    }
-
-    # Combine and add to data frame
-    if (length(new_stocks_data) > 0) {
-      new_stocks_df <- do.call(rbind, new_stocks_data)
-      object[["variables"]] <- rbind(object[["variables"]], new_stocks_df)
-    }
-
-    if (length(new_aux_data) > 0) {
-      new_aux_df <- do.call(rbind, new_aux_data)
-      object[["variables"]] <- rbind(object[["variables"]], new_aux_df)
-    }
-  }
-
-  object
-}
-
-
 #' Prepare intermediary variables
 #'
 #' @inheritParams update.sdbuildR
@@ -331,51 +227,6 @@ prep_intermediary_variables <- function(object, language) {
       intermediary_var <- c(intermediary_var, names(gf_dict))
       intermediary_var_values <- c(intermediary_var_values, unname(gf_dict))
     }
-
-    # # Add fixed delayed and past variables to intermediary_var
-    # delay_past <- get_delay(object, type = "past")
-    # extra_intermediary_var <- list_extract(delay_past, "var")
-
-
-    # if (length(extra_intermediary_var) > 0) {
-    #   # Check whether the intermediary variables are in the model
-    #   names_df <- get_names(object)
-    #   allowed_intermediary_var <- names_df[names_df[["type"]] %in% c("stock", "flow", "aux"), "name"]
-
-    #   idx <- !(extra_intermediary_var %in% names_df[["name"]])
-    #   if (any(idx)) {
-    #     cli::cli_abort(paste0(
-    #       "The following variables used in delay() or past() are not defined in the model: ",
-    #       paste0(extra_intermediary_var[idx], collapse = ", ")
-    #     ), call. = FALSE)
-    #   }
-
-    #   idx <- !(extra_intermediary_var %in% allowed_intermediary_var)
-    #   if (any(idx)) {
-    #     cli::cli_abort(paste0(
-    #       "The following variables used in delay() or past() are not stocks, flows, or auxiliaries: ",
-    #       paste0(extra_intermediary_var[idx], collapse = ", ")
-    #     ), call. = FALSE)
-    #   }
-
-    #   # Get unique intermediary variables to add
-    #   new_intermediary_var <- setdiff(unique(unlist(extra_intermediary_var)), intermediary_var)
-
-    #   if (length(new_intermediary_var) > 0) {
-    #     intermediary_var <- c(intermediary_var, new_intermediary_var)
-    #     intermediary_var_values <- c(intermediary_var_values, new_intermediary_var)
-    #   }
-    # }
-
-    # # If delayN() and smoothN() were used, state has to be unpacked differently
-    # delayN_smoothN <- get_delay(object, type = "delayN_smoothN")
-
-    # if (length(delayN_smoothN) > 0) {
-    #   delay_names <- names(unlist(unname(delayN_smoothN), recursive = FALSE))
-
-    #   intermediary_var <- setdiff(intermediary_var, delay_names)
-    #   intermediary_var_values <- setdiff(intermediary_var_values, delay_names)
-    # }
 
     # Order intermediary variables and values alphabetically
     if (length(intermediary_var) > 0) {
@@ -566,4 +417,3 @@ compile_post_ensemble <- function(object, ensemble_pars) {
 
   script
 }
-

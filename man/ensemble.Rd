@@ -126,7 +126,8 @@ plot(sims, central_tendency = "median", type = "sims", alpha = 0.1)
 
 \dontshow{if (Sys.getenv("NOT_CRAN") == "true") withAutoprint(\{ # examplesIf}
 # For larger ensembles, we can use parallelization with future
-if (requireNamespace("future", quietly = TRUE) && requireNamespace("future.apply", quietly = TRUE)) {
+if (requireNamespace("future", quietly = TRUE) && 
+   requireNamespace("future.apply", quietly = TRUE)) {
  future::plan(future::multisession, workers = 4)
 }
 
@@ -158,7 +159,8 @@ sims <- ensemble(sfm,
 plot(sims, nrows = 3)
 
 # Stop parallelization after use
-if (requireNamespace("future", quietly = TRUE) && requireNamespace("future.apply", quietly = TRUE)) {
+if (requireNamespace("future", quietly = TRUE) && 
+   requireNamespace("future.apply", quietly = TRUE)) {
  future::plan(future::sequential) 
 }
 \dontshow{\}) # examplesIf}

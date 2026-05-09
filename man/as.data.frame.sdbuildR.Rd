@@ -8,8 +8,8 @@
   x,
   row.names = NULL,
   optional = FALSE,
-  type = NULL,
   name = NULL,
+  type = NULL,
   properties = NULL,
   ...
 )
@@ -17,15 +17,15 @@
 \arguments{
 \item{x}{A stock-and-flow model object of class \code{\link{sdbuildR}}.}
 
-\item{row.names}{NULL or a character vector giving the row names for the data frame. Missing values are not allowed.}
+\item{row.names}{\code{NULL} or a character vector giving the row names for the data frame. Missing values are not allowed.}
 
 \item{optional}{Ignored parameter.}
 
-\item{type}{Variable types to retain in the data frame. Must be one or more of 'stock', 'flow', 'constant', 'aux', 'gf', 'func', or 'custom_unit'. Defaults to NULL to include all types.}
+\item{name}{Variable names to retain in the data frame. Defaults to \code{NULL} to include all variables.}
 
-\item{name}{Variable names to retain in the data frame. Defaults to NULL to include all variables.}
+\item{type}{Variable types to retain in the data frame. Must be one or more of 'stock', 'flow', 'constant', 'aux', 'gf', 'func', or 'custom_unit'. Defaults to \code{NULL} to include all types.}
 
-\item{properties}{Variable properties to retain in the data frame. Defaults to NULL to include all properties.}
+\item{properties}{Variable properties to retain in the data frame. Defaults to \code{NULL} to include all properties.}
 
 \item{...}{Optional arguments}
 }

@@ -52,8 +52,10 @@ verify <- function(object, ...) {
 #' @examples
 #' sfm <- sdbuildR("SIR") |>
 #'   unit_test(expr = all(Susceptible >= 0)) |>
-#'   unit_test(label = "Recovered increases over time", 
-#'            expr = all(diff(Recovered) >= 0))
+#'   unit_test(
+#'     label = "Recovered increases over time",
+#'     expr = all(diff(Recovered) >= 0)
+#'   )
 #'
 #' verify(sfm)
 #'
@@ -119,7 +121,6 @@ verify.sdbuildR <- function(object, verbose = TRUE, return_sims = FALSE, ...) {
     if (key == .BASELINE) {
       sim_cache[[i]] <- rlang::inject(simulate(object, only_stocks = os, !!!dots))
     } else {
-
       # Modify the original model with the test conditions.
       obj_modified <- object
       first_test_idx <- which(condition_keys == key)[[1]]
@@ -156,18 +157,20 @@ verify.sdbuildR <- function(object, verbose = TRUE, return_sims = FALSE, ...) {
     sim_index <- NULL
   }
 
-  result_obj <- new_verify_sdbuildR(results = results, object = object,
-                                     sims = sims, sim_index = sim_index)
+  result_obj <- new_verify_sdbuildR(
+    results = results, object = object,
+    sims = sims, sim_index = sim_index
+  )
   if (verbose) print(result_obj)
   invisible(result_obj)
 }
 
 
 #' Verify unit tests against existing simulation results
-#' 
+#'
 #' Run all active unit tests defined on a stock-and-flow model against an existing
 #' simulation result. Only tests whose `conditions` are empty or already match the current model parameter values are run; tests that require re-simulation are skipped with an informative message. Use `verify(object)` (the unsimulated model) to run all tests including those that require re-simulation.
-#' 
+#'
 #' @param object A [`simulate_sdbuildR`][simulate.sdbuildR()] object.
 #' @param verbose If `TRUE` (default), print results to the console.
 #' @param ... Additional arguments (not used).
@@ -196,13 +199,13 @@ verify.simulate_sdbuildR <- function(object, verbose = TRUE, ...) {
   results <- lapply(tests, function(test) {
     expr_str <- test[["expr_str"]]
     conditions <- if (is.null(test[["conditions"]])) list() else test[["conditions"]]
-    
+
     if (!isTRUE(test[["active"]])) {
       return(list(
-        label   = test[["label"]],
+        label = test[["label"]],
         expr_str = expr_str,
         conditions = conditions,
-        status  = "skipped",
+        status = "skipped",
         error_type = NA,
         message = "Test is inactive.",
         outcome = NULL
@@ -919,10 +922,10 @@ print.verify_sdbuildR <- function(x, ...) {
 #'
 #' @param test A single unit test entry
 #' @param sim A `simulate_sdbuildR` object
-#' @return A named list with fields: `label`, `expr_str`, `conditions`, `status`, `error_type`, 
-#'   `message`, `outcome`. The `error_type` field is `NA` for pass/fail/skipped results, 
-#'   and one of `"expr_syntax"` (parse error), `"expr_result"` (type validation error), 
-#'   `"expr_eval"` (runtime evaluation error), `"simulation"` (simulation failure), or 
+#' @return A named list with fields: `label`, `expr_str`, `conditions`, `status`, `error_type`,
+#'   `message`, `outcome`. The `error_type` field is `NA` for pass/fail/skipped results,
+#'   and one of `"expr_syntax"` (parse error), `"expr_result"` (type validation error),
+#'   `"expr_eval"` (runtime evaluation error), `"simulation"` (simulation failure), or
 #'   `"model_update"` (conditions application failure) for error results.
 #' @noRd
 .run_one_unit_test <- function(test, sim) {

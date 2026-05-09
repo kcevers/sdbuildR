@@ -116,11 +116,6 @@ lang_adapter_r <- function() {
     #   ""
     # },
 
-    # Whether delayN uses special sum_name handling
-    format_delay_sum_name = function(row) {
-      paste0(row[["inflow"]], "$update")
-    },
-
     # Whether to call sanitize_sdbuildR after stock change prep
     validate_after_stock_change = FALSE,
 
@@ -248,19 +243,14 @@ lang_adapter_julia <- function() {
     # Stock change: sum_eqn with unit conversion
     format_sum_eqn = function(sum_eqn, row, keep_unit) {
       if (keep_unit && is_defined(row[["units"]]) && row[["units"]] != "1") {
-        # if (!is.null(row[["delayN"]]) && is_defined(row[["delayN"]])) {
-        #   paste0(sum_eqn, " ./ ", P[["time_units_name"]])
-        # } else {
         paste0(
           P[["convert_u_func"]], "(", sum_eqn,
           ", Unitful.unit.(", row[["name"]], ")/",
           P[["time_units_name"]], ")" # , " ./ Unitful.unit.(", row[["name"]], ")"
         )
-        # }
       } else {
-        # sum_eqn
-        # Scale the entire derivative by 1/time_units when time is unitful
-        set_units_on_flow <- TRUE
+        # Scale the derivative by 1/time_units only when time is unitful
+        set_units_on_flow <- keep_unit
         if (set_units_on_flow) {
           paste0("(", sum_eqn, ") ./ ", P[["time_units_name"]])
         } else {
@@ -273,15 +263,6 @@ lang_adapter_julia <- function() {
     # format_sum_units = function(row, keep_unit) {
     #   NULL
     # },
-
-    # DelayN sum_name
-    format_delay_sum_name = function(row) {
-      paste0(
-        P[["change_state_name"]], "[",
-        P[["model_setup_name"]], ".", P[["delay_idx_name"]], ".", row[["name"]], "]"
-      )
-    },
-
     # Whether to call sanitize_sdbuildR after stock change prep
     validate_after_stock_change = FALSE,
 

@@ -64,7 +64,6 @@ install_julia_env <- function(remove = FALSE) {
       cli::cli_inform("Julia environment removed.")
     }
   } else {
-
     # First stop Julia for a clean installation
     JuliaConnectoR::stopJulia()
 
@@ -194,10 +193,10 @@ use_julia <- function(
 #' @examplesIf Sys.getenv("NOT_CRAN") == "true"
 #' # Check if Julia is ready; this automatically opens a Julia session if possible
 #' is_julia_ready()
-#' 
+#'
 #' # Close Julia session
 #' use_julia(stop = TRUE)
-#' 
+#'
 is_julia_ready <- function() {
   if (Sys.getenv("NOT_CRAN") != "true") {
     return(FALSE)

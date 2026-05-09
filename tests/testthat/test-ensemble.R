@@ -92,7 +92,6 @@ test_that("ensemble() validates equal conditions lengths when cross = FALSE", {
 # Basic ensemble ----------------------------------------
 
 test_that("ensemble() runs successfully", {
-
   sfm <- make_jl_ensemble_sfm()
 
   sims <- silence(ensemble(sfm, n = 3))
@@ -101,7 +100,6 @@ test_that("ensemble() runs successfully", {
 })
 
 test_that("ensemble() returns correct structure", {
-
   sfm <- make_jl_ensemble_sfm()
 
   sims <- silence(ensemble(sfm, n = 3, return_sims = TRUE))
@@ -120,7 +118,6 @@ test_that("ensemble() returns correct structure", {
 })
 
 test_that("ensemble() respects only_stocks = TRUE", {
-
   sfm <- make_jl_ensemble_sfm()
   df <- as.data.frame(sfm, properties = "eqn")
   n_stocks <- nrow(df[df[["type"]] == "stock", ])
@@ -137,7 +134,6 @@ test_that("ensemble() respects only_stocks = TRUE", {
 })
 
 test_that("ensemble() returns all variables with only_stocks = FALSE", {
-
   sfm <- make_jl_ensemble_sfm()
 
   df <- as.data.frame(sfm, properties = "eqn")
@@ -525,8 +521,10 @@ test_that("ensemble() works with units", {
     update("coffee_temperature", eqn = "runif(1, 20, 150)")
 
   nr_sims <- 3
-  sims <- silence(ensemble(sfm, n = nr_sims, 
-    only_stocks = FALSE, return_sims = TRUE))
+  sims <- silence(ensemble(sfm,
+    n = nr_sims,
+    only_stocks = FALSE, return_sims = TRUE
+  ))
   expect_true(sims[["success"]])
   expect_false(is.null(sims[["summary"]]))
   expect_false(is.null(sims[["df"]]))
@@ -607,14 +605,14 @@ test_that("plot.ensemble_sdbuildR() rejects invalid ...", {
   sims <- silence(ensemble(sfm, n = 3))
 
   expect_error(plot(sims, type = "NA"), "must be.*summary.*sims")
-  
+
   expect_no_error(plot(sims, central_tendency = "median"))
   expect_error(
     plot(sims, central_tendency = "medians"),
     "must be.*mean.*median.*FALSE"
   )
 
-# plot.ensemble_sdbuildR() validates j index with single condition
+  # plot.ensemble_sdbuildR() validates j index with single condition
   expect_error(
     plot(sims, j = c(3, 6, 9)),
     "only one condition"
