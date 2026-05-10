@@ -23,7 +23,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-This is the online supplemental material accompanying the paper *Formalizing Psychological Theories with sdbuildR: A System Dynamics Modelling Tutorial in R* by Evers et al. (submitted). It contains the complete code to build, test, and simulate a formal model of Job Demands-Resources (JD-R) theory. To reproduce the figures in the paper, please see the corresponding .Rmd file.
+This is the online supplemental material accompanying the paper *Formalizing Psychological Theories with stockflow: A Stock-and-Flow Modelling Tutorial in R* by Evers et al. (submitted). It contains the complete code to build, test, and simulate a formal model of Job Demands-Resources (JD-R) theory. To reproduce the figures in the paper, please see the corresponding .Rmd file.
 
 To follow the entire tutorial, it is necessary to install Julia as well as set up the Julia environment. See [this vignette](https://kcevers.github.io/sdbuildR/articles/julia-setup.html) for guidance.
 
@@ -59,14 +59,15 @@ if (recreate_figs) {
   PALETTE <- c("Geyser", "Temps", "Spectral", "Zissou 1", "Roma")[5]
   COLORS <- grDevices::hcl.colors(n = 50, palette = PALETTE)
 
-  flow_col1 <- adjustcolor(COLORS[17], alpha.f = 1)
-  flow_col2 <- adjustcolor(COLORS[9], alpha.f = 1)
+  inflow_col <- adjustcolor(COLORS[17], alpha.f = 1)
+  outflow_col <- adjustcolor(COLORS[9], alpha.f = 1)
 
   COLORS_alpha <- adjustcolor(COLORS, alpha.f = .25)
 
   COLORS <- COLORS[c(37, 9, 32, 1, 47, 17)]
   stock_col <- adjustcolor(COLORS[1], alpha.f = .75)
   flow_col <- COLORS[6]
+  
 
   health_path <- adjustcolor(COLORS[4], alpha.f = .75)
   motivation_path <- adjustcolor(COLORS[1], alpha.f = .85)
@@ -125,52 +126,211 @@ if (recreate_figs) {
 
 
 ```{r include=FALSE}
+# if (recreate_figs) {
+#   sfm <- sdbuildR() |>
+#     stock(Stock, label = "Stock", eqn = 1) |>
+#     constant(pulse_func1, eqn = pulse(times, start = 20, height = .1, width = 5)) |>
+#     constant(pulse_func2, eqn = pulse(times, start = 40, height = .1, width = 5)) |>
+#     constant(pulse_func3, eqn = pulse(times, start = 60, height = -.1, width = 5)) |>
+#     constant(pulse_func4, eqn = pulse(times, start = 80, height = -.1, width = 5)) |>
+#     flow(Inflow, to = Stock, eqn = 1 + pulse_func1(t) + pulse_func3(t)) |>
+#     flow(Outflow, from = Stock, eqn = 1 + pulse_func2(t) + pulse_func4(t))
+
+#   pl <- plot(sfm,
+#     wrap_width = 9.5,
+#     font_size = 20, minlen = 1.5,
+#     stock_col = stock_col,
+#     flow_col = flow_col,
+#     font_family = font_family,
+#     show_constants = FALSE, show_aux = FALSE, show_dependencies = FALSE
+#   )
+#   pl
+
+#   export_plot(pl, file.path(filepath_figs, "sfm.pdf"))
+
+#   # Simulation
+#   sim <- simulate(sfm, save_at = .01, only_stocks = FALSE)
+#   pl_sim <- plot(sim,
+#     vars = rev(c("Stock", "Inflow", "Outflow")),
+#     xlab = "", main = "",
+#     colors = rev(c(stock_col, inflow_col, outflow_col)),
+#     font_family = font_family,
+#     font_size = font_size_subplot,
+#     showlegend = TRUE
+#   ) |>
+#     plotly::layout(
+#       font = annot_font,
+#       legend = utils::modifyList(annot_legend, list(y = -0.2))
+#     ) |>
+#     plotly::layout(
+#       annotations = list(
+#         utils::modifyList(annot_xlab, list(x = 0.5))
+#       )
+#     ) |> rm_grid()
+#   pl_sim
+  
+#   export_plot(pl_sim, file.path(filepath_figs, "sfm_sim_old.pdf"),
+#     width = 4, height = 3
+#   )
+
+# }
+```
+
+
+```{r}
 if (recreate_figs) {
-  sfm <- sdbuildR() |>
-    stock(Stock, label = "Stock", eqn = 1) |>
-    constant(pulse_func1, eqn = pulse(times, start = 20, height = .1, width = 5)) |>
-    constant(pulse_func2, eqn = pulse(times, start = 40, height = .1, width = 5)) |>
-    constant(pulse_func3, eqn = pulse(times, start = 60, height = -.1, width = 5)) |>
-    constant(pulse_func4, eqn = pulse(times, start = 80, height = -.1, width = 5)) |>
-    flow(Inflow, to = Stock, eqn = 1 + pulse_func1(t) + pulse_func3(t)) |>
-    flow(Outflow, from = Stock, eqn = 1 + pulse_func2(t) + pulse_func4(t))
 
-  pl <- plot(sfm,
-    wrap_width = 9.5,
-    font_size = 20, minlen = 1.5,
-    stock_col = stock_col,
-    flow_col = flow_col,
-    font_family = font_family,
-    show_constants = FALSE, show_aux = FALSE, show_dependencies = FALSE
-  )
+vars <- c("Stock", "Inflow", "Outflow")
+colors <- c(stock_col, inflow_col, outflow_col)
+sfm_list <- list()
+pl_list <- list()
+
+sfm <- sdbuildR() |> 
+sim_specs(only_stocks = FALSE, stop = 1, save_at = .01, dt = .01) |>
+stock(Stock)
+
+sfm1 <- sfm |>
+flow(Inflow, eqn = 1, to = Stock)
+sfm_list[["A"]] <- sfm1
+
+sfm2 <- sfm |>
+flow(Outflow, eqn = 1, from = Stock) 
+sfm_list[["B"]] <- sfm2
+
+sfm3 <- sfm |>
+flow(Inflow, eqn = 1, to = Stock) |>
+flow(Outflow, eqn = 5 * Stock, from = Stock) 
+sfm_list[["C"]] <- sfm3
+
+sfm_big <- sdbuildR() |>
+stock(stockA, label = "Stock") |>
+flow(inflowA, label = "Inflow", to = stockA) |>
+stock(stockB, label = "Stock") |>
+flow(outflowB, label = "Outflow", from = stockB) |>
+stock(stockC, label = "Stock") |>
+flow(inflowC, label = "Inflow", to = stockC) |>
+flow(outflowC, label = "Outflow", from = stockC)
+
+# copy (cat(viz_str))
+{
+viz_str <- "
+    digraph sfm {
+
+      graph [layout = dot, rankdir = LR, center=true, outputorder='edgesfirst', pad=.1, nodesep= .8]
+
+      # Rank groupings
+      {rank=same; stockA; stockB; stockC}
+    
+      # Invisible edge to fix order
+      stockA -> stockB -> stockC [style=invis]
+
+      # Define stock nodes
+      'stockA' [id='stockA',label='Stock',tooltip = 'eqn = 0',shape=box,style=filled,fillcolor='#09B0ACBF',fontsize=20,fontname='Times New Roman']
+      'stockB' [id='stockB',label='Stock',tooltip = 'eqn = 0',shape=box,style=filled,fillcolor='#09B0ACBF',fontsize=20,fontname='Times New Roman']
+      'stockC' [id='stockC',label='Stock',tooltip = 'eqn = 0',shape=box,style=filled,fillcolor='#09B0ACBF',fontsize=20,fontname='Times New Roman']
+
+      # Define flow nodes (intermediate nodes for flows)
+      'inflowA' [id='inflowA',label='Inflow', tooltip = 'eqn = 0', shape = plaintext, fontsize=18, fontname='Times New Roman', width=0.6, height=0.3]
+      'outflowB' [id='outflowB',label='Outflow', tooltip = 'eqn = 0', shape = plaintext, fontsize=18, fontname='Times New Roman', width=0.6, height=0.3]
+      'inflowC' [id='inflowC',label='Inflow', tooltip = 'eqn = 0', shape = plaintext, fontsize=18, fontname='Times New Roman', width=0.6, height=0.3]
+      'outflowC' [id='outflowC',label='Outflow', tooltip = 'eqn = 0', shape = plaintext, fontsize=18, fontname='Times New Roman', width=0.6, height=0.3]
+
+      # Define external cloud nodes
+      'Cloud1' [label='', tooltip = 'Unspecified source',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
+      'Cloud2' [label='', tooltip = 'Unspecified source',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
+      'Cloud3' [label='', tooltip = 'Unspecified sink',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
+      'Cloud4' [label='', tooltip = 'Unspecified sink',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
+
+      # Define flow edges (stock -> flow_node -> stock)
+      'Cloud3' -> 'inflowA' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
+      'inflowA' -> 'stockA' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
+      'stockB' -> 'outflowB' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
+      'outflowB' -> 'Cloud1' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
+      'Cloud4' -> 'inflowC' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
+      'inflowC' -> 'stockC' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
+      'stockC' -> 'outflowC' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
+      'outflowC' -> 'Cloud2' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
+
+      # Define dependency edges
+      
+
+      # Define auxiliary nodes
+      
+
+      # Define constant nodes
+      
+    }
+
+"
+
+
+  pl <- DiagrammeR::grViz(viz_str)
   pl
-
   export_plot(pl, file.path(filepath_figs, "sfm.pdf"))
 
-  # Simulation
-  sim <- simulate(sfm, save_at = .01, only_stocks = FALSE)
-  pl_sim <- plot(sim,
-    vars = rev(c("Stock", "Inflow", "Outflow")),
+ }
+
+
+for (i in names(sfm_list)) {
+  # pl_sfm <- plot(sfm_list[[i]],
+  #   wrap_width = 9.5,
+  #   font_size = 20, minlen = 1.5,
+  #   stock_col = stock_col,
+  #   flow_col = flow_col,
+  #   font_family = font_family,
+  #   show_constants = FALSE, show_aux = FALSE, 
+  #   show_dependencies = FALSE
+  # )
+  # pl_sfm
+
+  # export_plot(pl_sfm, file.path(filepath_figs, sprintf("sfm_%s.pdf", i)))
+
+  if (i == "A"){
+    idx <- c(1, 2)
+  } else if (i == "B"){
+    idx <- c(1, 3)
+  } else {
+    idx <- 1:3
+  }
+  idx <- rev(idx)
+
+  sim <- simulate(sfm_list[[i]])
+  pl_list[[i]] <- plot(sim,
+    vars = vars[idx],
     xlab = "", main = "",
-    colors = rev(c(stock_col, flow_col1, flow_col2)),
+    colors = colors[idx],
     font_family = font_family,
     font_size = font_size_subplot,
-    showlegend = TRUE
-  ) |>
+    showlegend = (i == "C")
+  )  |> rm_grid()
+}
+
+  # Simulation
+#   pl1 <- plot(simulate(sfm1), vars = vars[1:2], 
+# showlegend = FALSE, main = "")
+# pl2 <- plot(simulate(sfm2), vars = vars[c(1, 3)], 
+# showlegend = FALSE, main = "")
+# pl3 <- plot(simulate(sfm3), vars = vars, 
+# showlegend = TRUE, main = "")
+
+# pl <- plotly::subplot(pl1, pl2, pl3, nrows = 3, shareX = TRUE, margin = .05)
+# pl
+  # sim <- simulate(sfm, save_at = .01, only_stocks = FALSE)
+  pl_sim <- plotly::subplot(pl_list, nrows = 3, shareX = TRUE, shareY = FALSE,
+  margin = .05) |>
     plotly::layout(
       font = annot_font,
-      legend = utils::modifyList(annot_legend, list(
-        y = -0.2)
+      legend = utils::modifyList(annot_legend, list(y = -0.18))
     ) |>
     plotly::layout(
       annotations = list(
-        utils::modifyList(annot_xlab, list(x = 0.5))
+        utils::modifyList(annot_xlab, list(x = 0.5, y = -.08))
       )
-    ) |> rm_grid()
+    )
   pl_sim
   
   export_plot(pl_sim, file.path(filepath_figs, "sfm_sim.pdf"),
-    width = 4, height = 3
+    width = 3.5, height = 4.5
   )
 
 }
@@ -495,8 +655,6 @@ if (recreate_figs) {
   pl_list <- list()
   max_letter <- max(names(sfm_list))
   VARS_example <- c("energy", "work", "recovery", "recovery_rate", "net_change")
-
-  # COLORS_example <- grDevices::hcl.colors(n = 50, palette = PALETTE)
   COLORS_example <- COLORS[seq_along(VARS_example)]
 
   titles <- paste0(
@@ -727,7 +885,7 @@ colors_linear <- grDevices::hcl.colors(n = 50, palette = "Roma")[c(20, 15, 8)]
 colors_hill <- grDevices::hcl.colors(n = 50, palette = "Roma")[c(45, 35, 28)]
 
 # Plot functional form
-pl1 <- plotly::plot_ly() |>
+pl_linear <- plotly::plot_ly() |>
   plotly::add_trace(
     data = df_linear, x = ~x,
     y = ~value,
@@ -736,9 +894,9 @@ pl1 <- plotly::plot_ly() |>
     legendgroup = ~type,
     type = "scatter",
     mode = "lines"
-  )
+  ) |> rm_grid()
 
-pl2 <- plotly::plot_ly() |>
+pl_hill <- plotly::plot_ly() |>
   plotly::add_trace(
     data = df_hill, x = ~x,
     y = ~value,
@@ -747,14 +905,14 @@ pl2 <- plotly::plot_ly() |>
     legendgroup = ~type,
     type = "scatter",
     mode = "lines"
-  )
+  ) |> rm_grid()
 
-pl_func_form <- plotly::subplot(pl1, pl2, 
+pl_func_form <- plotly::subplot(pl_linear, pl_hill, 
       nrows = 1,
     shareX = TRUE,
     shareY = TRUE,
     titleY = TRUE,
-    titleX = TRUE,
+    titleX = FALSE,
     margin = c(0.1, 0.05, 0.05, 0.05)
 ) |>
   plotly::layout(title = "", 
@@ -855,7 +1013,7 @@ x3 <- 0.86
 y1 <- 1.15
 y2 <- 0.42
 
-annot <- list(
+annot_ <- list(
   size = font_size_subplot - 4,
   xanchor = "center",
   yanchor = "middle",
@@ -944,9 +1102,9 @@ pl_func_form_rev <- plotly::subplot(pl1, pl2, pl3,
       )
     ) |>
     plotly::layout(annotations = list(
-      utils::modifyList(annot, list(x = x1, y = y1, text = titles_top[[1]])),
-      utils::modifyList(annot, list(x = x2, y = y1, text = titles_top[[2]])),
-      utils::modifyList(annot, list(x = x3, y = y1, text = titles_top[[3]]))
+      utils::modifyList(annot_, list(x = x1, y = y1, text = titles_top[[1]])),
+      utils::modifyList(annot_, list(x = x2, y = y1, text = titles_top[[2]])),
+      utils::modifyList(annot_, list(x = x3, y = y1, text = titles_top[[3]]))
     ))
 
 pl_bottom_rev <- plotly::subplot(
@@ -1022,31 +1180,31 @@ pl_final_rev <- plotly::subplot(
       font = list(size = font_size_legend)
     ),
     annotations = list(
-      utils::modifyList(annot, list(
+      utils::modifyList(annot_, list(
         text = "<i>Functional forms</i>",
         x = 0.5,
         y = 1.03,
         yanchor = "top",
         font = list(size = font_size_xlab)
       )),
-      utils::modifyList(annot, list(
+      utils::modifyList(annot_, list(
         text = "<i>Timeseries</i>",
         x = 0.5,
         y = y2 + 0.06,
         yanchor = "bottom",
         font = list(size = font_size_xlab)
       )),
-      utils::modifyList(annot, list(x = x1, y = y2, text = titles_bottom[[1]])),
-      utils::modifyList(annot, list(x = x2, y = y2, text = titles_bottom[[2]])),
-      utils::modifyList(annot, list(x = x3, y = y2, text = titles_bottom[[3]])),
-      utils::modifyList(annot, list(
+      utils::modifyList(annot_, list(x = x1, y = y2, text = titles_bottom[[1]])),
+      utils::modifyList(annot_, list(x = x2, y = y2, text = titles_bottom[[2]])),
+      utils::modifyList(annot_, list(x = x3, y = y2, text = titles_bottom[[3]])),
+      utils::modifyList(annot_, list(
         text = "Influencing variable",
         x = 0.5,
         y = y2 + 0.2,
         yanchor = "top",
         font = list(size = font_size_xlab - 2)
       )),
-      utils::modifyList(annot, list(
+      utils::modifyList(annot_, list(
         text = "Time",
         x = 0.5,
         y = 0.03,
@@ -1109,6 +1267,136 @@ if (recreate_figs) {
 
 
 ```{r include=FALSE}
+# if (recreate_figs) {
+#   # Create subplot figure
+#   pl_list <- list()
+#   max_letter <- max(names(func_form_list))
+#   VARS_example <- c("engagement", "resources")
+
+#   # COLORS_example <- grDevices::hcl.colors(n = 50, palette = PALETTE)
+#   COLORS_example <- COLORS[seq_along(VARS_example)]
+
+#   titles <- paste0("<i>",
+#     paste0(LETTERS[1:6], ". ", c(
+#       "Linear functional form", 
+#       "Linear feedback loop", 
+#        "Add outflows", 
+#       "S-shaped functional form", 
+#       "S-shaped feedback loop", 
+#       "Add outflows"
+#     )), "</i>"
+#   )
+
+
+#   for (letter in names(func_form_list)) {
+#     sim <- simulate(func_form_list[[letter]], 
+#     save_at = .01, only_stocks = FALSE
+#     )
+
+#     vars_in_sim <- unique(sim$df$variable)
+#     vars_ <- VARS_example[VARS_example %in% vars_in_sim]
+#     colors_ <- COLORS_example[VARS_example %in% vars_in_sim]
+
+#     pl_list[[letter]] <- plot(sim,
+#       vars = vars_,
+#       colors = colors_,
+#       main = "",
+#       # ylim = ylim,
+#       showlegend = (letter == max_letter)
+#     ) |> plotly::layout(xaxis = list(
+#       # nticks = 3
+#       tickvals = list(0, 150)
+#       ))
+
+#   }
+
+#   # Route simulation traces to legend2 and fix margins/automargin for equal widths
+#   pl_list <- lapply(pl_list, function(p) {
+#     plotly::style(p, legend = "legend2") |>
+#       plotly::layout(
+#         margin = list(t = 0, b = 0, l = 0, r = 0),
+#         yaxis = list(automargin = FALSE)
+#       ) |> rm_grid()
+#   })
+
+#   x1 <- 0.22
+#   x2 <- 0.1
+#   x3 <- 0.37
+#   x4 <- 0.78
+#   x5 <- 0.62
+#   x6 <- 0.88
+#   y1 <- 1
+#   y2 <- 0.28
+
+#   annot <- list(size = font_size_subplot - 4, xanchor = "center", yanchor = "middle", showarrow = FALSE, xref = "paper", yref = "paper")
+
+#   inner_pl <- plotly::subplot(pl_list,
+#     nrows = 1,
+#     shareX = TRUE,
+#     shareY = FALSE,
+#     titleY = FALSE,
+#     titleX = FALSE,
+#     margin = c(0.05, 0.05, 0.05, 0.05),
+#     widths = c(1/4, 1/4, 1/4, 1/4)
+#   ) 
+
+#   pl <- plotly::subplot(
+#     pl_func_form,
+#     inner_pl,
+#     nrows = 2, titleY = TRUE,
+#     # heights = c(1/3, 2/3),
+#     heights = c(2/3, 1/3),
+#     # heights = c(6/10, 4/10),
+#     # heights = c(0.5,0.5),
+#     margin = c(0.1, 0.1, 0.1, 0.1)
+#   ) |>
+#   plotly::layout(
+#     font = list(family = font_family, size = font_size),
+#     legend = list(
+#       orientation = "h",
+#       x = 0.5, y = 0.32,
+#       xanchor = "center",
+#       yanchor = "top",
+#       traceorder = "normal",
+#       tracegroupgap = 0,
+#       itemwidth = 15,
+#       title = list(text = "Slope", font = list(size = font_size_legend)),
+#       font = list(size = font_size_legend)
+#     ),
+#     legend2 = list(
+#       orientation = "h",
+#       x = 0.5, y = -0.16,
+#       xanchor = "center",
+#       yanchor = "top",
+#       font = list(size = font_size_legend)
+#     )
+#   ) |>
+#     plotly::layout(
+#       annotations = list(
+#         utils::modifyList(annot_xlab, list(y = -0.075))
+#       )
+#     ) |>
+#     plotly::layout(annotations = list(
+#       utils::modifyList(annot, list(x = x1, y = y1, text = titles[[1]])),
+#       utils::modifyList(annot, list(x = x2, y = y2, text = titles[[2]])),
+#       utils::modifyList(annot, list(x = x3, y = y2, text = titles[[3]])),
+#       utils::modifyList(annot, list(x = x4, y = y1, text = titles[[4]])),
+#       utils::modifyList(annot, list(x = x5, y = y2, text = titles[[5]])),
+#       utils::modifyList(annot, list(x = x6, y = y2, text = titles[[6]]))
+#     ))
+
+#   pl
+
+#   export_plot(pl, file.path(filepath_figs, "JDR_functional_forms_old.pdf"),
+#     width = 6, height = 5
+#   )
+# }
+```
+
+
+
+
+```{r include=FALSE}
 if (recreate_figs) {
   # Create subplot figure
   pl_list <- list()
@@ -1122,14 +1410,38 @@ if (recreate_figs) {
     paste0(LETTERS[1:6], ". ", c(
       "Linear functional form", 
       "Linear feedback loop", 
-       "Add outflows", 
-      "S-shaped functional form", 
-      "S-shaped feedback loop", 
-      "Add outflows"
+       "Linear feedback loop with outflows", 
+      "Hill functional form", 
+      "Hill feedback loop", 
+      "Hill feedback loop with outflows"
     )), "</i>"
   )
 
+# Functional form
+pl_func_form <- plotly::subplot(pl_linear, pl_hill, 
+    nrows = 2,
+    shareX = TRUE,
+    shareY = TRUE,
+    titleY = TRUE,
+    titleX = TRUE,
+    margin = c(0.1, 0.05, 0.05, 0.05)
+) |>
+  plotly::layout(title = "", 
+  yaxis = list(title = "", range = c(0, 1)),
+  yaxis2 = list(title = "", range = c(0, 1)),
+  # yaxis2 = list(title = ""),
+  font = annot_font
+  # legend = utils::modifyList(annot_legend, list(
+  #       y = -0.2, 
+  #       title = list(text = "Slope", font = list(size = font_size_legend)),
+  #       traceorder = "normal",
+  #       tracegroupgap = 0,
+  #       itemwidth = 15,
+  #       font = list(size = font_size_legend)
+  #     ))
+    )
 
+  # Timeseries
   for (letter in names(func_form_list)) {
     sim <- simulate(func_form_list[[letter]], 
     save_at = .01, only_stocks = FALSE
@@ -1142,12 +1454,10 @@ if (recreate_figs) {
     pl_list[[letter]] <- plot(sim,
       vars = vars_,
       colors = colors_,
-      main = "",
-      # ylim = ylim,
+      main = "", wrap_width = 10,
       showlegend = (letter == max_letter)
     ) |> plotly::layout(xaxis = list(
-      # nticks = 3
-      tickvals = list(0, 150)
+      nticks = 3
       ))
 
   }
@@ -1161,79 +1471,93 @@ if (recreate_figs) {
       ) |> rm_grid()
   })
 
-  x1 <- 0.22
-  x2 <- 0.1
-  x3 <- 0.37
-  x4 <- 0.78
-  x5 <- 0.62
-  x6 <- 0.88
-  y1 <- 1
-  y2 <- 0.28
+  x1 <- 0.18
+  x2 <- 0.82
+  # x3 <- 0.37
+  # x4 <- 0.78
+  # x5 <- 0.62
+  # x6 <- 0.88
+  y1 <- 1.04
+  y2 <- 0.75
+  y3 <- 0.49
+  y4 <- 0.25
+  
 
-  annot <- list(size = font_size_subplot - 4, xanchor = "center", yanchor = "middle", showarrow = FALSE, xref = "paper", yref = "paper")
+  annot_ <- list(size = font_size_subplot - 4, xanchor = "center", yanchor = "middle", showarrow = FALSE, xref = "paper", yref = "paper")
 
   inner_pl <- plotly::subplot(pl_list,
-    nrows = 1,
+    nrows = 4,
     shareX = TRUE,
     shareY = FALSE,
     titleY = FALSE,
     titleX = FALSE,
-    margin = c(0.05, 0.05, 0.05, 0.05),
-    widths = c(1/4, 1/4, 1/4, 1/4)
+    margin = 0.05,
+    heights = c(1/4, 1/4, 1/4, 1/4)
   ) 
 
   pl <- plotly::subplot(
     pl_func_form,
     inner_pl,
-    nrows = 2, titleY = TRUE,
-    # heights = c(1/3, 2/3),
-    heights = c(2/3, 1/3),
-    # heights = c(6/10, 4/10),
-    # heights = c(0.5,0.5),
-    margin = c(0.1, 0.1, 0.1, 0.1)
+    nrows = 1, titleY = FALSE, titleX = FALSE,
+    widths = c(5/10, 5/10),
+    margin = 0.14
   ) |>
   plotly::layout(
+    margin = 0,
     font = list(family = font_family, size = font_size),
-    legend = list(
-      orientation = "h",
-      x = 0.5, y = 0.32,
-      xanchor = "center",
-      yanchor = "top",
+    legend = utils::modifyList(annot_legend, list(
+      # y = -0.16, x = 0.1, orientation = "v",
+      y = 0.7, x = 0.45, orientation = "v",
       traceorder = "normal",
-      tracegroupgap = 0,
-      itemwidth = 15,
-      title = list(text = "Slope", font = list(size = font_size_legend)),
-      font = list(size = font_size_legend)
+      # tracegroupgap = 0,
+      # itemwidth = 15,
+      title = list(text = "Slope", side = "top",
+      font = list(size = font_size_legend))),
     ),
-    legend2 = list(
-      orientation = "h",
-      x = 0.5, y = -0.16,
-      xanchor = "center",
-      yanchor = "top",
-      font = list(size = font_size_legend)
-    )
+    legend2 = utils::modifyList(annot_legend, list(
+      y = 0.625, x = 1.15, orientation = "v", itemwidth = 10
+      # y = -0.14, x = x2, orientation = "h"
+    ))
   ) |>
-    plotly::layout(
-      annotations = list(
-        utils::modifyList(annot_xlab, list(y = -0.075))
-      )
-    ) |>
     plotly::layout(annotations = list(
-      utils::modifyList(annot, list(x = x1, y = y1, text = titles[[1]])),
-      utils::modifyList(annot, list(x = x2, y = y2, text = titles[[2]])),
-      utils::modifyList(annot, list(x = x3, y = y2, text = titles[[3]])),
-      utils::modifyList(annot, list(x = x4, y = y1, text = titles[[4]])),
-      utils::modifyList(annot, list(x = x5, y = y2, text = titles[[5]])),
-      utils::modifyList(annot, list(x = x6, y = y2, text = titles[[6]]))
+      utils::modifyList(annot_xlab, list(y = -0.05, x = x1, text = "Input")),
+      utils::modifyList(annot_xlab, list(y = -0.05, x = x2)),
+      utils::modifyList(annot_xlab, list(y = 0.6, x = -0.075, textangle = -90, text = "Output")),
+      utils::modifyList(annot_, list(x = x1, y = y1 + .075, text = "<i>Functional Forms</i>", font = list(size = font_size_xlab))),
+      utils::modifyList(annot_, list(x = x2, y = y1 + .075, text = "<i>Timeseries</i>", font = list(size = font_size_xlab))),
+      utils::modifyList(annot_, list(x = x1, y = y1, text = titles[[1]])),
+      utils::modifyList(annot_, list(x = x2, y = y1, text = titles[[2]])),
+      utils::modifyList(annot_, list(x = x2, y = y2, text = titles[[3]])),
+      utils::modifyList(annot_, list(x = x1, y = y3, text = titles[[4]])),
+      utils::modifyList(annot_, list(x = x2, y = y3, text = titles[[5]])),
+      utils::modifyList(annot_, list(x = x2, y = y4, text = titles[[6]]))
     ))
 
-  pl
-
-  export_plot(pl, file.path(filepath_figs, "JDR_feedback_loop.pdf"),
-    width = 6, height = 5
+  export_plot(pl, file.path(filepath_figs, "JDR_functional_forms.pdf"),
+    width = 6.5, height = 5
   )
+
 }
 ```
+
+
+
+```{r}
+if (recreate_figs) {
+  pl <- plot(sfm,
+    wrap_width = 9.5,
+    font_size = 20, minlen = 1.5,
+    stock_col = stock_col,
+    flow_col = flow_col,
+    font_family = font_family,
+    show_constants = FALSE, show_aux = TRUE, show_dependencies = TRUE
+  )
+
+  export_plot(pl, file.path(filepath_figs, "sfm_feedback_loop.pdf"))
+}
+
+```
+
 
 To implement the health impairment pathway, we add two stocks -- job demands and energy -- as well as an auxiliary for job performance. 
 
@@ -1516,8 +1840,6 @@ pl
 ```
 
 
-
-
 ```{r include=FALSE}
 if (recreate_figs) {
   sfm_list[["B"]] <- sim_specs(sfm, seed = 1)
@@ -1531,6 +1853,7 @@ if (recreate_figs) {
 
 ```{r include=FALSE}
 if (recreate_figs) {
+
   # Create subplot figure
   pl_list <- list()
   min_letter <- min(names(sfm_list))
@@ -1565,6 +1888,7 @@ if (recreate_figs) {
     }
 
   }
+  
   inner_pl <- plotly::subplot(pl_list[c(2,3,4)],
     nrows = 1,
     shareX = TRUE,
@@ -1608,13 +1932,32 @@ if (recreate_figs) {
 ```
 
 
+```{r}
+sfm <- sim_specs(sfm, seed = 123)
+```
+
+
 ## Interrogating Your Model
 
 ### Verification Tests
 
 ```{r}
 sfm <- sfm0
+```
 
+```{r}
+# Behaviours should always be positive
+sfm <- unit_test(sfm, expr = all(undermining >= 0))
+sfm <- unit_test(sfm, expr = all(proactive >= 0))
+sfm <- unit_test(sfm, expr = all(work >= 0))
+```
+
+```{r}
+verify(sfm)
+```
+
+
+```{r}
 # Job demands and energy should negatively correlate
 sfm <- unit_test(sfm, expr = cor(demands, energy) < -.2)
 verify(sfm)
@@ -1632,35 +1975,21 @@ sfm <- unit_test(sfm, expr = cor(performance, energy) > .2)
 verify(sfm)
 ```
 
-```{r}
-# Behaviours should always be positive
-sfm <- unit_test(sfm, expr = all(undermining >= 0))
-sfm <- unit_test(sfm, expr = all(proactive >= 0))
-sfm <- unit_test(sfm, expr = all(work >= 0))
-verify(sfm)
-```
 
-
-```{r}
-# # All flows should be non-negative
-# as.data.frame(sfm, type = "flows", properties = "name")
-# sfm <- unit_test(sfm, expr = all(E_R >= 0))
-
-```
-
-With conditions:
-
-```{r}
-sfm <- unit_test(sfm, expr = all(motivation == 0),
-                conditions = list(motivation_rate = 0))
-verify(sfm)
-```
-
+### Unit tests with conditions
 
 With zero job demands, we would expect job performance to be low.
 
+
 ```{r}
-sfm <- unit_test(sfm, expr = mean(performance) < 0.2, 
+# sfm2 <- sfm0 |> update(c(demands, exo_demand_rate, undermining_rate), eqn = 0)
+
+# sim <- simulate(sfm2, only_stocks = FALSE)
+# plot(sim)
+```
+
+```{r}
+sfm <- unit_test(sfm, expr = tail(performance, 1) < 0.1, 
                 conditions = list(demands = 0, exo_demand_rate = 0, undermining_rate = 0))
 verify(sfm)
 ```
@@ -1695,7 +2024,19 @@ Update saved model:
 sfm0 <- sfm0 |> update(performance, eqn = demands * (engagement + energy))
 ```
 
-We include some additional verification tests checks that are omitted from the paper for brevity. First, we would expect that when resources are zero, engagement decays to zero, which is indeed what we find.
+We include some additional verification tests checks that are omitted from the paper for brevity. 
+
+
+
+```{r}
+sfm <- unit_test(sfm, expr = all(motivation == 0),
+                conditions = list(motivation_rate = 0))
+verify(sfm)
+```
+
+
+
+We would expect that when resources are zero, engagement decays to zero, which is indeed what we find.
 
 ```{r}
 sfm <- unit_test(sfm, expr = tail(engagement, 1) < 0.01, 
@@ -2279,7 +2620,7 @@ if (recreate_figs) {
 sfm <- sfm0 |>
   constant(start, eqn = 21) |>
   constant(input, eqn = pulse(times, start,
-   height = .1, width = 14)) |>
+   height = .15, width = 14)) |>
   change_type(effort_rate, new_type = stock) |>
   flow(intervention, from = effort_rate, 
   eqn = effort_rate * input(t), 
@@ -2289,6 +2630,8 @@ sfm <- sfm0 |>
 sim <- simulate(sfm, seed = 12345)
 plot(sim)
 ```
+
+
 
 ```{r}
 # Simulation study
@@ -2311,11 +2654,11 @@ if (recreate_figs) {
 
 ```{r eval=FALSE, include=FALSE}
 if (recreate_figs) {
-  show_vars <- c("engagement", "demands")
+  show_vars <- c("engagement", "demands") |> rev()
   vars_ <- VARS[VARS %in% show_vars]
   colors_ <- COLORS[VARS %in% show_vars]
 
-  # Ensemble
+  # Ensemble (plain)
   sfm <- sfm_ens_par |> sim_specs(save_at = dt)
   sims <- ensemble(sfm, n = 1000)
 
@@ -2326,10 +2669,6 @@ if (recreate_figs) {
   ) |> rm_grid()
 
   # Parameter variation
-  show_vars <- c("engagement", "demands")
-  vars_ <- VARS[VARS %in% show_vars]
-  colors_ <- COLORS[VARS %in% show_vars]
-
   sims <- ensemble(sfm,
     n = n_ens_par,
     conditions = list(effort_rate = effort_rates),
@@ -2337,7 +2676,7 @@ if (recreate_figs) {
   )
 
   pl_par <- plot(sims,
-    type = "sims", i = 1:n_ensemble,
+    type = "sims", i = 1:n_ens_par,
     vars = vars_, colors = colors_, alpha = .25,
     main = "", sub = "",
     nrows = 3, central_tendency = FALSE,
@@ -2347,7 +2686,7 @@ if (recreate_figs) {
   pl_par
 
   # Intervention
-  show_vars <- c("engagement", "demands", "effort_rate")
+  show_vars <- c("engagement", "demands", "effort_rate") |> rev()
   vars_ <- VARS[VARS %in% show_vars]
   colors_ <- COLORS[VARS %in% show_vars]
 
@@ -2410,15 +2749,13 @@ if (recreate_figs) {
     plotly::layout(
       title = list(text = ""),
       font = annot_font,
-      legend = utils::modifyList(annot_legend, list(y = -0.12)),
+      legend = utils::modifyList(annot_legend, list(y = -0.12))
     ) |>
     plotly::layout(
       annotations = list(
         utils::modifyList(annot_xlab, list(y = -0.06))
       )
     )
-  pl
-
 
   export_plot(pl, file.path(filepath_figs, "learning_JDR.pdf"),
     width = 5, height = 5
@@ -2472,7 +2809,7 @@ for (k in 1:3){
   )
 
   pl_par <- plot(sims,
-    type = "sims", i = 1:n_ensemble,
+    type = "sims", i = 1:n_ens_par,
     vars = vars_, colors = colors_, alpha = .25,
     main = "", sub = "",
     nrows = 1,
