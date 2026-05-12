@@ -59,8 +59,8 @@ if (recreate_figs) {
   PALETTE <- c("Geyser", "Temps", "Spectral", "Zissou 1", "Roma")[5]
   COLORS <- grDevices::hcl.colors(n = 50, palette = PALETTE)
 
-  inflow_col <- adjustcolor(COLORS[17], alpha.f = 1)
-  outflow_col <- adjustcolor(COLORS[9], alpha.f = 1)
+  inflow_col <- adjustcolor(COLORS[10], alpha.f = 1)
+  outflow_col <- adjustcolor(COLORS[3], alpha.f = 1)
 
   COLORS_alpha <- adjustcolor(COLORS, alpha.f = .25)
 
@@ -242,14 +242,14 @@ viz_str <- "
       'Cloud4' [label='', tooltip = 'Unspecified sink',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
 
       # Define flow edges (stock -> flow_node -> stock)
-      'Cloud3' -> 'inflowA' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
-      'inflowA' -> 'stockA' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
-      'stockB' -> 'outflowB' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
-      'outflowB' -> 'Cloud1' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
-      'Cloud4' -> 'inflowC' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
-      'inflowC' -> 'stockC' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
-      'stockC' -> 'outflowC' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
-      'outflowC' -> 'Cloud2' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
+      'Cloud3' -> 'inflowA' [arrowhead='none', color='black:%(inflow_col)s:black', penwidth=1.1, minlen=1.5, splines=false]
+      'inflowA' -> 'stockA' [arrowhead='normal', color='black:%(inflow_col)s:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
+      'stockB' -> 'outflowB' [arrowhead='none', color='black:%(outflow_col)s:black', penwidth=1.1, minlen=1.5, splines=false]
+      'outflowB' -> 'Cloud1' [arrowhead='normal', color='black:%(outflow_col)s:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
+      'Cloud4' -> 'inflowC' [arrowhead='none', color='black:%(inflow_col)s:black', penwidth=1.1, minlen=1.5, splines=false]
+      'inflowC' -> 'stockC' [arrowhead='normal', color='black:%(inflow_col)s:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
+      'stockC' -> 'outflowC' [arrowhead='none', color='black:%(outflow_col)s:black', penwidth=1.1, minlen=1.5, splines=false]
+      'outflowC' -> 'Cloud2' [arrowhead='normal', color='black:%(outflow_col)s:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
 
       # Define dependency edges
       
@@ -263,6 +263,14 @@ viz_str <- "
 
 "
 
+
+viz_str <- sprintf_arg(
+  viz_str,
+  list(
+    inflow_col = inflow_col,
+    outflow_col = outflow_col
+  )
+)
 
   pl <- DiagrammeR::grViz(viz_str)
   pl
@@ -316,21 +324,26 @@ for (i in names(sfm_list)) {
 # pl <- plotly::subplot(pl1, pl2, pl3, nrows = 3, shareX = TRUE, margin = .05)
 # pl
   # sim <- simulate(sfm, save_at = .01, only_stocks = FALSE)
-  pl_sim <- plotly::subplot(pl_list, nrows = 3, shareX = TRUE, shareY = FALSE,
-  margin = .05) |>
+  pl_sim <- plotly::subplot(pl_list, nrows = 3,
+   shareX = FALSE, shareY = FALSE, 
+  margin = 0.05, heights = c(.25, .3, .25)
+  ) |>
     plotly::layout(
+      # margin = 0.05,
       font = annot_font,
-      legend = utils::modifyList(annot_legend, list(y = -0.18))
+      legend = utils::modifyList(annot_legend, list(y = -0.02))
     ) |>
     plotly::layout(
+      yaxis = list(range = c(0, 1.1)),
+      yaxis3 = list(range = c(0, 1.1)),
       annotations = list(
-        utils::modifyList(annot_xlab, list(x = 0.5, y = -.08))
+        utils::modifyList(annot_xlab, list(x = 0.5, y = 0.05))
       )
     )
   pl_sim
   
   export_plot(pl_sim, file.path(filepath_figs, "sfm_sim.pdf"),
-    width = 3.5, height = 4.5
+    width = 3.25, height = 5.5
   )
 
 }
@@ -916,7 +929,7 @@ pl_func_form <- plotly::subplot(pl_linear, pl_hill,
     margin = c(0.1, 0.05, 0.05, 0.05)
 ) |>
   plotly::layout(title = "", 
-  yaxis = list(title = "Effect on receiving variable"),
+  yaxis = list(title = "Output"),
   font = annot_font,
   legend = utils::modifyList(annot_legend, list(
         y = -0.2, 
@@ -928,7 +941,7 @@ pl_func_form <- plotly::subplot(pl_linear, pl_hill,
       )),
       annotations = list(
         utils::modifyList(annot_xlab, 
-        list(text = "Influencing variable", y = -.05)
+        list(text = "Input", y = -.05)
         )
       )
     )
@@ -1000,16 +1013,16 @@ colors_hill <- grDevices::hcl.colors(n = 100, palette = "Roma")[c(72, 83, 100)]
 # cl <- grDevices::hcl.colors(n = 100, palette = "Roma")
 # scales::show_col(cl)
 
-titles_top <- paste0("<i>", c("Logistic function", "Probit function", "Hill function"), "</i>")
+titles_top <- paste0("<i>", c("A. Logistic function", "B. Probit function", "C. Hill function"), "</i>")
 titles_bottom <- paste0("<i>", c(
-  "Inflow =<br>s * Stock * (1 - Stock / K)<br>s (slope) = 1, K = 0.5",
-  "Inflow =<br>pnorm(Stock, mu, s)<br>s (slope) = 0.3, mu = 0.5",
-  "Inflow =<br>Stock^s / (K^s + Stock^s)<br>s (slope) = 3, K = 0.5"
+  "D. Inflow =<br>s * Stock * (1 - Stock / K)<br>s = 1, K = 0.5",
+  "E. Inflow =<br>pnorm(Stock, mu, s)<br>s = 0.3, mu = 0.5",
+  "F. Inflow =<br>Stock^s / (K^s + Stock^s)<br>s = 3, K = 0.5"
 ), "</i>")
 
 x1 <- 0.16
 x2 <- 0.50
-x3 <- 0.86
+x3 <- 0.85
 y1 <- 1.15
 y2 <- 0.42
 
@@ -1034,9 +1047,9 @@ pl1 <- plotly::plot_ly() |>
     mode = "lines"
   ) |>
   plotly::layout(
-    yaxis = list(range = ylim)
+    yaxis = list(range = ylim, title = list(text = ""))
     # margin = list(t = 0, b = 0, l = 0, r = 0)
-  )
+  ) |> rm_grid()
 
 pl2 <- plotly::plot_ly() |>
   plotly::add_trace(
@@ -1049,9 +1062,9 @@ pl2 <- plotly::plot_ly() |>
     mode = "lines"
   ) |>
   plotly::layout(
-    yaxis = list(range = ylim)
+    yaxis = list(range = ylim, title = list(text = ""))
     # margin = list(t = 0, b = 0, l = 0, r = 0)
-  )
+  ) |> rm_grid()
 
 pl3 <- plotly::plot_ly() |>
   plotly::add_trace(
@@ -1064,42 +1077,37 @@ pl3 <- plotly::plot_ly() |>
     mode = "lines"
   ) |>
   plotly::layout(
-    yaxis = list(range = ylim)
+    yaxis = list(range = ylim, title = list(text = ""))
     # margin = list(t = 0, b = 0, l = 0, r = 0)
-  )
+  ) |> rm_grid()
 
 sim1_rev <- plot(simulate(sfm1_rev), vars = vars,
- xlab = "", showlegend = TRUE, main = "")
-sim2_rev <- plot(simulate(sfm2_rev), vars = vars, xlab = "", showlegend = FALSE, main = "")
-sim3_rev <- plot(simulate(sfm3_rev), vars = vars, xlab = "", showlegend = FALSE, main = "")
+ xlab = "", ylab = "", showlegend = TRUE, main = "")
+sim2_rev <- plot(simulate(sfm2_rev), vars = vars, xlab = "", ylab = "",showlegend = FALSE, main = "")
+sim3_rev <- plot(simulate(sfm3_rev), vars = vars, xlab = "", ylab = "", showlegend = FALSE, main = "")
 
 # Route bottom row traces to legend2
-sim1_rev <- plotly::style(sim1_rev, legend = "legend2")
-sim2_rev <- plotly::style(sim2_rev, legend = "legend2")
-sim3_rev <- plotly::style(sim3_rev, legend = "legend2")
+sim1_rev <- plotly::style(sim1_rev, legend = "legend2") |> rm_grid()
+sim2_rev <- plotly::style(sim2_rev, legend = "legend2") |> rm_grid()
+sim3_rev <- plotly::style(sim3_rev, legend = "legend2") |> rm_grid()
 
 pl_func_form_rev <- plotly::subplot(pl1, pl2, pl3,
-      nrows = 1,
+    nrows = 1,
     shareX = TRUE,
     shareY = TRUE,
     titleY = TRUE,
     titleX = FALSE,
-    margin = c(0.05, 0.05, 0.05, 0.05)
+    margin = 0.05
 ) |>
-  plotly::layout(title = "", yaxis = list(title = "Effect on receiving variable")) |>
+  plotly::layout(title = "", yaxis = list(title = "")) |>
     plotly::layout(
-      font = list(family = font_family, size = font_size),
-      legend = list(
-        orientation = "h",
-        x = 0.5, y = 0,
-        xanchor = "center",
-        yanchor = "top",
+      font = annot_font,
+      legend = utils::modifyList(annot_legend, list(
+        y = 0,        
         traceorder = "normal",
         tracegroupgap = 0,
         itemwidth = 15,
-        title = list(text = "Slope", font = list(size = font_size_legend)),
-        font = list(size = font_size_legend)
-      )
+        title = list(text = "Slope", font = list(size = font_size_legend))))
     ) |>
     plotly::layout(annotations = list(
       utils::modifyList(annot_, list(x = x1, y = y1, text = titles_top[[1]])),
@@ -1114,9 +1122,9 @@ pl_bottom_rev <- plotly::subplot(
   shareY = FALSE,
   titleY = FALSE,
   titleX = FALSE,
-  margin = c(0.05, 0.05, 0.05, 0.05)
+  margin = 0.05
 ) |>
-  plotly::layout(title = "", yaxis = list(title = "Value"))
+  plotly::layout(title = "", yaxis = list(title = ""))
 
 pl_spacer_rev <- plotly::plot_ly(
   x = 0,
@@ -1151,57 +1159,57 @@ pl_final_rev <- plotly::subplot(
   pl_spacer_rev,
   nrows = 5,
   titleY = TRUE,
-  heights = c(0.001, 0.35, 0.25, 0.35, 0.01),
+  heights = c(0.001, 0.3, 0.38, 0.3, 0.01),
   margin = c(0.05, 0.05, 0.05, 0.05)
 ) |>
   plotly::layout(
-    font = list(family = font_family, size = font_size),
-    legend = list(
+    margin = 0,
+    font = annot_font,
+    legend = utils::modifyList(annot_legend, list(
       orientation = "v",
-      x = 1.02,
+      x = 1.1,
       y = 1,
-      xanchor = "left",
-      yanchor = "top",
       traceorder = "normal",
       tracegroupgap = 0,
       itemwidth = 15,
-      title = list(text = "Slope", font = list(size = font_size_legend)),
-      font = list(size = font_size_legend)
+      title = list(text = "Slope (s)", font = list(size = font_size_legend)))
     ),
-    legend2 = list(
+    legend2 = utils::modifyList(annot_legend, list(
       orientation = "v",
-      x = 1.02,
-      y = y2 - .25,
-      xanchor = "left",
-      yanchor = "center",
+      x = 1.1,
+      y = y2 - .2,
       traceorder = "normal",
       tracegroupgap = 0,
-      itemwidth = 15,
-      font = list(size = font_size_legend)
+      itemwidth = 15)
     ),
     annotations = list(
       utils::modifyList(annot_, list(
         text = "<i>Functional forms</i>",
         x = 0.5,
-        y = 1.03,
+        y = 1.08,
         yanchor = "top",
         font = list(size = font_size_xlab)
       )),
       utils::modifyList(annot_, list(
         text = "<i>Timeseries</i>",
         x = 0.5,
-        y = y2 + 0.06,
+        y = y2 + 0.08,
         yanchor = "bottom",
         font = list(size = font_size_xlab)
       )),
       utils::modifyList(annot_, list(x = x1, y = y2, text = titles_bottom[[1]])),
       utils::modifyList(annot_, list(x = x2, y = y2, text = titles_bottom[[2]])),
       utils::modifyList(annot_, list(x = x3, y = y2, text = titles_bottom[[3]])),
-      utils::modifyList(annot_, list(
-        text = "Influencing variable",
+      utils::modifyList(annot_, list(text = "Input",
         x = 0.5,
-        y = y2 + 0.2,
+        y = y2 + 0.275,
         yanchor = "top",
+        font = list(size = font_size_xlab - 2)
+      )),
+      utils::modifyList(annot_, list(text = "Output",
+        x = -.1,
+        y = 0.91,
+        yanchor = "top", textangle = -90,
         font = list(size = font_size_xlab - 2)
       )),
       utils::modifyList(annot_, list(
