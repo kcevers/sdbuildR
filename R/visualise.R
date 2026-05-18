@@ -474,7 +474,8 @@ plot.sdbuildR <- function(x,
   # Prepare auxiliary nodes
   if (length(aux_names) > 0) {
     aux_nodes <- sprintf(
-      "%s [id=%s,label='%s',tooltip = 'eqn = %s',shape=plaintext,fontsize=%s,fontname='%s', width=0.6, height=0.3]",
+      # "%s [id=%s,label='%s',tooltip = 'eqn = %s',shape=plaintext,fontsize=%s,fontname='%s', width=0.6, height=0.3]",
+      "%s [id=%s,xlabel='%s',label='',tooltip = 'eqn = %s',shape=circle,fontsize=%s,fontname='%s', width=0.15, height=0.15, fixedsize=true, style=filled, fillcolor='grey90']",
       paste0("'", aux_names, "'"),
       paste0("'", aux_names, "'"),
       dict[aux_names],
@@ -494,9 +495,12 @@ plot.sdbuildR <- function(x,
     }, character(1), USE.NAMES = FALSE)
 
     const_nodes <- sprintf(
-      "%s [id=%s,label=<%s>, tooltip = 'eqn = %s',
-                         shape=plaintext,fontsize=%s,fontname='%s',
-                         width=0.6, height=0.3]",
+      # "%s [id=%s,label=<%s>, tooltip = 'eqn = %s',
+      #                    shape=plaintext,fontsize=%s,fontname='%s',
+      #                    width=0.6, height=0.3]",
+      "%s [id=%s,xlabel=<%s>,label='', tooltip = 'eqn = %s',
+                         shape=diamond,fontsize=%s,fontname='%s',
+                         width=0.15, height=0.15, fixedsize=true, style=filled, fillcolor='grey90']",
       paste0("'", const_names, "'"),
       paste0("'", const_names, "'"),
       formatted_labels,
@@ -716,355 +720,6 @@ plot.sdbuildR <- function(x,
   pl
 }
 
-
-#' Plot stock-and-flow diagram with qgraph
-#'
-#' Visualize a stock-and-flow diagram using the R package qgraph. This function
-#' is a static-graphics alternative to [plot.sdbuildR()], preserving core
-#' filtering and labeling behavior while using a deterministic hierarchical
-#' layout.
-#'
-#' @param x A stock-and-flow model object of class [`sdbuildR`][sdbuildR].
-#' @param vars Variables to plot. Defaults to NULL to plot all variables.
-#' @param format_label If TRUE, apply default formatting (removing periods and underscores) to labels if labels are the same as variable names.
-#' @param wrap_width Width of text wrapping for labels. Must be an integer. Defaults to 20.
-#' @param font_size Font size. Defaults to 18.
-#' @param font_family Font name. Defaults to "Times New Roman".
-#' @param stock_col Colour of stocks. Defaults to "#83d3d4".
-#' @param flow_col Colour of flows. Defaults to "#f48153".
-#' @param dependency_col Colour of dependency arrows. Defaults to "#999999".
-#' @param show_dependencies If TRUE, show dependencies between variables. Defaults to TRUE.
-#' @param show_constants If TRUE, show constants. Defaults to FALSE.
-#' @param show_aux If TRUE, show auxiliary variables. Defaults to TRUE.
-#' @param layout_algo Layout algorithm. One of "sugiyama" (structured, default) or "fr".
-#' @param level_spacing Horizontal spacing multiplier between layout levels.
-#' @param node_spacing Vertical spacing multiplier between nodes.
-#' @param show_eqn If TRUE, attach equations as metadata attribute on the returned object.
-#' @param ... Optional arguments reserved for future extensions.
-#'
-#' @returns qgraph object.
-#' @export
-#' @concept build
-#' @seealso [plot.sdbuildR()], [export_plot()]
-#'
-#' @examples
-#' \dontrun{
-#' sfm <- sdbuildR("SIR")
-#' pl <- plot_sdbuildR2(sfm)
-#' export_plot(pl, tempfile(fileext = ".pdf"))
-#' }
-plot_sdbuildR2 <- function(x,
-                           vars = NULL,
-                           format_label = TRUE,
-                           wrap_width = 20,
-                           font_size = 18,
-                           font_family = "Times New Roman",
-                           stock_col = "#83d3d4",
-                           flow_col = "#f48153",
-                           dependency_col = "#999999",
-                           show_dependencies = TRUE,
-                           show_constants = FALSE,
-                           show_aux = TRUE,
-                           layout_algo = c("sugiyama", "fr"),
-                           level_spacing = 1.25,
-                           node_spacing = 1,
-                           show_eqn = FALSE,
-                           ...) {
-  rlang::check_installed("qgraph", reason = "to plot stock-and-flow diagrams with qgraph.")
-
-  sfm <- x
-  rm(x)
-  check_sdbuildR(sfm)
-
-  layout_algo <- match.arg(layout_algo)
-
-  validate_plot_params(
-    vars = vars,
-    font_family = font_family,
-    font_size = font_size,
-    wrap_width = wrap_width
-  )
-
-  if (!is.logical(show_dependencies) || length(show_dependencies) != 1) {
-    cli::cli_abort("{.arg show_dependencies} must be TRUE or FALSE.")
-  }
-  if (!is.logical(show_constants) || length(show_constants) != 1) {
-    cli::cli_abort("{.arg show_constants} must be TRUE or FALSE.")
-  }
-  if (!is.logical(show_aux) || length(show_aux) != 1) {
-    cli::cli_abort("{.arg show_aux} must be TRUE or FALSE.")
-  }
-
-  df <- as.data.frame(sfm, properties = c("type", "name", "label", "eqn"))
-
-  if (nrow(df) == 0) {
-    cli::cli_warn(c(
-      "i" = "Model contains no variables.",
-      ">" = "Add variables using {.fn update} before plotting."
-    ))
-    return(invisible(NULL))
-  }
-
-  dep <- dependencies(sfm)
-  flow_df <- get_flow_df(sfm)
-
-  if (!is.null(vars)) {
-    vars <- unique(vars)
-    validate_vars_in_model(vars, df, context = "model")
-
-    df <- df[df[["name"]] %in% vars, , drop = FALSE]
-    dep <- dep[names(dep) %in% vars]
-    flow_df <- flow_df[flow_df[["name"]] %in% vars, , drop = FALSE]
-
-    flow_df[["to"]][!flow_df[["to"]] %in% vars] <- ""
-    flow_df[["from"]][!flow_df[["from"]] %in% vars] <- ""
-
-    if (any(vars %in% df[df[["type"]] == "aux", "name"])) {
-      show_aux <- TRUE
-    }
-    if (any(vars %in% df[df[["type"]] == "constant", "name"])) {
-      show_constants <- TRUE
-    }
-  }
-
-  if (format_label) {
-    df[["label"]] <- ifelse(df[["name"]] == df[["label"]],
-      stringr::str_replace_all(df[["label"]], c("_" = " ", "\\." = " ", "  " = " ")),
-      df[["label"]]
-    )
-  }
-
-  df <- prepare_labels(df, wrap_width = wrap_width, format_label = FALSE, deduplicate = FALSE)
-  dict <- stats::setNames(df[["label"]], df[["name"]])
-  dict_eqn <- stats::setNames(stringr::str_replace_all(df[["eqn"]], c("'" = "", "\"" = "")), df[["name"]])
-
-  stock_names <- df[df[["type"]] == "stock", "name"]
-  flow_names <- df[df[["type"]] == "flow", "name"]
-  aux_names <- df[df[["type"]] == "aux", "name"]
-  const_names <- df[df[["type"]] == "constant", "name"]
-
-  if (!show_constants) const_names <- character(0)
-  if (!show_aux) aux_names <- character(0)
-
-  node_names <- c(stock_names, flow_names, aux_names, const_names)
-  node_types <- c(
-    rep("stock", length(stock_names)),
-    rep("flow", length(flow_names)),
-    rep("aux", length(aux_names)),
-    rep("constant", length(const_names))
-  )
-
-  nodes_df <- data.frame(
-    name = node_names,
-    type = node_types,
-    label = unname(dict[node_names]),
-    eqn = unname(dict_eqn[node_names]),
-    stringsAsFactors = FALSE
-  )
-
-  all_edges <- data.frame(
-    from = character(0),
-    to = character(0),
-    kind = character(0),
-    directed = logical(0),
-    stringsAsFactors = FALSE
-  )
-
-  if (nrow(flow_df) > 0) {
-    flow_df[["from"]] <- ifelse(flow_df[["from"]] %in% stock_names, flow_df[["from"]], "")
-    flow_df[["to"]] <- ifelse(flow_df[["to"]] %in% stock_names, flow_df[["to"]], "")
-
-    missing_from <- which(flow_df[["from"]] == "")
-    missing_to <- which(flow_df[["to"]] == "")
-
-    if (length(missing_from) > 0) {
-      from_clouds <- paste0("CloudSrc", seq_along(missing_from))
-      flow_df[["from"]][missing_from] <- from_clouds
-      nodes_df <- rbind(
-        nodes_df,
-        data.frame(
-          name = from_clouds,
-          type = rep("cloud", length(from_clouds)),
-          label = rep("", length(from_clouds)),
-          eqn = rep("Unspecified source", length(from_clouds)),
-          stringsAsFactors = FALSE
-        )
-      )
-    }
-
-    if (length(missing_to) > 0) {
-      to_clouds <- paste0("CloudSink", seq_along(missing_to))
-      flow_df[["to"]][missing_to] <- to_clouds
-      nodes_df <- rbind(
-        nodes_df,
-        data.frame(
-          name = to_clouds,
-          type = rep("cloud", length(to_clouds)),
-          label = rep("", length(to_clouds)),
-          eqn = rep("Unspecified sink", length(to_clouds)),
-          stringsAsFactors = FALSE
-        )
-      )
-    }
-
-    flow_edges_in <- data.frame(
-      from = flow_df[["from"]],
-      to = flow_df[["name"]],
-      kind = rep("flow", nrow(flow_df)),
-      directed = rep(FALSE, nrow(flow_df)),
-      stringsAsFactors = FALSE
-    )
-
-    flow_edges_out <- data.frame(
-      from = flow_df[["name"]],
-      to = flow_df[["to"]],
-      kind = rep("flow", nrow(flow_df)),
-      directed = rep(TRUE, nrow(flow_df)),
-      stringsAsFactors = FALSE
-    )
-
-    all_edges <- rbind(all_edges, flow_edges_in, flow_edges_out)
-  }
-
-  if (show_dependencies) {
-    plot_var <- nodes_df$name[nodes_df$type != "cloud"]
-    dep <- lapply(dep, function(x) intersect(x, plot_var))
-    dep <- dep[names(dep) %in% plot_var]
-
-    if (length(dep) > 0) {
-      dep_edges <- do.call(rbind, lapply(names(dep), function(x) {
-        if (length(dep[[x]]) == 0) {
-          return(NULL)
-        }
-        data.frame(
-          from = dep[[x]],
-          to = rep(x, length(dep[[x]])),
-          kind = rep("dependency", length(dep[[x]])),
-          directed = rep(TRUE, length(dep[[x]])),
-          stringsAsFactors = FALSE
-        )
-      }))
-
-      if (!is.null(dep_edges) && nrow(dep_edges) > 0) {
-        all_edges <- rbind(all_edges, dep_edges)
-      }
-    }
-  }
-
-  nodes_df <- nodes_df[!duplicated(nodes_df$name), , drop = FALSE]
-
-  if (nrow(all_edges) > 0) {
-    keep <- all_edges$from %in% nodes_df$name & all_edges$to %in% nodes_df$name
-    all_edges <- all_edges[keep, , drop = FALSE]
-  }
-
-  graph_df <- if (nrow(all_edges) > 0) {
-    all_edges[, c("from", "to"), drop = FALSE]
-  } else {
-    data.frame(from = character(0), to = character(0), stringsAsFactors = FALSE)
-  }
-
-  graph <- igraph::graph_from_data_frame(
-    d = graph_df,
-    directed = TRUE,
-    vertices = data.frame(name = nodes_df$name, stringsAsFactors = FALSE)
-  )
-
-  layout <- if (layout_algo == "sugiyama") {
-    igraph::layout_with_sugiyama(graph)$layout
-  } else {
-    igraph::layout_with_fr(graph)
-  }
-
-  layout <- layout[match(nodes_df$name, igraph::V(graph)$name), , drop = FALSE]
-  layout[, 1] <- layout[, 1] * level_spacing
-  layout[, 2] <- layout[, 2] * node_spacing
-
-  stock_idx <- which(nodes_df$type == "stock")
-  if (length(stock_idx) > 0) {
-    stock_x <- mean(layout[stock_idx, 1])
-    layout[, 1] <- layout[, 1] - stock_x
-    layout[stock_idx, 1] <- 0
-  }
-
-  labels <- nodes_df$label
-
-  shape <- ifelse(nodes_df$type == "stock", "rectangle", "circle")
-  vsize <- ifelse(
-    nodes_df$type == "stock", 13,
-    ifelse(nodes_df$type == "flow", 2.2,
-      ifelse(nodes_df$type == "cloud", 3, 1.8)
-    )
-  )
-  vsize2 <- ifelse(nodes_df$type == "stock", 8.2, vsize)
-
-  node_color <- ifelse(nodes_df$type == "stock", stock_col, "#FFFFFF")
-  border_color <- ifelse(
-    nodes_df$type == "stock", "#222222",
-    ifelse(nodes_df$type == "flow", flow_col,
-      ifelse(nodes_df$type == "cloud", "#555555", "#FFFFFF")
-    )
-  )
-  border_width <- ifelse(
-    nodes_df$type == "stock", 1.8,
-    ifelse(nodes_df$type == "flow", 0,
-      ifelse(nodes_df$type == "cloud", 1.2, 0)
-    )
-  )
-  borders <- border_width > 0
-  border_width <- pmax(border_width, 0.01)
-
-  base_cex <- max(0.55, font_size / 16)
-  label_cex <- ifelse(nodes_df$type == "stock", base_cex, base_cex * 0.82)
-  label_font <- ifelse(nodes_df$type == "constant", 3, 1)
-  label_color <- rep("black", nrow(nodes_df))
-
-  edge_mat <- if (nrow(all_edges) > 0) {
-    cbind(
-      match(all_edges$from, nodes_df$name),
-      match(all_edges$to, nodes_df$name)
-    )
-  } else {
-    matrix(numeric(0), ncol = 2)
-  }
-
-  edge_color <- ifelse(all_edges$kind == "dependency", dependency_col, flow_col)
-  edge_width <- ifelse(all_edges$kind == "dependency", 1, 3.8)
-  arrow_size <- ifelse(all_edges$kind == "dependency", 2.2, 4.8)
-
-  old_par <- graphics::par(no.readonly = TRUE)
-  on.exit(graphics::par(old_par), add = TRUE)
-  graphics::par(family = font_family)
-
-  pl <- qgraph::qgraph(
-    input = edge_mat,
-    nNodes = nrow(nodes_df),
-    labels = labels,
-    layout = layout,
-    shape = shape,
-    vsize = vsize,
-    vsize2 = vsize2,
-    color = node_color,
-    borders = borders,
-    border.color = border_color,
-    border.width = border_width,
-    label.cex = label_cex,
-    label.font = label_font,
-    label.color = label_color,
-    edge.color = edge_color,
-    edge.width = edge_width,
-    directed = all_edges$directed,
-    asize = arrow_size,
-    mar = c(2.5, 2.5, 2.5, 2.5)
-  )
-
-  attr(pl, "node_metadata") <- nodes_df[, c("name", "type", "eqn"), drop = FALSE]
-  if (isTRUE(show_eqn)) {
-    attr(pl, "equations") <- stats::setNames(nodes_df$eqn, nodes_df$name)
-  }
-
-  pl
-}
 
 
 #' Prepare for plotting simulation
@@ -1337,6 +992,7 @@ plot.simulate_sdbuildR <- function(x,
 #' @param i Indices of the individual trajectories to plot if type = "sims". Defaults to 1:10. Including a high number of trajectories will slow down plotting considerably.
 #' @param j Indices of the condition to plot. Defaults to 1:9. If only one condition is specified, the plot will not be a grid of subplots.
 #' @param nrows Number of rows in the plot grid. Defaults to ceiling(sqrt(n_conditions)).
+#' @param margin Margin between subplots. Either a single numeric or a vector of length four(left, right, top, bottom). See `?plotly::subplot()` for more details. Defaults to 0.05.
 #' @param shareX If TRUE, share the x-axis across subplots. Defaults to TRUE.
 #' @param shareY If TRUE, share the y-axis across subplots. Defaults to TRUE.
 #' @param palette Colour palette. Must be one of hcl.pals().
@@ -1364,6 +1020,7 @@ plot.ensemble_sdbuildR <- function(x,
                                    vars = NULL,
                                    add_constants = FALSE,
                                    nrows = ceiling(sqrt(max(j))),
+                                   margin = .05,
                                    shareX = TRUE,
                                    shareY = TRUE,
                                    palette = "Dark 2",
@@ -1687,6 +1344,7 @@ plot.ensemble_sdbuildR <- function(x,
 
     pl <- plotly::subplot(pl_list,
       nrows = nrows,
+      margin = margin,
       shareX = shareX,
       shareY = shareY,
       titleY = FALSE,
