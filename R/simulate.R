@@ -39,15 +39,6 @@
 #' sim <- simulate(sim_specs(sfm, only_stocks = FALSE))
 #' plot(sim, add_constants = TRUE)
 #'
-#' @examplesIf Sys.getenv("NOT_CRAN") == "true" && is_julia_ready()
-#' # Use Julia for models with units
-#' sfm <- sim_specs(sdbuildR("coffee_cup"), language = "Julia")
-#' sim <- simulate(sfm)
-#' plot(sim)
-#'
-#' # Close Julia session
-#' use_julia(stop = TRUE)
-#'
 simulate.sdbuildR <- function(
   object,
   nsim = 1, seed = NULL,
@@ -98,29 +89,6 @@ simulate.sdbuildR <- function(
       verbose = verbose
     ))
   } else if (tolower(object[["sim_specs"]][["language"]]) == "r") {
-    # Check model for unit strings
-    if (is.null(object[["assemble"]][["unit_strings"]])) {
-      object[["assemble"]][["unit_strings"]] <- find_unit_strings(object)
-    }
-    eqn_units <- object[["assemble"]][["unit_strings"]]
-
-    # Stop if equations contain unit strings
-    if (length(eqn_units) > 0) {
-      txt <- paste0(
-        "The model contains unit strings u(''), which are not supported for simulations in R.\nSet sim_specs(sfm, language = 'Julia') or modify the equations of these variables:\n\n",
-        paste0(names(eqn_units), collapse = ", ")
-      )
-      cli::cli_warn(c(
-        "!" = "Function {.fn u} with unit strings is not supported for R simulations.",
-        "i" = "Use {.fn sim_specs}(sfm, language = {.code 'Julia'}) for unit support.",
-        ">" = "Or modify the equations of these variables: {paste0(names(eqn_units), collapse = ', ')}"
-      ))
-      return(new_simulate_sdbuildR(
-        success = FALSE,
-        error_message = txt,
-        object = object
-      ))
-    }
 
     return(simulate_r(object,
       only_stocks = only_stocks,
@@ -128,18 +96,6 @@ simulate.sdbuildR <- function(
       verbose = verbose
     ))
   }
-  # else {
-  #   txt <- "Simulation language not supported.\nPlease run either sim_specs(sfm, language = 'Julia') (recommended) or sim_specs(sfm, language = 'R') (no unit or ensemble support)."
-  #   cli::cli_warn(c(
-  #     "!" = "Simulation language must be either {.code 'Julia'} or {.code 'R'}.",
-  #     ">" = "Set: {.fn sim_specs}(sfm, language = {.code 'R'}) or {.fn sim_specs}(sfm, language = {.code 'Julia'})."
-  #   ))
-  #   return(new_simulate_sdbuildR(
-  #     success = FALSE,
-  #     error_message = txt,
-  #     object = object
-  #   ))
-  # }
 }
 
 
@@ -319,7 +275,7 @@ model_properties <- function(object) {
 
 #' Compare two stock-and-flow models
 #'
-#' Compares the structure, equations, units, and simulation settings of two
+#' Compares the structure, equations, and simulation settings of two
 #' `sdbuildR` models, and computes a nonlinearity score for each.
 #'
 #' @param sfm1 A stock-and-flow model of class [`sdbuildR`][sdbuildR()].
@@ -332,7 +288,6 @@ model_properties <- function(object) {
 #'     \item{`removed`}{Variables present in `sfm1` but not `sfm2`.}
 #'     \item{`type_changed`}{Variables with different types.}
 #'     \item{`eqn_changed`}{Variables with different equations.}
-#'     \item{`units_changed`}{Variables with different units.}
 #'     \item{`sim_specs_diff`}{Simulation settings that differ.}
 #'     \item{`properties`}{Per-model counts and nonlinearity scores.}
 #'   }
@@ -363,7 +318,7 @@ compare_models <- function(sfm1, sfm2) {
 
   # Variables added / removed
   make_var_df <- function(vars, nms) {
-    rows <- vars[vars[["name"]] %in% nms, c("name", "type", "eqn", "units"), drop = FALSE]
+    rows <- vars[vars[["name"]] %in% nms, c("name", "type", "eqn"), drop = FALSE]
     rownames(rows) <- NULL
     rows
   }
@@ -394,15 +349,6 @@ compare_models <- function(sfm1, sfm2) {
     stringsAsFactors = FALSE
   )
 
-  u1 <- ifelse(is.na(v1s[["units"]]), "", v1s[["units"]])
-  u2 <- ifelse(is.na(v2s[["units"]]), "", v2s[["units"]])
-  u_diff_idx <- u1 != u2
-  units_changed <- data.frame(
-    name = in_both[u_diff_idx],
-    units_1 = u1[u_diff_idx],
-    units_2 = u2[u_diff_idx],
-    stringsAsFactors = FALSE
-  )
 
   # Sim specs diff
   spec_fields <- c(
@@ -438,7 +384,6 @@ compare_models <- function(sfm1, sfm2) {
     removed = removed,
     type_changed = type_changed,
     eqn_changed = eqn_changed,
-    units_changed = units_changed,
     sim_specs_diff = sim_specs_diff,
     properties = list(
       sfm1 = model_properties(sfm1),
@@ -474,8 +419,7 @@ print.compare_sdbuildR <- function(x, ...) {
   n_removed <- nrow(x[["removed"]])
   n_type <- nrow(x[["type_changed"]])
   n_eqn <- nrow(x[["eqn_changed"]])
-  n_units <- nrow(x[["units_changed"]])
-  total_struct <- n_added + n_removed + n_type + n_eqn + n_units
+  total_struct <- n_added + n_removed + n_type + n_eqn
 
   if (total_struct == 0L) {
     cli::cli_alert_success("No structural differences")
@@ -502,11 +446,6 @@ print.compare_sdbuildR <- function(x, ...) {
           "Equation changed: {.code {ec$name[i]}}: {.code {ec$eqn_1[i]}} \u2192 {.code {ec$eqn_2[i]}}"
         )
       }
-    }
-    if (n_units > 0) {
-      uc <- x[["units_changed"]]
-      entries <- paste0(uc[["name"]], ": \"", uc[["units_1"]], "\" \u2192 \"", uc[["units_2"]], "\"")
-      cli::cli_alert_warning("Units changed ({n_units}): {entries}")
     }
   }
 
@@ -834,39 +773,10 @@ get_build_code <- function(object) {
     ""
   }
 
-  # Model units — name and eqn are NSE in custom_unit() (bare expressions, no quotes)
-  if (nrow(object[["custom_unit"]]) > 0) {
-    cu_defaults <- formals(custom_unit)
-    cu_defaults <- cu_defaults[!names(cu_defaults) %in% c("object", "name")]
-    cu_default_eqn <- as.character(cu_defaults[["eqn"]]) # "1"
-    cu_default_doc <- cu_defaults[["doc"]] # ""
-
-    custom_unit_str <- apply(object[["custom_unit"]], 1, function(row) {
-      row <- as.list(row)
-      unit_name <- row[["name"]] # bare expression, no quotes
-
-      args <- character(0)
-      # eqn: unquoted bare expression; skip if default
-      if (!is.null(row[["eqn"]]) && !identical(row[["eqn"]], cu_default_eqn)) {
-        args <- c(args, paste0("eqn = ", row[["eqn"]]))
-      }
-      # doc: quoted string; skip if default ""
-      if (!is.null(row[["doc"]]) && !identical(row[["doc"]], cu_default_doc)) {
-        args <- c(args, paste0("doc = \"", row[["doc"]], "\""))
-      }
-
-      paste0("custom_unit(", paste(c(unit_name, args), collapse = ", "), ")")
-    }) |>
-      paste0(collapse = " |>\n\t")
-    custom_unit_str <- paste0(" |>\n\t", custom_unit_str)
-  } else {
-    custom_unit_str <- ""
-  }
-
   # Funcs (custom functions) — name is NSE (bare symbol, no quotes)
   func_df <- get_funcs(object)
   if (nrow(func_df) > 0) {
-    func_cols <- intersect(c("name", "eqn", "units", "doc"), names(func_df))
+    func_cols <- intersect(c("name", "eqn", "doc"), names(func_df))
     func_df <- func_df[, func_cols, drop = FALSE]
 
     cf_defaults <- formals(custom_func)
@@ -1015,8 +925,8 @@ get_build_code <- function(object) {
   }
 
   script <- sprintf(
-    "sfm <-\tsdbuildR()%s%s%s%s%s", sim_specs_str,
-    meta_str, var_str, func_str, custom_unit_str
+    "sfm <-\tsdbuildR()%s%s%s%s", sim_specs_str,
+    meta_str, var_str, func_str
   )
 
   paste0(script, "\n")

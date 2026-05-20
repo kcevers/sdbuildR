@@ -9,7 +9,6 @@
   name,
   type = NULL,
   eqn = 0,
-  units = 1,
   label = name,
   doc = "",
   to = NULL,
@@ -33,27 +32,25 @@
 
 \item{eqn}{Equation (or initial value in the case of stocks). Accepts a bare expression (e.g., \code{a * b + 1}), a string (\code{"a * b + 1"}), or a numeric value. Use \verb{!!} to inject from a variable. Defaults to \code{0}.}
 
-\item{units}{Unit of variable, such as 'meter'. Defaults to \code{1} (no units).}
-
 \item{label}{Name of variable used for plotting. Defaults to the same as name.}
 
-\item{doc}{Description of variable. Defaults to "" (no description).}
+\item{doc}{Description of variable. Defaults to \code{""} (no description).}
 
-\item{to}{Target of flow. Accepts a bare symbol or string. Must be a stock in the model. Defaults to NULL to indicate no target.}
+\item{to}{Target of flow. Accepts a bare symbol or string. Must be a stock in the model. Defaults to \code{NULL} to indicate no target.}
 
-\item{from}{Source of flow. Accepts a bare symbol or string. Must be a stock in the model. Defaults to NULL to indicate no source.}
+\item{from}{Source of flow. Accepts a bare symbol or string. Must be a stock in the model. Defaults to \code{NULL} to indicate no source.}
 
-\item{non_negative}{If TRUE, variable is enforced to be non-negative (i.e. strictly 0 or positive). Defaults to FALSE.}
+\item{non_negative}{If TRUE, variable is enforced to be non-negative (i.e. strictly 0 or positive). Defaults to \code{FALSE}.}
 
 \item{xpts}{Only for graphical functions: vector of x-domain points. Must be of the same length as ypts.}
 
 \item{ypts}{Only for graphical functions: vector of y-domain points. Must be of the same length as xpts.}
 
-\item{source}{Only for graphical functions: name of the variable which will serve as the input to the graphical function. Accepts a bare symbol or string. Necessary to specify if units are used. Defaults to NULL.}
+\item{source}{Only for graphical functions: name of the variable which will serve as the input to the graphical function. Accepts a bare symbol or string. Defaults to \code{NULL}.}
 
 \item{interpolation}{Only for graphical functions: interpolation method. Must be either "constant" or "linear". Defaults to "linear".}
 
-\item{extrapolation}{Only for graphical functions: extrapolation method. Must be either "nearest" or "NA". Defaults to "nearest".}
+\item{extrapolation}{Only for graphical functions: extrapolation method. Must be either \code{"nearest"} or \code{"NA"}. Defaults to \code{"nearest"}.}
 
 \item{df}{A data.frame with variable properties to add and/or modify. Each row represents one variable to update. Required columns depend on the variable type being created:
 \itemize{
@@ -65,7 +62,7 @@
 \item Graphical functions require: 'xpts', 'ypts'
 }
 
-Optional columns for all types: 'units', 'label', 'doc', 'non_negative'
+Optional columns for all types: 'label', 'doc', 'non_negative'
 Optional columns for graphical functions: 'source', 'interpolation', 'extrapolation'
 
 Columns not applicable to a variable type should be set to NA. See Examples for a complete demonstration.}
@@ -81,31 +78,31 @@ Add or change variables in a stock-and-flow model. Variables may be stocks, flow
 \section{Stocks}{
  Stocks define the state of the system. They accumulate material or information over time, such as people, products, or beliefs, which creates memory and inertia in the system. As such, stocks need not be tangible. Stocks are variables that can increase and decrease, and can be measured at a single moment in time. The value of a stock is increased or decreased by flows. A stock may have multiple inflows and multiple outflows. The net change in a stock is the sum of its inflows minus the sum of its outflows.
 
-The obligatory properties of a stock are "name", "type", and "eqn". Optional additional properties are "units", "label", "doc", "non_negative".
+The obligatory properties of a stock are "name", "type", and "eqn". Optional additional properties are "label", "doc", "non_negative".
 }
 
 \section{Flows}{
  Flows move material and information through the system. Stocks can only decrease or increase through flows. A flow must flow from and/or flow to a stock. If a flow is not flowing from a stock, the source of the flow is outside of the model boundary. Similarly, if a flow is not flowing to a stock, the destination of the flow is outside the model boundary. Flows are defined in units of material or information moved over time, such as birth rates, revenue, and sales.
 
-The obligatory properties of a flow are "name", "type", "eqn", and either "from", "to", or both. Optional additional properties are "units", "label", "doc", "non_negative".
+The obligatory properties of a flow are "name", "type", "eqn", and either "from", "to", or both. Optional additional properties are "label", "doc", "non_negative".
 }
 
 \section{Constants}{
  Constants are variables that do not change over the course of the simulation - they are time-independent. These may be numbers, but also functions. They can depend only on other constants.
 
-The obligatory properties of a constant are "name", "type", and "eqn". Optional additional properties are "units", "label", "doc", "non_negative".
+The obligatory properties of a constant are "name", "type", and "eqn". Optional additional properties are "label", "doc", "non_negative".
 }
 
 \section{Auxiliaries}{
  Auxiliaries are dynamic variables that change over time. They are used for intermediate calculations in the system, and can depend on other flows, auxiliaries, constants, and stocks.
 
-The obligatory properties of an auxiliary are "name", "type", and "eqn". Optional additional properties are "units", "label", "doc", "non_negative".
+The obligatory properties of an auxiliary are "name", "type", and "eqn". Optional additional properties are "label", "doc", "non_negative".
 }
 
 \section{Graphical functions}{
  Graphical functions, also known as table or lookup functions, are interpolation functions used to define the desired output (y) for a specified input (x). They are defined by a set of x- and y-domain points, which are used to create a piecewise linear function. The interpolation method defines the behavior of the graphical function between x-points ("constant" to return the value of the previous x-point, "linear" to linearly interpolate between defined x-points), and the extrapolation method defines the behavior outside of the x-points ("NA" to return NA values outside of defined x-points, "nearest" to return the value of the closest x-point).
 
-The obligatory properties of a graphical function are "name", "type", "xpts", and "ypts". "xpts" and "ypts" must be of the same length. Optional additional properties are "units", "label", "doc", "source", "interpolation", "extrapolation".
+The obligatory properties of a graphical function are "name", "type", "xpts", and "ypts". "xpts" and "ypts" must be of the same length. Optional additional properties are "label", "doc", "source", "interpolation", "extrapolation".
 }
 
 \section{Non-standard evaluation (NSE)}{
@@ -125,7 +122,7 @@ To inject the value of a variable (rather than its name), use the
 update(sfm, !!my_name, stock, eqn = 100)
 }\if{html}{\out{</div>}}
 
-The \code{label}, \code{doc}, \code{units}, \code{non_negative}, \code{xpts}, \code{ypts},
+The \code{label}, \code{doc},  \code{non_negative}, \code{xpts}, \code{ypts},
 \code{interpolation}, and \code{extrapolation} arguments are not affected by NSE
 and are evaluated normally.
 }

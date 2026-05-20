@@ -13,13 +13,12 @@ sim_specs(
   save_at = NULL,
   save_n = NULL,
   seed = NULL,
-  time_units = "s",
+  time_units = "seconds",
   language = "R",
   only_stocks = TRUE,
   vars = NULL,
   keep_nonnegative_stock = FALSE,
-  keep_nonnegative_flow = TRUE,
-  keep_unit = TRUE
+  keep_nonnegative_flow = TRUE
 )
 }
 \arguments{
@@ -53,11 +52,10 @@ Mutually exclusive with \code{save_at}. Defaults to \code{NULL} (save all).}
 \item{seed}{Seed number to ensure reproducibility across runs in case of
 random elements. Must be an integer. Defaults to \code{NULL} (no seed).}
 
-\item{time_units}{Simulation time unit, e.g. \code{"s"} (second). Defaults to \code{"s"}.}
+\item{time_units}{Simulation time unit. Defaults to \code{"seconds"}.}
 
 \item{language}{Coding language in which to simulate model. Either \code{"R"} or
-\code{"Julia"}. Julia is necessary for using units or running ensemble simulations.
-Defaults to \code{"R"}.}
+\code{"Julia"}. Defaults to \code{"R"}.}
 
 \item{only_stocks}{If \code{TRUE}, only return stocks in output, discarding flows
 and auxiliaries. If \code{FALSE}, flows and auxiliaries are saved, which slows
@@ -72,8 +70,6 @@ of stocks. Defaults to \code{FALSE}.}
 
 \item{keep_nonnegative_flow}{If \code{TRUE}, keeps original non-negativity setting
 of flows. Defaults to \code{TRUE}.}
-
-\item{keep_unit}{If \code{TRUE}, keeps units of variables. Defaults to \code{TRUE}.}
 }
 \value{
 A stock-and-flow model object of class \code{\link{sdbuildR}}
@@ -93,7 +89,7 @@ plot(sim)
 sfm <- sim_specs(sfm, method = rk4)
 
 # Change the time units to "years", such that one time unit is one year
-sfm <- sim_specs(sfm, time_units = years)
+sfm <- sim_specs(sfm, time_units = "years")
 
 # Save at an interval to reduce output size without affecting accuracy
 sfm <- sim_specs(sfm, save_at = 1)
@@ -106,9 +102,6 @@ sfm <- sim_specs(sfm, save_n = 11)
 # Add stochastic initial condition but specify seed to obtain same result
 sfm <- sim_specs(sfm, seed = 1) |>
   update(c(predator, prey), eqn = runif(1, 20, 50))
-
-# Change the simulation language to Julia to use units
-sfm <- sim_specs(sfm, language = Julia)
 
 }
 \seealso{

@@ -5,37 +5,37 @@
 # ==============================================================================
 
 test_that(".expr_to_char() handles NULL", {
-  expect_null(sdbuildR:::.expr_to_char(NULL))
+  expect_null(.expr_to_char(NULL))
 })
 
 test_that(".expr_to_char() passes through character strings", {
-  expect_equal(sdbuildR:::.expr_to_char("hello"), "hello")
-  expect_equal(sdbuildR:::.expr_to_char(c("a", "b")), c("a", "b"))
+  expect_equal(.expr_to_char("hello"), "hello")
+  expect_equal(.expr_to_char(c("a", "b")), c("a", "b"))
 })
 
 test_that(".expr_to_char() converts numeric to character", {
-  expect_equal(sdbuildR:::.expr_to_char(100), "100")
-  expect_equal(sdbuildR:::.expr_to_char(0.5), "0.5")
+  expect_equal(.expr_to_char(100), "100")
+  expect_equal(.expr_to_char(0.5), "0.5")
 })
 
 test_that(".expr_to_char() converts logical to character", {
-  expect_equal(sdbuildR:::.expr_to_char(TRUE), "TRUE")
+  expect_equal(.expr_to_char(TRUE), "TRUE")
 })
 
 test_that(".expr_to_char() converts symbols to names", {
-  expect_equal(sdbuildR:::.expr_to_char(quote(population)), "population")
-  expect_equal(sdbuildR:::.expr_to_char(quote(stock)), "stock")
+  expect_equal(.expr_to_char(quote(population)), "population")
+  expect_equal(.expr_to_char(quote(stock)), "stock")
 })
 
 test_that(".expr_to_char() handles c() calls", {
-  expect_equal(sdbuildR:::.expr_to_char(quote(c(a, b, c))), c("a", "b", "c"))
-  expect_equal(sdbuildR:::.expr_to_char(quote(c("x", "y"))), c("x", "y"))
+  expect_equal(.expr_to_char(quote(c(a, b, c))), c("a", "b", "c"))
+  expect_equal(.expr_to_char(quote(c("x", "y"))), c("x", "y"))
   # Mixed: bare symbols and strings
-  expect_equal(sdbuildR:::.expr_to_char(quote(c("x", y))), c("x", "y"))
+  expect_equal(.expr_to_char(quote(c("x", y))), c("x", "y"))
 })
 
 test_that(".expr_to_char() deparses general expressions", {
-  result <- sdbuildR:::.expr_to_char(quote(a * b + 1))
+  result <- .expr_to_char(quote(a * b + 1))
   expect_true(is.character(result))
   expect_equal(length(result), 1)
   # Deparsed form of a * b + 1
@@ -44,7 +44,7 @@ test_that(".expr_to_char() deparses general expressions", {
 })
 
 test_that(".expr_to_char() handles negative numbers", {
-  result <- sdbuildR:::.expr_to_char(quote(-1))
+  result <- .expr_to_char(quote(-1))
   expect_true(is.character(result))
   expect_true(grepl("-1", result))
 })

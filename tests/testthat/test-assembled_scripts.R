@@ -60,27 +60,6 @@ test_that("R funcs are pre-cached in assemble", {
 })
 
 
-test_that("R custom_unit pre-cached and work correctly", {
-  sfm <- sdbuildR() |>
-    update("S", "stock", eqn = 100) |>
-    update("I", "stock", eqn = 1) |>
-    update("recovery_rate", "constant", eqn = 0.1) |>
-    custom_unit(name = "people", eqn = "person") |>
-    sim_specs(language = "R", start = 0, stop = 10, dt = 0.1)
-
-  # Check that assemble is populated BEFORE simulate
-  expect_equal(length(sfm$assemble), length(empty_assemble()))
-
-  # Model units should be reflected in the units field (empty for R)
-  expect_true(!nzchar(sfm$assemble$units))
-
-  # Switching to Julia should populate the units script
-  sfm <- sim_specs(sfm, language = "Julia", keep_unit = TRUE)
-  expect_true(nzchar(sfm$assemble$units))
-  expect_true(grepl("people", sfm$assemble$units, fixed = TRUE))
-})
-
-
 # Julia Script Assembly Tests ---------------------------------------------------
 
 test_that("Julia script components are pre-cached after sim_specs", {

@@ -1,7 +1,6 @@
 test_that("convert_builtin_functions_IM assignment", {
   sfm <- sdbuildR("predator_prey")
   var_names <- get_model_var(sfm)
-  regex_units <- get_regex_units()
   name <- "test"
   type <- "stock"
 
@@ -39,13 +38,6 @@ test_that("convert_builtin_functions_IM assignment", {
   result <- remove_comments(eqn)
   expect_equal(result$eqn, "min(3,4,5)\n\nmax(3,4,5)")
   expect_equal(result$doc, "# A Test# Another Test")
-
-  # result = convert_equations_IM(eqn,
-  #                                 var_names,
-  #                                 name, type, regex_units)
-  # expect_equal(result[[type]][[name]]$eqn, "{\nmin(c(3, 4, 5))\nmax(c(3, 4, 5))\n}")
-  # expect_equal(result[[type]][[name]]$doc, "# A Test# Another Test")
-
 
   # ** statements
 

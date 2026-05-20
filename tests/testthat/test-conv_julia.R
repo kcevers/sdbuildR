@@ -1,34 +1,29 @@
 test_that("converting equations to Julia", {
   sfm <- sdbuildR("predator_prey")
   var_names <- get_model_var(sfm)
-  regex_units <- get_regex_units()
   name <- var_names[1]
   type <- "aux"
 
   result <- convert_equations_julia(
-    type, name, "min(predator_births)", var_names,
-    regex_units
+    type, name, "min(predator_births)", var_names
   )
   expected <- "min(predator_births)"
   expect_equal(result$eqn, expected)
 
   result <- convert_equations_julia(
-    type, name, "max(predator_births)", var_names,
-    regex_units
+    type, name, "max(predator_births)", var_names
   )
   expected <- "max(predator_births)"
   expect_equal(result$eqn, expected)
 
   result <- convert_equations_julia(
-    type, name, "c(0, predator_births, 1)", var_names,
-    regex_units
+    type, name, "c(0, predator_births, 1)", var_names
   )
   expected <- "[0.0, predator_births, 1.0]"
   expect_equal(result$eqn, expected)
 
   result <- convert_equations_julia(
-    type, name, "range(predator_births, predator_deaths) * 10", var_names,
-    regex_units
+    type, name, "range(predator_births, predator_deaths) * 10", var_names
   )
   expected <- "extrema(predator_births, predator_deaths) .* 10.0"
   expect_equal(result$eqn, expected)
@@ -36,51 +31,44 @@ test_that("converting equations to Julia", {
   result <- convert_equations_julia(
     type, name, "test = function(a, b){
                                        a + b
-                                       }", var_names,
-    regex_units
+                                       }", var_names
   )
   expected <- "function test(a, b) a .+ b end"
   expect_equal(stringr::str_squish(result$eqn), expected)
 
   result <- convert_equations_julia(
-    type, name, "c(9 + 8 - 0, c('1 + 2 + 3'))", var_names,
-    regex_units
+    type, name, "c(9 + 8 - 0, c('1 + 2 + 3'))", var_names
   )
   expected <- "[9.0 .+ 8.0 .- 0.0, [\"1 + 2 + 3\"]]"
   expect_equal(result$eqn, expected)
 
   result <- convert_equations_julia(
-    type, name, "1E08", var_names,
-    regex_units
+    type, name, "1E08", var_names
   )
   expected <- "100000000.0"
   expect_equal(result$eqn, expected)
 
   result <- convert_equations_julia(
-    type, name, "c(T, TRUE, 'F', F+T, NULL, NA)", var_names,
-    regex_units
+    type, name, "c(T, TRUE, 'F', F+T, NULL, NA)", var_names
   )
   expected <- "[true, true, \"F\", false .+ true, nothing, missing]"
   expect_equal(result$eqn, expected)
 
   result <- convert_equations_julia(
-    type, name, "for (i in 1:9){\n\tprint(i)\n}", var_names,
-    regex_units
+    type, name, "for (i in 1:9){\n\tprint(i)\n}", var_names
   )
   expected <- "for  i in 1.0:9.0\n\tprintln(i)\nend"
   expect_equal(result$eqn, expected)
 
   result <- convert_equations_julia(
-    type, name, "if(t<2020){\n\tgf<-0.07\n} else if (t<2025){\n\tgf<-0.03\n} else {\n\tgf<-0.02\n}", var_names,
-    regex_units
+    type, name, "if(t<2020){\n\tgf<-0.07\n} else if (t<2025){\n\tgf<-0.03\n} else {\n\tgf<-0.02\n}", var_names
   )
   expected <- "if t .< 2020.0\n\tgf = 0.07\nelseif t .< 2025.0\n\tgf = 0.03\n else\n\tgf = 0.02\nend"
   expect_equal(result$eqn, expected)
 
   # while
   result <- convert_equations_julia(
-    type, name, "while(a < 0){\n\tif (prey >0){\n\t\ta <- 0\n\t} else {\n\ta = 1\n\t}\n}", var_names,
-    regex_units
+    type, name, "while(a < 0){\n\tif (prey >0){\n\t\ta <- 0\n\t} else {\n\ta = 1\n\t}\n}", var_names
   )
   expected <- "while a .< 0.0\n\tif prey .> 0.0\n\t\ta = 0.0\n\t else\n\ta = 1.0\n\tend\nend"
   expect_equal(result$eqn, expected)
@@ -92,42 +80,36 @@ test_that("converting equations to Julia", {
 test_that("converting functions to Julia with named arguments", {
   sfm <- sdbuildR("predator_prey")
   var_names <- get_model_var(sfm)
-  regex_units <- get_regex_units()
   name <- var_names[1]
   type <- "aux"
 
   # Check that functions without named arguments (e.g. min) have their names stripped
   result <- convert_equations_julia(
-    type, name, "min(x = predator_births)", var_names,
-    regex_units
+    type, name, "min(x = predator_births)", var_names
   )
   expected <- "min(predator_births)"
   expect_equal(result$eqn, expected)
 
   result <- convert_equations_julia(
-    type, name, "min(x = max(y = predator_births))", var_names,
-    regex_units
+    type, name, "min(x = max(y = predator_births))", var_names
   )
   expected <- "min(max(predator_births))"
   expect_equal(result$eqn, expected)
 
   result <- convert_equations_julia(
-    type, name, "range(x = 10, y= 8)", var_names,
-    regex_units
+    type, name, "range(x = 10, y= 8)", var_names
   )
   expected <- "extrema(10.0, 8.0)"
   expect_equal(result$eqn, expected)
 
   result <- convert_equations_julia(
-    type, name, "logistic(x, midpoint = 8)", var_names,
-    regex_units
+    type, name, "logistic(x, midpoint = 8)", var_names
   )
   expected <- "logistic.(x, 1.0, 8.0, 1.0)"
   expect_equal(result$eqn, expected)
 
   result <- convert_equations_julia(
-    type, name, "logistic(x, upper = 8)", var_names,
-    regex_units
+    type, name, "logistic(x, upper = 8)", var_names
   )
   expected <- "logistic.(x, 1.0, 0.0, 8.0)"
   expect_equal(result$eqn, expected)
@@ -135,55 +117,48 @@ test_that("converting functions to Julia with named arguments", {
 
   # Error for na.rm
   expect_error(
-    convert_equations_julia(type, name, "sd(x = test, na.rm = T)", var_names, regex_units),
+    convert_equations_julia(type, name, "sd(x = test, na.rm = T)", var_names),
     "na\\.rm.*not supported"
   )
 
   # Check that wrong arguments throw error
   expect_error(convert_equations_julia(
     type, name, "sd(a, y = test)",
-    var_names,
-    regex_units
+    var_names
   ), "not allowed.*sd|Invalid argument.*sd", ignore.case = TRUE)
 
   expect_error(convert_equations_julia(
     type, name, "rnorm(x = predator_births, mean = 0)",
-    var_names,
-    regex_units
+    var_names
   ), "not allowed.*rnorm|Invalid argument.*rnorm", ignore.case = TRUE)
 
   expect_error(convert_equations_julia(
     type, name, "rnorm(n = 1, x = predator_births, mean = 0)",
-    var_names,
-    regex_units
+    var_names
   ), "not allowed.*rnorm|Invalid argument.*rnorm", ignore.case = TRUE)
 
   expect_error(convert_equations_julia(
     type, name, "rnorm(dt)",
-    var_names,
-    regex_units
+    var_names
   ), "Invalid first argument of.*rnorm")
 
 
   # Check for missing obligatory arguments
   expect_error(convert_equations_julia(
     type, name, "rnorm()",
-    var_names,
-    regex_units
+    var_names
   ), "Missing required argument.*rnorm", ignore.case = TRUE)
 
   expect_error(convert_equations_julia(
     type, name, "rnorm(sd = predator_births, mean = 0)",
-    var_names,
-    regex_units
+    var_names
   ), "Missing required argument.*rnorm", ignore.case = TRUE)
 
 
   # Check error for too many arguments
   expect_error(convert_equations_julia(
     type, name, "dnorm(1, 2, 3, log=FALSE, predator_deaths)",
-    var_names,
-    regex_units
+    var_names
   ), "Too many arguments.*dnorm", ignore.case = TRUE)
 
 
@@ -210,12 +185,11 @@ test_that("custom function definitons work", {
     custom_func("myfunc", "function(x, y = 1, z = 2) x + y")
 
   # Test func definition conversion via convert_equations_julia
-  regex_units <- get_regex_units()
   var_names <- get_model_var(sfm)
   func_eqn <- as.data.frame(sfm, type = "func")[["eqn"]][[1]]
   result <- convert_equations_julia(
     "func", "myfunc",
-    paste0("myfunc = ", func_eqn), var_names, regex_units
+    paste0("myfunc = ", func_eqn), var_names
   )
   expect_equal(result$eqn, "function myfunc(x, y = 1.0, z = 2.0)\n x .+ y\nend")
 
@@ -237,10 +211,10 @@ test_that("custom function definitons work", {
   expect_equal(sim$df[1, "value"], 1 + 2)
 
   # Test named argument conversion to Julia
-  result <- convert_equations_julia("stock", "a", "myfunc(1, y = 2)", var_names, regex_units)
+  result <- convert_equations_julia("stock", "a", "myfunc(1, y = 2)", var_names)
   expect_equal(result$eqn, "myfunc(1.0, y = 2.0)")
 
-  result <- convert_equations_julia("stock", "a", "myfunc(1, z = 3, y = 2)", var_names, regex_units)
+  result <- convert_equations_julia("stock", "a", "myfunc(1, z = 3, y = 2)", var_names)
   expect_equal(result$eqn, "myfunc(1.0, z = 3.0, y = 2.0)")
 
   # Repeat in Julia
@@ -252,218 +226,6 @@ test_that("custom function definitons work", {
     update("a", "stock", eqn = "myfunc(1, 2)")
   sim <- expect_no_error(simulate(sfm))
   expect_equal(sim$df[1, "value"], 1 + 2)
-})
-
-
-test_that("clean units for Julia", {
-  regex_units <- get_regex_units()
-
-  x <- "meter"
-  result <- clean_unit(x, regex_units)
-  expected <- "m"
-  expect_equal(result, expected)
-
-  x <- "meter squared"
-  result <- clean_unit(x, regex_units)
-  expected <- "m^2"
-  expect_equal(result, expected)
-
-  x <- "cubic meter"
-  result <- clean_unit(x, regex_units)
-  expected <- "m^3"
-  expect_equal(result, expected)
-
-  x <- "cubic"
-  result <- clean_unit(x, regex_units)
-  expected <- "cubic"
-  expect_equal(result, expected)
-
-  x <- "meter per 100 sec"
-  result <- clean_unit(x, regex_units)
-  expected <- "m/100s"
-  expect_equal(result, expected)
-
-  x <- "HOUR"
-  result <- clean_unit(x, regex_units)
-  expected <- "HOUR"
-  expect_equal(result, expected)
-
-  x <- "3 feet / minute"
-  result <- clean_unit(x, regex_units)
-  expected <- "3ft/minute"
-  expect_equal(result, expected)
-
-  # Scientific notation
-  x <- "3e+02 watts per hour"
-  result <- clean_unit(x, regex_units)
-  expected <- "300W/hr"
-  expect_equal(result, expected)
-
-  # Special characters except - removed
-  x <- "my-new-unit  /  my!other!unit"
-  result <- clean_unit(x, regex_units)
-  expected <- "my-new-unit/my_other_unit"
-  expect_equal(result, expected)
-
-  # Don't remove phrases
-  x <- "Kilograms Meters per Second"
-  result <- clean_unit(x, regex_units)
-  expected <- "KilogramsMeters/s"
-  expect_equal(result, expected)
-
-  # Check whether it works with numbers
-  x <- " 10 Kilograms Meters per Second "
-  result <- clean_unit(x, regex_units)
-  expected <- "10KilogramsMeters/s"
-  expect_equal(result, expected)
-
-  # Check whether it works with numbers
-  x <- ".1 meters"
-  result <- clean_unit(x, regex_units)
-  expected <- ".1m"
-  expect_equal(result, expected)
-
-  # Check whether it works with numbers
-  x <- "0.8 meters"
-  result <- clean_unit(x, regex_units)
-  expected <- "0.8m"
-  expect_equal(result, expected)
-
-  # Different plurals; leading zeros are preserved
-  x <- "08 inches"
-  result <- clean_unit(x, regex_units)
-  expected <- "08inch"
-  expect_equal(result, expected)
-
-  x <- "180 foot"
-  result <- clean_unit(x, regex_units)
-  expected <- "180ft"
-  expect_equal(result, expected)
-
-  # Prefixes
-  x <- "0.8 Kilometers"
-  result <- clean_unit(x, regex_units)
-  expected <- "0.8km"
-  expect_equal(result, expected)
-
-  x <- "10 millimeters per millisecond"
-  result <- clean_unit(x, regex_units)
-  expected <- "10mm/ms"
-  expect_equal(result, expected)
-
-  # Units that shouldn't have prefixes shouldn't be translated
-  x <- "0.8 kiloinch"
-  result <- clean_unit(x, regex_units)
-  expected <- "0.8kiloinch"
-  expect_equal(result, expected)
-
-  # Units with special characters should be replaced
-  x <- "CO^2"
-  result <- clean_unit(x, regex_units, unit_name = TRUE)
-  expected <- "CO_2"
-  expect_equal(result, expected)
-
-  x <- "C02"
-  result <- clean_unit(x, regex_units, unit_name = TRUE)
-  expected <- "C02"
-  expect_equal(result, expected)
-
-  x <- "CO2"
-  result <- clean_unit(x, regex_units, unit_name = TRUE)
-  expected <- "CO2"
-  expect_equal(result, expected)
-
-  x <- "a+b"
-  result <- clean_unit(x, regex_units, unit_name = TRUE)
-  expected <- "a_b"
-  expect_equal(result, expected)
-
-  x <- "my-unit"
-  result <- clean_unit(x, regex_units, unit_name = TRUE)
-  expected <- "my_unit"
-  expect_equal(result, expected)
-
-  x <- "a/b"
-  result <- clean_unit(x, regex_units, unit_name = TRUE)
-  expected <- "a_b"
-  expect_equal(result, expected)
-
-  x <- "S&P"
-  result <- clean_unit(x, regex_units)
-  expected <- "S_P"
-  expect_equal(result, expected)
-
-  x <- "10 CO^2"
-  result <- clean_unit(x, regex_units)
-  expected <- "10CO^2"
-  expect_equal(result, expected)
-
-  x <- "0.0000000567 Watts/(Meters^2 * Degrees Kelvin^4)"
-  result <- clean_unit(x, regex_units)
-  expected <- "0.0000000567W/(m^2*K^4)"
-  expect_equal(result, expected)
-
-  x <- "0.0000000567 Watts / square meter / Degrees Celsius^4"
-  result <- clean_unit(x, regex_units)
-  expected <- "0.0000000567W/m^2/degC^4"
-  expect_equal(result, expected)
-
-  x <- "273 Degrees Celsius"
-  result <- clean_unit(x, regex_units)
-  expected <- "273degC"
-  expect_equal(result, expected)
-
-  x <- "386000000000000013920400480 Watts"
-  result <- clean_unit(x, regex_units)
-  expected <- "3.86e+26W"
-  expect_equal(result, expected)
-
-  x <- "1004 Joules / kilograms / Degrees Celsius"
-  result <- clean_unit(x, regex_units)
-  expected <- "1004J/kg/degC"
-  expect_equal(result, expected)
-
-  x <- "4180 Joules / kg / Degrees Celsius"
-  result <- clean_unit(x, regex_units)
-  expected <- "4180J/kg/degC"
-  expect_equal(result, expected)
-
-  x <- "1000 kg / cubic meter"
-  result <- clean_unit(x, regex_units)
-  expected <- "1000kg/m^3"
-  expect_equal(result, expected)
-
-  # **test unicode symbols like ohm and degree
-
-  # **test ignore case
-})
-
-
-test_that("clean_unit_in_u() works", {
-  regex_units <- get_regex_units()
-
-  result <- clean_unit_in_u("u('10 Meters') + u('Kilograms per sec') + u('10 pounds squared')", regex_units)
-  expected <- "u(\"10m\") + u(\"kg/s\") + u(\"10lb^2\")"
-  expect_equal(result, expected)
-
-  # Complex equation from Insight Maker
-  x <- "u(\"3.86e26 Watts\") * ([Radius_of_planet] / [Distance_from_sun])^2 / 4\n\n# The sun's total radiation is 3.86×10^26 Watts.  From https://en.wikipedia.org/wiki/Solar_constant#The_Sun.27s_total_radiation\n# Incoming solar radiation = total radiation * (Shadow area of planet) / (Surface area of sphere at planet distance)\n# At Earth's distance, the incoming radiation density should be {1367 Watts / square meter}."
-  result <- clean_unit_in_u(x, regex_units)
-  expected <- "u(\"3.86e+26W\") * ([Radius_of_planet] / [Distance_from_sun])^2 / 4\n\n# The sun's total radiation is 3.86×10^26 Watts.  From https://en.wikipedia.org/wiki/Solar_constant#The_Sun.27s_total_radiation\n# Incoming solar radiation = total radiation * (Shadow area of planet) / (Surface area of sphere at planet distance)\n# At Earth's distance, the incoming radiation density should be {1367 Watts / square meter}."
-  expect_equal(result, expected)
-
-  # Check whether repeating units are all replaced
-  x <- "u('10 Meters squared per second') - u('10lb^2') + u('10 Meters squared per second') * + u('10lb^2')"
-  result <- clean_unit_in_u(x, regex_units)
-  expected <- "u(\"10m^2/s\") - u(\"10lb^2\") + u(\"10m^2/s\") * + u(\"10lb^2\")"
-  expect_equal(result, expected)
-
-  # Nested unit string throws error
-  x <- "u('10 Meters squared per second + u('2 meters')')"
-  expect_error(
-    clean_unit_in_u(x, regex_units),
-    "Nested unit specification detected"
-  )
 })
 
 
@@ -519,21 +281,6 @@ test_that("converting statements", {
 
   # **to do: hysteresis model
   # "F <- function(x,a,d){\nif (x > a + d){\n  1\n  } else if (x > a){\n   1-2*(((a-x + d)/(2*d))^2)\n   } else {\n       ifelse(x>a-d, 2*(((x-a + d)/(2*d))^2), 0)\n}\n}"
-})
-
-
-test_that("replace_written_powers() works", {
-  result <- replace_written_powers("cubic meter")
-  expected <- "meter^3"
-  expect_equal(result, expected)
-
-  result <- replace_written_powers("100 Meters squared")
-  expected <- "100 Meters^2"
-  expect_equal(result, expected)
-
-  result <- replace_written_powers("squared cubic meter")
-  expected <- "meter^3^2"
-  expect_equal(result, expected)
 })
 
 

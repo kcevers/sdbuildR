@@ -25,8 +25,6 @@ The following problems are detected:
 \item Flows connected to a stock that does not exist
 \item Undefined variable references in equations
 \item Circularity in equations
-\item Connected stocks and flows without both having units or no units
-\item Missing unit definitions
 }
 
 The following potential problems are detected:

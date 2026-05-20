@@ -12,7 +12,6 @@ test_that("sdbuildR() has required top-level components", {
   expect_true("meta" %in% names(sfm))
   expect_true("sim_specs" %in% names(sfm))
   expect_true("variables" %in% names(sfm))
-  expect_true("custom_unit" %in% names(sfm))
 })
 
 
@@ -23,9 +22,6 @@ test_that("sdbuildR() initializes empty data frames with columns", {
   expect_equal(nrow(sfm$variables), 0)
   expect_true(all(c("name", "type", "eqn") %in% names(sfm$variables)))
 
-  expect_s3_class(sfm$custom_unit, "data.frame")
-  expect_equal(nrow(sfm$custom_unit), 0)
-  expect_true("name" %in% names(sfm$custom_unit))
 })
 
 
@@ -116,27 +112,6 @@ test_that("validate_sdbuildR warns but does not mutate", {
   # Verify no mutation occurred
   flow_row <- sfm[["variables"]][sfm[["variables"]][["name"]] == "BadFlow", ]
   expect_equal(flow_row[["to"]], "Aux")
-})
-
-
-test_that("sanitize_sdbuildR sets custom_unit prefix defaults", {
-  sfm <- sdbuildR()
-  sfm[["custom_unit"]] <- data.frame(
-    name = "myunit", eqn = "1", doc = "",
-    stringsAsFactors = FALSE
-  )
-  sfm <- sanitize_sdbuildR(sfm)
-  expect_false(sfm[["custom_unit"]][["prefix"]])
-})
-
-
-test_that("validate_sdbuildR warns about missing columns", {
-  sfm <- sdbuildR()
-  sfm[["custom_unit"]] <- data.frame(
-    name = "myunit", eqn = "1",
-    stringsAsFactors = FALSE
-  )
-  expect_warning(sfm <- validate_sdbuildR(sfm), "missing columns")
 })
 
 

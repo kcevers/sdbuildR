@@ -80,23 +80,6 @@ summarise_by <- function(df, by, quantiles, q_names) {
 ensemble_r <- function(object, n, return_sims, conditions, cross,
                        quantiles, only_stocks, vars = NULL, verbose,
                        n_conditions, total_sims) {
-  # Check model for unit strings (not supported in R)
-  if (is.null(object[["assemble"]][["unit_strings"]])) {
-    object[["assemble"]][["unit_strings"]] <- find_unit_strings(object)
-  }
-  eqn_units <- object[["assemble"]][["unit_strings"]]
-  if (length(eqn_units) > 0) {
-    msg <- paste0(
-      "Unit strings u('') are not supported for R ensemble simulations.",
-      " Set sim_specs(object, language = 'Julia') or modify these variables: ",
-      paste0(names(eqn_units), collapse = ", ")
-    )
-    return(new_ensemble_sdbuildR(
-      success = FALSE,
-      error_message = msg,
-      object = object
-    ))
-  }
 
   # Build conditions grid
   if (!is.null(conditions)) {
@@ -373,12 +356,22 @@ assemble_ensemble_results_r <- function(good_results, n, n_conditions,
 
     # Constants
     const_vals <- res[["constants"]]
-    all_constants[[k]] <- data.frame(
-      i = res[["i"]], j = res[["j"]],
-      variable = names(const_vals),
-      value = unname(const_vals),
-      stringsAsFactors = FALSE
-    )
+    if (length(const_vals) == 0L) {
+      all_constants[[k]] <- data.frame(
+        i = integer(0),
+        j = integer(0),
+        variable = character(0),
+        value = numeric(0),
+        stringsAsFactors = FALSE
+      )
+    } else {
+      all_constants[[k]] <- data.frame(
+        i = res[["i"]], j = res[["j"]],
+        variable = names(const_vals),
+        value = unname(const_vals),
+        stringsAsFactors = FALSE
+      )
+    }
   }
 
   combined_df <- data.table::rbindlist(all_dfs, use.names = TRUE)

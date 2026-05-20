@@ -305,26 +305,38 @@ verify.simulate_sdbuildR <- function(object, verbose = TRUE, ...) {
 #'
 #' @examples
 #' sfm <- sdbuildR("SIR") |>
-#'   unit_test(expr = all(S >= 0)) |>
-#'   unit_test(expr = all(diff(R) >= 0), label = "R increases over time") |>
-#'   unit_test(
-#'     expr = all(I == I[1]),
-#'     label = "When beta is zero, no one gets infected",
-#'     conditions = list(beta = 0)
+#'   unit_test(expr = all(Susceptible >= 0)) 
+#' 
+#' # Run unit tests
+#' verify(sfm)
+#' 
+#' # Add test with label
+#' sfm <- unit_test(sfm, label = "Recovered increases", 
+#'                  expr = all(diff(Recovered) >= 0))
+#' verify(sfm)
+#' 
+#' # Add test with conditions
+#' sfm <- unit_test(sfm,
+#'     expr = all(Infected == Infected[1]),
+#'     label = "When Beta is zero, no one gets infected",
+#'     conditions = list(Beta = 0)
 #'   )
-#'
+#' verify(sfm)
+#' 
+#' # View all tests
 #' unit_tests(sfm)
 #'
-#' # Modify test 1 by nr: deactivate it
+#' # Deactivate test nr. 1
 #' sfm <- unit_test(sfm, nr = 1, active = FALSE)
-#'
-#' # Modify by label: change the expression
-#' sfm <- unit_test(sfm,
-#'   label = "R increases over time",
-#'   expr = all(diff(R) > -1)
-#' )
-#'
 #' verify(sfm)
+#'
+#' # Modify test by label, e.g., to change the expression
+#' sfm <- unit_test(sfm,
+#'   label = "Recovered increases over time",
+#'   expr = all(diff(Recovered) > -1)
+#' )
+#' verify(sfm)
+#' 
 unit_test <- function(object, nr, expr, label, conditions = list(), active = TRUE) {
   check_sdbuildR(object)
 
@@ -653,14 +665,14 @@ unit_test <- function(object, nr, expr, label, conditions = list(), active = TRU
 #'
 #' @examples
 #' sfm <- sdbuildR("SIR") |>
-#'   unit_test(label = "S is non-negative", expr = all(S >= 0)) |>
-#'   unit_test(label = "R increases", expr = all(diff(R) >= 0))
+#'   unit_test(label = "Susceptible is non-negative", expr = all(Susceptible >= 0)) |>
+#'   unit_test(label = "Recovered increases", expr = all(diff(Recovered) >= 0))
 #'
 #' # Remove by nr
 #' sfm <- discard_unit_test(sfm, nr = 1)
 #'
 #' # Remove by label
-#' sfm <- discard_unit_test(sfm, label = "R increases")
+#' sfm <- discard_unit_test(sfm, label = "Recovered increases")
 discard_unit_test <- function(object, label, nr) {
   check_sdbuildR(object)
 
@@ -712,7 +724,7 @@ discard_unit_test <- function(object, label, nr) {
       idx_to_remove <- which(all_labels %in% labels_wanted)
     }
   } else {
-    cli::cli_abort("Please specify {.arg nr} or {.arg label} to identify the test(s) to remove.")
+    cli::cli_abort(c("x" = "Please specify {.arg nr} or {.arg label} to identify the test(s) to remove."))
   }
 
   # Batch remove (remaining tests are renumbered implicitly by position)
@@ -746,8 +758,9 @@ discard_unit_test <- function(object, label, nr) {
 #'
 #' @examples
 #' sfm <- sdbuildR("SIR") |>
-#'   unit_test(expr = all(S >= 0)) |>
-#'   unit_test(label = "R increases over time", expr = all(diff(R) >= 0))
+#'   unit_test(expr = all(Susceptible >= 0)) |>
+#'   unit_test(label = "Recovered increases over time", 
+#'             expr = all(diff(Recovered) >= 0))
 #'
 #' unit_tests(sfm)
 unit_tests <- function(object) {
@@ -811,7 +824,7 @@ print.verify_sdbuildR <- function(x, ...) {
   results <- x[["results"]]
 
   if (length(results) == 0) {
-    cli::cli_inform("No unit tests to report.")
+    cli::cli_inform(c("i" = "No unit tests to report."))
     return(invisible(x))
   }
 

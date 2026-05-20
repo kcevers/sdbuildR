@@ -46,8 +46,10 @@ use \code{verify(object)} (the unsimulated model) to run all tests.
 \examples{
 sfm <- sdbuildR("SIR") |>
   unit_test(expr = all(Susceptible >= 0)) |>
-  unit_test(label = "Recovered increases over time", 
-           expr = all(diff(Recovered) >= 0))
+  unit_test(
+    label = "Recovered increases over time",
+    expr = all(diff(Recovered) >= 0)
+  )
 
 verify(sfm)
 

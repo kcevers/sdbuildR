@@ -2088,6 +2088,9 @@ plot(sim, vars = vars)
 
 To illustrate the impact of aleatory uncertainty in our JD-R model, we substitute the deterministic formulation of demand influx for a stochastic process. This more closely aligns with JD-R theory, which posits job demands may fluctuate rapidly on a daily basis due to environmental volatility \parencite{Bakker2024JobQuestions, Downes2021IncorporatingMeta-Analysis}. To implement this, we adopt the Cox-Ingersoll-Ross model \parencite{cox_theory_1985}, a classical stochastic process. It consists of both a deterministic and stochastic component. The former ensures `D` reverts to its mean `D_mean` with a rate `r_D`. The latter adds normally distributed noise at each step, and scales this with the amount of demands. As long as `r_D` and `D_mean` are positive, this ensures that the inflow to demands cannot become negative, as noise is reduced to zero when demands are zero.
 
+
+**Euler-Maruyama without the √dt scaling ?
+
 ```{r}
 sfm <- sfm0 |>
     constant(demand_mean, eqn = 1) |>

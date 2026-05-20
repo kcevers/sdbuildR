@@ -88,7 +88,7 @@ test_that("diagnose() returns diagnose_sdbuildR with all 11 checks", {
     "no_stocks", "no_flows", "disconnected_stocks",
     "disconnected_flows", "bad_flow_connections",
     "zero_equations", "undefined_vars",
-    "circular_static", "circular_dynamic", "undefined_units",
+    "circular_static", "circular_dynamic", 
     "unit_test_refs"
   )
   expect_true(all(expected_names %in% names(result)))

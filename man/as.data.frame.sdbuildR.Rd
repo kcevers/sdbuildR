@@ -23,23 +23,22 @@
 
 \item{name}{Variable names to retain in the data frame. Defaults to \code{NULL} to include all variables.}
 
-\item{type}{Variable types to retain in the data frame. Must be one or more of 'stock', 'flow', 'constant', 'aux', 'gf', 'func', or 'custom_unit'. Defaults to \code{NULL} to include all types.}
+\item{type}{Variable types to retain in the data frame. Must be one or more of 'stock', 'flow', 'constant', 'aux', 'gf', or 'func'. Defaults to \code{NULL} to include all types.}
 
 \item{properties}{Variable properties to retain in the data frame. Defaults to \code{NULL} to include all properties.}
 
 \item{...}{Optional arguments}
 }
 \value{
-A data.frame with one row per model component (variable, unit definition, or func).
+A data.frame with one row per model component.
 Common columns include \code{type} (component type), \code{name} (variable name),
-\code{eqn} (equation), \code{units} (units of measurement), and \code{label}
-(descriptive label). Additional columns may include \code{to}, \code{from},
+\code{eqn} (equation), and \code{label} (descriptive label). Additional columns may include \code{to}, \code{from},
 \code{non_negative}, and others depending on variable types. The exact columns returned
 depend on the \code{type} and \code{properties} arguments. Returns an empty data.frame
 if no components match the filters.
 }
 \description{
-Create a data frame with properties of all model variables, model units, and funcs. Specify the variable types, variable names, and/or properties to get a subset of the data frame.
+Create a data frame with properties of all model variables and functions. Specify the variable types, variable names, and/or properties to get a subset of the data frame.
 }
 \examples{
 as.data.frame(sdbuildR("SIR"))

@@ -73,11 +73,6 @@ test_that("saveat_func works", {
 })
 
 
-test_that("convert_u works", {
-  expect_equal(convert_u(1, u("s")), 1)
-})
-
-
 test_that("logistic works", {
   expect_equal(logistic(0), 0.5)
   expect_equal(logistic(0.9, midpoint = .9), 0.5)
@@ -230,17 +225,6 @@ test_that("step works (Julia)", {
 
   # Plotting with add_constants covered in consolidated test-plot-simulate_sdbuildR.R
 
-  # Also works with units
-  expect_no_error(sfm0 |> update("input", "constant", eqn = "step(times, start = u('5seconds'))"))
-  sfm <- sfm0 |>
-    update("input", "constant", eqn = "step(times, start = u('5seconds'))") |>
-    sim_specs(language = "Julia", time_units = "seconds")
-  sim <- expect_no_error(simulate(sfm))
-  df <- as.data.frame(sim)
-  a <- df[df$variable == "a", "value"]
-  expect_equal(a[which(df$time < 5)[1]], 0)
-  expect_equal(a[which(near(df$time, 5))[1]], 0)
-  expect_equal(a[which(df$time > 5)[1]], 0.1 * 1) # dt * height step
 })
 
 

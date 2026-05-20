@@ -79,26 +79,38 @@ an error is thrown if an identical \code{expr} already exists on another test.
 
 \examples{
 sfm <- sdbuildR("SIR") |>
-  unit_test(expr = all(S >= 0)) |>
-  unit_test(expr = all(diff(R) >= 0), label = "R increases over time") |>
-  unit_test(
-    expr = all(I == I[1]),
-    label = "When beta is zero, no one gets infected",
-    conditions = list(beta = 0)
-  )
+  unit_test(expr = all(Susceptible >= 0)) 
 
+# Run unit tests
+verify(sfm)
+
+# Add test with label
+sfm <- unit_test(sfm, label = "Recovered increases", 
+                 expr = all(diff(Recovered) >= 0))
+verify(sfm)
+
+# Add test with conditions
+sfm <- unit_test(sfm,
+    expr = all(Infected == Infected[1]),
+    label = "When Beta is zero, no one gets infected",
+    conditions = list(Beta = 0)
+  )
+verify(sfm)
+
+# View all tests
 unit_tests(sfm)
 
-# Modify test 1 by nr: deactivate it
+# Deactivate test nr. 1
 sfm <- unit_test(sfm, nr = 1, active = FALSE)
-
-# Modify by label: change the expression
-sfm <- unit_test(sfm,
-  label = "R increases over time",
-  expr = all(diff(R) > -1)
-)
-
 verify(sfm)
+
+# Modify test by label, e.g., to change the expression
+sfm <- unit_test(sfm,
+  label = "Recovered increases over time",
+  expr = all(diff(Recovered) > -1)
+)
+verify(sfm)
+
 }
 \seealso{
 \code{\link[=verify]{verify()}}, \code{\link[=unit_tests]{unit_tests()}}, \code{\link[=discard_unit_test]{discard_unit_test()}}

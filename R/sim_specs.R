@@ -26,10 +26,9 @@
 #'   Mutually exclusive with `save_at`. Defaults to `NULL` (save all).
 #' @param seed Seed number to ensure reproducibility across runs in case of
 #'   random elements. Must be an integer. Defaults to `NULL` (no seed).
-#' @param time_units Simulation time unit, e.g. `"s"` (second). Defaults to `"s"`.
+#' @param time_units Simulation time unit. Defaults to `"seconds"`. 
 #' @param language Coding language in which to simulate model. Either `"R"` or
-#'   `"Julia"`. Julia is necessary for using units or running ensemble simulations.
-#'   Defaults to `"R"`.
+#'   `"Julia"`. Defaults to `"R"`.
 #' @param only_stocks If `TRUE`, only return stocks in output, discarding flows
 #'   and auxiliaries. If `FALSE`, flows and auxiliaries are saved, which slows
 #'   down the simulation. Defaults to `TRUE`.
@@ -40,7 +39,6 @@
 #'   of stocks. Defaults to `FALSE`.
 #' @param keep_nonnegative_flow If `TRUE`, keeps original non-negativity setting
 #'   of flows. Defaults to `TRUE`.
-#' @param keep_unit If `TRUE`, keeps units of variables. Defaults to `TRUE`.
 #'
 #' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR]
 #' @concept simulate
@@ -57,7 +55,7 @@
 #' sfm <- sim_specs(sfm, method = rk4)
 #'
 #' # Change the time units to "years", such that one time unit is one year
-#' sfm <- sim_specs(sfm, time_units = years)
+#' sfm <- sim_specs(sfm, time_units = "years")
 #'
 #' # Save at an interval to reduce output size without affecting accuracy
 #' sfm <- sim_specs(sfm, save_at = 1)
@@ -71,9 +69,6 @@
 #' sfm <- sim_specs(sfm, seed = 1) |>
 #'   update(c(predator, prey), eqn = runif(1, 20, 50))
 #'
-#' # Change the simulation language to Julia to use units
-#' sfm <- sim_specs(sfm, language = Julia)
-#'
 sim_specs <- function(object,
                       method = "euler",
                       start = 0,
@@ -82,13 +77,12 @@ sim_specs <- function(object,
                       save_at = NULL,
                       save_n = NULL,
                       seed = NULL,
-                      time_units = "s",
+                      time_units = "seconds",
                       language = "R",
                       only_stocks = TRUE,
                       vars = NULL,
                       keep_nonnegative_stock = FALSE,
-                      keep_nonnegative_flow = TRUE,
-                      keep_unit = TRUE) {
+                      keep_nonnegative_flow = TRUE) {
   # Basic check
   if (missing(object)) {
     missing_arg("object")
@@ -96,7 +90,6 @@ sim_specs <- function(object,
   check_sdbuildR(object)
 
   # NSE: allow bare symbols, e.g. sim_specs(object, language = Julia, method = rk4)
-  if (!missing(time_units)) time_units <- .expr_to_char(rlang::enexpr(time_units))
   if (!missing(method)) method <- .expr_to_char(rlang::enexpr(method))
   if (!missing(language)) language <- .expr_to_char(rlang::enexpr(language))
 
@@ -165,22 +158,9 @@ sim_specs <- function(object,
       ))
     }
 
-    # Time units can only contain letters, spaces, or underscores
-    if (any(grepl("[^a-zA-Z _]", time_units))) {
-      cli::cli_abort(c(
-        "Invalid {.arg time_units} format.",
-        "x" = "The {.arg time_units} argument can only contain letters, spaces, or underscores."
-      ))
-    }
-    regex_time_units <- get_regex_time_units()
-    time_units <- clean_unit(time_units, regex_time_units)
+    # Time units are merely the x-axis label; can be whatever the user specifies as long as it is a string
+    time_units <- as.character(time_units)
 
-    if (!any(time_units == unname(regex_time_units))) {
-      cli::cli_abort(c(
-        "Invalid time unit {.val {time_units}}.",
-        "i" = "Available time units are: {paste0(unique(unname(regex_time_units)), collapse = ', ')}"
-      ))
-    }
   }
 
   # Validate method
@@ -262,7 +242,6 @@ sim_specs <- function(object,
   if (!missing(vars)) argg$vars <- vars
   if (!missing(keep_nonnegative_stock)) argg$keep_nonnegative_stock <- keep_nonnegative_stock
   if (!missing(keep_nonnegative_flow)) argg$keep_nonnegative_flow <- keep_nonnegative_flow
-  if (!missing(keep_unit)) argg$keep_unit <- keep_unit
   # seed handled separately: c() preserves NULL elements, unlike $ assignment
   if (!missing(seed)) argg <- c(argg, list(seed = seed))
 
@@ -293,7 +272,7 @@ sim_specs <- function(object,
   if (all(names(argg) %in% c("language", time_related))) {
     object <- invalidate_assemble(object, "times")
   } else {
-    # keep_unit, keep_nonnegative_stock/flow affect equation formatting
+    # keep_nonnegative_stock/flow affect equation formatting
     object <- invalidate_assemble(object, "all")
   }
 

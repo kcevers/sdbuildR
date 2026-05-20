@@ -425,8 +425,6 @@ clean_type <- function(type) {
   # Remove trailing s if present
   type <- gsub("s$", "", type)
 
-  type[type == "custom_units"] <- "custom_unit"
-
   # Allow "function" as alias for "func"
   type[type == "function"] <- "func"
   type[type == "custom_func"] <- "func"
@@ -441,7 +439,9 @@ clean_type <- function(type) {
 
 
 .julia_func_names <- function() {
-  c("is_function_or_interp", "itp", "make_ramp", "make_step", "make_pulse", "make_seasonal", "round_IM", "logit", "expit", "logistic", "nonnegative", "rbool", "rdist", "indexof", "contains_IM", "round_", "\u2295", "convert_u", "saveat_func", "clean_df", "clean_constants", "clean_init", "transform_intermediaries", "generate_param_combinations", "ensemble_to_df", "ensemble_to_df_threaded", "ensemble_summ", "ensemble_summ_threaded")
+  c("is_function_or_interp", "itp", "make_ramp", "make_step", "make_pulse", "make_seasonal", "round_IM", "logit", "expit", "logistic", "nonnegative", "rbool", "rdist", "indexof", "contains_IM", "round_", "\u2295", 
+  # "convert_u", 
+  "saveat_func", "clean_df", "clean_constants", "clean_init", "transform_intermediaries", "generate_param_combinations", "ensemble_to_df", "ensemble_to_df_threaded", "ensemble_summ", "ensemble_summ_threaded")
 }
 
 
@@ -489,10 +489,12 @@ clean_name <- function(new, protected = NULL) {
       "jl_pkg_name", "model_setup_name", "func_name", "initial_value_name",
       "initial_value_names", "parameter_name", "parameter_names",
       "state_name", "time_name", "change_state_name", "times_name",
-      "timestep_name", "saveat_name", "time_units_name", "ensemble_iter",
+      "timestep_name", "saveat_name", "ensemble_iter",
       "ode_func_name", "callback_func_name", "callback_name", "intermediaries",
-      "rootfun_name", "eventfun_name", "convert_u_func", "sdbuildR_units",
-      "MyCustomUnits", "init_sdbuildR"
+      "rootfun_name", "eventfun_name", 
+      #  "sdbuildR_units",
+      # "MyCustomUnits", 
+      "init_sdbuildR"
     )])),
     as.character(stats::na.omit(protected))
   ) |> unique()
@@ -512,19 +514,10 @@ clean_name <- function(new, protected = NULL) {
 
 #' Get allowed variable types for sdbuildR model
 #'
-#' @param only_model_var Logical. If TRUE (default), returns core model variable types
-#'   (stock, flow, constant, aux, lookup, func). If FALSE, also includes custom_unit
-#'   for use in query/filter contexts.
-#'
 #' @returns Character vector of allowed type names.
 #' @noRd
-.sdbuildR_types <- function(only_model_var = TRUE) {
-  core_types <- c("stock", "flow", "constant", "aux", "lookup", "func")
-  if (only_model_var) {
-    core_types
-  } else {
-    c(core_types, "custom_unit")
-  }
+.sdbuildR_types <- function() {
+  c("stock", "flow", "constant", "aux", "lookup", "func")
 }
 
 
@@ -549,7 +542,7 @@ get_funcs <- function(object) {
 }
 
 
-#' Create data frame with stock-and-flow model variables, types, labels, and units
+#' Create data frame with stock-and-flow model variables, types, and labels
 #'
 #' @inheritParams update.sdbuildR
 #'
@@ -557,17 +550,16 @@ get_funcs <- function(object) {
 #' @noRd
 #'
 get_names <- function(object) {
-  # Return variables data frame (already has type, name, label, units)
+  # Return variables data frame (already has type, name, label)
   if (nrow(object[["variables"]]) == 0) {
     names_df <- data.frame(
       type = character(0),
       name = character(0),
       label = character(0),
-      units = character(0),
       stringsAsFactors = FALSE
     )
   } else {
-    names_df <- object[["variables"]][, c("type", "name", "label", "units")]
+    names_df <- object[["variables"]][, c("type", "name", "label")]
   }
 
   rownames(names_df) <- NULL
@@ -965,7 +957,7 @@ get_variables_by_type <- function(object, type) {
 #'
 #' @param object A stock-and-flow model
 #' @param type Type of variable to extract
-#' @param column Column name to extract (e.g., "eqn_str", "units", etc.)
+#' @param column Column name to extract (e.g., "eqn_str")
 #'
 #' @returns Named list where names are variable names and values are the column values
 #' @noRd
@@ -1225,7 +1217,7 @@ create_import_context <- function(vendor) {
 
     # Variables in intermediate state (not yet ready for object)
     # This is a list of variable specs, NOT yet a data frame
-    # Each element has: name, type, eqn, units, etc.
+    # Each element has: name, type, eqn, etc.
     variables = list(),
 
     # Original variable info (for import_metadata, captured before transformations)
@@ -1236,9 +1228,6 @@ create_import_context <- function(vendor) {
 
     # Original macro info (for import_metadata)
     original_macros = NULL,
-
-    # Custom units (ready to add to object)
-    units = NULL,
 
     # Settings from the source model
     settings = list(),
@@ -1310,7 +1299,6 @@ ctx_capture_original_variables <- function(ctx) {
       original_id = vapply(ctx$variables, function(x) x[["id_insightmaker"]] %||% NA_character_, character(1)),
       original_name = vapply(ctx$variables, function(x) x[["name_insightmaker"]] %||% x[["name"]] %||% NA_character_, character(1)),
       original_eqn = vapply(ctx$variables, function(x) x[["eqn_insightmaker"]] %||% x[["eqn"]] %||% NA_character_, character(1)),
-      original_units = vapply(ctx$variables, function(x) x[["units_insightmaker"]] %||% x[["units"]] %||% "1", character(1)),
       stringsAsFactors = FALSE
     )
   } else {
@@ -1319,7 +1307,6 @@ ctx_capture_original_variables <- function(ctx) {
       original_id = character(0),
       original_name = character(0),
       original_eqn = character(0),
-      original_units = character(0),
       stringsAsFactors = FALSE
     )
   }
@@ -1382,9 +1369,8 @@ ctx_add_variables <- function(ctx) {
 
   # Temporary columns that need to be added manually after add_variable_row()
   temp_cols <- c(
-    "eqn_insightmaker", "units_insightmaker",
-    "name_insightmaker", "id_insightmaker",
-    "conveyor", "len"
+    "eqn_insightmaker", "name_insightmaker", "id_insightmaker"
+    # "conveyor", "len"
   )
 
   # Add temporary columns to object$variables if they don't exist yet

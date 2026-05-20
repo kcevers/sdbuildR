@@ -2,8 +2,10 @@
 P <- list(
   debug = FALSE,
   insightmaker_version = 38, # version sdbuildR was made with
-  jl_pkg_name = "SystemDynamicsBuildR",
-  jl_pkg_version = "0.2.5", # required version SystemDynamicsBuildR
+  # jl_pkg_name = "SystemDynamicsBuildR",
+  # jl_pkg_version = "0.2.5", # required version SystemDynamicsBuildR
+  jl_pkg_name = "StockFlowRSupport",
+  jl_pkg_version_github_release = "0.0.1", # required version StockFlowRSupport
   jl_required_version = "1.10", # required minimum version of Julia
   model_setup_name = "model_setup",
   func_name = "func",
@@ -20,8 +22,8 @@ P <- list(
   saveat_name = "saveat",
   savefrom_name = "savefrom",
   tstops_name = "tstops",
-  units_name = "units",
-  time_units_name = "time_units",
+  # units_name = "units",
+  # time_units_name = "time_units",
   # conveyor_suffix = "_conv",
   # delayN_suffix = "_delayN",
   # smoothN_suffix = "_smoothN",
@@ -37,7 +39,9 @@ P <- list(
   ensemble_output_func = "output_func",
   ensemble_conditions = "ensemble_conditions",
   ensemble_pars = "ensemble_pars",
-  ensemble_iter = "i",
+  ensemble_ctx = "ctx",
+  ensemble_iter = "sim_id",#"i",
+  ensemble_rng = "rng",
   ensemble_n = "ensemble_n",
   ensemble_total_n = "ensemble_total_n",
   ensemble_func_name = "prob_func",
@@ -56,9 +60,9 @@ P <- list(
   rootfun_name = "rootfun",
   eventfun_name = "eventfun",
   nonneg_stock_name = "nonneg_stock",
-  convert_u_func = "convert_u",
-  sdbuildR_units = "sdbuildR_units",
-  MyCustomUnits = "MyCustomUnits",
+  # convert_u_func = "convert_u",
+  # sdbuildR_units = "sdbuildR_units",
+  # MyCustomUnits = "MyCustomUnits",
   saveat_func = "saveat_func",
   init_sdbuildR = "init_sdbuildR"
 )

@@ -10,7 +10,7 @@ articles:
   - articles/jdr
   - articles/julia-setup
   - articles/ensemble
-  - articles/units
+  - articles/unit-tests
 reference:
 - title: Building stock-and-flow models
 - contents:
@@ -30,9 +30,6 @@ reference:
 - title: Custom functions
 - contents:
   - has_concept("custom")
-- title: Units
-- contents:
-  - has_concept("units")
 - title: Internal functions
 - contents:
   - has_concept("internal")

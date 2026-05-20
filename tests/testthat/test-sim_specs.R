@@ -19,14 +19,6 @@ test_that("sim_specs() modifies dt", {
   expect_equal(as.numeric(sfm$sim_specs$dt), 0.1)
 })
 
-test_that("sim_specs() modifies time_units", {
-  sfm <- sdbuildR() |>
-    sim_specs(time_units = "days")
-
-  # Note: time_units get converted to abbreviations internally
-  expect_true(sfm$sim_specs$time_units %in% c("d", "days"))
-})
-
 test_that("sim_specs() modifies method", {
   sfm <- sdbuildR() |>
     sim_specs(method = "rk4")
@@ -139,18 +131,13 @@ test_that("sim_specs() validates method parameter", {
 
 test_that("sim_specs() handles time_units", {
   sfm <- sdbuildR()
-  sfm1 <- update(sfm, "Stock1", type = "stock")
 
-  expect_no_error(sim_specs(sfm1, time_units = "days"))
-  expect_no_error(sim_specs(sfm1, time_units = "hours"))
-  expect_no_error(sim_specs(sfm1, time_units = "years"))
-})
-
-test_that("sim_specs() rejects invalid time_units", {
-  sfm <- sdbuildR()
-  sfm1 <- update(sfm, "Stock1", type = "stock")
-
-  expect_error(sim_specs(sfm1, time_units = "invalid123"), "only contain letters")
+  sfm <- expect_no_error(sim_specs(sfm, time_units = "days"))
+  expect_equal(sfm[["sim_specs"]][["time_units"]], "days")
+  sfm <- expect_no_error(sim_specs(sfm, time_units = "hours"))
+  expect_equal(sfm[["sim_specs"]][["time_units"]], "hours")
+  sfm <- expect_no_error(sim_specs(sfm, time_units = "years"))
+  expect_equal(sfm[["sim_specs"]][["time_units"]], "years")
 })
 
 test_that("sim_specs() warns about large dt", {
@@ -187,22 +174,6 @@ test_that("sim_specs() rejects non-positive save_at", {
 
 # --- NSE support ---------------------------------------------------------------
 
-test_that("sim_specs() accepts bare symbols via NSE", {
-  sfm <- sdbuildR()
-
-  expect_equal(
-    sim_specs(sfm, language = R)[["sim_specs"]][["language"]], "R"
-  )
-  expect_equal(
-    sim_specs(sfm, language = Julia)[["sim_specs"]][["language"]], "Julia"
-  )
-  expect_equal(
-    sim_specs(sfm, method = rk4)[["sim_specs"]][["method"]], "rk4"
-  )
-  expect_true(
-    sim_specs(sfm, time_units = years)[["sim_specs"]][["time_units"]] %in% c("yr", "years")
-  )
-})
 
 test_that("sim_specs() supports !! injection for NSE args", {
   sfm <- sdbuildR()

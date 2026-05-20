@@ -26,7 +26,7 @@
     Code
       print(result)
     Message
-      No problems detected!
+      v No problems detected!
 
 # diagnose() warns when unit test eqn reference undefined variable
 

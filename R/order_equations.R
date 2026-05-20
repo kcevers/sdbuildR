@@ -145,7 +145,7 @@ find_newly_defined_var <- function(eqn) {
 #'
 #' @inheritParams update.sdbuildR
 #' @param name Variable names to find dependencies for. Defaults to `NULL` to include all variables.
-#' @param type Variable types to find dependencies for. Must be one or more of 'stock', 'flow', 'constant', 'aux', 'gf', 'func', or 'custom_unit'. Defaults to `NULL` to include all types.
+#' @param type Variable types to find dependencies for. Must be one or more of 'stock', 'flow', 'constant', 'aux', 'gf', or 'func'. Defaults to `NULL` to include all types.
 #' @param reverse If FALSE, list for each variable X which variables Y it depends on for its equation definition. If TRUE, don't show dependencies but dependents. This reverses the dependencies, such that for each variable X, it lists what other variables Y depend on X.
 #'
 #' @returns List, with for each model variable what other variables it depends on, or if \code{reverse = TRUE}, which variables depend on it
@@ -161,7 +161,7 @@ dependencies <- function(object, name = NULL, type = NULL, reverse = FALSE) {
 
   # Check for mutually exclusive parameters
   if (!is.null(name) && !is.null(type)) {
-    cli::cli_warn("Both {.arg name} and {.arg type} specified; ignoring {.arg type} and using {.arg name} only.")
+    cli::cli_warn(c("!" = "Both {.arg name} and {.arg type} specified; ignoring {.arg type} and using {.arg name} only."))
     type <- NULL
   }
 
@@ -171,10 +171,10 @@ dependencies <- function(object, name = NULL, type = NULL, reverse = FALSE) {
   }
 
   if (!is.null(type)) {
-    type <- .validate_type_arg(type, arg_name = "type", only_model_var = FALSE)
+    type <- .validate_type_arg(type, arg_name = "type")
 
     if (length(type) == 0) {
-      cli::cli_abort("At least one {.arg type} must be specified")
+      cli::cli_abort(c("x" = "At least one {.arg type} must be specified"))
     }
   }
 
@@ -190,7 +190,7 @@ dependencies <- function(object, name = NULL, type = NULL, reverse = FALSE) {
     name <- Filter(nzchar, unique(name))
 
     if (length(name) == 0) {
-      cli::cli_abort("At least one {.arg name} must be specified")
+      cli::cli_abort(c("x" = "At least one {.arg name} must be specified"))
     }
 
     # Check if names exist
@@ -425,8 +425,8 @@ order_equations <- function(object, print_msg = TRUE) {
       names(deps[["flow"]])
     ))) {
       cli::cli_warn(c(
-        "Could not resolve equation ordering.",
-        "!" = "Topological sorting of all equations failed.",
+        "!" = "Could not resolve equation ordering.",
+        "i" = "Topological sorting of all equations failed.",
         "i" = static_and_dynamic[["msg"]],
         ">" = "Check for circular dependencies in your model equations."
       ))

@@ -12,6 +12,7 @@
   vars = NULL,
   add_constants = FALSE,
   nrows = ceiling(sqrt(max(j))),
+  margin = 0.05,
   shareX = TRUE,
   shareY = TRUE,
   palette = "Dark 2",
@@ -40,6 +41,8 @@
 \item{add_constants}{If TRUE, include constants in plot. Defaults to FALSE.}
 
 \item{nrows}{Number of rows in the plot grid. Defaults to ceiling(sqrt(n_conditions)).}
+
+\item{margin}{Margin between subplots. Either a single numeric or a vector of length four(left, right, top, bottom). See \code{?plotly::subplot()} for more details. Defaults to 0.05.}
 
 \item{shareX}{If TRUE, share the x-axis across subplots. Defaults to TRUE.}
 

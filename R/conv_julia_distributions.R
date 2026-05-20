@@ -22,8 +22,8 @@ conv_distribution_julia <- function(arg, R_func, julia_func, distribution) {
 
   if (!is.integer(arg[[1]])) {
     cli::cli_abort(c(
-      "Invalid first argument of {.fn {R_func}}.",
-      "x" = "Must be {.cls integer}."
+      "x" = "Invalid first argument of {.fn {R_func}}.",
+      "i" = "Must be {.cls integer}."
     ), call. = FALSE)
   }
 

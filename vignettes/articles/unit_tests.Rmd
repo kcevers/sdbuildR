@@ -133,3 +133,95 @@ unit_tests(sfm)
 
 Unit tests are most useful when kept small, readable, and tied to a specific
 model expectation.
+
+
+## Modify an existing test
+
+You can modify an existing test by its numeric position (`nr`) or by `label`.
+
+```{r}
+# Modify test number 1 to be less strict
+sfm <- unit_test(sfm, nr = 1, expr = all(Susceptible >= -1))
+unit_tests(sfm)
+```
+
+Or modify by label:
+
+```{r}
+sfm <- unit_test(sfm, label = "Recovered increases", expr = all(diff(Recovered) > -1))
+```
+
+## Deactivate / reactivate tests
+
+Use the `active` flag to temporarily disable a test without removing it.
+
+```{r}
+sfm <- unit_test(sfm, nr = 1, active = FALSE)
+verify(sfm)
+
+# Reactivate
+sfm <- unit_test(sfm, nr = 1, active = TRUE)
+```
+
+## Pass the test expression as a string
+
+You may provide `expr` as a character string; it will be validated and parsed.
+
+```{r}
+sfm <- unit_test(sfm, expr = "all(Susceptible >= 0)", label = "Susceptible non-neg-string")
+```
+
+## Inspecting `verify()` results and returned simulations
+
+`verify()` can return the simulations used when running tests. Use
+`return_sims = TRUE` to retrieve them and the `sim_index` mapping to find
+which simulation corresponds to each test label.
+
+```{r}
+res <- verify(sfm, return_sims = TRUE, verbose = FALSE)
+
+# View results summary
+res$results
+
+# Retrieve the simulation used for a specific test label
+lab <- res$results[[1]]$label
+sim_for_test <- res$sims[[res$sim_index[[lab]]]]
+plot(sim_for_test)
+```
+
+## Running `verify()` on existing simulation results
+
+If you already have a `simulate_sdbuildR` object, `verify(sim)` will run only
+those tests whose `conditions` are empty or already match the simulation's
+parameters; tests that require re-simulation are skipped with an informative
+message.
+
+```{r}
+sim <- simulate(sfm)
+verify(sim)
+```
+
+### Failing test walkthrough
+
+If a test fails, `verify()` reports the failure and you can inspect the
+returned result to debug. Below we create a deliberately failing test and
+show how to inspect the simulation used for the failing test.
+
+```{r}
+# Add a failing test
+sfm <- unit_test(sfm, expr = all(Susceptible < 0), label = "deliberate fail")
+
+res <- verify(sfm, return_sims = TRUE, verbose = FALSE)
+
+# Find failing entries
+failures <- Filter(function(x) x$status != "success", res$results)
+failures
+
+# Inspect message for first failure
+failures[[1]]$message
+
+# Retrieve simulation for the failing test
+lab_fail <- failures[[1]]$label
+sim_fail <- res$sims[[res$sim_index[[lab_fail]]]]
+plot(sim_fail)
+```

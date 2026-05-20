@@ -26,14 +26,14 @@ not found. Remaining tests are renumbered sequentially after removal.
 }
 \examples{
 sfm <- sdbuildR("SIR") |>
-  unit_test(label = "S is non-negative", expr = all(S >= 0)) |>
-  unit_test(label = "R increases", expr = all(diff(R) >= 0))
+  unit_test(label = "Susceptible is non-negative", expr = all(Susceptible >= 0)) |>
+  unit_test(label = "Recovered increases", expr = all(diff(Recovered) >= 0))
 
 # Remove by nr
 sfm <- discard_unit_test(sfm, nr = 1)
 
 # Remove by label
-sfm <- discard_unit_test(sfm, label = "R increases")
+sfm <- discard_unit_test(sfm, label = "Recovered increases")
 }
 \seealso{
 \code{\link[=unit_test]{unit_test()}}, \code{\link[=unit_tests]{unit_tests()}}

@@ -2,7 +2,7 @@
 % Please edit documentation in R/update.R
 \name{discard}
 \alias{discard}
-\title{Remove variable(s) or model unit(s)}
+\title{Remove variable(s)}
 \usage{
 discard(
   object,
@@ -13,7 +13,7 @@ discard(
 \arguments{
 \item{object}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
 
-\item{name}{Name(s) to remove. Accepts bare symbols (e.g., \code{x}), strings, or vectors via \code{c()}. Can be variable names or model unit names.}
+\item{name}{Name(s) to remove. Accepts bare symbols (e.g., \code{x}), strings, or vectors via \code{c()}. Must be variable names.}
 
 \item{remove_references}{Where to remove references to the discarded variables. By default, references to discarded variables in \code{"to"}, \code{"from"}, \code{"source"}, and \code{"unit_test"} are removed. Set to \code{NULL} to keep all references (not recommended). Note that any lingering references in equations will cause errors in simulation and should be removed or updated with \code{update()} after discarding the variable.}
 }
@@ -21,7 +21,7 @@ discard(
 A stock-and-flow model object of class \code{\link[=sdbuildR]{sdbuildR}}
 }
 \description{
-Remove variable(s) or model unit(s) from a stock-and-flow model. For variables, all references in flow connections and graphical function sources are also removed. A warning will be thrown if any lingering references to the removed name remain in the model.
+Remove variable(s) from a stock-and-flow model. All references in flow connections and graphical function sources are also removed. A warning will be thrown if any lingering references to the removed name remain in the model.
 }
 \examples{
 sfm <- sdbuildR() |>
@@ -32,5 +32,5 @@ sfm <- discard(sfm, x)
 as.data.frame(sfm)
 }
 \seealso{
-\code{\link[=update]{update()}}, \code{\link[=custom_unit]{custom_unit()}}, \code{\link[=change_name]{change_name()}}
+\code{\link[=update]{update()}}, \code{\link[=change_name]{change_name()}}
 }

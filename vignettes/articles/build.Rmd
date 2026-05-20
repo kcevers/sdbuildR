@@ -319,8 +319,8 @@ We've created oscillations in the system! Maya is now trapped in a cycle of over
 
 ```{r echo=FALSE}
 functions_table <- data.frame(
-  Function = c("`sdbuildR()`", "`insightmaker_to_sfm()`", "`build()`", "`simulate()`", "`plot()`", "`summary()`", "`as.data.frame()`", "`diagnose()`", "`get_build_code()`", "`sim_specs()`", "`custom_unit()`", "`macro()`", "`meta()`"),
-  Purpose = c("Create empty model or load template", "Import Insight Maker model", "Create, modify, or remove variable from the model", "Simulate model", "Plot model diagram or simulation", "Print summary of building blocks and variables", "Get model properties in a dataframe", "Find problems in your model formulation", "Get code to build model from scratch", "Modify simulation specifications", "Create, modify, or remove custom units", "Create, modify, or remove global variables", "Modify model meta")
+  Function = c("`sdbuildR()`", "`insightmaker_to_sfm()`", "`build()`", "`simulate()`", "`plot()`", "`summary()`", "`as.data.frame()`", "`diagnose()`", "`get_build_code()`", "`sim_specs()`", "`macro()`", "`meta()`"),
+  Purpose = c("Create empty model or load template", "Import Insight Maker model", "Create, modify, or remove variable from the model", "Simulate model", "Plot model diagram or simulation", "Print summary of building blocks and variables", "Get model properties in a dataframe", "Find problems in your model formulation", "Get code to build model from scratch", "Modify simulation specifications", "Create, modify, or remove global variables", "Modify model meta")
 )
 
 kableExtra::kbl(functions_table,

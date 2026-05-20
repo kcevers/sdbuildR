@@ -49,13 +49,6 @@ test_that("custom_func() validates function definitions (defaults at end)", {
   expect_equal(nrow(df), 1)
 })
 
-test_that("custom_func() sets units", {
-  sfm <- sdbuildR()
-
-  sfm1 <- custom_func(sfm, "rate", eqn = "0.05", units = "1/yr")
-  df <- as.data.frame(sfm1, type = "func", properties = c("name", "units"))
-  expect_equal(df[["units"]], "1/yr")
-})
 
 test_that("custom_func() sets documentation", {
   sfm <- sdbuildR()

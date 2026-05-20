@@ -1,10 +1,9 @@
 #' Transform Insight Maker eqn to R code
 #'
 #' @param eqn String with Insight Maker eqn, but translated R names
-#' @param var_names data.frame with type, name, label and units per variable
+#' @param var_names data.frame with type, name, and label per variable
 #' @param name R name of variable to which the eqn belongs
 #' @param type Name of model element to which the eqn belongs
-#' @inheritParams clean_unit
 #'
 #' @returns List with flat structure:
 #'   - eqn: Converted equation string
@@ -17,13 +16,12 @@
 convert_equations_IM <- function(type,
                                  name,
                                  eqn,
-                                 var_names,
-                                 regex_units) {
+                                 var_names) {
   if (P[["debug"]]) {
-    cli::cli_inform("")
-    # cli::cli_inform(type)
-    cli::cli_inform(name)
-    cli::cli_inform(eqn)
+    cli::cli_inform(c(" " = ""))
+    # cli::cli_inform(c("i" = type))
+    cli::cli_inform(c("i" = name))
+    cli::cli_inform(c("i" = eqn))
   }
 
   # Check whether eqn is empty or NULL
@@ -42,7 +40,7 @@ convert_equations_IM <- function(type,
     translated_func <- c()
     add_vars <- data.frame()
   } else {
-    # Step 2. Syntax (bracket types, destructuring assignment, time units {1 Month})
+    # Step 2. Syntax (bracket types, destructuring assignment)
     # Replace curly brackets {} with c()
     eqn <- curly_to_vector_brackets(eqn, var_names)
 
@@ -64,9 +62,6 @@ convert_equations_IM <- function(type,
     add_vars <- conv_list[["add_vars"]]
     translated_func <- conv_list[["translated_func"]]
 
-    # Ensure units which need scientific notation have it
-    eqn <- clean_unit_in_u(eqn, regex_units)
-
     # Replace two consecutive newlines and trim white space
     eqn <- stringr::str_replace_all(trimws(eqn), "\\\n[ ]*\\\n", "\n")
 
@@ -77,7 +72,7 @@ convert_equations_IM <- function(type,
     }
 
     if (P[["debug"]]) {
-      cli::cli_inform(eqn)
+      cli::cli_inform(c("i" = eqn))
     }
   }
 
@@ -587,10 +582,10 @@ convert_statement <- function(line, var_names) {
   ) |> stringr::str_c(collapse = "")
 
   if (P[["debug"]]) {
-    cli::cli_inform("Converting statements:")
-    cli::cli_inform(line)
-    cli::cli_inform(join_str)
-    cli::cli_inform("")
+    cli::cli_inform(c("i" = "Converting statements:"))
+    cli::cli_inform(c("i" = line))
+    cli::cli_inform(c("i" = join_str))
+    cli::cli_inform(c(" " = ""))
   }
   return(join_str)
 }
@@ -788,7 +783,7 @@ get_syntax_IM <- function() {
       "Pause", "", "syntax5", FALSE, FALSE, "", # no R equivalent
       "Stop", "stop", "syntax5", FALSE, FALSE, "",
       # Syntax 3
-      "Unitless", "drop_u", "syntax1", FALSE, TRUE, "",
+      "Unitless", "", "syntax5", FALSE, TRUE, "",
       "PastValues", "conv_past_values", "syntax5", FALSE, TRUE, "",
       "PastMax", "conv_past_values", "syntax5", FALSE, TRUE, "",
       "PastMin", "conv_past_values", "syntax5", FALSE, TRUE, "",
@@ -807,17 +802,17 @@ get_syntax_IM <- function() {
       "Step", "conv_step", "syntax3", FALSE, TRUE, "",
       "Pulse", "conv_pulse", "syntax3", FALSE, TRUE, "",
       "Ramp", "conv_ramp", "syntax3", FALSE, TRUE, "",
-      "Seasonal", "conv_seasonal", "syntax3", FALSE, TRUE, "",
+      "Seasonal", "conv_seasonal", "syntax5", FALSE, TRUE, "", # not supported because Insight Maker's seasonal function has as a default a period of a year, and we no longer support units
       "Lookup", "conv_lookup", "syntax3", FALSE, TRUE, "",
       "Repeat", "", "syntax5", FALSE, TRUE, "",
-      "Seconds", sprintf("drop_u(convert_u(%s, u(\"s\")))", P[["time_name"]]), "syntax0", FALSE, FALSE, "",
-      "Minutes", sprintf("drop_u(convert_u(%s, u(\"minute\")))", P[["time_name"]]), "syntax0", FALSE, FALSE, "",
-      "Hours", sprintf("drop_u(convert_u(%s, u(\"hr\")))", P[["time_name"]]), "syntax0", FALSE, FALSE, "",
-      "Days", sprintf("drop_u(convert_u(%s, u(\"d\")))", P[["time_name"]]), "syntax0", FALSE, FALSE, "",
-      "Weeks", sprintf("drop_u(convert_u(%s, u(\"wk\")))", P[["time_name"]]), "syntax0", FALSE, FALSE, "",
-      "Months", sprintf("drop_u(convert_u(%s, u(\"common_month\")))", P[["time_name"]]), "syntax0", FALSE, FALSE, "",
-      "Quarters", sprintf("drop_u(convert_u(%s, u(\"common_quarter\")))", P[["time_name"]]), "syntax0", FALSE, FALSE, "",
-      "Years", sprintf("drop_u(convert_u(%s, u(\"common_yr\")))", P[["time_name"]]), "syntax0", FALSE, FALSE, "",
+      "Seconds", P[["time_name"]], "syntax0", FALSE, FALSE, "",
+      "Minutes", P[["time_name"]], "syntax0", FALSE, FALSE, "",
+      "Hours", P[["time_name"]], "syntax0", FALSE, FALSE, "",
+      "Days", P[["time_name"]], "syntax0", FALSE, FALSE, "",
+      "Weeks", P[["time_name"]], "syntax0", FALSE, FALSE, "",
+      "Months", P[["time_name"]], "syntax0", FALSE, FALSE, "",
+      "Quarters", P[["time_name"]], "syntax0", FALSE, FALSE, "",
+      "Years", P[["time_name"]], "syntax0", FALSE, FALSE, "",
       "Time", P[["time_name"]], "syntax0", FALSE, FALSE, "",
       "TimeStart", paste0(P[["times_name"]], "[1]"), "syntax0", FALSE, FALSE, "",
       "TimeStep", P[["timestep_name"]], "syntax0", FALSE, FALSE, "",
@@ -1168,9 +1163,9 @@ convert_builtin_functions_IM <- function(type, name, eqn, var_names) {
         }
 
         if (P[["debug"]]) {
-          cli::cli_inform(stringr::str_sub(eqn, start_idx, end_idx))
-          cli::cli_inform(replacement)
-          cli::cli_inform("")
+          cli::cli_inform(c("i" = stringr::str_sub(eqn, start_idx, end_idx)))
+          cli::cli_inform(c("i" = replacement))
+          cli::cli_inform(c(" " = ""))
         }
 
         # Replace eqn
@@ -1200,11 +1195,10 @@ convert_builtin_functions_IM <- function(type, name, eqn, var_names) {
     idx_ABM <- stringr::str_detect(eqn_no_names, syntax4[["insightmaker_regex"]])
 
     if (any(idx_ABM)) {
-      cli::cli_inform(
-        "Agent-Based Modelling functions were detected in equation of ",
-        name, ", and won't be translated: "
-      )
-      cli::cli_inform(paste0(syntax4[idx_ABM, "insightmaker"], ")"))
+      cli::cli_inform(c(
+        "!" = "Agent-Based Modelling functions were detected in equation of {name}, and won't be translated:",
+        ">" = paste0(paste0(syntax4[idx_ABM, "insightmaker"], ")"), collapse = ", ")
+      ))
     }
 
     # Syntax 5: Unsupported Insight Maker functions
@@ -1406,7 +1400,7 @@ conv_pulse <- function(func,
 
   # Pulse(Time, Height, Width=0, Repeat=-1), e.g. Pulse({5 Years}, 10, 1, {10 Years})
 
-  # Clean start time by converting to simulation time units
+  # Start time
   start_t_pulse <- arg[1]
 
   # Define interpolation function
@@ -1415,18 +1409,14 @@ conv_pulse <- function(func,
 
   if (w_pulse == "0") {
     w_pulse <- P[["timestep_name"]]
-  } else {
-    w_pulse <- sprintf("%s(%s, %s)", P[["convert_u_func"]], w_pulse, P[["time_units_name"]])
-  }
-
+  } 
   repeat_interval <- ifelse(is.na(arg[4]), repeat_interval, arg[4])
 
   # Function definition to put at beginning of script
   func_def_str <- sprintf(
-    "pulse(%s, start = %s(%s, %s), height = %s, width = %s, repeat_interval = %s)",
+    "pulse(%s, start = %s, height = %s, width = %s, repeat_interval = %s)",
     P[["times_name"]],
-    P[["convert_u_func"]],
-    start_t_pulse, P[["time_units_name"]],
+    start_t_pulse,
     h_pulse,
     w_pulse,
     repeat_interval
@@ -1461,7 +1451,7 @@ conv_ramp <- function(func, arg, match_idx, name, # Default settings of Insight 
 
   # Ramp(Start, Finish, Height=1), e.g. Ramp({3 Years}, {8 Years}, -50)
 
-  # Clean start time by converting to simulation time units
+  # Start and end time
   start_t_ramp <- arg[1]
   end_t_ramp <- arg[2]
 
@@ -1470,12 +1460,10 @@ conv_ramp <- function(func, arg, match_idx, name, # Default settings of Insight 
 
   # Function definition to put at beginning of script
   func_def_str <- sprintf(
-    "ramp(%s, start = %s(%s, %s), finish = %s(%s, %s), height = %s)",
+    "ramp(%s, start = %s, finish = %s, height = %s)",
     P[["times_name"]],
-    P[["convert_u_func"]],
-    start_t_ramp, P[["time_units_name"]],
-    P[["convert_u_func"]],
-    end_t_ramp, P[["time_units_name"]],
+    start_t_ramp, 
+    end_t_ramp, 
     h_ramp
   )
   # add_code <- list(aux = list(list(
@@ -1490,48 +1478,48 @@ conv_ramp <- function(func, arg, match_idx, name, # Default settings of Insight 
 }
 
 
-#' Convert Insight Maker's Seasonal() function to R
-#'
-#' @param period Period of wave in years, defaults to 1
-#' @param shift Time in years at which the wave peaks, defaults to 0
-#'
-#' @returns List with transformed eqn and list with additional R code needed to make the eqn function
-#' @inheritParams convert_equations_IM
-#' @noRd
-#' @inheritParams conv_step
-#'
-conv_seasonal <- function(func, arg, match_idx, name,
-                          period = "u(\"1common_yr\")", shift = "u(\"0common_yr\")") {
-  # Name of function is the type (step, pulse, ramp), the number, and which model element it belongs to
-  func_name_str <- sprintf(
-    "%s_%s%s", name, func, # If there is only one match, don't number function
-    as.character(match_idx)
-  )
-  replacement <- sprintf("[%s](%s)", func_name_str, P[["time_name"]])
+# #' Convert Insight Maker's Seasonal() function to R
+# #'
+# #' @param period Period of wave in years, defaults to 1
+# #' @param shift Time in years at which the wave peaks, defaults to 0
+# #'
+# #' @returns List with transformed eqn and list with additional R code needed to make the eqn function
+# #' @inheritParams convert_equations_IM
+# #' @noRd
+# #' @inheritParams conv_step
+# #'
+# conv_seasonal <- function(func, arg, match_idx, name,
+#                           period = "u(\"1common_yr\")", shift = "u(\"0common_yr\")") {
+#   # Name of function is the type (step, pulse, ramp), the number, and which model element it belongs to
+#   func_name_str <- sprintf(
+#     "%s_%s%s", name, func, # If there is only one match, don't number function
+#     as.character(match_idx)
+#   )
+#   replacement <- sprintf("[%s](%s)", func_name_str, P[["time_name"]])
 
-  # If an argument is specified, it's the peak time
-  if (nzchar(arg)) {
-    # If there are only numbers and a period in there, add unit
-    if (grepl("^[0-9]+\\.?[0-9]*$", arg[1]) || grepl("^[\\.?[0-9]*$", arg[1])) {
-      shift <- paste0("u(\"", arg[1], "common_yr\")")
-    } else {
-      shift <- arg[1]
-    }
-  }
+#   # If an argument is specified, it's the peak time
+#   if (nzchar(arg)) {
+#     # If there are only numbers and a period in there, add unit
+#     if (grepl("^[0-9]+\\.?[0-9]*$", arg[1]) || grepl("^[\\.?[0-9]*$", arg[1])) {
+#       shift <- paste0("u(\"", arg[1], "common_yr\")")
+#     } else {
+#       shift <- arg[1]
+#     }
+#   }
 
-  # Function definition to put at beginning of script
-  func_def_str <- sprintf(
-    "seasonal(%s, %s, %s)",
-    P[["times_name"]],
-    period, shift
-  )
-  # add_code <- list(aux = list(list(
-  #   eqn = func_def_str
-  # )) |> stats::setNames(func_name_str))
-  add_var <- get_variable_row(name = func_name_str, type = "aux", eqn = func_def_str)
+#   # Function definition to put at beginning of script
+#   func_def_str <- sprintf(
+#     "seasonal(%s, %s, %s)",
+#     P[["times_name"]],
+#     period, shift
+#   )
+#   # add_code <- list(aux = list(list(
+#   #   eqn = func_def_str
+#   # )) |> stats::setNames(func_name_str))
+#   add_var <- get_variable_row(name = func_name_str, type = "aux", eqn = func_def_str)
 
-  return(list(
-    replacement = replacement,
-    add_var = add_var
-  ))
-}
+#   return(list(
+#     replacement = replacement,
+#     add_var = add_var
+#   ))
+# }

@@ -174,10 +174,10 @@ templates <- function(template) {
     object <- sdbuildR() |>
       meta(name = "Coffee cup", caption = "Coffee cup cooling or heating from Meadows' Thinking in Systems (Chapter 1)") |>
       sim_specs(stop = 100, dt = 1, time_units = "minute", language = "Julia") |>
-      update("coffee_temperature", "stock", eqn = "100", units = "Celsius", label = "Coffee temperature") |>
-      update("cooling", "flow", eqn = "discrepancy * .1 / u('min')", units = "Celsius/min", to = "coffee_temperature", label = "Cooling or heating") |>
-      update("discrepancy", "aux", eqn = "room_temperature - coffee_temperature", units = "Celsius", label = "Discrepancy") |>
-      update("room_temperature", "constant", eqn = "18", units = "Celsius", label = "Room temperature")
+      update("coffee_temperature", "stock", eqn = "100", label = "Coffee temperature") |>
+      update("cooling", "flow", eqn = "discrepancy * .1", to = "coffee_temperature", label = "Cooling or heating") |>
+      update("discrepancy", "aux", eqn = "room_temperature - coffee_temperature", label = "Discrepancy") |>
+      update("room_temperature", "constant", eqn = "18", label = "Room temperature")
   } else if (template == "bank_account") {
     object <- sdbuildR() |>
       meta(
@@ -187,16 +187,15 @@ templates <- function(template) {
       sim_specs(start = 0, stop = 12, dt = 1, time_units = "year", language = "Julia") |>
       update("money_in_bank_account", "stock",
         eqn = "100",
-        label = "Money in bank account", units = "dollar"
+        label = "Money in bank account"
       ) |>
       update("interest_added", "flow",
-        eqn = "money_in_bank_account * interest_rate / u('1year')",
+        eqn = "money_in_bank_account * interest_rate",
         label = "Adding interest",
-        units = "dollar/year", to = "money_in_bank_account"
+        to = "money_in_bank_account"
       ) |>
       update("interest_rate", "constant",
-        eqn = ".02", label = "Interest rate",
-        units = "1"
+        eqn = ".02", label = "Interest rate"
       )
   } else if (template == "Lorenz") {
     object <- sdbuildR() |>

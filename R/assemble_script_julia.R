@@ -34,7 +34,7 @@ simulate_julia <- function(object,
       # Evaluate script
       start_t <- Sys.time()
 
-      # Wrap in invisible and capture.output to not show message of units module being overwritten
+      # Wrap in invisible and capture.output to keep Julia output quiet
       # out <- invisible({
       #   utils::capture.output({
       out <- JuliaConnectoR::juliaEval(paste0('include("', jl_path(filepath), '")'))
@@ -103,7 +103,6 @@ check_no_keyword_arg <- function(object, var_names) {
   # Check for all variable names if they are used as functions. If so, throw error if they are used with keyword arguments in the Julia translated equation.
 
   # Batch convert equations to Julia format for checking
-  regex_units <- get_regex_units()
   eqns <- character(nrow(object[["variables"]]))
   for (i in seq_len(nrow(object[["variables"]]))) {
     if (object[["variables"]][i, "type"] %in% c("stock", "flow", "constant", "aux")) {
@@ -111,8 +110,7 @@ check_no_keyword_arg <- function(object, var_names) {
         type = object[["variables"]][i, "type"],
         name = object[["variables"]][i, "name"],
         eqn = object[["variables"]][i, "eqn"],
-        var_names = var_names,
-        regex_units = regex_units
+        var_names = var_names
       )
       eqns[i] <- result[["eqn"]]
     }
@@ -216,7 +214,7 @@ prep_intermediary_variables <- function(object, language) {
   ordering <- object[["assemble"]][["ordering"]]
 
   if (language == "R") {
-    cli::cli_abort("prep_intermediary_variables() is not implemented for R.", call. = FALSE)
+    cli::cli_abort(c("x" = "prep_intermediary_variables() is not implemented for R."), call. = FALSE)
   } else if (language == "Julia") {
     # Create separate vector for names of intermediate variables and values, because graphical functions need to be in the intermediate function as gf(t), but their name should be gf
     intermediary_var <- intermediary_var_values <- ordering[["dynamic"]][["order"]]

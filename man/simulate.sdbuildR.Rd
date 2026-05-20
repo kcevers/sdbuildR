@@ -45,15 +45,6 @@ plot(sim)
 sim <- simulate(sim_specs(sfm, only_stocks = FALSE))
 plot(sim, add_constants = TRUE)
 
-\dontshow{if (Sys.getenv("NOT_CRAN") == "true" && is_julia_ready()) withAutoprint(\{ # examplesIf}
-# Use Julia for models with units
-sfm <- sim_specs(sdbuildR("coffee_cup"), language = "Julia")
-sim <- simulate(sfm)
-plot(sim)
-
-# Close Julia session
-use_julia(stop = TRUE)
-\dontshow{\}) # examplesIf}
 }
 \seealso{
 \code{\link[=update]{update()}}, \code{\link[=sdbuildR]{sdbuildR()}}, \code{\link[=diagnose]{diagnose()}}, \code{\link[=sim_specs]{sim_specs()}}, \code{\link[=use_julia]{use_julia()}}

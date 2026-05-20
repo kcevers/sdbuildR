@@ -18,7 +18,7 @@ lang_adapter <- function(language) {
   } else if (language == "Julia") {
     lang_adapter_julia()
   } else {
-    cli::cli_abort("Unsupported language: {language}")
+    cli::cli_abort(c("x" = "Unsupported language: {language}"))
   }
 }
 
@@ -31,12 +31,12 @@ lang_adapter_r <- function() {
     language = "R",
 
     # No equation conversion needed for R
-    convert_eqn = function(type, name, eqn, var_names, regex_units) {
+    convert_eqn = function(type, name, eqn, var_names) {
       eqn
     },
 
     # Graphical function formatting
-    format_lookup = function(row, keep_unit, names_df) {
+    format_lookup = function(row, names_df) {
       xpts <- row[["xpts"]][[1]]
       ypts <- row[["ypts"]][[1]]
 
@@ -64,12 +64,12 @@ lang_adapter_r <- function() {
     assign_op = "<-",
 
     # Simple assignment: name = eqn (for constants and stock init)
-    format_static = function(name, eqn_converted, row, keep_unit) {
+    format_static = function(name, eqn_converted, row) {
       paste0(name, " = ", eqn_converted)
     },
 
     # Auxiliary: name <- eqn
-    format_aux = function(name, eqn_converted, row, keep_unit) {
+    format_aux = function(name, eqn_converted, row) {
       sprintf("%s <- %s", name, eqn_converted)
     },
 
@@ -106,21 +106,11 @@ lang_adapter_r <- function() {
     # Zero literal
     zero = "0",
 
-    # Stock change: sum_eqn with units
-    format_sum_eqn = function(sum_eqn, row, keep_unit) {
-      sum_eqn
-    },
-
-    # # Stock change: sum_units
-    # format_sum_units = function(row, keep_unit) {
-    #   ""
-    # },
-
     # Whether to call sanitize_sdbuildR after stock change prep
     validate_after_stock_change = FALSE,
 
     # Func equation formatting: R just pastes name = eqn
-    convert_func_eqn = function(name, eqn, var_names, regex_units) {
+    convert_func_eqn = function(name, eqn, var_names) {
       if (nzchar(name) && !startsWith(name, ".")) {
         paste0(name, " = ", eqn)
       } else {
@@ -139,16 +129,16 @@ lang_adapter_julia <- function() {
     language = "Julia",
 
     # Convert R equation syntax to Julia
-    convert_eqn = function(type, name, eqn, var_names, regex_units) {
+    convert_eqn = function(type, name, eqn, var_names) {
       result <- convert_equations_julia(
         type = type, name = name, eqn = eqn,
-        var_names = var_names, regex_units = regex_units
+        var_names = var_names
       )
       result[["eqn"]]
     },
 
     # Graphical function formatting
-    format_lookup = function(row, keep_unit, names_df) {
+    format_lookup = function(row, names_df) {
       if (!is_defined(row[["xpts"]]) || !is_defined(row[["ypts"]])) {
         return(NULL)
       }
@@ -161,28 +151,12 @@ lang_adapter_julia <- function() {
           stringr::str_replace_all("\\)$", "]")
       }
 
-      # Add units of source if defined
-      if (keep_unit && is_defined(row[["source"]])) {
-        if (row[["source"]] == P[["time_name"]]) {
-          xpts_str <- paste0(xpts_str, " .* ", P[["time_units_name"]])
-        } else {
-          unit_source <- names_df[names_df[["name"]] == row[["source"]], "units"]
-          if (is_defined(unit_source) && unit_source != "1") {
-            xpts_str <- paste0(xpts_str, " .* u\"", unit_source, "\"")
-          }
-        }
-      }
-
       ypts_val <- row[["ypts"]][[1]]
       if (inherits(ypts_val, "numeric")) {
         ypts_str <- paste0("[", paste0(as.character(ypts_val), collapse = ", "), "]")
       } else {
         ypts_str <- stringr::str_replace_all(ypts_val, "^c\\(", "[") |>
           stringr::str_replace_all("\\)$", "]")
-      }
-
-      if (keep_unit && is_defined(row[["units"]]) && row[["units"]] != "1") {
-        ypts_str <- paste0(ypts_str, " .* u\"", row[["units"]], "\"")
       }
 
       sprintf(
@@ -193,22 +167,14 @@ lang_adapter_julia <- function() {
     },
     assign_op = "=",
 
-    # Static equation with optional unit conversion
-    format_static = function(name, eqn_converted, row, keep_unit) {
-      if (keep_unit && is_defined(row[["units"]]) && row[["units"]] != "1") {
-        paste0(name, " = ", P[["convert_u_func"]], "(", eqn_converted, ", u\"", row[["units"]], "\")")
-      } else {
-        paste0(name, " = ", eqn_converted)
-      }
+    # Static equation
+    format_static = function(name, eqn_converted, row) {
+      paste0(name, " = ", eqn_converted)
     },
 
-    # Auxiliary with optional unit conversion
-    format_aux = function(name, eqn_converted, row, keep_unit) {
-      if (keep_unit && is_defined(row[["units"]]) && row[["units"]] != "1") {
-        paste0(name, " = ", P[["convert_u_func"]], "(", eqn_converted, ", u\"", row[["units"]], "\")")
-      } else {
-        paste0(name, " = ", eqn_converted)
-      }
+    # Auxiliary
+    format_aux = function(name, eqn_converted, row) {
+      paste0(name, " = ", eqn_converted)
     },
 
     # Flow with optional nonneg and comment
@@ -240,41 +206,17 @@ lang_adapter_julia <- function() {
     # Zero literal
     zero = "0.0",
 
-    # Stock change: sum_eqn with unit conversion
-    format_sum_eqn = function(sum_eqn, row, keep_unit) {
-      if (keep_unit && is_defined(row[["units"]]) && row[["units"]] != "1") {
-        paste0(
-          P[["convert_u_func"]], "(", sum_eqn,
-          ", Unitful.unit.(", row[["name"]], ")/",
-          P[["time_units_name"]], ")" # , " ./ Unitful.unit.(", row[["name"]], ")"
-        )
-      } else {
-        # Scale the derivative by 1/time_units only when time is unitful
-        set_units_on_flow <- keep_unit
-        if (set_units_on_flow) {
-          paste0("(", sum_eqn, ") ./ ", P[["time_units_name"]])
-        } else {
-          sum_eqn
-        }
-      }
-    },
-
-    # # Stock change: sum_units (Julia doesn't use this column)
-    # format_sum_units = function(row, keep_unit) {
-    #   NULL
-    # },
     # Whether to call sanitize_sdbuildR after stock change prep
     validate_after_stock_change = FALSE,
 
     # Func equation formatting: Julia converts R syntax to Julia
-    convert_func_eqn = function(name, eqn, var_names, regex_units) {
+    convert_func_eqn = function(name, eqn, var_names) {
       full_eqn <- if (nzchar(name) && !startsWith(name, ".")) paste0(name, " = ", eqn) else eqn
       result <- convert_equations_julia(
         type = P[["func_name"]],
         name = name,
         eqn = full_eqn,
-        var_names = var_names,
-        regex_units = regex_units
+        var_names = var_names
       )
       result[["eqn"]]
     }

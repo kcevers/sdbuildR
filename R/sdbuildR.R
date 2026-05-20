@@ -5,8 +5,7 @@
 #' library.
 #'
 #' Do not edit the object manually; this will likely lead to errors downstream.
-#' Rather, use [meta()], [sim_specs()], [update()], [custom_func()], and
-#' [custom_unit()] for safe manipulation.
+#' Rather, use [meta()], [sim_specs()], [update()], and [custom_func()] for safe manipulation.
 #'
 #' @param template Name of the template to load. If `NULL`, an empty stock-and-flow
 #' model will be created with default simulation parameters and a default meta.
@@ -33,14 +32,13 @@
 #'  \item{meta}{Meta-information about model. A list containing arguments listed in [meta()].}
 #'  \item{sim_specs}{Simulation specifications. A list containing arguments listed in [sim_specs()].}
 #'  \item{model}{Model variables, grouped under the variable types stock, flow, aux (auxiliaries), constant, gf (graphical functions), and func (custom functions). Each variable contains arguments as listed in [update()].}
-#'  \item{custom_unit}{Custom model units. A list containing arguments listed in [custom_unit()].}
 #'  }
 #'
 #' Use [summary()] to summarize, [as.data.frame()] to convert to a data.frame, [plot()] to visualize.
 #'
 #' @export
 #' @concept build
-#' @seealso [update()], [meta()], [custom_func()], [custom_unit()], [sim_specs()]
+#' @seealso [update()], [meta()], [custom_func()], [sim_specs()]
 #'
 #' @examples sfm <- sdbuildR()
 #' summary(sfm)
@@ -73,7 +71,6 @@ empty_assemble <- function() {
     ordering = NULL, # Contains deps_by_name for incremental updates
     funcs = "",
     times = "",
-    units = "",
     static = list(script = "", par_names = character(0)),
     nonneg_stocks = empty_nonneg_stocks(),
     ode = "",
@@ -83,7 +80,6 @@ empty_assemble <- function() {
     intermediaries = list(),
     ensemble = list(),
     diagnose = NULL, # cached result: list(problems="", potential_problems="")
-    unit_strings = NULL, # cached result of find_unit_strings(): named char vec or character(0)
     unit_tests = list(deps = NULL) # cached unit test dependencies (positionally indexed)
   )
 }
@@ -94,22 +90,12 @@ empty_unit_tests <- function() {
 }
 
 
-empty_custom_unit <- function() {
-  data.frame(
-    name = character(0),
-    eqn = character(0),
-    doc = character(0),
-    prefix = logical(0),
-    stringsAsFactors = FALSE
-  )
-}
 
 empty_variables <- function() {
   variables_df <- data.frame(
     name = character(0),
     type = character(0),
     eqn = character(0),
-    units = character(0),
     label = character(0),
     doc = character(0),
     non_negative = logical(0),
@@ -141,7 +127,6 @@ empty_variables <- function() {
 
 get_variable_row <- function(name, type,
                              eqn = "0",
-                             units = "1",
                              label = name,
                              doc = "",
                              non_negative = FALSE,
@@ -156,7 +141,6 @@ get_variable_row <- function(name, type,
     name = name,
     type = type,
     eqn = eqn %||% "0",
-    units = units %||% "1",
     label = label %||% name,
     doc = doc %||% "",
     non_negative = non_negative %||% FALSE,
@@ -168,7 +152,6 @@ get_variable_row <- function(name, type,
     eqn_str = "",
     sum_eqn = "",
     sum_name = "",
-    # sum_units = "",
     stringsAsFactors = FALSE
   )
 
@@ -187,6 +170,7 @@ get_variable_row <- function(name, type,
   row
 }
 
+
 #' Add a variable to sfm
 #'
 #' @param object Stock-and-flow model
@@ -197,7 +181,6 @@ get_variable_row <- function(name, type,
 #'
 add_variable_row <- function(object, name, type,
                              eqn,
-                             units,
                              label,
                              doc,
                              non_negative,
@@ -214,7 +197,6 @@ add_variable_row <- function(object, name, type,
     arg[["object"]] <- NULL
   }
   new_row <- do.call(get_variable_row, arg)
-
 
   # Add to variables data frame
   object[["variables"]] <- rbind(object[["variables"]], new_row)
@@ -259,15 +241,11 @@ new_sdbuildR <- function() {
   # Create data frame for variables (all types in one data frame, including funcs)
   variables_df <- empty_variables()
 
-  # Create data frame for custom_unit
-  custom_unit_df <- empty_custom_unit()
-
   # Create list with fixed structure
   obj <- list(
     meta = meta_defaults,
     sim_specs = spec_defaults,
     variables = variables_df,
-    custom_unit = custom_unit_df,
     # Cache for pre-assembled simulation components
     assemble = empty_assemble(),
     # Import metadata (NULL for programmatic models, populated for imported models)
@@ -306,33 +284,6 @@ get_flow_df <- function(object) {
 }
 
 
-#' Find longest regex match
-#'
-#' @param x Value
-#' @param regex_units Regex units dictionary
-#'
-#' @returns Longest cleaned regex match
-#' @noRd
-find_matching_regex <- function(x, regex_units) {
-  matches <- names(regex_units[regex_units == x])
-
-  # Return empty string if no matches found
-  if (length(matches) == 0) {
-    return("")
-  }
-
-  # Clean regex and select longest match
-  matches <- sub("\\$$", "", sub("^\\^", "", matches))
-  matches <- sub("\\[s\\]\\?", "s", matches)
-
-  matches <- unique(tolower(stringr::str_replace_all(
-    matches,
-    "\\[([a-zA-Z])\\|([a-zA-Z])\\]", "\\1"
-  )))
-  matches[which.max(nchar(matches))] # Return longest match
-}
-
-
 #' Check whether object is of class [`sdbuildR`][sdbuildR]
 #'
 #' @inheritParams update.sdbuildR
@@ -365,21 +316,12 @@ check_sdbuildR <- function(object) {
 validate_sdbuildR <- function(object) {
   check_sdbuildR(object)
 
-  # Check custom_unit has required columns
-  if (nrow(object[["custom_unit"]])) {
-    required_mu_cols <- colnames(empty_custom_unit())
-    missing_mu <- setdiff(required_mu_cols, colnames(object[["custom_unit"]]))
-    if (length(missing_mu) > 0) {
-      cli::cli_warn("Model units is missing columns: {.field {missing_mu}}")
-    }
-  }
-
   # Check variables data frame has required columns
   if (nrow(object[["variables"]]) > 0) {
     required_var_cols <- colnames(empty_variables())
     missing_cols <- setdiff(required_var_cols, colnames(object[["variables"]]))
     if (length(missing_cols) > 0) {
-      cli::cli_warn("Variables is missing columns: {.field {missing_cols}}")
+      cli::cli_warn(c("!" = "Variables is missing columns: {.field {missing_cols}}"))
     }
 
     # Warn about flow connections to non-stocks (but don't fix)
@@ -442,28 +384,6 @@ validate_sdbuildR <- function(object) {
 #'
 sanitize_sdbuildR <- function(object) {
   check_sdbuildR(object)
-
-  # Ensure custom_unit data frame has default properties
-  if (nrow(object[["custom_unit"]]) > 0) {
-    # Ensure required columns exist
-    if (!"eqn" %in% colnames(object[["custom_unit"]])) {
-      object[["custom_unit"]][["eqn"]] <- "1"
-    }
-    if (!"doc" %in% colnames(object[["custom_unit"]])) {
-      object[["custom_unit"]][["doc"]] <- ""
-    }
-
-    # Ensure prefix is FALSE if not set
-    if (!"prefix" %in% colnames(object[["custom_unit"]])) {
-      object[["custom_unit"]][["prefix"]] <- FALSE
-    } else {
-      # Replace NA values in prefix with FALSE
-      idx_na_prefix <- is.na(object[["custom_unit"]][["prefix"]])
-      if (any(idx_na_prefix)) {
-        object[["custom_unit"]][idx_na_prefix, "prefix"] <- FALSE
-      }
-    }
-  }
 
   # Sanitize variables data frame
   if (nrow(object[["variables"]])) {
@@ -620,42 +540,41 @@ report_name_change <- function(old_names, new_names) {
 get_building_block_prop <- function() {
   list(
     "stock" = c(
-      "name", "type", "eqn", "units", "label", "doc",
+      "name", "type", "eqn", "label", "doc",
       "non_negative"
     ),
     "flow" = c(
-      "name", "type", "eqn", "to", "from", "units", "label", "doc",
+      "name", "type", "eqn", "to", "from", "label", "doc",
       "non_negative"
     ),
     "constant" = c(
-      "name", "type", "eqn", "units", "label", "doc",
+      "name", "type", "eqn", "label", "doc",
       "non_negative"
     ),
     "aux" = c(
-      "name", "type", "eqn", "units", "label", "doc",
+      "name", "type", "eqn", "label", "doc",
       "non_negative"
     ),
-    "lookup" = c("name", "type", "units", "label", "xpts", "ypts", "source", "interpolation", "extrapolation", "doc"),
-    "func" = c("name", "type", "eqn", "units", "label", "doc")
+    "lookup" = c("name", "type", "label", "xpts", "ypts", "source", "interpolation", "extrapolation", "doc"),
+    "func" = c("name", "type", "eqn", "label", "doc")
   )
 }
 
 
 #' Convert stock-and-flow model to data frame
 #'
-#' Create a data frame with properties of all model variables, model units, and funcs. Specify the variable types, variable names, and/or properties to get a subset of the data frame.
+#' Create a data frame with properties of all model variables and functions. Specify the variable types, variable names, and/or properties to get a subset of the data frame.
 #'
 #' @inheritParams plot.sdbuildR
 #' @param name Variable names to retain in the data frame. Defaults to `NULL` to include all variables.
-#' @param type Variable types to retain in the data frame. Must be one or more of 'stock', 'flow', 'constant', 'aux', 'gf', 'func', or 'custom_unit'. Defaults to `NULL` to include all types.
+#' @param type Variable types to retain in the data frame. Must be one or more of 'stock', 'flow', 'constant', 'aux', 'gf', or 'func'. Defaults to `NULL` to include all types.
 #' @param properties Variable properties to retain in the data frame. Defaults to `NULL` to include all properties.
 #' @param row.names `NULL` or a character vector giving the row names for the data frame. Missing values are not allowed.
 #' @param optional Ignored parameter.
 #'
-#' @returns A data.frame with one row per model component (variable, unit definition, or func).
+#' @returns A data.frame with one row per model component.
 #'   Common columns include \code{type} (component type), \code{name} (variable name),
-#'   \code{eqn} (equation), \code{units} (units of measurement), and \code{label}
-#'   (descriptive label). Additional columns may include \code{to}, \code{from},
+#'   \code{eqn} (equation), and \code{label} (descriptive label). Additional columns may include \code{to}, \code{from},
 #'   \code{non_negative}, and others depending on variable types. The exact columns returned
 #'   depend on the \code{type} and \code{properties} arguments. Returns an empty data.frame
 #'   if no components match the filters.
@@ -681,7 +600,7 @@ as.data.frame.sdbuildR <- function(x,
 
   # Check for mutually exclusive parameters
   if (!is.null(name) && !is.null(type)) {
-    cli::cli_warn("Both {.arg name} and {.arg type} specified; ignoring {.arg type} and using {.arg name} only.")
+    cli::cli_warn(c("!" = "Both {.arg name} and {.arg type} specified; ignoring {.arg type} and using {.arg name} only."))
     type <- NULL
   }
 
@@ -690,19 +609,19 @@ as.data.frame.sdbuildR <- function(x,
     .validate_name_arg(name, arg_name = "name")
   }
 
-  # Only keep specified types (allow custom_unit in query context)
+  # Only keep specified types
   if (!is.null(type)) {
-    type <- .validate_type_arg(type, arg_name = "type", only_model_var = FALSE)
+    type <- .validate_type_arg(type, arg_name = "type")
 
     if (length(type) == 0) {
-      cli::cli_abort("At least one {.arg type} must be specified")
+      cli::cli_abort(c("x" = "At least one {.arg type} must be specified"))
     }
   }
 
   df <- data.frame()
 
   # Add model variables to data frame - already in data frame format!
-  core_types <- .sdbuildR_types(only_model_var = TRUE)
+  core_types <- .sdbuildR_types()
   if ((is.null(type) || any(core_types %in% type)) && nrow(sfm[["variables"]]) > 0) {
     var_df <- sfm[["variables"]]
 
@@ -728,14 +647,6 @@ as.data.frame.sdbuildR <- function(x,
     df <- bind_rows_(df, var_df)
   }
 
-  # Add model units
-  if ((is.null(type) || "custom_unit" %in% type) && nrow(sfm[["custom_unit"]]) > 0) {
-    units_df <- sfm[["custom_unit"]]
-    units_df[["prefix"]] <- NULL
-    units_df[["type"]] <- "custom_unit"
-    df <- bind_rows_(df, units_df)
-  }
-
   if (nrow(df) == 0) {
     return(df)
   }
@@ -746,7 +657,7 @@ as.data.frame.sdbuildR <- function(x,
     name <- Filter(nzchar, unique(name))
 
     if (length(name) == 0) {
-      cli::cli_abort("At least one {.arg name} must be specified")
+      cli::cli_abort(c("x" = "At least one {.arg name} must be specified"))
     }
 
     # Check if names exist
@@ -773,7 +684,7 @@ as.data.frame.sdbuildR <- function(x,
     # Check if properties exist
     properties <- Filter(nzchar, unique(tolower(properties)))
     if (length(properties) == 0) {
-      cli::cli_abort("At least one property must be specified")
+      cli::cli_abort(c("x" = "At least one property must be specified"))
     }
 
     # Internal properties that shouldn't be exposed to users
@@ -799,7 +710,7 @@ as.data.frame.sdbuildR <- function(x,
   }
 
   # Reorder columns
-  order_first <- c("type", "name", "eqn", "units", "label", "to", "from", "non_negative")
+  order_first <- c("type", "name", "eqn", "label", "to", "from", "non_negative")
 
   # Get columns to prioritize (in order_first order)
   cols_first <- intersect(order_first, names(df))
@@ -811,7 +722,7 @@ as.data.frame.sdbuildR <- function(x,
   df <- df[, new_cols, drop = FALSE]
 
   # Make sure that for all columns, at least one row is not NA or empty
-  # This is especially necessary when only interested in one type, e.g. func or custom_unit
+  # This is especially necessary when only interested in one type, e.g. func
 
   # Convert empty strings to NA and keep columns with at least one non-NA
   df[] <- lapply(df, function(x) {
@@ -948,7 +859,7 @@ print.sdbuildR <- function(x, ...) {
   # Simulation settings
   cli::cli_h2("Simulation Settings")
   ss <- x[["sim_specs"]]
-  time_unit <- find_matching_regex(ss[["time_units"]], get_regex_time_units())
+  time_unit <- ss[["time_units"]]
   cli::cli_text(
     "  Time: {ss$start} to {ss$stop} {time_unit} (dt = {ss$dt}) \u2022 {ss$method} \u2022 {ss$language}"
   )

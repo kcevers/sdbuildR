@@ -16,7 +16,7 @@ test_that("invalidate_assemble 'all' wipes entire cache", {
 })
 
 
-test_that("invalidate_assemble 'variables' preserves times/funcs/units", {
+test_that("invalidate_assemble 'variables' preserves times/funcs", {
   sfm <- sdbuildR("SIR")
 
   old_times <- sfm[["assemble"]][["times"]]
@@ -26,7 +26,6 @@ test_that("invalidate_assemble 'variables' preserves times/funcs/units", {
   sfm <- invalidate_assemble(sfm, "variables")
 
   # Variable-dependent components cleared
-
   expect_null(sfm[["assemble"]][["ordering"]])
   expect_equal(sfm[["assemble"]][["ode"]], "")
   expect_equal(sfm[["assemble"]][["static"]][["script"]], "")
@@ -192,7 +191,7 @@ test_that("targeted invalidation produces same simulation as full invalidation",
 })
 
 
-# --- diagnose and unit_strings cache fields -----------------------------------
+# --- diagnose cache fields -----------------------------------
 
 test_that("pre_assemble_components populates diagnose cache", {
   sfm <- sdbuildR("SIR")
@@ -202,32 +201,15 @@ test_that("pre_assemble_components populates diagnose cache", {
 })
 
 
-test_that("pre_assemble_components populates unit_strings cache", {
-  sfm <- sdbuildR("SIR")
-  expect_false(is.null(sfm[["assemble"]][["unit_strings"]]))
-})
-
-
-test_that("invalidate_assemble 'all' clears diagnose and unit_strings", {
+test_that("invalidate_assemble 'all' clears diagnose", {
   sfm <- sdbuildR("SIR")
   sfm <- invalidate_assemble(sfm, "all")
   expect_null(sfm[["assemble"]][["diagnose"]])
-  expect_null(sfm[["assemble"]][["unit_strings"]])
 })
 
 
-test_that("invalidate_assemble 'variables' clears diagnose and unit_strings", {
+test_that("invalidate_assemble 'variables' clears diagnose", {
   sfm <- sdbuildR("SIR")
   sfm <- invalidate_assemble(sfm, "variables")
   expect_null(sfm[["assemble"]][["diagnose"]])
-  expect_null(sfm[["assemble"]][["unit_strings"]])
-})
-
-
-test_that("invalidate_assemble 'units' clears diagnose but preserves unit_strings", {
-  sfm <- sdbuildR("SIR")
-  old_unit_strings <- sfm[["assemble"]][["unit_strings"]]
-  sfm <- invalidate_assemble(sfm, "units")
-  expect_null(sfm[["assemble"]][["diagnose"]])
-  expect_equal(sfm[["assemble"]][["unit_strings"]], old_unit_strings)
 })

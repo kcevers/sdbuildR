@@ -150,19 +150,6 @@ test_that("sim_specs() works", {
     "Detected use of large timestep dt = 0.5\\. This will likely lead to inaccuracies in the simulation"
   )
 
-  # Check that all time units are correctly converted
-  sfm <- sdbuildR()
-  expect_error(sdbuildR() |> sim_specs(time_units = "10s"), "time_units can only contain letters")
-  expect_equal(sim_specs(sfm, time_units = "Sec")$sim_specs$time_units, "s")
-  expect_equal(sim_specs(sfm, time_units = " minutes ")$sim_specs$time_units, "minute")
-  expect_equal(sim_specs(sfm, time_units = "d")$sim_specs$time_units, "d")
-  expect_equal(sim_specs(sfm, time_units = "day")$sim_specs$time_units, "d")
-  expect_equal(sim_specs(sfm, time_units = "weeks")$sim_specs$time_units, "wk")
-  expect_equal(sim_specs(sfm, time_units = "Common years")$sim_specs$time_units, "common_yr")
-  expect_equal(sim_specs(sfm, time_units = "Years")$sim_specs$time_units, "yr")
-  expect_equal(sim_specs(sfm, time_units = "Months")$sim_specs$time_units, "month")
-  expect_equal(sim_specs(sfm, time_units = "Quarters")$sim_specs$time_units, "quarter")
-
   # method cannot be NULL
   expect_error(sim_specs(sfm, method = NULL), "method must be a single string")
   expect_error(sim_specs(sfm, method = NA), "method must be a single string")
@@ -280,22 +267,20 @@ test_that("change_name and change_type in update()", {
   expect_equal(sfm$model$variables$aux$a, NULL)
 
   # Check update() with change_name and other modified properties
-  sfm <- sfm |> update("b", change_name = "c", eqn = "100", units = "kg")
+  sfm <- sfm |> update("b", change_name = "c", eqn = "100")
   expect_equal(names(sfm$model$variables$aux), "c")
   expect_equal(sfm$model$variables$aux$b, NULL)
   expect_equal(as.data.frame(sfm)$name, "c")
   expect_equal(sfm$model$variables$aux$c$eqn, "100")
   expect_equal(sfm$model$variables$aux$c$label, "c")
-  expect_equal(sfm$model$variables$aux$c$units, "kg")
 
   # Check update() with change_type; are the properties copied?
-  sfm <- sdbuildR() |> update("K", "aux", eqn = 100, label = "K", units = "kg")
+  sfm <- sdbuildR() |> update("K", "aux", eqn = 100, label = "K")
   expect_no_error(expect_no_message(sfm |> update("K", change_type = "stock")))
   sfm <- sfm |> update("K", change_type = "stock")
   expect_equal(sfm$model$variables$aux$K, NULL)
   expect_equal(sfm$model$variables$stock$K$eqn, "100")
   expect_equal(sfm$model$variables$stock$K$label, "K")
-  expect_equal(sfm$model$variables$stock$K$units, "kg")
   expect_equal(sfm$model$variables$stock$K$from, NULL)
   expect_equal(sfm$model$variables$stock$K$to, NULL)
   expect_equal(as.data.frame(sfm)$type, "stock")
@@ -326,7 +311,6 @@ test_that("change_name and change_type in update()", {
   expect_equal(sfm$model$variables$flow$to_G$to, "")
   expect_equal(sfm$model$variables$stock$G, NULL)
   expect_equal(sfm$model$variables$aux$G$eqn, "0")
-  expect_equal(sfm$model$variables$aux$G$units, "1")
 
   # Test that properties are not affected if no change is made
   sfm <- sdbuildR() |>
@@ -428,8 +412,8 @@ test_that("discard in update() works", {
   )
 
   # discard while specifying type and other properties; these should be ignored
-  expect_no_error(expect_no_message(sfm |> update("z", "stock", eqn = "10", units = "kg", discard = TRUE)))
-  sfm <- sfm |> update("sigma", "constant", eqn = "10", units = "kg", discard = TRUE)
+  expect_no_error(expect_no_message(sfm |> update("z", "stock", eqn = "10", discard = TRUE)))
+  sfm <- sfm |> update("sigma", "constant", eqn = "10", discard = TRUE)
   expect_equal(sfm$model$variables$constant$sigma, NULL)
   df <- as.data.frame(sfm)
   expect_equal("sigma" %in% df$name, FALSE)
@@ -671,156 +655,6 @@ test_that("ensure_length() works", {
 })
 
 
-test_that("custom_unit() works", {
-  sfm <- sdbuildR()
-  sfm <- sfm |> custom_unit("abc", "0")
-  result <- names(sfm$custom_unit)
-  expected <- "abc"
-  expect_equal(result, expected)
-  expect_no_error(expect_no_message(as.data.frame(sfm, type = "custom_unit")))
-  expect_equal(as.data.frame(sfm, type = "custom_unit")$name, "abc")
-  expect_equal(as.data.frame(sfm, type = "custom_unit")$eqn, "0")
-
-  # Check that model units definition can be overwritten
-  sfm <- sfm |> custom_unit("abc", "10 meters")
-  result <- sfm$custom_unit$abc$eqn
-  expected <- "10m"
-  expect_equal(result, expected)
-  expect_equal(as.data.frame(sfm, type = "custom_unit")$eqn, "10m")
-
-  # Check that doc is overwritten
-  sfm <- sfm |> custom_unit("abc", doc = "New doc")
-  result <- sfm$custom_unit$abc$doc
-  expected <- "New doc"
-  expect_equal(result, expected)
-  expect_equal(as.data.frame(sfm, type = "custom_unit")$doc, "New doc")
-
-  # Default eqn
-  sfm <- sdbuildR() |> custom_unit("abc")
-  result <- sfm$custom_unit$abc$eqn
-  expected <- "1"
-  expect_equal(result, expected)
-
-  # Check overwriting with multiple units
-  sfm <- sdbuildR() |> custom_unit(c("abc", "def"), "10 meters")
-  expect_equal(sfm$custom_unit$abc$eqn, "10m")
-  expect_equal(sfm$custom_unit$def$eqn, "10m")
-  sfm <- sdbuildR() |> custom_unit(c("abc", "def"), "100 kilograms/40 sec")
-  expect_equal(sfm$custom_unit$abc$eqn, "100kg/40s")
-  expect_equal(sfm$custom_unit$def$eqn, "100kg/40s")
-
-  # Vector of model units
-  sfm <- sfm |> custom_unit(c("abc", "def"), "1")
-  result <- names(sfm$custom_unit)
-  expected <- c("abc", "def")
-  expect_equal(result, expected)
-
-  result <- unname(unlist(lapply(sfm$custom_unit, `[[`, "eqn")))
-  expected <- c("1", "1")
-  expect_equal(result, expected)
-
-
-  # Multiple dependent model units
-  sfm <- sdbuildR() |>
-    custom_unit("stressors") |>
-    custom_unit("challenge", eqn = "stressors/d")
-  result <- sort(names(sfm$custom_unit))
-  expected <- c("challenge", "stressors")
-  expect_equal(result, expected)
-
-  # Check written powers and per
-  sfm <- sdbuildR() |> custom_unit("BMI",
-    eqn = "kilograms per meters squared",
-    doc = "Body Mass Index"
-  )
-  result <- sfm$custom_unit$BMI$eqn
-  expected <- "kg/m^2"
-  expect_equal(result, expected)
-  df <- as.data.frame(sfm)
-  expect_equal(df[df$name == "BMI", "eqn"], "kg/m^2")
-  expect_equal(df[df$name == "BMI", "doc"], "Body Mass Index")
-
-  # Check use of per in custom units
-  expect_warning(sdbuildR() |> custom_unit("Person per year"), "The custom unit name Person per year was modified to Person_yr to comply with Julia's syntactic rules")
-})
-
-
-test_that("unique unit names in custom_unit()", {
-  # Existing unit cannot be overwritten
-  expect_error(sdbuildR() |> custom_unit("d"), "The custom unit name d matches the standard unit d, which cannot be overwritten")
-  expect_error(sdbuildR() |> custom_unit("a"), "The custom unit name a matches the standard unit a, which cannot be overwritten")
-  expect_error(sdbuildR() |> custom_unit("kg"), "The custom unit name kg matches the standard unit kg, which cannot be overwritten")
-  expect_error(sdbuildR() |> custom_unit("$$$"), "The custom unit name \\$\\$\\$ matches the standard unit USD, which cannot be overwritten")
-  expect_error(sdbuildR() |> custom_unit("€"), "The custom unit name € matches the standard unit EUR, which cannot be overwritten") # \\u20AC
-  expect_error(sdbuildR() |> custom_unit("Ohm"), "The custom unit name Ohm matches the standard unit Ohm, which cannot be overwritten")
-
-  # Custom unit names should contain at least one letter
-  expect_error(sdbuildR() |> custom_unit("*"), "Each custom unit name needs at least one letter or number.")
-  expect_error(sdbuildR() |> custom_unit("%"), "Each custom unit name needs at least one letter or number.")
-
-  # Existing unit cannot be overwritten, also when not using the standard symbol but something that is translated to the standard symbol
-  expect_error(sdbuildR() |> custom_unit("kilograms"), "The custom unit name kilograms matches the standard unit kg, which cannot be overwritten")
-  expect_error(sdbuildR() |> custom_unit("meters"), "The custom unit name meters matches the standard unit m, which cannot be overwritten")
-  expect_error(sdbuildR() |> custom_unit("milliseconds"), "The custom unit name milliseconds matches the standard unit ms, which cannot be overwritten")
-
-  # Throw message if unit name was changed
-  expect_warning(sdbuildR() |> custom_unit("CO^2"), "The custom unit name CO\\^2 was modified to CO_2 to comply with Julia's syntactic rules")
-  expect_warning(sdbuildR() |> custom_unit("life-years"), "The custom unit name life-years was modified to life_yr to comply with Julia's syntactic rules")
-  expect_warning(sdbuildR() |> custom_unit("Beck Depression Inventory"), "The custom unit name Beck Depression Inventory was modified to BeckDepressionInventory to comply with Julia's syntactic rules")
-  expect_warning(sdbuildR() |> custom_unit("10M!"), "The custom unit name 10M! was modified to _10M_ to comply with Julia's syntactic rules")
-
-  # Throw message if unit name was changed with multiple units
-  # one unit is fine, the other not
-  expect_warning(sdbuildR() |> custom_unit(c("S&P", "myunit")), "The custom unit name S&P was modified to S_P to comply with Julia's syntactic rules")
-
-  # both are changed
-  expect_warning(sdbuildR() |> custom_unit(c("%household", "(myunit)")), "The custom unit names %household, \\(myunit\\) were modified to _household, _myunit_ to comply with Julia's syntactic rules")
-  # both are fine
-  expect_no_error(sdbuildR() |> custom_unit(c("joulesperhour", "MilesWalked")))
-  expect_no_warning(sdbuildR() |> custom_unit(c("joulesperhour", "MilesWalked")))
-})
-
-
-test_that("discard in custom_unit() works", {
-  # Erase units
-  sfm <- sdbuildR() |>
-    custom_unit("abc", eqn = "def") |>
-    custom_unit("abc", discard = TRUE)
-  expect_equal(length(names(sfm$custom_unit)), 0)
-  df <- as.data.frame(sfm, type = "custom_unit")
-  expect_equal(nrow(df), 0)
-
-  # Erase multiple units
-  sfm <- sdbuildR() |>
-    custom_unit(c("abc", "def", "ghi")) |>
-    custom_unit(c("abc", "def"), discard = TRUE)
-  expect_equal(length(names(sfm$custom_unit)), 1)
-  df <- as.data.frame(sfm, type = "custom_unit")
-  expect_equal(nrow(df), 1)
-  expect_equal(df$name, "ghi")
-})
-
-
-test_that("change_name in custom_unit() works", {
-  # Change name
-  sfm <- sdbuildR() |> custom_unit("abc", eqn = "def")
-  expect_no_error(expect_no_message(sfm |> custom_unit("abc", change_name = "xyz")))
-  sfm <- sfm |> custom_unit("abc", change_name = "xyz")
-  expect_equal(names(sfm$custom_unit), "xyz")
-  expect_equal(sfm$custom_unit$xyz$eqn, "def")
-  expect_equal(sfm$custom_unit$abc, NULL)
-  df <- as.data.frame(sfm, type = "custom_unit")
-  expect_equal(df$name, "xyz")
-
-
-  # Test that properties are not affected if no change is made
-  sfm <- sdbuildR() |>
-    custom_unit("abc", eqn = "def") |>
-    custom_unit("abc")
-  expect_equal(sfm$custom_unit$abc$eqn, "def")
-})
-
-
 test_that("diagnose() works", {
   expect_message(
     diagnose(sdbuildR("SIR")),
@@ -888,21 +722,6 @@ test_that("detect_undefined_var() works", {
 })
 
 
-test_that("detect_undefined_units() works", {
-  # Check that undefined variables are detected
-  sfm <- sdbuildR() |> update("a", "aux", units = "BMI")
-  expect_message(diagnose(sfm), "These units are not defined.* BMI")
-
-  sfm <- sdbuildR() |> update("a", "aux", units = "BMI/year")
-  expect_message(diagnose(sfm), "These units are not defined.* BMI")
-
-  # Check that no error is thrown for defined units
-  sfm <- sdbuildR() |>
-    update("a", "aux", units = "BMI/year") |>
-    custom_unit("BMI", eqn = "kilograms/meters^2")
-  out <- diagnose(sfm)
-  expect_false(grepl("These units are not defined", out$problems))
-})
 
 
 test_that("as.data.frame(sfm) works", {
@@ -916,7 +735,7 @@ test_that("as.data.frame(sfm) works", {
   df <- as.data.frame(sfm)
   expect_equal(class(df), "data.frame")
   expect_equal(df[["type"]], "aux")
-  expect_true(all(c("type", "name", "eqn", "label", "units") %in% names(df)))
+  expect_true(all(c("type", "name", "eqn", "label") %in% names(df)))
   expect_false(any(c("intermediary", "func") %in% names(df)))
 
   # Check that it works with templates
@@ -932,8 +751,8 @@ test_that("as.data.frame(sfm) works", {
   expect_no_error(as.data.frame(sfm, type = c("stock", "lookup"))) # works with multiple types
   expect_no_error(as.data.frame(sfm, type = c("lookup"))) # works when type doesn't exist
   expect_equal(nrow(as.data.frame(sfm, type = c("lookup"))), 0) # works when type doesn't exist
-  expect_no_error(as.data.frame(sfm, type = c("lookup"))) # works with model units
-
+  expect_no_error(as.data.frame(sfm, type = c("lookup"))) 
+  
   # Specify name
   sfm <- sdbuildR("Lorenz")
   expect_error(as.data.frame(sfm, name = "a"), "a does not exist in your model")
@@ -948,31 +767,6 @@ test_that("as.data.frame(sfm) works", {
   expect_error(as.data.frame(sfm, properties = c("a", "b")), "a, b are not existing properties")
   expect_error(as.data.frame(sfm, properties = c("a", "eqn")), "a is not an existing property")
   expect_error(as.data.frame(sfm, properties = ""), "At least one property must be specified")
-  expect_no_error(as.data.frame(sfm, properties = c("eqn", "units")))
-  expect_equal(names(as.data.frame(sfm, properties = c("eqn", "units"))), c("type", "name", "eqn", "units"))
-
-  # Works with model units
-  sfm <- sdbuildR() |>
-    custom_unit("BMI", eqn = "kilograms/meters^2", doc = "Body Mass Index") |>
-    custom_unit("BAC",
-      eqn = "grams/deciliter",
-      doc = "Blood Alcohol Concentration, grams of alcohol per deciliter of blood"
-    ) |>
-    custom_unit("bottle", eqn = "2liters") |>
-    custom_unit("meal", eqn = "700kcal")
-
-  df <- as.data.frame(sfm)
-  expect_true(all(df$type == "custom_unit"))
-  expect_true(all(c("BMI", "BAC", "bottle", "meal") %in% df$name))
-  expect_equal(as.data.frame(sfm, name = "BMI")$name, "BMI")
-  expect_equal(names(as.data.frame(sfm, properties = "eqn")), c("type", "name", "eqn"))
-  expect_equal(nrow(as.data.frame(sfm, type = c("lookup"))), 0)
-  expect_no_error(as.data.frame(sfm, type = c("custom_unit")))
-
-  sfm <- sdbuildR() |>
-    custom_unit("abc") |>
-    custom_unit("abc", discard = TRUE)
-  expect_no_error(expect_no_message(as.data.frame(sfm, type = "custom_unit")))
 
   # Works with macros
   sfm <- sdbuildR() |>
@@ -990,10 +784,10 @@ test_that("as.data.frame(sfm) works", {
   # Combine type, name, properties
   sfm <- sdbuildR("Lorenz")
   expect_no_error(as.data.frame(sfm, name = c("x", "y", "z"), type = c("stock", "flow", "aux")))
-  expect_no_error(as.data.frame(sfm, name = c("x", "y", "z"), type = c("stock", "flow", "aux"), properties = c("eqn", "units", "label", "doc", "from")))
+  expect_no_error(as.data.frame(sfm, name = c("x", "y", "z"), type = c("stock", "flow", "aux"), properties = c("eqn", "label", "doc", "from")))
 
-  df <- as.data.frame(sfm, name = c("x", "y", "z"), type = c("stock", "flow", "aux"), properties = c("eqn", "units", "label", "doc", "from"))
-  expect_equal(names(df), c("type", "name", "eqn", "units", "label")) # "doc", "from" are not recorded for these variables
+  df <- as.data.frame(sfm, name = c("x", "y", "z"), type = c("stock", "flow", "aux"), properties = c("eqn", "label", "doc", "from"))
+  expect_equal(names(df), c("type", "name", "eqn", "label")) # "doc", "from" are not recorded for these variables
   expect_equal(nrow(df), 3)
 
   # Check with Julia properties
@@ -1326,26 +1120,6 @@ test_that("prep_equations_variables handles constant interpolation", {
 
   eqn_str <- sfm$model$variables$gf$const_gf$eqn_str
   expect_true(grepl("method = 'constant'", eqn_str))
-})
-
-test_that("graphical functions work with units", {
-  sfm <- sdbuildR()
-
-  sfm <- update(sfm, "gf_with_units", "lookup",
-    xpts = c(0, 10),
-    ypts = c(0, 100),
-    units = "meters"
-  )
-
-  expect_true("units" %in% names(sfm$model$variables$gf$gf_with_units))
-
-  sfm <- prep_equations_variables_julia(sfm,
-    keep_nonnegative_flow = TRUE,
-    keep_unit = TRUE
-  )
-
-  eqn_str <- sfm$model$variables$gf$gf_with_units$eqn_str
-  expect_true(grepl("\\[0, 100\\] \\.\\* u\"m\"", eqn_str))
 })
 
 test_that("graphical functions can be modified", {

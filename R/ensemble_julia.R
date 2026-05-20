@@ -71,8 +71,7 @@ ensemble_julia <- function(object, n, return_sims, conditions, cross,
       # Evaluate script
       start_t <- Sys.time()
 
-      # Wrap in invisible and capture.output to not show message of units module
-      # being overwritten
+      # Wrap in invisible and capture.output to keep Julia output quiet
       invisible(utils::capture.output(
         JuliaConnectoR::juliaEval(paste0('include("', jl_path(filepath), '")'))
       ))
@@ -183,9 +182,9 @@ ensemble_julia <- function(object, n, return_sims, conditions, cross,
     },
     error = function(e) {
       cli::cli_warn(c(
-        "Julia execution failed.",
-        "!" = "An error occurred while running the Julia script.",
-        "i" = "Error: {e[['message']]}"
+        "!" = "Julia execution failed.",
+        "i" = "An error occurred while running the Julia script.",
+        ">" = "Error: {e[['message']]}"
       ))
       new_ensemble_sdbuildR(
         success = FALSE,

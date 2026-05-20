@@ -146,16 +146,14 @@
 #' @param type Character vector of types
 #' @param arg_name Name of argument for error messages (default: "type")
 #' @return Validated, cleaned type vector (invisibly valid, or error raised)
-#' @param only_model_var Logical. If TRUE (default), validates against core model types
-#'   (stock, flow, constant, aux, lookup, func). If FALSE, also allows custom_unit.
 #' @noRd
-.validate_type_arg <- function(type, arg_name = "type", only_model_var = TRUE) {
+.validate_type_arg <- function(type, arg_name = "type") {
   if (is.null(type)) {
     return(type)
   }
 
   type <- clean_type(type)
-  allowed_types <- .sdbuildR_types(only_model_var = only_model_var)
+  allowed_types <- .sdbuildR_types()
 
   if (!all(type %in% allowed_types)) {
     types_display <- paste0("'", allowed_types, "'", collapse = ", ")
@@ -233,18 +231,31 @@
 }
 
 
-.validate_units_arg <- function(units) {
-  if (is.null(units)) {
-    units <- "1"
-  } else {
-    if (!inherits(units, "character")) {
-      units <- as.character(units)
+#' Validate equation syntax
+#' @param eqn Character vector of equations
+#' @param name Character vector of corresponding variable names
+#' @noRd
+.validate_eqn_syntax <- function(eqn, name) {
+  for (j in seq_along(eqn)) {
+    if (is.na(eqn[j]) || !nzchar(eqn[j])) {
+      next
     }
-    if (any(!nzchar(units))) {
-      units[!nzchar(units)] <- "1"
-    }
+
+    tryCatch(
+      {
+        parse(text = eqn[j])
+      },
+      error = function(e) {
+        cli::cli_abort(c(
+          "Invalid {.arg eqn} syntax.",
+          "x" = "Could not parse the equation for {.val {name[j]}}.",
+          "i" = e$message
+        ), call. = FALSE)
+      }
+    )
   }
-  units
+
+  invisible()
 }
 
 
@@ -599,7 +610,7 @@
 #' @inheritParams update.sdbuildR
 #' @noRd
 update_variable_row <- function(object, type, name,
-                                eqn, units, label, doc,
+                                eqn, label, doc,
                                 non_negative, to, from,
                                 xpts, ypts, source,
                                 interpolation, extrapolation) {
@@ -617,7 +628,6 @@ update_variable_row <- function(object, type, name,
   if ("eqn" %in% passed_arg) {
     object[["variables"]][idx_var, "eqn"] <- eqn
   }
-  if ("units" %in% passed_arg) object[["variables"]][idx_var, "units"] <- units
   if ("label" %in% passed_arg) object[["variables"]][idx_var, "label"] <- label
   if ("doc" %in% passed_arg) object[["variables"]][idx_var, "doc"] <- doc
   if ("non_negative" %in% passed_arg) object[["variables"]][idx_var, "non_negative"] <- non_negative
@@ -730,7 +740,6 @@ update_variable_row <- function(object, type, name,
 #'
 stock <- function(object, name,
                   eqn = 0,
-                  units = 1,
                   label = name,
                   doc = "",
                   non_negative = FALSE
@@ -773,7 +782,6 @@ flow <- function(object, name,
                  eqn = 0,
                  to = NULL,
                  from = NULL,
-                 units = 1,
                  label = name,
                  doc = "",
                  non_negative = FALSE) {
@@ -810,7 +818,6 @@ flow <- function(object, name,
 #'
 constant <- function(object, name,
                      eqn = 0,
-                     units = 1,
                      label = name,
                      doc = "",
                      non_negative = FALSE) {
@@ -848,7 +855,6 @@ constant <- function(object, name,
 #'
 auxiliary <- function(object, name,
                       eqn = 0,
-                      units = 1,
                       label = name,
                       doc = "",
                       non_negative = FALSE) {
@@ -904,7 +910,7 @@ aux <- auxiliary
 #'   update(c_, constant, eqn = my_logistic(2, slope = 50))
 #'
 custom_func <- function(object, name, eqn = 0,
-                        units = 1, label = name, doc = "") {
+                        label = name, doc = "") {
   cl <- match.call()
   cl[[1]] <- quote(update)
   cl$type <- "func"
@@ -941,7 +947,6 @@ lookup <- function(object, name,
                    xpts, ypts, source = NULL,
                    interpolation = "linear",
                    extrapolation = "nearest",
-                   units = 1,
                    label = name,
                    doc = "",
                    non_negative = FALSE) {
@@ -957,7 +962,7 @@ lookup <- function(object, name,
 }
 
 
-.validate_build_args <- function(name, type, label, eqn, to, from, units,
+.validate_build_args <- function(name, type, label, eqn, to, from,
                                  xpts, ypts, source, interpolation, extrapolation,
                                  non_negative, doc) {
   # Only validate arguments that were passed
@@ -977,11 +982,7 @@ lookup <- function(object, name,
   # Validate eqn
   if ("eqn" %in% passed_arg) {
     out$eqn <- .validate_eqn_arg(eqn)
-  }
-
-  # Validate units
-  if ("units" %in% passed_arg) {
-    out$units <- .validate_units_arg(units)
+    .validate_eqn_syntax(out$eqn, name)
   }
 
   # Validate label
@@ -1082,23 +1083,23 @@ lookup <- function(object, name,
 #'
 #' @section Stocks: Stocks define the state of the system. They accumulate material or information over time, such as people, products, or beliefs, which creates memory and inertia in the system. As such, stocks need not be tangible. Stocks are variables that can increase and decrease, and can be measured at a single moment in time. The value of a stock is increased or decreased by flows. A stock may have multiple inflows and multiple outflows. The net change in a stock is the sum of its inflows minus the sum of its outflows.
 #'
-#' The obligatory properties of a stock are "name", "type", and "eqn". Optional additional properties are "units", "label", "doc", "non_negative".
+#' The obligatory properties of a stock are "name", "type", and "eqn". Optional additional properties are "label", "doc", "non_negative".
 #'
 #' @section Flows: Flows move material and information through the system. Stocks can only decrease or increase through flows. A flow must flow from and/or flow to a stock. If a flow is not flowing from a stock, the source of the flow is outside of the model boundary. Similarly, if a flow is not flowing to a stock, the destination of the flow is outside the model boundary. Flows are defined in units of material or information moved over time, such as birth rates, revenue, and sales.
 #'
-#' The obligatory properties of a flow are "name", "type", "eqn", and either "from", "to", or both. Optional additional properties are "units", "label", "doc", "non_negative".
+#' The obligatory properties of a flow are "name", "type", "eqn", and either "from", "to", or both. Optional additional properties are "label", "doc", "non_negative".
 #'
 #' @section Constants: Constants are variables that do not change over the course of the simulation - they are time-independent. These may be numbers, but also functions. They can depend only on other constants.
 #'
-#' The obligatory properties of a constant are "name", "type", and "eqn". Optional additional properties are "units", "label", "doc", "non_negative".
+#' The obligatory properties of a constant are "name", "type", and "eqn". Optional additional properties are "label", "doc", "non_negative".
 #'
 #' @section Auxiliaries: Auxiliaries are dynamic variables that change over time. They are used for intermediate calculations in the system, and can depend on other flows, auxiliaries, constants, and stocks.
 #'
-#' The obligatory properties of an auxiliary are "name", "type", and "eqn". Optional additional properties are "units", "label", "doc", "non_negative".
+#' The obligatory properties of an auxiliary are "name", "type", and "eqn". Optional additional properties are "label", "doc", "non_negative".
 #'
 #' @section Graphical functions: Graphical functions, also known as table or lookup functions, are interpolation functions used to define the desired output (y) for a specified input (x). They are defined by a set of x- and y-domain points, which are used to create a piecewise linear function. The interpolation method defines the behavior of the graphical function between x-points ("constant" to return the value of the previous x-point, "linear" to linearly interpolate between defined x-points), and the extrapolation method defines the behavior outside of the x-points ("NA" to return NA values outside of defined x-points, "nearest" to return the value of the closest x-point).
 #'
-#' The obligatory properties of a graphical function are "name", "type", "xpts", and "ypts". "xpts" and "ypts" must be of the same length. Optional additional properties are "units", "label", "doc", "source", "interpolation", "extrapolation".
+#' The obligatory properties of a graphical function are "name", "type", "xpts", and "ypts". "xpts" and "ypts" must be of the same length. Optional additional properties are "label", "doc", "source", "interpolation", "extrapolation".
 #'
 #' @section Non-standard evaluation (NSE): The `name`, `type`, `eqn`, `to`, `from`, and `source` arguments
 #' support non-standard evaluation. This means you can pass bare symbols and
@@ -1118,7 +1119,7 @@ lookup <- function(object, name,
 #' update(sfm, !!my_name, stock, eqn = 100)
 #' ```
 #'
-#' The `label`, `doc`, `units`, `non_negative`, `xpts`, `ypts`,
+#' The `label`, `doc`,  `non_negative`, `xpts`, `ypts`,
 #' `interpolation`, and `extrapolation` arguments are not affected by NSE
 #' and are evaluated normally.
 #'
@@ -1127,16 +1128,15 @@ lookup <- function(object, name,
 #' @param type Type of building block(s); accepts a bare symbol or string. One of `stock`, `flow`, `constant`, `aux`, `lookup`, or `func`. Does not need to be specified to modify an existing variable.
 #' @param label Name of variable used for plotting. Defaults to the same as name.
 #' @param eqn Equation (or initial value in the case of stocks). Accepts a bare expression (e.g., `a * b + 1`), a string (`"a * b + 1"`), or a numeric value. Use `!!` to inject from a variable. Defaults to `0`.
-#' @param to Target of flow. Accepts a bare symbol or string. Must be a stock in the model. Defaults to NULL to indicate no target.
-#' @param from Source of flow. Accepts a bare symbol or string. Must be a stock in the model. Defaults to NULL to indicate no source.
-#' @param units Unit of variable, such as 'meter'. Defaults to `1` (no units).
-#' @param non_negative If TRUE, variable is enforced to be non-negative (i.e. strictly 0 or positive). Defaults to FALSE.
+#' @param to Target of flow. Accepts a bare symbol or string. Must be a stock in the model. Defaults to `NULL` to indicate no target.
+#' @param from Source of flow. Accepts a bare symbol or string. Must be a stock in the model. Defaults to `NULL` to indicate no source.
+#' @param non_negative If TRUE, variable is enforced to be non-negative (i.e. strictly 0 or positive). Defaults to `FALSE`.
 #' @param xpts Only for graphical functions: vector of x-domain points. Must be of the same length as ypts.
 #' @param ypts Only for graphical functions: vector of y-domain points. Must be of the same length as xpts.
-#' @param source Only for graphical functions: name of the variable which will serve as the input to the graphical function. Accepts a bare symbol or string. Necessary to specify if units are used. Defaults to NULL.
+#' @param source Only for graphical functions: name of the variable which will serve as the input to the graphical function. Accepts a bare symbol or string. Defaults to `NULL`.
 #' @param interpolation Only for graphical functions: interpolation method. Must be either "constant" or "linear". Defaults to "linear".
-#' @param extrapolation Only for graphical functions: extrapolation method. Must be either "nearest" or "NA". Defaults to "nearest".
-#' @param doc Description of variable. Defaults to "" (no description).
+#' @param extrapolation Only for graphical functions: extrapolation method. Must be either `"nearest"` or `"NA"`. Defaults to `"nearest"`.
+#' @param doc Description of variable. Defaults to `""` (no description).
 #' @param df A data.frame with variable properties to add and/or modify. Each row represents one variable to update. Required columns depend on the variable type being created:
 #'
 #' - All types require: 'type', 'name'
@@ -1146,7 +1146,7 @@ lookup <- function(object, name,
 #' - Auxiliaries require: 'eqn'
 #' - Graphical functions require: 'xpts', 'ypts'
 #'
-#' Optional columns for all types: 'units', 'label', 'doc', 'non_negative'
+#' Optional columns for all types: 'label', 'doc', 'non_negative'
 #' Optional columns for graphical functions: 'source', 'interpolation', 'extrapolation'
 #'
 #' Columns not applicable to a variable type should be set to NA. See Examples for a complete demonstration.
@@ -1244,7 +1244,6 @@ lookup <- function(object, name,
 #'
 update.sdbuildR <- function(object, name, type = NULL,
                             eqn = 0,
-                            units = 1,
                             label = name,
                             doc = "",
                             to = NULL, from = NULL,
@@ -1281,7 +1280,6 @@ update.sdbuildR <- function(object, name, type = NULL,
   if (!missing(eqn)) eqn <- .expr_to_char(rlang::enexpr(eqn))
   if (!missing(to)) to <- .expr_to_char(rlang::enexpr(to))
   if (!missing(from)) from <- .expr_to_char(rlang::enexpr(from))
-  if (!missing(units)) units <- .expr_to_char(rlang::enexpr(units))
   if (!missing(source)) source <- .expr_to_char(rlang::enexpr(source))
 
   passed_arg <- setdiff(names(match.call()[-1]), c("object", "df"))
@@ -1343,8 +1341,7 @@ update.sdbuildR <- function(object, name, type = NULL,
 
   # Clean names for new variables
   if (any(!idx_exist)) {
-    all_names <- c(var_names, object[["custom_unit"]][["name"]])
-    new_names <- clean_name(args[["name"]][!idx_exist], all_names)
+    new_names <- clean_name(args[["name"]][!idx_exist], var_names)
     report_name_change(args[["name"]][!idx_exist], new_names)
     args[["name"]][!idx_exist] <- new_names
   }
@@ -1416,13 +1413,6 @@ update.sdbuildR <- function(object, name, type = NULL,
     }
   }
 
-  # Process units
-  if ("units" %in% passed_arg) {
-    regex_units <- get_regex_units()
-    args[["units"]] <- vapply(args[["units"]], function(x) {
-      clean_unit(x, regex_units)
-    }, character(1), USE.NAMES = FALSE)
-  }
 
   # Build/update variables in data frame
   for (i in seq_along(args[["name"]])) {
@@ -1562,16 +1552,16 @@ add_from_df <- function(object, df) {
 }
 
 
-#' Change name of variable or model unit
+#' Change name of variable
 #'
-#' Change the name of a variable or model unit throughout the model. For variables, this updates the data frame and all references in equations, flow connections, and labels. For model units, this updates the unit data frame and all references in other units' equations and variables' unit specifications.
+#' Change the name of a variable throughout the model. This updates the data frame and all references in equations, flow connections, and labels.
 #'
 #' @inheritParams update.sdbuildR
-#' @param new_name New name. Character vector of the same length as `name`. Must be unique across all existing variable and model unit names.
+#' @param new_name New name. Character vector of the same length as `name`. Must be unique across all existing variables.
 #'
 #' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR] with the name changed throughout the model.
 #'
-#' @seealso [update()], [custom_unit()], [discard()]
+#' @seealso [update()], [discard()]
 #' @concept build
 #' @export
 #' @examples
@@ -1614,85 +1604,31 @@ change_name <- function(object, name, new_name) {
     ))
   }
 
-  # Determine if names are variables or model units
-  entity_types <- find_entity_type(object, name)
-
-  # All names must be the same entity type (can't mix variables and units)
-  if (length(unique(entity_types)) > 1) {
-    cli::cli_abort(c(
-      "x" = "Cannot rename variables and model units in the same call.",
-      ">" = "Rename variables and model units separately."
-    ))
-  }
-
-  entity_type <- entity_types[1]
-
-  # Ensure new_name is clean and unique across both variables and units
+  # Ensure new_name is clean and unique across variables
   var_names <- object[["variables"]][["name"]]
-  all_names <- c(var_names, object[["custom_unit"]][["name"]])
   chosen_new_name <- new_name
-  new_name <- clean_name(new_name, all_names)
+  new_name <- clean_name(new_name, var_names)
   report_name_change(chosen_new_name, new_name)
 
-  if (entity_type == "variable") {
-    # --- Rename variable ---
+  # Check if any renamed variables are funcs (for cache invalidation)
+  renamed_types <- object[["variables"]][match(name, var_names), "type"]
 
-    # Check if any renamed variables are funcs (for cache invalidation)
-    renamed_types <- object[["variables"]][match(name, var_names), "type"]
+  # If the previous label was the same as the old name, update it to match the new name
+  idx_var <- match(name, var_names)
+  old_labels <- object[["variables"]][idx_var, "label"]
+  update_label <- old_labels == name
+  new_labels <- ifelse(update_label, new_name, old_labels)
+  object[["variables"]][idx_var, "label"] <- new_labels
 
-    # If the previous label was the same as the old name, update it to match the new name
-    idx_var <- match(name, var_names)
-    old_labels <- object[["variables"]][idx_var, "label"]
-    update_label <- old_labels == name
-    new_labels <- ifelse(update_label, new_name, old_labels)
-    object[["variables"]][idx_var, "label"] <- new_labels
+  # Update variable name in data frame and all references to it in the model
+  object <- .change_name(object, name, new_name)
 
-    # Update variable name in data frame and all references to it in the model
-    object <- .change_name(object, name, new_name)
-
-    # Re-prep equations since .change_name() updates eqn via gsub but not eqn_str
-    object <- prep_equations_variables(object)
-    object <- prep_stock_change(object)
-    object <- invalidate_assemble(object, "variables")
-    if (any(renamed_types == "func")) {
-      object <- invalidate_assemble(object, "funcs")
-    }
-  } else {
-    # --- Rename model unit ---
-
-    for (i in seq_along(name)) {
-      old_name_i <- name[i]
-      new_name_i <- new_name[i]
-
-      # Update the unit name in the data frame
-      old_idx <- which(object[["custom_unit"]][["name"]] == old_name_i)
-      object[["custom_unit"]][old_idx, "name"] <- new_name_i
-
-      # Build a replacement dictionary for unit references
-      dict <- stats::setNames(new_name_i, paste0("^", old_name_i, "$"))
-
-      # Update references in other model units' equations
-      for (j in seq_len(nrow(object[["custom_unit"]]))) {
-        if (is_defined(object[["custom_unit"]][j, "eqn"])) {
-          object[["custom_unit"]][j, "eqn"] <- clean_unit(object[["custom_unit"]][j, "eqn"], dict)
-        }
-      }
-
-      # Update references in variables' units columns and u() calls in equations
-      for (j in seq_len(nrow(object[["variables"]]))) {
-        if (is_defined(object[["variables"]][j, "units"])) {
-          object[["variables"]][j, "units"] <- clean_unit(object[["variables"]][j, "units"], dict)
-        }
-        if (is_defined(object[["variables"]][j, "eqn"])) {
-          object[["variables"]][j, "eqn"] <- clean_unit_in_u(object[["variables"]][j, "eqn"], dict)
-        }
-      }
-    }
-
-    # Invalidate units cache (only relevant for Julia)
-    if (object[["sim_specs"]][["language"]] == "Julia") {
-      object <- invalidate_assemble(object, "units")
-    }
+  # Re-prep equations since .change_name() updates eqn via gsub but not eqn_str
+  object <- prep_equations_variables(object)
+  object <- prep_stock_change(object)
+  object <- invalidate_assemble(object, "variables")
+  if (any(renamed_types == "func")) {
+    object <- invalidate_assemble(object, "funcs")
   }
 
   object <- sanitize_sdbuildR(object)
@@ -1847,39 +1783,16 @@ check_var_existence <- function(name, var_names) {
 }
 
 
-#' Find whether names are variables or model units
+#' Remove variable(s)
 #'
-#' @param object A stock-and-flow model object
-#' @param name Character vector of names to look up
-#' @returns Character vector of `"variable"` or `"unit"` for each name. Errors if any name is not found in either.
-#' @noRd
-find_entity_type <- function(object, name) {
-  in_vars <- name %in% object[["variables"]][["name"]]
-  in_units <- name %in% object[["custom_unit"]][["name"]]
-
-  not_found <- !in_vars & !in_units
-  if (any(not_found)) {
-    missing_names <- name[not_found]
-    cli::cli_abort(c(
-      "{cli::qty(length(missing_names))}Name{?s} not found in model.",
-      "x" = "{.code {missing_names}} {?does/do} not exist as a variable or model unit."
-    ))
-  }
-
-  ifelse(in_vars, "variable", "unit")
-}
-
-
-#' Remove variable(s) or model unit(s)
-#'
-#' Remove variable(s) or model unit(s) from a stock-and-flow model. For variables, all references in flow connections and graphical function sources are also removed. A warning will be thrown if any lingering references to the removed name remain in the model.
+#' Remove variable(s) from a stock-and-flow model. All references in flow connections and graphical function sources are also removed. A warning will be thrown if any lingering references to the removed name remain in the model.
 #'
 #' @inheritParams update.sdbuildR
-#' @param name Name(s) to remove. Accepts bare symbols (e.g., `x`), strings, or vectors via `c()`. Can be variable names or model unit names.
+#' @param name Name(s) to remove. Accepts bare symbols (e.g., `x`), strings, or vectors via `c()`. Must be variable names.
 #' @param remove_references Where to remove references to the discarded variables. By default, references to discarded variables in `"to"`, `"from"`, `"source"`, and `"unit_test"` are removed. Set to `NULL` to keep all references (not recommended). Note that any lingering references in equations will cause errors in simulation and should be removed or updated with `update()` after discarding the variable.
 #' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR()]
 #'
-#' @seealso [update()], [custom_unit()], [change_name()]
+#' @seealso [update()], [change_name()]
 #' @export
 #' @examples
 #' sfm <- sdbuildR() |>
@@ -1894,60 +1807,36 @@ discard <- function(object, name, remove_references = c("to", "from", "source", 
   .check_name_not_sdbuildR(name_expr, rlang::caller_env())
   name <- .expr_to_char(name_expr)
 
-  # Determine if names are variables or model units
-  entity_types <- find_entity_type(object, name)
-
-  # All names must be the same entity type
-  if (length(unique(entity_types)) > 1) {
-    cli::cli_abort(c(
-      "Cannot discard variables and model units in the same call.",
-      ">" = "Erase variables and model units separately."
-    ))
-  }
+  # Determine if names are variables
+  check_var_existence(name, object[["variables"]][["name"]])
 
   remove_references <- match.arg(remove_references, several.ok = TRUE)
 
-  entity_type <- entity_types[1]
 
-  if (entity_type == "variable") {
-    # --- Erase variable(s) ---
+  # Erase variable(s)
+  discard_types <- object[["variables"]][object[["variables"]][["name"]] %in% name, "type"]
 
-    # Check types before erasing to know what to invalidate
-    discard_types <- object[["variables"]][object[["variables"]][["name"]] %in% name, "type"]
+  object <- .discard(object, name, remove_references = remove_references)
 
-    object <- .discard(object, name, remove_references = remove_references)
-
-    # Keep sim_specs(vars=...) consistent after variable removal
-    sim_vars <- object[["sim_specs"]][["vars"]]
-    if (!is.null(sim_vars)) {
-      sim_vars <- sim_vars[!(sim_vars %in% name)]
-      if (length(sim_vars) == 0L) {
-        sim_vars <- NULL
-      }
-      object[["sim_specs"]][["vars"]] <- sim_vars
+  # Keep sim_specs(vars=...) consistent after variable removal
+  sim_vars <- object[["sim_specs"]][["vars"]]
+  if (!is.null(sim_vars)) {
+    sim_vars <- sim_vars[!(sim_vars %in% name)]
+    if (length(sim_vars) == 0L) {
+      sim_vars <- NULL
     }
-
-    # Invalidate appropriate cache components
-    if (any(discard_types == "func")) {
-      object <- invalidate_assemble(object, "funcs")
-    }
-    if (any(discard_types != "func")) {
-      object <- invalidate_assemble(object, "variables")
-    }
-
-    .warn_lingering_ref(object, name, entity_type = "variable")
-  } else {
-    # --- Erase model unit(s) ---
-
-    object[["custom_unit"]] <- object[["custom_unit"]][!object[["custom_unit"]][["name"]] %in% name, ]
-
-    # Invalidate units cache (only relevant for Julia)
-    if (object[["sim_specs"]][["language"]] == "Julia") {
-      object <- invalidate_assemble(object, "units")
-    }
-
-    .warn_lingering_ref(object, name, entity_type = "unit")
+    object[["sim_specs"]][["vars"]] <- sim_vars
   }
+
+  # Invalidate appropriate cache components
+  if (any(discard_types == "func")) {
+    object <- invalidate_assemble(object, "funcs")
+  }
+  if (any(discard_types != "func")) {
+    object <- invalidate_assemble(object, "variables")
+  }
+
+  .warn_lingering_ref(object, name)
 
   # Re-prep equations and invalidate cache
   object <- prep_equations_variables(object, modified_names = NULL)
@@ -2070,71 +1959,33 @@ discard <- function(object, name, remove_references = c("to", "from", "source", 
 }
 
 
-.warn_lingering_ref <- function(object, name, entity_type = c("variable", "unit")) {
-  entity_type <- match.arg(entity_type)
+.warn_lingering_ref <- function(object, name) {
+  # Check for lingering references to removed variable in equations
+  for (var in name) {
+    idx <- grepl(object[["variables"]][["eqn"]], pattern = paste0("\\b", var, "\\b"))
+    dep <- object[["variables"]][idx, "name"]
+    if (any(idx)) {
+      cli::cli_warn(c(
+        "{cli::qty(length(dep))}Found {?a /}lingering reference{?s} to removed variable {.code {var}}.",
+        ">" = "Check equation of variable{?s} {.val {dep}}."
+      ))
+    }
+  }
 
-  if (entity_type == "variable") {
-    # Check for lingering references to removed variable in equations
-    for (var in name) {
-      idx <- grepl(object[["variables"]][["eqn"]], pattern = paste0("\\b", var, "\\b"))
-      dep <- object[["variables"]][idx, "name"]
-      if (any(idx)) {
+  # Check for lingering references in unit test expressions
+  if (length(object[["unit_tests"]]) > 0L) {
+    full_model_names <- c(get_model_var(object), name)
+
+    for (i in seq_along(object[["unit_tests"]])) {
+      linger <- intersect(
+        name,
+        .ut_expr_vars(object[["unit_tests"]][[i]][["expr_str"]], full_model_names)[["model_refs"]]
+      )
+      if (length(linger) > 0L) {
         cli::cli_warn(c(
-          "{cli::qty(length(dep))}Found {?a /}lingering reference{?s} to removed variable {.code {var}}.",
-          ">" = "Check equation of variable{?s} {.val {dep}}."
+          "Unit test [{i}] {.val {object[['unit_tests']][[i]][['label']]}} still references removed variable{?s} {.code {linger}}.",
+          ">" = "Update or remove this test with {.fn unit_test} or {.fn discard_unit_test}."
         ))
-      }
-    }
-
-    # Check for lingering references in unit test expressions
-    # NOTE: The discarded variable(s) are already removed from get_model_var(),
-    # so we must include them in model_names to detect lingering refs.
-    if (length(object[["unit_tests"]]) > 0L) {
-      full_model_names <- c(get_model_var(object), name)
-
-      for (i in seq_along(object[["unit_tests"]])) {
-        linger <- intersect(
-          name,
-          .ut_expr_vars(object[["unit_tests"]][[i]][["expr_str"]], full_model_names)[["model_refs"]]
-        )
-        if (length(linger) > 0L) {
-          cli::cli_warn(c(
-            "Unit test [{i}] {.val {object[['unit_tests']][[i]][['label']]}} still references removed variable{?s} {.code {linger}}.",
-            ">" = "Update or remove this test with {.fn unit_test} or {.fn discard_unit_test}."
-          ))
-        }
-      }
-    }
-  } else {
-    # entity_type == "unit"
-
-    # Check for lingering references in other custom unit equations
-    if (nrow(object[["custom_unit"]]) > 0) {
-      for (unit_name in name) {
-        for (j in seq_len(nrow(object[["custom_unit"]]))) {
-          if (is_defined(object[["custom_unit"]][j, "eqn"]) &&
-            grepl(paste0("\\b", unit_name, "\\b"), object[["custom_unit"]][j, "eqn"])) {
-            cli::cli_warn(c(
-              "Found lingering reference to removed unit {.code {unit_name}}.",
-              ">" = "Check the equation of model unit {.val {object[['custom_unit']][j, 'name']}}."
-            ))
-          }
-        }
-      }
-    }
-
-    # Check for lingering references in variables' units columns
-    if (nrow(object[["variables"]]) > 0) {
-      for (unit_name in name) {
-        for (j in seq_len(nrow(object[["variables"]]))) {
-          if (is_defined(object[["variables"]][j, "units"]) &&
-            grepl(paste0("\\b", unit_name, "\\b"), object[["variables"]][j, "units"])) {
-            cli::cli_warn(c(
-              "Found lingering reference to removed unit {.code {unit_name}}.",
-              ">" = "Check the units of variable {.val {object[['variables']][j, 'name']}}."
-            ))
-          }
-        }
       }
     }
   }

@@ -31,9 +31,9 @@ test_that("prep_stock_change() creates list columns", {
 # Test prep_stock_change() creates list columns
 test_that("prep_stock_change() creates list columns", {
   sfm <- sdbuildR() |>
-    update(name = "S", type = "stock", eqn = "100", units = "people") |>
-    update(name = "inflow1", type = "flow", eqn = "5", to = "S", units = "people/day") |>
-    update(name = "outflow1", type = "flow", eqn = "3", from = "S", units = "people/day") |>
+    update(name = "S", type = "stock", eqn = "100") |>
+    update(name = "inflow1", type = "flow", eqn = "5", to = "S") |>
+    update(name = "outflow1", type = "flow", eqn = "3", from = "S") |>
     sim_specs(language = "Julia")
 
   # Call Julia prep function
@@ -218,28 +218,4 @@ test_that("bidirectional flows handled correctly", {
   # sum_eqn should have both
   expect_true(grepl("pump_in", stocks$sum_eqn))
   expect_true(grepl("drain_out", stocks$sum_eqn))
-})
-
-# Test Julia prep with units
-test_that("Julia prep handles units correctly with list columns", {
-  sfm <- sdbuildR() |>
-    update(name = "Water", type = "stock", eqn = "100", units = "liters") |>
-    update(name = "rain", type = "flow", eqn = "2", to = "Water", units = "liters/hour") |>
-    update(name = "evap", type = "flow", eqn = "1", from = "Water", units = "liters/hour") |>
-    sim_specs(language = "Julia")
-
-  sfm <- prep_stock_change(sfm)
-
-  stocks <- sfm$variables[sfm$variables$type == "stock", ]
-
-  # Should have list columns
-  expect_true(is.list(stocks$inflow))
-  expect_true(is.list(stocks$outflow))
-
-  # Should have proper inflow/outflow
-  w_inflow <- stocks[stocks$name == "Water", "inflow"][[1]]
-  w_outflow <- stocks[stocks$name == "Water", "outflow"][[1]]
-
-  expect_equal(w_inflow, "rain")
-  expect_equal(w_outflow, "evap")
 })

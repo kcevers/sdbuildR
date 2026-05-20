@@ -28,6 +28,25 @@ test_that("ensemble() R returns correct structure", {
   }
 })
 
+test_that("ensemble() R handles models with no constants", {
+  sfm <- make_basic_sfm() |>
+    sim_specs(language = "R", start = 0, stop = 10, dt = 0.1, save_at = 1)
+
+  sims <- silence(ensemble(sfm, n = 3, return_sims = TRUE, verbose = FALSE))
+
+  expect_true(sims[["success"]])
+  expect_equal(nrow(sims[["constants"]][["df"]]), 0)
+  expect_equal(nrow(sims[["constants"]][["summary"]]), 0)
+  expect_equal(
+    names(sims[["constants"]][["df"]]),
+    c("i", "j", "variable", "value")
+  )
+  expect_true(
+    all(c("j", "variable", "mean", "median", "sd", "min", "max", "q0.025", "q0.975") %in%
+      names(sims[["constants"]][["summary"]]))
+  )
+})
+
 test_that("ensemble() R respects only_stocks = TRUE", {
   sfm <- make_r_ensemble_random_sfm()
   df <- as.data.frame(sfm, properties = "eqn")
@@ -245,18 +264,6 @@ test_that("ensemble() R works with conditions and n = 1", {
   expect_equal(sims[["n"]], 1)
   expect_equal(sims[["n_total"]], 2)
   expect_equal(sims[["n_conditions"]], 2)
-})
-
-test_that("ensemble() R rejects models with unit strings", {
-  # Create a model that uses u() — this should fail gracefully in R
-  sfm <- sdbuildR() |>
-    update("S", type = "stock", eqn = "u('1 kg')") |>
-    update("F1", type = "flow", eqn = "S", to = "S") |>
-    sim_specs(language = "R")
-
-  sims <- silence(ensemble(sfm, n = 2, verbose = FALSE))
-  expect_false(sims[["success"]])
-  expect_true(grepl("unit", sims[["error_message"]], ignore.case = TRUE))
 })
 
 

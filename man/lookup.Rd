@@ -12,7 +12,6 @@ lookup(
   source = NULL,
   interpolation = "linear",
   extrapolation = "nearest",
-  units = 1,
   label = name,
   doc = "",
   non_negative = FALSE
@@ -27,19 +26,17 @@ lookup(
 
 \item{ypts}{Only for graphical functions: vector of y-domain points. Must be of the same length as xpts.}
 
-\item{source}{Only for graphical functions: name of the variable which will serve as the input to the graphical function. Accepts a bare symbol or string. Necessary to specify if units are used. Defaults to NULL.}
+\item{source}{Only for graphical functions: name of the variable which will serve as the input to the graphical function. Accepts a bare symbol or string. Defaults to \code{NULL}.}
 
 \item{interpolation}{Only for graphical functions: interpolation method. Must be either "constant" or "linear". Defaults to "linear".}
 
-\item{extrapolation}{Only for graphical functions: extrapolation method. Must be either "nearest" or "NA". Defaults to "nearest".}
-
-\item{units}{Unit of variable, such as 'meter'. Defaults to \code{1} (no units).}
+\item{extrapolation}{Only for graphical functions: extrapolation method. Must be either \code{"nearest"} or \code{"NA"}. Defaults to \code{"nearest"}.}
 
 \item{label}{Name of variable used for plotting. Defaults to the same as name.}
 
-\item{doc}{Description of variable. Defaults to "" (no description).}
+\item{doc}{Description of variable. Defaults to \code{""} (no description).}
 
-\item{non_negative}{If TRUE, variable is enforced to be non-negative (i.e. strictly 0 or positive). Defaults to FALSE.}
+\item{non_negative}{If TRUE, variable is enforced to be non-negative (i.e. strictly 0 or positive). Defaults to \code{FALSE}.}
 }
 \value{
 A stock-and-flow model object of class \code{\link[=sdbuildR]{sdbuildR}}

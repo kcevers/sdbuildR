@@ -8,8 +8,6 @@
 #' - Flows connected to a stock that does not exist
 #' - Undefined variable references in equations
 #' - Circularity in equations
-#' - Connected stocks and flows without both having units or no units
-#' - Missing unit definitions
 #'
 #' The following potential problems are detected:
 #' - Absence of flows
@@ -57,8 +55,7 @@ diagnose <- function(object) {
     undefined_vars       = list(problem = "none", refs = list()),
     unit_test_refs       = list(problem = "none", refs = list()),
     circular_static      = list(problem = "none", cycle_nodes = character(), edge_list = NULL),
-    circular_dynamic     = list(problem = "none", cycle_nodes = character(), edge_list = NULL),
-    undefined_units      = list(problem = "none", units = character())
+    circular_dynamic     = list(problem = "none", cycle_nodes = character(), edge_list = NULL)
   )
 
   # Get stock and flow names
@@ -128,12 +125,12 @@ diagnose <- function(object) {
     )
   }
 
-  ### Detect undefined variable references in unit test expressions and conditions
-  out_ut <- .detect_undefined_unit_test_vars(object)
-  if (out_ut[["issue"]]) {
+  ### Detect undefined variable references in unit tests
+  out <- .detect_undefined_unit_test_vars(object)
+  if (out[["issue"]]) {
     checks[["unit_test_refs"]] <- list(
       problem = "warning",
-      refs    = out_ut[["data"]]
+      refs = out[["data"]]
     )
   }
 
@@ -151,23 +148,6 @@ diagnose <- function(object) {
       problem = "error",
       cycle_nodes = out[["dynamic"]][["cycle_nodes"]],
       edge_list = out[["dynamic"]][["edge_list"]]
-    )
-  }
-
-  ### Find missing unit definitions
-  regex_units <- get_regex_units()
-
-  add_custom_unit <- detect_undefined_units(
-    object,
-    new_eqns = object[["variables"]][["eqn"]],
-    new_units = object[["variables"]][["units"]],
-    regex_units = regex_units,
-    R_or_Julia = "R"
-  )
-  if (NROW(add_custom_unit) > 0) {
-    checks[["undefined_units"]] <- list(
-      problem = "error",
-      units = add_custom_unit[["name"]]
     )
   }
 
@@ -201,7 +181,7 @@ print.diagnose_sdbuildR <- function(x, ...) {
   warnings <- Filter(function(y) y$problem == "warning", x)
 
   if (length(errors) == 0 && length(warnings) == 0) {
-    cli::cli_inform("No problems detected!")
+    cli::cli_inform(c("v" = "No problems detected!"))
     return(invisible(x))
   }
 
@@ -287,10 +267,6 @@ print.diagnose_sdbuildR <- function(x, ...) {
         }
       }
     },
-    undefined_units = cli::cli_inform(c(
-      "!" = "{cli::qty(length(check$units))}Unit{?s} not defined: {.code {check$units}}.",
-      ">" = "Add custom units with {.fn custom_unit}."
-    )),
     unit_test_refs = {
       n <- length(check$refs)
       cli::cli_inform(c("*" = "{cli::qty(n)}Unit test{?s} reference{?s} undefined variable{?s}."))
@@ -320,7 +296,6 @@ print.diagnose_sdbuildR <- function(x, ...) {
     undefined_vars       = "Undefined variable reference(s).",
     circular_static      = "Circular dependency in static equations.",
     circular_dynamic     = "Circular dependency in dynamic equations.",
-    undefined_units      = "Undefined unit(s).",
     unit_test_refs       = "Unit test(s) reference undefined variable(s).",
     nm
   )

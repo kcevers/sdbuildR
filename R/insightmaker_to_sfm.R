@@ -35,8 +35,8 @@ insightmaker_to_sfm <- function(URL,
                                 keep_nonnegative_flow = TRUE,
                                 keep_nonnegative_stock = FALSE) {
   if (P[["debug"]]) {
-    cli::cli_inform("URL: {URL}")
-    cli::cli_inform("file: {file}")
+    cli::cli_inform(c("i" = "URL: {URL}"))
+    cli::cli_inform(c("i" = "file: {file}"))
   }
 
   # Get Insight Maker model
@@ -57,9 +57,9 @@ insightmaker_to_sfm <- function(URL,
     },
     error = function(e) {
       cli::cli_abort(
-        c("Failed to convert Insight Maker model structure to XMILE format.",
-          "x" = "Check for unsupported Insight Maker syntax or model structure.",
-          "i" = "Original error: {conditionMessage(e)}"
+        c("x" = "Failed to convert Insight Maker model structure to XMILE format.",
+          "i" = "Check for unsupported Insight Maker syntax or model structure.",
+          ">" = "Original error: {conditionMessage(e)}"
         ),
         call = NULL
       )
@@ -79,28 +79,6 @@ insightmaker_to_sfm <- function(URL,
   # Extract object for convenience (conversion functions work on object)
   object <- ctx$object
 
-  # Clean up units
-  if (P[["debug"]]) {
-    cli::cli_inform("Cleaning units")
-  }
-
-  regex_units <- get_regex_units()
-
-  object <- tryCatch(
-    {
-      clean_units_IM(object, regex_units)
-    },
-    error = function(e) {
-      cli::cli_abort(
-        c("Failed to clean units in the model.",
-          "x" = "Check for invalid unit syntax or unsupported unit types.",
-          "i" = "Original error: {conditionMessage(e)}"
-        ),
-        call = NULL
-      )
-    }
-  )
-
   # Check non-negativity for flows and stocks
   object <- tryCatch(
     {
@@ -108,9 +86,9 @@ insightmaker_to_sfm <- function(URL,
     },
     error = function(e) {
       cli::cli_abort(
-        c("Failed to check non-negativity constraints.",
-          "x" = "Review your keep_nonnegative_flow and keep_nonnegative_stock settings.",
-          "i" = "Original error: {conditionMessage(e)}"
+        c("x" = "Failed to check non-negativity constraints.",
+          "i" = "Review your keep_nonnegative_flow and keep_nonnegative_stock settings.",
+          ">" = "Original error: {conditionMessage(e)}"
         ),
         call = NULL
       )
@@ -119,18 +97,18 @@ insightmaker_to_sfm <- function(URL,
 
   # Convert macros
   if (P[["debug"]]) {
-    cli::cli_inform("Converting macros")
+    cli::cli_inform(c("i" = "Converting macros"))
   }
 
   object <- tryCatch(
     {
-      convert_macros_IM_wrapper(object, regex_units = regex_units)
+      convert_macros_IM_wrapper(object)
     },
     error = function(e) {
       cli::cli_abort(
-        c("Failed to convert macros from Insight Maker format.",
-          "x" = "Check for unsupported macro syntax or functions.",
-          "i" = "Original error: {conditionMessage(e)}"
+        c("x" = "Failed to convert macros from Insight Maker format.",
+          "i" = "Check for unsupported macro syntax or functions.",
+          ">" = "Original error: {conditionMessage(e)}"
         ),
         call = NULL
       )
@@ -139,18 +117,18 @@ insightmaker_to_sfm <- function(URL,
 
   # Convert equations in model variables (IM format -> R format)
   if (P[["debug"]]) {
-    cli::cli_inform("Converting equations")
+    cli::cli_inform(c("i" = "Converting equations"))
   }
 
   object <- tryCatch(
     {
-      convert_equations_IM_wrapper(object, regex_units = regex_units)
+      convert_equations_IM_wrapper(object)
     },
     error = function(e) {
       cli::cli_abort(
-        c("Failed to convert equations from Insight Maker format.",
-          "x" = "Check for unsupported functions or syntax in your model equations.",
-          "i" = "Original error: {conditionMessage(e)}"
+        c("x" = "Failed to convert equations from Insight Maker format.",
+          "i" = "Check for unsupported functions or syntax in your model equations.",
+          ">" = "Original error: {conditionMessage(e)}"
         ),
         call = NULL
       )
@@ -164,7 +142,7 @@ insightmaker_to_sfm <- function(URL,
     },
     error = function(e) {
       cli::cli_abort(
-        c("Failed to clean variable names.",
+        c("x" = "Failed to clean variable names.",
           "i" = "Original error: {conditionMessage(e)}"
         ),
         call = NULL
@@ -179,7 +157,7 @@ insightmaker_to_sfm <- function(URL,
     },
     error = function(e) {
       cli::cli_abort(
-        c("Failed to split auxiliary variables into constants and auxiliaries.",
+        c("x" = "Failed to split auxiliary variables into constants and auxiliaries.",
           "i" = "Original error: {conditionMessage(e)}"
         ),
         call = NULL
@@ -187,41 +165,10 @@ insightmaker_to_sfm <- function(URL,
     }
   )
 
-  # Prepare equation strings for the target language
-  # This must happen before sim_specs() to ensure eqn_str and sum_eqn are populated
-  # Determine which language will be used (check for units first)
-  unit_strings <- find_unit_strings(object)
-  df_units <- as.data.frame(object, type = c("stock", "aux", "constant", "lookup"), properties = "units")
-
-  will_use_julia <- length(unit_strings) > 0 ||
-    nrow(object[["custom_unit"]]) > 0 ||
-    any(df_units[["units"]] != "1")
-
-  # Prepare equations (adapter handles R vs Julia based on sim_specs)
-  if (will_use_julia) {
-    object[["sim_specs"]][["language"]] <- "Julia"
-  }
   object <- prep_equations_variables(object)
   object <- prep_stock_change(object)
-
-  # Determine simulation language: if using units, set to Julia
-  # Reuse variables computed above for prep functions
-  if (will_use_julia) {
-    cli::cli_inform("Units detected. Setting language to {.code Julia}")
-    object <- sim_specs(object, language = "Julia")
-  }
   object <- sim_specs(object, keep_nonnegative_flow = keep_nonnegative_flow, keep_nonnegative_stock = keep_nonnegative_stock)
 
-  # Clean up temporary columns used during conversion
-  # These columns are no longer needed and should not appear in the final sdbuildR object
-  # temp_cols <- c("eqn_insightmaker", "units_insightmaker",
-  #                "name_insightmaker", "id_insightmaker",
-  #                "conveyor", "len")
-  # for (col in temp_cols) {
-  #   if (col %in% colnames(object[["variables"]])) {
-  #     object[["variables"]][[col]] <- NULL
-  #   }
-  # }
   allowed_cols <- colnames(empty_variables())
   object[["variables"]] <- object[["variables"]][, colnames(object[["variables"]]) %in% allowed_cols]
 

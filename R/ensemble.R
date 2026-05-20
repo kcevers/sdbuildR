@@ -68,7 +68,7 @@
 #'    data.frame with the initial values of the stocks used in the ensemble.}
 #'  \item{constants}{List with df (if return_sims = TRUE) and summary,
 #'    containing data.frame with the constant parameters used in the ensemble.}
-#'  \item{script}{Script used for the ensemble simulation (Julia only).}
+#'  \item{script}{Script used for the ensemble simulation.}
 #'  \item{duration}{Duration of the simulation in seconds.}
 #'  \item{...}{Other parameters passed to ensemble}
 #'  }
@@ -95,7 +95,8 @@
 #' sims <- ensemble(sfm, n = 10)
 #' plot(sims)
 #'
-#' # To plot individual trajectories, rerun the ensemble with return_sims = TRUE. Note that this can consume a lot of memory for large simulations.
+#' # To plot individual trajectories, rerun the ensemble with return_sims = TRUE. 
+#' # Note that this can consume a lot of memory for large simulations.
 #' sims <- ensemble(sfm, n = 10, return_sims = TRUE)
 #' plot(sims, type = "sims")
 #'
@@ -144,19 +145,6 @@
 #'   requireNamespace("future.apply", quietly = TRUE)) {
 #'   future::plan(future::sequential)
 #' }
-#'
-#' @examplesIf Sys.getenv("NOT_CRAN") == "true" && is_julia_ready()
-#'
-#' # Run simulation in parallel (Julia)
-#' use_julia(nthreads = 4)
-#' sfm <- sfm |> sim_specs(language = "Julia")
-#' sims <- ensemble(sfm, n = 50)
-#'
-#' # Stop using threads (restarts Julia session)
-#' use_julia(nthreads = 1)
-#'
-#' # Close Julia
-#' use_julia(stop = TRUE)
 #'
 ensemble <- function(object,
                      n = 10,
@@ -433,7 +421,7 @@ print.ensemble_sdbuildR <- function(x, ...) {
   has_counts <- all(!vapply(x[c("n_total", "n_conditions", "n")], is.null, logical(1)))
   if (has_counts) {
     cond_word <- if (x[["n_conditions"]] == 1) "condition" else "conditions"
-    cli::cli_inform("{x[['n_total']]} total simulations \u2022 {x[['n_conditions']]} {cond_word} \u2022 {x[['n']]} per condition")
+    cli::cli_inform(c("i" = "{x[['n_total']]} total simulations \u2022 {x[['n_conditions']]} {cond_word} \u2022 {x[['n']]} per condition"))
   }
 
   if (x[["success"]]) {

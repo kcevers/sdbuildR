@@ -58,7 +58,7 @@ test_that("clean_language works", {
 
 test_that("get_names() works", {
   # Check no variables
-  expect_equal(get_names(sdbuildR()), data.frame(type = character(), name = character(), label = character(), units = character()))
+  expect_equal(get_names(sdbuildR()), data.frame(type = character(), name = character(), label = character()))
 
   # Check with variables
   sfm <- sdbuildR() |>
@@ -68,23 +68,10 @@ test_that("get_names() works", {
   expected <- data.frame(
     type = c("aux", "aux"),
     name = c("a", "b"),
-    label = c("a", "b"),
-    units = c("1", "1")
+    label = c("a", "b")
   )
   expect_equal(result, expected)
 
-  # Check with units
-  sfm <- sdbuildR() |>
-    update("a", "stock", units = "1/s") |>
-    update("b", "aux", units = "m")
-  result <- get_names(sfm)
-  expected <- data.frame(
-    type = c("stock", "aux"),
-    name = c("a", "b"),
-    label = c("a", "b"),
-    units = c("1/s", "m")
-  )
-  expect_equal(result, expected)
 
   # Check with label
   sfm <- sdbuildR() |>
@@ -94,8 +81,7 @@ test_that("get_names() works", {
   expected <- data.frame(
     type = c("stock", "aux"),
     name = c("a", "b"),
-    label = c("A", "B"),
-    units = c("1", "1")
+    label = c("A", "B")
   )
   expect_equal(result, expected)
 })

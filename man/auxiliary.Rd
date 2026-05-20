@@ -5,25 +5,9 @@
 \alias{aux}
 \title{Add or modify auxiliaries}
 \usage{
-auxiliary(
-  object,
-  name,
-  eqn = 0,
-  units = 1,
-  label = name,
-  doc = "",
-  non_negative = FALSE
-)
+auxiliary(object, name, eqn = 0, label = name, doc = "", non_negative = FALSE)
 
-aux(
-  object,
-  name,
-  eqn = 0,
-  units = 1,
-  label = name,
-  doc = "",
-  non_negative = FALSE
-)
+aux(object, name, eqn = 0, label = name, doc = "", non_negative = FALSE)
 }
 \arguments{
 \item{object}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
@@ -32,13 +16,11 @@ aux(
 
 \item{eqn}{Equation (or initial value in the case of stocks). Accepts a bare expression (e.g., \code{a * b + 1}), a string (\code{"a * b + 1"}), or a numeric value. Use \verb{!!} to inject from a variable. Defaults to \code{0}.}
 
-\item{units}{Unit of variable, such as 'meter'. Defaults to \code{1} (no units).}
-
 \item{label}{Name of variable used for plotting. Defaults to the same as name.}
 
-\item{doc}{Description of variable. Defaults to "" (no description).}
+\item{doc}{Description of variable. Defaults to \code{""} (no description).}
 
-\item{non_negative}{If TRUE, variable is enforced to be non-negative (i.e. strictly 0 or positive). Defaults to FALSE.}
+\item{non_negative}{If TRUE, variable is enforced to be non-negative (i.e. strictly 0 or positive). Defaults to \code{FALSE}.}
 }
 \value{
 A stock-and-flow model object of class \code{\link{sdbuildR}}

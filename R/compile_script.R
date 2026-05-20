@@ -138,7 +138,6 @@ compile <- function(object, only_stocks = FALSE,
   } else {
     script <- paste0(c(
       seed_str,
-      object[["assemble"]][["units"]],
       object[["assemble"]][["times"]],
       object[["assemble"]][["funcs"]],
       ode,
@@ -165,9 +164,6 @@ compile_times <- function(object, language) {
   if (language == "R") {
     script <- fmt_script("times", "R", ss)
   } else if (language == "Julia") {
-    keep_unit <- ss[["keep_unit"]]
-    unit_mult <- function(op) if (keep_unit) paste0(" ", op, " ", P[["time_units_name"]]) else ""
-    time_units_value <- if (keep_unit) paste0('u"', ss[["time_units"]], '"') else "1.0"
 
     save_type <- ss[["save_type"]] %||% "all"
     save_at <- ss[["save_at"]]
@@ -181,38 +177,29 @@ compile_times <- function(object, language) {
       "save_at" = if (length(save_at) == 1) {
         # Scalar interval: Julia range evaluated natively
         sprintf(
-          "%s[1]:%s%s:%s[2]",
-          P[["times_name"]], save_at,
-          unit_mult("*"), P[["times_name"]]
+          "%s[1]:%s:%s[2]",
+          P[["times_name"]], save_at, P[["times_name"]]
         )
       } else {
-        # Explicit vector: broadcast-multiply with time units
-        # um <- if (keep_unit) paste0(" .* ", P[["time_units_name"]]) else ""
-        um <- ""
-        str <- paste(save_at, collapse = ", ")
-        sprintf("[%s]%s", str, um)
+        # Explicit vector
+        paste0("[", paste(save_at, collapse = ", "), "]")
       },
       "save_n" = {
-        # um <- if (keep_unit) paste0(" .* ", P[["time_units_name"]]) else ""
-        um <- ""
         if (as.integer(save_n) == 1L) {
           # Only save the final time point
           sprintf("[%s[2]]", P[["times_name"]])
         } else {
           # range() evaluated in Julia — avoids R rounding issues
           sprintf(
-            "range(%s[1], %s[2], length=%s)%s",
-            P[["times_name"]], P[["times_name"]], save_n, um
+            "range(%s[1], %s[2], length=%s)",
+            P[["times_name"]], P[["times_name"]], save_n
           )
         }
       }
     )
 
     script <- fmt_script("times", "julia", ss,
-      times_unit_mult  = unit_mult(".*"),
-      dt_unit_mult     = unit_mult("*"),
-      saveat_expr      = saveat_expr,
-      time_units_value = time_units_value
+      saveat_expr      = saveat_expr
     )
   }
 
@@ -236,9 +223,8 @@ compile_funcs <- function(object, language) {
 
   lang <- lang_adapter(language)
 
-  # Julia needs var_names and regex_units for equation conversion; R ignores them
+  # Julia needs var_namesfor equation conversion; R ignores them
   var_names <- if (language == "Julia") get_model_var(object) else NULL
-  regex_units <- if (language == "Julia") get_regex_units() else NULL
 
   eqns <- character(nrow(func_df))
   for (i in seq_len(nrow(func_df))) {
@@ -246,8 +232,7 @@ compile_funcs <- function(object, language) {
       eqns[i] <- lang$convert_func_eqn(
         name = func_df[i, "name"],
         eqn = func_df[i, "eqn"],
-        var_names = var_names,
-        regex_units = regex_units
+        var_names = var_names
       )
     }
   }
@@ -276,7 +261,6 @@ compile_funcs <- function(object, language) {
 compile_static <- function(object, language,
                            ordering_override = NULL,
                            ensemble_iter_code = "") {
-  keep_unit <- object[["sim_specs"]][["keep_unit"]]
   intermediaries <- object[["assemble"]][["intermediaries"]]
   ordering <- if (!is.null(ordering_override)) ordering_override else object[["assemble"]][["ordering"]]
 
@@ -356,12 +340,10 @@ compile_static <- function(object, language,
       "\n# Define initial condition in vector\n",
       P[["initial_value_name"]],
       " = [Base.Iterators.flatten(",
-      # ifelse(keep_unit, "Unitful.ustrip.(", ""),
       "[",
       init_def_stocks,
       # Add extra comma in case there is only one stock
       ",]",
-      # ifelse(keep_unit, ")", ""),
       ")...]\n"
     )
 
@@ -571,10 +553,9 @@ compile_post <- function(object, filepath_sim = NULL, language, vars = NULL) {
 
 #' Compile a complete ensemble simulation script
 #'
-#' Julia-only entry point for ensemble compilation. Calls
-#' pre_assemble_components() to reuse the model structure cache, then builds
-#' the ensemble-specific portions (ensemble_def, ensemble_iter, run_ode,
-#' post) on top.
+#' Calls pre_assemble_components() to reuse the model structure cache, then
+#' builds the ensemble-specific portions (ensemble_def, ensemble_iter,
+#' run_ode, post) on top.
 #'
 #' @inheritParams simulate.sdbuildR
 #' @inheritParams ensemble
@@ -617,7 +598,6 @@ compile_ensemble <- function(object, ensemble_pars, only_stocks = TRUE) {
 
   script <- paste0(c(
     seed_str,
-    object[["assemble"]][["units"]],
     object[["assemble"]][["times"]],
     object[["assemble"]][["funcs"]],
     ode,
@@ -647,7 +627,6 @@ compile_ode <- function(object,
                         is_ensemble = FALSE,
                         vars = NULL) {
   keep_nonnegative_stock <- object[["sim_specs"]][["keep_nonnegative_stock"]]
-  keep_unit <- object[["sim_specs"]][["keep_unit"]]
 
   ordering <- object[["assemble"]][["ordering"]]
   static <- object[["assemble"]][["static"]]
@@ -728,26 +707,6 @@ compile_ode <- function(object,
     stock_change <- gather_stock_changes(object, assign_op = lang$assign_op, language = language)
     stock_change_str <- paste0(stock_change, collapse = "\n\t")
 
-    # Add units to stocks
-    add_stock_units <- ""
-    # if (keep_unit) {
-    #   # For each stock that has a unit, add
-    #   stock_vars <- get_variables_by_type(object, "stock")
-    #   stock_names <- stock_vars[["name"]]
-    #   stock_units <- stock_vars[["units"]]
-    #   idx <- stock_units != "1"
-    #   if (any(idx)) {
-    #     add_stock_units <- paste0(
-    #       "\n\n\t# Assign units to stocks\n\t",
-    #       paste0(paste0(
-    #         stock_names[idx], " = ",
-    #         stock_names[idx], " .* u\"",
-    #         stock_units[idx], "\""
-    #       ), collapse = "\n\t"), "\n"
-    #     )
-    #   }
-    # }
-
     # Non-negative stocks
     stock_vars_df <- get_variables_by_type(object, "stock")
     nonneg_stocks <- stock_vars_df[["non_negative"]] |> unlist()
@@ -800,7 +759,6 @@ compile_ode <- function(object,
     # Compile ODE
     script_ode <- fmt_script("ode", "Julia",
       unpack_state_str = unpack_state_str,
-      add_stock_units = add_stock_units,
       unpack_pars_str = unpack_pars_str,
       dynamic_eqn_str = dynamic_eqn_str,
       stock_change_str = stock_change_str
@@ -842,7 +800,6 @@ compile_ode <- function(object,
 
       script_callback <- fmt_script("callback", "Julia",
         unpack_state_str = unpack_state_str,
-        add_stock_units = add_stock_units,
         unpack_pars_integrator_str = unpack_pars_integrator_str,
         dynamic_eqn_str = dynamic_eqn_str,
         intermediary_values = intermediary_values,
@@ -856,67 +813,3 @@ compile_ode <- function(object,
   script
 }
 
-
-#' Compile script for defining a units module in Julia
-#'
-#' @inheritParams compile
-#'
-#' @returns List with script
-#'
-#' @noRd
-compile_units <- function(object, language) {
-  if (language == "R") {
-    stop("compile_units() only works for Julia.")
-  } else if (language == "Julia") {
-    #   script <- sprintf("\n# Clear any existing definitions to avoid conflicts
-    # if @isdefined(%s)
-    #     # Force garbage collection to clean up old module
-    #     %s = nothing
-    #     GC.gc()
-    # end\n", P[["MyCustomUnits"]], P[["MyCustomUnits"]])
-    script <- ""
-
-    if (nrow(object[["custom_unit"]]) > 0) {
-      if (nrow(object[["custom_unit"]]) > 1) {
-        # Topological sort of units
-        eq_names <- object[["custom_unit"]][["name"]]
-        deps <- lapply(
-          object[["custom_unit"]][["eqn"]],
-          function(x) {
-            unlist(stringr::str_extract_all(x, eq_names))
-          }
-        )
-        names(deps) <- eq_names
-        out <- topological_sort(deps)
-
-        if (out[["issue"]]) {
-          cli::cli_inform(paste0("Ordering custom units failed. ", paste0(out[["msg"]])))
-        }
-
-        object[["custom_unit"]] <- object[["custom_unit"]][out[["order"]], ]
-      }
-
-
-      unit_str <- lapply(seq_len(nrow(object[["custom_unit"]])), function(i) {
-        row <- object[["custom_unit"]][i, ]
-        if (is_defined(row[["eqn"]])) {
-          unit_def <- row[["eqn"]]
-        } else {
-          unit_def <- "1"
-        }
-
-        paste0(
-          "@unit ", row[["name"]], " \"", row[["name"]], "\" ",
-          row[["name"]], " u\"", unit_def, "\" ", ifelse(row[["prefix"]], "true", "false")
-        )
-      }) |> paste0(collapse = sprintf(
-        "\n\tUnitful.register(%s)\n\t",
-        P[["MyCustomUnits"]]
-      ))
-
-      script <- fmt_script("units", "Julia", unit_str = unit_str)
-    }
-
-    script
-  }
-}

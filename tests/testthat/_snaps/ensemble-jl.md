@@ -59,7 +59,7 @@
     Message
       
       -- Ensemble simulation: Demo model ---------------------------------------------
-      3 total simulations • 1 condition • 3 per condition
+      i 3 total simulations • 1 condition • 3 per condition
       v Completed in 1.234 seconds
       i Individual simulations saved: no
       i Time points saved per simulation: 11
@@ -71,19 +71,9 @@
     Message
       
       -- Ensemble simulation: Demo model ---------------------------------------------
-      12 total simulations • 4 conditions • 3 per condition
+      i 12 total simulations • 4 conditions • 3 per condition
       v Completed in 1.234 seconds
       i Parameters changed across conditions: Delay, Effective_Contact_Rate
       i Individual simulations saved: yes
       i Time points saved per simulation: 11
-
-# print() failure output does not expose raw error text [plain]
-
-    Code
-      print(sims)
-    Message
-      
-      -- Ensemble simulation: Demo model ---------------------------------------------
-      x Simulation failed
-      i Inspect the error message with: `x$error_message`
 

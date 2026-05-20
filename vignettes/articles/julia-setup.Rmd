@@ -22,7 +22,7 @@ library(JuliaConnectoR)
 ```
 
 
-sdbuildR uses Julia for ensemble simulations and working with units in models. This is supported by the R package [`JuliaConnectoR`](https://github.com/stefan-m-lenz/JuliaConnectoR/). This guide will help you install Julia and configure it to work with sdbuildR.
+sdbuildR offers running simulations of stock-and-flow models with Julia as the backend. This is supported by the R package [`JuliaConnectoR`](https://github.com/stefan-m-lenz/JuliaConnectoR/). This guide will help you install Julia and configure it to work with sdbuildR.
 
 
 ## Step 1: Install Julia

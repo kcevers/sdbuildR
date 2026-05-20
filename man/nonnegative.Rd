@@ -13,7 +13,7 @@ nonnegative(x)
 x if x is greater than 0, 0 otherwise
 }
 \description{
-If using Julia, units are preserved
+Safely check whether x is less than zero
 }
 \examples{
 nonnegative(NA)

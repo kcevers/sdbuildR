@@ -4,36 +4,20 @@
 \alias{solvers}
 \title{Check or translate between deSolve and Julia DifferentialEquations solvers}
 \usage{
-solvers(method, from = c("R", "Julia"), to = NULL, show_info = FALSE)
+solvers(method, from = NULL, to = NULL, show_info = FALSE)
 }
 \arguments{
-\item{method}{Character string of solver name}
+\item{method}{Solver name to validate or translate.}
 
-\item{from}{Character string indicating source language: "R" or "Julia"}
+\item{from}{Source solver family, either \code{"R"} or \code{"Julia"}.}
 
-\item{to}{Character string indicating target language: "R" or "Julia"}
+\item{to}{Target solver family when translating, either \code{"R"} or \code{"Julia"}.}
 
-\item{show_info}{Logical, whether to display additional solver information}
+\item{show_info}{If \code{TRUE}, return the full solver metadata instead of only the name.}
 }
 \value{
-Character vector of equivalent solver(s) or list with details
+A character scalar, a character vector of solver names, or a solver metadata list when \code{show_info = TRUE}.
 }
 \description{
-This function either checks whether a solver method exists or provides
-bidirectional translation between R's deSolve package solvers and Julia's
-DifferentialEquations.jl solvers.
+Check or translate between deSolve and Julia DifferentialEquations solvers
 }
-\examples{
-# Translate from R to Julia
-solvers("euler", from = "R", to = "Julia")
-solvers("rk45dp6", from = "R", to = "Julia")
-
-# Translate from Julia to R
-solvers("Tsit5", from = "Julia", to = "R")
-solvers("DP5", from = "Julia", to = "R", show_info = TRUE)
-
-# List all available solvers
-solvers(from = "R")
-solvers(from = "Julia")
-}
-\concept{simulate}

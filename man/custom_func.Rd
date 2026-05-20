@@ -4,7 +4,7 @@
 \alias{custom_func}
 \title{Create or modify custom variables or functions}
 \usage{
-custom_func(object, name, eqn = 0, units = 1, label = name, doc = "")
+custom_func(object, name, eqn = 0, label = name, doc = "")
 }
 \arguments{
 \item{object}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
@@ -12,8 +12,6 @@ custom_func(object, name, eqn = 0, units = 1, label = name, doc = "")
 \item{name}{Name of the function variable. The equation will be assigned to this name.}
 
 \item{eqn}{Equation of the function variable. A character vector. Defaults to \code{0}.}
-
-\item{units}{Unit of variable, such as 'meter'. Defaults to \code{1} (no units).}
 
 \item{label}{Name of variable used for plotting. Defaults to the same as name.}
 

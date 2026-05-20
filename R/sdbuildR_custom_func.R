@@ -511,8 +511,6 @@ seasonal <- function(times, period = 1, shift = 0) {
 
 #' Safely check whether x is less than zero
 #'
-#' If using Julia, units are preserved
-#'
 #' @param x Value
 #'
 #' @returns x if x is greater than 0, 0 otherwise
@@ -669,6 +667,56 @@ logistic <- function(x, slope = 1, midpoint = 0, upper = 1) {
 #' @export
 sigmoid <- logistic
 
+
+#' Hill function
+#'
+#' Computes the Hill function with configurable slope, midpoint, and upper asymptote.
+#'
+#' @param x Value at which to evaluate the function
+#' @param slope Slope of Hill function at the midpoint. Defaults to 1.
+#' @param midpoint Midpoint of Hill function where the output is `upper/2`. Defaults to 0.
+#' @param upper Upper asymptote (maximal value) of the Hill function. Defaults to 1.
+#'
+#' @returns Numeric value given by \deqn{f(x) = \frac{upper}{1 + e^{-slope \cdot (x - midpoint)}}}
+#'
+#' @details
+#' The Hill function is a smooth S-shaped curve (when slope > 1) bounded between 0 and `upper`.
+#' It transitions from near 0 to near `upper` around the `midpoint`, with the steepness
+#' of this transition controlled by `slope`. See \url{https://en.wikipedia.org/wiki/Hill_equation_%28biochemistry%29} for more details.
+#'
+#' @concept custom
+#' @export
+#'
+#' @examples
+#' hill(0)
+#' 
+#' # Adjust parameters
+#' hill(0, slope = 5, midpoint = 0.5, upper = 10)
+#' 
+hill <- function(x, slope = 1, midpoint = 0, upper = 1) {
+  if (!is.numeric(slope)) {
+    cli::cli_abort(c(
+      "Invalid {.arg slope} parameter.",
+      "x" = "The {.arg slope} parameter must be numeric."
+    ))
+  }
+
+  if (!is.numeric(midpoint)) {
+    cli::cli_abort(c(
+      "Invalid {.arg midpoint} parameter.",
+      "x" = "The {.arg midpoint} parameter must be numeric."
+    ))
+  }
+
+  if (!is.numeric(upper)) {
+    cli::cli_abort(c(
+      "Invalid {.arg upper} parameter.",
+      "x" = "The {.arg upper} parameter must be numeric."
+    ))
+  }
+  
+  upper * x^slope / (midpoint^slope + x^slope)
+}
 
 #' Internal function to save data frame at specific times
 #'

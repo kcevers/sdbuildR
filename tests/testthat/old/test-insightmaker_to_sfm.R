@@ -38,7 +38,6 @@ test_that("downloading and simulating Insight Maker models works", {
   df <- expect_no_error(as.data.frame(sfm))
   expect_true(nrow(df) > 0)
   expect_true("macro" %in% df$type)
-  expect_true("custom_unit" %in% df$type)
 
   # Contains graphical functions; check whether xpts and ypts were concatenated
   expect_true("xpts" %in% names(df))
@@ -53,7 +52,6 @@ test_that("downloading and simulating Insight Maker models works", {
   URL <- "https://insightmaker.com/insight/5LxQr0waZGgBcPJcNTC029/Crielaard-et-al-2022"
   sfm_list[[2]] <- sfm <- expect_no_error(insightmaker_to_sfm(URL = URL))
   df <- expect_no_error(as.data.frame(sfm))
-  expect_equal(sfm[["custom_unit"]], list())
   expect_true(nrow(df) > 0)
   expect_true("macro" %in% df$type)
 
@@ -83,7 +81,6 @@ test_that("downloading and simulating Insight Maker models works", {
 
   # Check all models in Julia
   lapply(sfm_list, function(sfm) {
-    # For some models with units, save_at and save_from create error
     sim <- expect_no_error(simulate(sfm |> sim_specs(
       language = "Julia",
       # dt = 0.1, start = 0,
@@ -199,7 +196,6 @@ test_that("translating .InsightMaker models works (cran)", {
         "eqn",
         "eqn_insightmaker",
         "name_insightmaker",
-        "units_insightmaker",
         "id_insightmaker"
       ) %in% names(df)
     ))
@@ -234,7 +230,6 @@ test_that("translating .InsightMaker models works (cran)", {
         "eqn",
         "eqn_insightmaker",
         "name_insightmaker",
-        "units_insightmaker",
         "id_insightmaker"
       ) %in% names(df)
     ))
@@ -312,7 +307,6 @@ test_that("translating Insight Maker models works (validation)", {
         "eqn_insightmaker",
         "eqn",
         "name_insightmaker",
-        "units_insightmaker",
         "id_insightmaker"
       ) %in% names(df)
     ))
@@ -345,7 +339,6 @@ test_that("translating Insight Maker models works (validation)", {
         "eqn_insightmaker",
         "eqn",
         "name_insightmaker",
-        "units_insightmaker",
         "id_insightmaker"
       ) %in% names(df)
     ))
@@ -403,7 +396,6 @@ test_that("translating Insight Maker models works (validation)", {
 #     data.frame(
 #
 #       macros = ,
-#       custom_units = ,
 #       converters = ,
 #       conveyors = ,
 #       gf = ,

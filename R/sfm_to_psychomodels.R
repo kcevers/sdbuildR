@@ -5,6 +5,9 @@
 #' Optionally appends a LaTeX equations section to the explanation field.
 #'
 #' @inheritParams update.sdbuildR
+#' @param include_latex If `TRUE`, append generated LaTeX equations to explanation.
+#' @param destfile Output file path. Must have extension `.json` or no extension.
+#'  If not provided, return model in JSON format.
 #' @param title Model title. Defaults to `object[["meta"]][["name"]]`.
 #' @param description Model description.
 #'  Defaults to `object[["meta"]][["caption"]]`.
@@ -30,9 +33,6 @@
 #' @param publication_csl_json CSL JSON text.
 #' @param id Optional record id.
 #' @param slug Optional slug. If NULL, generated from `title`.
-#' @param include_latex If `TRUE`, append generated LaTeX equations to explanation.
-#' @param destfile Output file path. Must have extension `.json` or no extension.
-#'  If not provided, return model in JSON format.
 #' @param pretty If `TRUE`, pretty-print output JSON.
 #'
 #' @returns If `destfile` is not provided; JSON string.
@@ -45,7 +45,10 @@
 #'   sfm,
 #'   publication_doi = "10.0000/example"
 #' )
+#' 
 sfm_to_psychomodels <- function(object,
+                                include_latex = TRUE,
+                                destfile = NULL,
                                 title = object[["meta"]][["name"]],
                                 description = object[["meta"]][["caption"]],
                                 explanation = description,
@@ -69,8 +72,6 @@ sfm_to_psychomodels <- function(object,
                                 publication_csl_json = "",
                                 id = NA,
                                 slug = NULL,
-                                include_latex = TRUE,
-                                destfile = NULL,
                                 pretty = TRUE) {
   if (missing(object)) {
     missing_arg("object")

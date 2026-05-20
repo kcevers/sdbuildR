@@ -29,8 +29,6 @@ high-quality models. Get started at
     Maker](https://insightmaker.com/).
   - **Julia backend**: Use Julia for high-performance simulations,
     without any knowledge of Julia.
-  - **Unit support**: Use standard or custom units to verify and
-    interpret your model.
 
 All package capabilities are described in the vignettes:
 
@@ -38,14 +36,15 @@ All package capabilities are described in the vignettes:
     Learn how to build, modify, and debug stock-and-flow models.
   - [Julia
     setup](https://kcevers.github.io/sdbuildR/articles/julia-setup.html):
-    Install and set up the Julia environment for running ensemble
-    simulations and using
-    units.
+    Install and set up the Julia environment for threaded Julia
+    execution.
   - [Ensemble](https://kcevers.github.io/sdbuildR/articles/ensemble.html):
     Learn how to assess a model’s sensitivity, uncertainty and
     robustness with ensemble simulations.
-  - [Units](https://kcevers.github.io/sdbuildR/articles/units.html):
-    Learn why and how to use (custom) units.
+  - [Unit
+    testing](https://kcevers.github.io/sdbuildR/articles/unit-testing.html):
+    Learn how to use unit testing to verify that your model behaves as
+    expected.
 
 ## Installation
 
@@ -64,8 +63,8 @@ remotes::install_github("KCEvers/sdbuildR")
 
 sdbuildR offers two simulation engines: R and Julia (supported by
 [JuliaConnectoR](https://github.com/stefan-m-lenz/JuliaConnectoR/)). If
-you would like to run ensemble simulations and use units, you will need
-to install and set up the Julia environment. See [this
+you would like to use the Julia backend, you will need to install and
+set up the Julia environment. See [this
 vignette](https://kcevers.github.io/sdbuildR/articles/julia-setup.html)
 for guidance.
 
@@ -111,7 +110,7 @@ citation("sdbuildR")
   - sdbuildR does not support the Insight Maker functions Stop(),
     Prompt(), Confirm(), Pause(), Fix(), Map(), Filter(), and Repeat(),
     nor the delay and past functions. A message is issued if any of
-    these are detected.
+    these are detected. Units (e.g., kilograms) are also not supported.
 
 ## Other system dynamics software
 

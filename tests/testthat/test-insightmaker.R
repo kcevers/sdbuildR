@@ -70,7 +70,7 @@ test_that("import_metadata structure is created correctly", {
   expect_s3_class(im$original_variables, "data.frame")
   expect_true(all(c(
     "name", "original_id", "original_name",
-    "original_eqn", "original_units"
+    "original_eqn"
   ) %in% names(im$original_variables)))
   expect_true(nrow(im$original_variables) > 0)
 
@@ -130,7 +130,6 @@ test_that("import_metadata is NOT in as.data.frame() output", {
   # InsightMaker-specific columns should NOT be in data frame output
   expect_false("eqn_insightmaker" %in% names(df))
   expect_false("name_insightmaker" %in% names(df))
-  expect_false("units_insightmaker" %in% names(df))
   expect_false("id_insightmaker" %in% names(df))
 })
 

@@ -74,7 +74,7 @@ conditions was specified.}
 data.frame with the initial values of the stocks used in the ensemble.}
 \item{constants}{List with df (if return_sims = TRUE) and summary,
 containing data.frame with the constant parameters used in the ensemble.}
-\item{script}{Script used for the ensemble simulation (Julia only).}
+\item{script}{Script used for the ensemble simulation.}
 \item{duration}{Duration of the simulation in seconds.}
 \item{...}{Other parameters passed to ensemble}
 }
@@ -103,8 +103,9 @@ other model elements (see examples).
 sfm <- sdbuildR(predator_prey)
 
 # Set random initial conditions
-sfm <- update(sfm, c(predator, prey), 
-              eqn = runif(1, min = 20, max = 80))
+sfm <- update(sfm, c(predator, prey),
+  eqn = runif(1, min = 20, max = 80)
+)
 
 # For ensemble simulations, it is highly recommended to reduce the
 # returned output. For example, to save only 100 values per simulation:
@@ -114,7 +115,8 @@ sfm <- sim_specs(sfm, save_n = 100)
 sims <- ensemble(sfm, n = 10)
 plot(sims)
 
-# To plot individual trajectories, rerun the ensemble with return_sims = TRUE. Note that this can consume a lot of memory for large simulations.
+# To plot individual trajectories, rerun the ensemble with return_sims = TRUE. 
+# Note that this can consume a lot of memory for large simulations.
 sims <- ensemble(sfm, n = 10, return_sims = TRUE)
 plot(sims, type = "sims")
 
@@ -126,9 +128,9 @@ plot(sims, central_tendency = "median", type = "sims", alpha = 0.1)
 
 \dontshow{if (Sys.getenv("NOT_CRAN") == "true") withAutoprint(\{ # examplesIf}
 # For larger ensembles, we can use parallelization with future
-if (requireNamespace("future", quietly = TRUE) && 
-   requireNamespace("future.apply", quietly = TRUE)) {
- future::plan(future::multisession, workers = 4)
+if (requireNamespace("future", quietly = TRUE) &&
+  requireNamespace("future.apply", quietly = TRUE)) {
+  future::plan(future::multisession, workers = 4)
 }
 
 # Ensembles can also be run with exact values for the initial conditions
@@ -159,23 +161,10 @@ sims <- ensemble(sfm,
 plot(sims, nrows = 3)
 
 # Stop parallelization after use
-if (requireNamespace("future", quietly = TRUE) && 
-   requireNamespace("future.apply", quietly = TRUE)) {
- future::plan(future::sequential) 
+if (requireNamespace("future", quietly = TRUE) &&
+  requireNamespace("future.apply", quietly = TRUE)) {
+  future::plan(future::sequential)
 }
-\dontshow{\}) # examplesIf}
-\dontshow{if (Sys.getenv("NOT_CRAN") == "true" && is_julia_ready()) withAutoprint(\{ # examplesIf}
-
-# Run simulation in parallel (Julia)
-use_julia(nthreads = 4)
-sfm <- sfm |> sim_specs(language = "Julia")
-sims <- ensemble(sfm, n = 50)
-
-# Stop using threads (restarts Julia session)
-use_julia(nthreads = 1)
-
-# Close Julia
-use_julia(stop = TRUE)
 \dontshow{\}) # examplesIf}
 }
 \seealso{

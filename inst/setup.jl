@@ -11,10 +11,9 @@ env_path = @__DIR__
 # println("Activating environment at: ", env_path, "\n")
 Pkg.activate(env_path)
 
-# Install SystemDynamicsBuildR from GitHub
-println("\nInstalling SystemDynamicsBuildR.jl from GitHub...")
-# Pkg.add(url="https://github.com/KCEvers/SystemDynamicsBuildR.jl", rev=jl_pkg_version)
-Pkg.add(url="https://github.com/KCEvers/SystemDynamicsBuildR.jl", rev="dev")
+# Install StockFlowRSupport from GitHub
+println("\nInstalling StockFlowRSupport.jl from GitHub...")
+Pkg.add(url="https://github.com/KCEvers/StockFlowRSupport.jl", rev = "v0.0.1")
 
 # Install all other dependencies from Project.toml
 println("\nInstalling dependencies from Project.toml...")
@@ -28,3 +27,4 @@ println("\nPrecompiling packages...")
 Pkg.precompile()
 
 println("\nSetup complete!")
+

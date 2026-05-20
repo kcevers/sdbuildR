@@ -67,15 +67,6 @@ test_that("save_at works", {
     as.numeric(sfm$sim_specs$save_at)
   )
 
-  # Also works with models with units
-  sfm <- sdbuildR("coffee_cup") |>
-    sim_specs(language = "Julia") |>
-    sim_specs(save_at = 1, dt = 0.01, start = 10, stop = 20)
-  sim <- simulate(sfm |> sim_specs(language = "Julia"))
-  expect_equal(
-    diff(sim$df[sim$df$variable == "coffee_temperature", "time"])[1],
-    as.numeric(sfm$sim_specs$save_at)
-  )
 })
 
 
@@ -182,8 +173,6 @@ test_that("simulate with different components works", {
   df <- df[df$type != "constant", ]
   expect_equal(length(unique(as.data.frame(sim)$variable)), length(df$name))
 
-
-  # ** some have units
 })
 
 
@@ -207,21 +196,6 @@ test_that("seed works", {
   expect_equal(last(sim1$df$value), last(sim2$df$value))
 })
 
-
-test_that("units in stocks and flows", {
-  skip_if_julia_not_ready()
-
-  # No unit specified in stock yet stock evaluates to unit
-  sfm <- sdbuildR() |>
-    sim_specs(language = "Julia", stop = 10, dt = 0.1) |>
-    update("a", "stock", eqn = "round(u('100.80 kilograms'))")
-  expect_no_error(simulate(sfm))
-
-  sfm <- sdbuildR() |>
-    sim_specs(language = "Julia", stop = 10, dt = 0.1) |>
-    update("a", "stock", eqn = "round(u('108.67 seconds'))")
-  expect_no_error(simulate(sfm))
-})
 
 
 test_that("function in aux still works", {
@@ -262,11 +236,6 @@ test_that("negative times are possible", {
 test_that("functions in Julia work", {
   skip_if_julia_not_ready()
 
-  # round() with units
-  sfm <- sdbuildR() |>
-    sim_specs(language = "Julia", stop = 1, dt = 0.1) |>
-    update("a", "stock", eqn = "round(10.235)")
-  expect_no_error(simulate(sfm))
 
   sfm <- sdbuildR() |>
     sim_specs(language = "Julia", stop = 1, dt = 0.1) |>
@@ -278,19 +247,6 @@ test_that("functions in Julia work", {
     update("a", "stock", eqn = "round(u('108.67 seconds'))")
   expect_no_error(simulate(sfm))
 
-  # Cosine function needs unitless argument or argument in radians
-  sfm <- sdbuildR() |>
-    sim_specs(language = "Julia", stop = 1, dt = 0.1) |>
-    update("a", "stock", eqn = "cos(10)")
-  expect_no_error(simulate(sfm))
-
-  sfm <- sdbuildR() |>
-    sim_specs(language = "Julia", stop = 1, dt = 0.1) |>
-    update("a", "stock", eqn = "cos(u('10meters'))")
-  expect_warning(
-    simulate(sfm),
-    "An error occurred while running the Julia script"
-  )
 
   sfm <- sdbuildR() |>
     sim_specs(language = "Julia", stop = 1, dt = 0.1) |>

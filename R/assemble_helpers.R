@@ -19,7 +19,7 @@
 #'     \item{"dynamic"}{Clear only dynamic equations (ode, callback, intermediaries)}
 #'     \item{"times"}{Clear time sequence}
 #'     \item{"funcs"}{Clear func definitions}
-#'     \item{"units"}{Clear unit definitions}
+  
 #'     \item{"nonneg"}{Clear non-negative stock handling}
 #'     \item{"unit_tests"}{Clear cached unit test dependencies}
 #'   }
@@ -27,6 +27,7 @@
 #' @returns A stock-and-flow model with selectively cleared assembly cache
 #' @noRd
 invalidate_assemble <- function(object, what = "all") {
+  
   no_assemble <- empty_assemble()
 
   if ("all" %in% what) {
@@ -45,8 +46,6 @@ invalidate_assemble <- function(object, what = "all") {
     a[["nonneg_stocks"]] <- no_assemble[["nonneg_stocks"]]
     a[["ensemble"]] <- no_assemble[["ensemble"]]
     a[["diagnose"]] <- no_assemble[["diagnose"]]
-    a[["unit_strings"]] <- no_assemble[["unit_strings"]]
-    a[["unit_tests"]] <- no_assemble[["unit_tests"]]
   }
   if ("static" %in% what && !"variables" %in% what) {
     a[["static"]] <- no_assemble[["static"]]
@@ -61,10 +60,6 @@ invalidate_assemble <- function(object, what = "all") {
   }
   if ("funcs" %in% what) {
     a[["funcs"]] <- no_assemble[["funcs"]]
-  }
-  if ("units" %in% what) {
-    a[["units"]] <- no_assemble[["units"]]
-    a[["diagnose"]] <- no_assemble[["diagnose"]]
   }
   if ("nonneg" %in% what) {
     a[["nonneg_stocks"]] <- no_assemble[["nonneg_stocks"]]
@@ -137,7 +132,6 @@ get_dynamic_equations <- function(object) {
 prep_equations_variables <- function(object, modified_names = NULL) {
   language <- object[["sim_specs"]][["language"]]
   lang <- lang_adapter(language)
-  keep_unit <- object[["sim_specs"]][["keep_unit"]] %||% FALSE
   keep_nonnegative_flow <- object[["sim_specs"]][["keep_nonnegative_flow"]]
   names_df <- get_names(object)
 
@@ -150,9 +144,7 @@ prep_equations_variables <- function(object, modified_names = NULL) {
 
   # Pre-convert equations for types that need it (Julia converts R->Julia syntax)
   eqn_converted <- character(nrow(object[["variables"]]))
-  regex_units <- get_regex_units()
   var_names <- get_model_var(object)
-
 
   for (i in process_indices) {
     type_i <- object[["variables"]][i, "type"]
@@ -163,21 +155,17 @@ prep_equations_variables <- function(object, modified_names = NULL) {
 
       if (any(grepl("^[ ]*function[ ]*\\(", eqn))) {
         cli::cli_abort(c(
-          "Invalid {.eqn} argument.",
-          "x" = "Model variables cannot be defined as functions.",
+          "x" = "Invalid {.eqn} argument.",
+          "i" = "Model variables cannot be defined as functions.",
           ">" = "To add a custom function, use {.fn custom_func} instead."
         ))
       }
-
-      eqn <- clean_unit_in_u(eqn, regex_units)
-
 
       eqn_converted[i] <- lang$convert_eqn(
         type = type_i,
         name = object[["variables"]][i, "name"],
         eqn = eqn,
-        var_names = var_names,
-        regex_units = regex_units
+        var_names = var_names
       )
     }
   }
@@ -201,7 +189,7 @@ prep_equations_variables <- function(object, modified_names = NULL) {
   gf_idx <- object[["variables"]][["type"]] == "lookup"
   for (i in intersect(which(gf_idx), process_indices)) {
     row <- object[["variables"]][i, ]
-    result <- lang$format_lookup(row, keep_unit, names_df)
+    result <- lang$format_lookup(row, names_df)
     if (!is.null(result)) {
       object[["variables"]][i, "eqn_str"] <- result
     }
@@ -215,8 +203,7 @@ prep_equations_variables <- function(object, modified_names = NULL) {
       object[["variables"]][i, "eqn_str"] <- lang$format_static(
         name = row[["name"]],
         eqn_converted = eqn_converted[i],
-        row = row,
-        keep_unit = keep_unit
+        row = row
       )
     }
   }
@@ -228,8 +215,7 @@ prep_equations_variables <- function(object, modified_names = NULL) {
     eqn_str <- lang$format_aux(
       name = row[["name"]],
       eqn_converted = eqn_converted[i],
-      row = row,
-      keep_unit = keep_unit
+      row = row
     )
 
     if (lang$eqn_str_as_list) {
@@ -283,7 +269,6 @@ prep_equations_variables <- function(object, modified_names = NULL) {
 prep_stock_change <- function(object, modified_names = NULL) {
   language <- object[["sim_specs"]][["language"]]
   lang <- lang_adapter(language)
-  keep_unit <- object[["sim_specs"]][["keep_unit"]] %||% FALSE
 
   stock_idx <- object[["variables"]][["type"]] == "stock"
 
@@ -357,8 +342,7 @@ prep_stock_change <- function(object, modified_names = NULL) {
     if (is_defined(outflow_def)) {
       outflow <- paste0(paste0(" - ", outflow_def), collapse = "")
     }
-    sum_eqn <- paste0(inflow, outflow)
-    object[["variables"]][i, "sum_eqn"] <- lang$format_sum_eqn(sum_eqn, row, keep_unit)
+    object[["variables"]][i, "sum_eqn"] <- paste0(inflow, outflow)
   }
 
   object
@@ -511,10 +495,6 @@ gather_stock_changes <- function(object, assign_op, language) {
         stock_row <- object[["variables"]][object[["variables"]][["name"]] == stock_name, ]
         x <- as.list(stock_row)
         sum_expr <- x[["sum_eqn"]]
-        # # Scale the entire derivative by 1/time_units when time is unitful
-        # if (set_units_on_flow) {
-        #   sum_expr <- paste0("(", sum_expr, ") ./ ", P[["time_units_name"]])
-        # }
         paste(
           x[["sum_name"]],
           "=",
@@ -601,10 +581,6 @@ pre_assemble_components <- function(object) {
     object[["assemble"]][["static"]] <- compile_static(object, language = language)
   }
 
-  # --- Julia: compile units --------------------------------------------------
-  if (language == "Julia") {
-    object[["assemble"]][["units"]] <- compile_units(object, language = language)
-  }
 
   # --- R: compile nonneg stocks ----------------------------------------------
   if (language == "R" && (!cache_valid || undefined_assemble[["nonneg_stocks"]])) {
@@ -624,9 +600,7 @@ pre_assemble_components <- function(object) {
   if (is.null(object[["assemble"]][["diagnose"]])) {
     object[["assemble"]][["diagnose"]] <- diagnose(object)
   }
-  if (is.null(object[["assemble"]][["unit_strings"]])) {
-    object[["assemble"]][["unit_strings"]] <- find_unit_strings(object)
-  }
+
 
   object
 }

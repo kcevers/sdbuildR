@@ -295,29 +295,6 @@ test_that("ensemble works with specified range", {
 })
 
 
-test_that("ensemble works with units", {
-  skip_if_julia_not_ready()
-
-  # Test ensemble with model with units
-  sfm <- sdbuildR("coffee_cup") |>
-    sim_specs(language = "Julia", stop = 10, dt = 0.1) |>
-    update("coffee_temperature", eqn = "runif(1, 20, 150)")
-  sims <- expect_no_error(ensemble(sfm))
-
-  nr_sims <- 15
-  sims <- expect_no_error(ensemble(sfm, n = nr_sims, only_stocks = FALSE, return_sims = TRUE))
-  expect_true(sims$success)
-  expect_equal(!is.null(sims[["summary"]]), TRUE)
-  expect_equal(!is.null(sims[["df"]]), TRUE)
-  expect_equal(sims[["n"]], nr_sims)
-  expect_equal(sims[["n_total"]], nr_sims)
-  expect_equal(sort(unique(sims[["df"]][["i"]])), 1:nr_sims)
-  expect_equal(sort(unique(sims[["df"]][["j"]])), 1)
-  expect_equal(sort(unique(sims[["summary"]][["j"]])), 1)
-  expect_no_error(expect_no_message(plot(sims)))
-  expect_no_error(expect_no_message(plot(sims, type = "sims")))
-})
-
 
 test_that("ensemble works with NA", {
   skip_if_julia_not_ready()

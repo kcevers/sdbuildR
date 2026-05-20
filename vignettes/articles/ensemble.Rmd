@@ -40,12 +40,7 @@ sfm <- sdbuildR("Crielaard2022")
 summary(sfm)
 ```
 
-Ensemble simulations are only supported in Julia, so we need to activate the Julia environment for sdbuildR and change the simulation language to Julia. For guidance on installing and setting up the Julia environment, see [this vignette](https://kcevers.github.io/sdbuildR/articles/julia-setup.html).
-
-```{r, results='hide'}
-use_julia()
-sfm <- sim_specs(sfm, language = "Julia")
-```
+Simulations run in R by default. If you want to use Julia for faster execution or additional parallelization options, you can activate the Julia environment for sdbuildR and change the simulation language to Julia (see below). For guidance on installing and setting up the Julia environment, see [this vignette](https://kcevers.github.io/sdbuildR/articles/julia-setup.html).
 
 Without changing the parameters, we can run a single simulation to see how the model behaves:
 
@@ -126,15 +121,54 @@ sims <- ensemble(sfm, n = 100, only_stocks = FALSE)
 plot(sims)
 ```
 
-### Parallel simulations
+### Parallel simulations (R)
 
-To run simulations in parallel, set the number of threads you would like to use:
+By default, R ensemble simulations run sequentially. To run simulations in parallel, use the `future` package to control parallel execution. First, check that the `future` and `future.apply` packages are available:
+
+```{r, eval=FALSE}
+if (requireNamespace("future", quietly = TRUE) &&
+    requireNamespace("future.apply", quietly = TRUE)) {
+  # Set up parallel execution with 4 workers
+  future::plan(future::multisession, workers = 4)
+  
+  # Run ensemble simulations (now in parallel)
+  sims <- ensemble(sfm, n = 100)
+  
+  # Restore sequential execution
+  future::plan(future::sequential)
+}
+```
+
+On Windows, `multisession` is the recommended backend. On POSIX systems (Linux, macOS), you can also use `multicore` for potentially better performance, though `multisession` will work on those systems as well. The `workers` argument specifies how many parallel processes to use; adjust this based on your system's capabilities.
+
+#### Ensemble simulations (Julia)
+
+Ensemble simulations can also be run in Julia, which is typically faster than R for large simulations. To use the Julia backend, first activate the Julia environment for sdbuildR:
 
 ```{r}
+use_julia()
+```
+
+Then, set the simulation language to Julia:
+
+```{r}
+sfm <- sim_specs(sfm, language = "julia")
+```
+
+
+##### Parallel simulations (Julia)
+
+We can also enable parallel execution in Julia by setting the number of threads:
+
+```{r, eval=FALSE}
 use_julia(nthreads = 4)
 ```
 
-To stop using parallel simulations, run `use_julia(nthreads = 1)`.
+To stop using parallel simulations, run:
+
+```{r, eval=FALSE}
+use_julia(nthreads = 1)
+```
 
 ## Specifying ranges
 

@@ -2,12 +2,11 @@
 #'
 #' @inheritParams update.sdbuildR
 #' @inheritParams simulate_julia
-#' @inheritParams clean_unit
 #'
 #' @returns Updated object
 #' @noRd
 #'
-convert_equations_julia_wrapper <- function(object, regex_units) {
+convert_equations_julia_wrapper <- function(object) {
   # Get variable names
   var_names <- get_model_var(object)
 
@@ -25,8 +24,7 @@ convert_equations_julia_wrapper <- function(object, regex_units) {
         var_type,
         var_name,
         eqn_before,
-        var_names,
-        regex_units = regex_units
+        var_names
       )
 
       object[["variables"]][i, "eqn"] <- out[["eqn"]]
@@ -65,8 +63,7 @@ convert_equations_julia_wrapper <- function(object, regex_units) {
         P[["func_name"]],
         P[["func_name"]],
         row_list[["eqn"]],
-        var_names,
-        regex_units = regex_units
+        var_names
       )
 
       # Only update the eqn column from the conversion result
@@ -84,7 +81,6 @@ convert_equations_julia_wrapper <- function(object, regex_units) {
 #'
 #' @inheritParams update.sdbuildR
 #' @inheritParams convert_equations_IM
-#' @inheritParams clean_unit
 #'
 #' @returns List with flat structure:
 #'   - eqn: Converted Julia equation
@@ -94,7 +90,7 @@ convert_equations_julia_wrapper <- function(object, regex_units) {
 #' @importFrom rlang .data
 #' @noRd
 #'
-convert_equations_julia <- function(type, name, eqn, var_names, regex_units) {
+convert_equations_julia <- function(type, name, eqn, var_names) {
   if (P[["debug"]]) {
     # cli::cli_inform("")
     # cli::cli_inform(type)
@@ -206,12 +202,6 @@ convert_equations_julia <- function(type, name, eqn, var_names, regex_units) {
 
     # Replace single with double quotation marks
     eqn <- stringr::str_replace_all(eqn, "\'", "\"")
-
-    # Clean units again to ensure no scientific notation is used when necessary; do this at the end to avoid the scientific notation messing up other parts
-    eqn <- clean_unit_in_u(eqn, regex_units)
-
-    # Units: replace u("") with u""
-    eqn <- stringr::str_replace_all(eqn, "(?:^|(?<=\\W))u\\([\"|'](.*?)[\"|']\\)", "u\"\\1\"")
 
     return(list(
       eqn = eqn,
@@ -586,14 +576,12 @@ get_syntax_julia <- function() {
       "logistic", "logistic", "syntax1", "", "", TRUE,
       "logit", "logit", "syntax1", "", "", TRUE,
       "expit", "expit", "syntax1", "", "", TRUE,
-      "convert_u", "convert_u", "syntax1", "", "", TRUE,
-      "drop_u", "Unitful.ustrip", "syntax1", "", "", TRUE,
       # step() is already an existing function in Julia, so we use make_step()
       # instead, as well as for the others for consistency
-      "step", "make_step", "syntax1", P[["time_units_name"]], "", FALSE,
-      "pulse", "make_pulse", "syntax1", P[["time_units_name"]], "", FALSE,
-      "ramp", "make_ramp", "syntax1", P[["time_units_name"]], "", FALSE,
-      "seasonal", "make_seasonal", "syntax1", P[["timestep_name"]], "", FALSE,
+      "step", "make_step", "syntax1", "", "", FALSE,
+      "pulse", "make_pulse", "syntax1", "", "", FALSE,
+      "ramp", "make_ramp", "syntax1", "", "", FALSE,
+      "seasonal", "make_seasonal", "syntax1", "", "", FALSE,
       "length_IM", "length", "syntax1", "", "", FALSE,
 
       # Random Number Functions (13)
@@ -714,7 +702,8 @@ convert_builtin_functions_julia <- function(type, name, eqn, var_names) {
 
   # Check if equation contains letters and opening and closing brackets
   # (all translated R functions have brackets)
-  if (grepl("[[:alpha:]]", eqn) && grepl("\\(", eqn) && grepl("\\)", eqn)) {
+  contains_letters <- grepl("[[:alpha:]]", eqn) && grepl("\\(", eqn) && grepl("\\)", eqn)
+  if (contains_letters) {
     # data.frame with regular expressions for each built-in R function
     syntax_df <- syntax_julia[["syntax_df"]]
     # conv_df <- syntax_julia[["conv_df"]]
@@ -834,8 +823,8 @@ convert_builtin_functions_julia <- function(type, name, eqn, var_names) {
         idx_func <- idx_funcs_ordered[1, ] # Select first match
 
         if (P[["debug"]]) {
-          cli::cli_inform("idx_func")
-          cli::cli_inform(idx_func)
+          cli::cli_inform(c("i" = "idx_func:"))
+          cli::cli_inform(c("i" = toString(idx_func)))
         }
 
         # Extract argument between brackets (excluding brackets)
@@ -889,9 +878,9 @@ convert_builtin_functions_julia <- function(type, name, eqn, var_names) {
         }
 
         if (P[["debug"]]) {
-          cli::cli_inform(stringr::str_sub(eqn, start_idx, end_idx))
-          cli::cli_inform(replacement)
-          cli::cli_inform("")
+          cli::cli_inform(c("i" = stringr::str_sub(eqn, start_idx, end_idx)))
+          cli::cli_inform(c("i" = replacement))
+          cli::cli_inform(c(" " = ""))
         }
 
         # Replace eqn

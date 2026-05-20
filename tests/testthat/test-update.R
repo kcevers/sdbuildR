@@ -9,7 +9,6 @@ test_that("update() creates variables with defaults", {
   expect_equal(vars[["name"]], "Population")
   expect_equal(vars[["type"]], "stock")
   expect_equal(vars[["eqn"]], "0")
-  expect_equal(vars[["units"]], "1")
   expect_equal(vars[["label"]], "Population")
   expect_false(vars[["non_negative"]])
 })
@@ -26,6 +25,23 @@ test_that("update() validates inputs and basic errors", {
 
   # invalid non_negative type
   expect_error(update(sfm, "E", type = "stock", non_negative = "no"), "must be")
+})
+
+
+test_that("update() rejects malformed equations at build time", {
+  sfm <- sdbuildR()
+
+  expect_error(
+    update(sfm, "S", type = "stock", eqn = "1 // 2"),
+    "Could not parse the equation for .*S",
+    ignore.case = TRUE
+  )
+
+  expect_error(
+    stock(sfm, S, eqn = "1 // 2"),
+    "Could not parse the equation for .*S",
+    ignore.case = TRUE
+  )
 })
 
 
@@ -192,12 +208,10 @@ test_that("update() warns when inappropriate properties are supplied", {
 })
 
 
-test_that("update() handles units, doc, non_negative lengths", {
+test_that("update() handles doc, non_negative lengths", {
   sfm <- sdbuildR()
-  sfm <- update(sfm, c("A", "B"), type = c("stock", "stock"), units = c("u1", ""), doc = c("d1", "d2"), non_negative = c(TRUE, FALSE))
+  sfm <- update(sfm, c("A", "B"), type = c("stock", "stock"), doc = c("d1", "d2"), non_negative = c(TRUE, FALSE))
   vars <- as.data.frame(sfm)
-  expect_equal(vars[vars[["name"]] == "A", "units"], "u1")
-  expect_equal(vars[vars[["name"]] == "B", "units"], "1") # blank cleaned to "1"
   expect_true(vars[vars[["name"]] == "A", "non_negative"])
   expect_false(vars[vars[["name"]] == "B", "non_negative"])
 })
@@ -315,7 +329,7 @@ test_that("update() with type = 'gf' still works (backward compat)", {
 test_that("stock() creates a stock and forwards all parameters", {
   sfm <- sdbuildR()
   sfm <- stock(sfm, "Pop",
-    eqn = "100", units = "people",
+    eqn = "100", 
     label = "Population", doc = "total pop", non_negative = TRUE
   )
 
@@ -324,7 +338,6 @@ test_that("stock() creates a stock and forwards all parameters", {
   expect_equal(v[["name"]], "Pop")
   expect_equal(v[["type"]], "stock")
   expect_equal(v[["eqn"]], "100")
-  expect_equal(v[["units"]], "people")
   expect_equal(v[["label"]], "Population")
   expect_equal(v[["doc"]], "total pop")
   expect_true(v[["non_negative"]])
@@ -334,7 +347,7 @@ test_that("flow() creates a flow and forwards to/from", {
   sfm <- sdbuildR() |> stock(c("S1", "S2"))
   sfm <- flow(sfm, "F1",
     eqn = "S1 * 0.5", from = "S1", to = "S2",
-    units = "people/yr", non_negative = TRUE
+    non_negative = TRUE
   )
 
   v <- sfm[["variables"]]
@@ -343,14 +356,13 @@ test_that("flow() creates a flow and forwards to/from", {
   expect_equal(f[["eqn"]], "S1 * 0.5")
   expect_equal(f[["from"]], "S1")
   expect_equal(f[["to"]], "S2")
-  expect_equal(f[["units"]], "people/yr")
   expect_true(f[["non_negative"]])
 })
 
 test_that("auxiliary() creates an aux and forwards parameters", {
   sfm <- sdbuildR()
   sfm <- auxiliary(sfm, "rate",
-    eqn = "0.05", units = "1/yr",
+    eqn = "0.05",
     label = "growth rate", doc = "per-capita"
   )
 
@@ -359,28 +371,26 @@ test_that("auxiliary() creates an aux and forwards parameters", {
   expect_equal(v[["name"]], "rate")
   expect_equal(v[["type"]], "aux")
   expect_equal(v[["eqn"]], "0.05")
-  expect_equal(v[["units"]], "1/yr")
   expect_equal(v[["label"]], "growth rate")
   expect_equal(v[["doc"]], "per-capita")
 })
 
 test_that("aux() behaves identically to auxiliary()", {
   sfm1 <- sdbuildR()
-  sfm1 <- auxiliary(sfm1, "r", eqn = "0.1", units = "1/yr")
+  sfm1 <- auxiliary(sfm1, "r", eqn = "0.1")
 
   sfm2 <- sdbuildR()
-  sfm2 <- sdbuildR:::aux(sfm2, "r", eqn = "0.1", units = "1/yr")
+  sfm2 <- aux(sfm2, "r", eqn = "0.1")
 
   v1 <- as.data.frame(sfm1)
   v2 <- as.data.frame(sfm2)
   expect_equal(v1[["type"]], v2[["type"]])
   expect_equal(v1[["eqn"]], v2[["eqn"]])
-  expect_equal(v1[["units"]], v2[["units"]])
 })
 
 test_that("custom_func() creates a func and forwards parameters", {
   sfm <- sdbuildR()
-  sfm <- custom_func(sfm, "square", eqn = "x^2", units = "1", doc = "square fn")
+  sfm <- custom_func(sfm, "square", eqn = "x^2", doc = "square fn")
 
   v <- as.data.frame(sfm)
   expect_equal(nrow(v), 1)
@@ -395,12 +405,11 @@ test_that("lookup() injects type = 'lookup'", {
   sfm <- sdbuildR()
   sfm <- lookup(sfm, "LU",
     xpts = c(0, 10), ypts = c(1, 2),
-    units = "widgets", doc = "a lookup"
+    doc = "a lookup"
   )
 
   v <- as.data.frame(sfm)
   expect_equal(v[["type"]], "lookup")
-  expect_equal(v[["units"]], "widgets")
   expect_equal(v[["doc"]], "a lookup")
 })
 

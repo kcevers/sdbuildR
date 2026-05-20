@@ -92,6 +92,7 @@ test_that("ensemble() validates equal conditions lengths when cross = FALSE", {
 # Basic ensemble ----------------------------------------
 
 test_that("ensemble() runs successfully", {
+  skip_if_julia_not_ready()
   sfm <- make_jl_ensemble_sfm()
 
   sims <- silence(ensemble(sfm, n = 3))
@@ -100,6 +101,7 @@ test_that("ensemble() runs successfully", {
 })
 
 test_that("ensemble() returns correct structure", {
+  skip_if_julia_not_ready()
   sfm <- make_jl_ensemble_sfm()
 
   sims <- silence(ensemble(sfm, n = 3, return_sims = TRUE))
@@ -117,7 +119,46 @@ test_that("ensemble() returns correct structure", {
   }
 })
 
+test_that("ensemble() handles models with no constants", {
+  skip_if_julia_not_ready()
+  sfm <- make_basic_sfm() |>
+    sim_specs(language = "jl", start = 0, stop = 10, dt = 0.1, save_at = 1)
+
+  sims <- silence(ensemble(sfm, n = 3, return_sims = TRUE, verbose = FALSE))
+
+  expect_true(sims[["success"]])
+  expect_equal(nrow(sims[["constants"]][["df"]]), 0)
+  expect_equal(nrow(sims[["constants"]][["summary"]]), 0)
+  expect_equal(
+    sort(names(sims[["constants"]][["df"]])),
+    c("i", "j", "value", "variable")
+  )
+  expect_true(
+    all(c("j", "variable", "mean") %in%
+      names(sims[["constants"]][["summary"]]))
+  )
+})
+
+
+test_that("ensemble() of model with only stocks", {
+  skip_if_julia_not_ready()
+  sfm <- sdbuildR() |>
+  stock("Stock1", eqn = 100) |>
+  stock("Stock2", eqn = 50) |>
+  sim_specs(language = "Julia", start = 0, stop = 10, dt = 0.1, save_at = 1)
+
+  sims <- silence(ensemble(sfm, n = 3, only_stocks = TRUE, return_sims = TRUE, verbose = FALSE))
+  expect_true(sims[["success"]])
+  expect_equal(
+    sort(unique(sims[["summary"]][["variable"]])),
+    c("Stock1", "Stock2")
+  )
+
+})
+
+
 test_that("ensemble() respects only_stocks = TRUE", {
+  skip_if_julia_not_ready()
   sfm <- make_jl_ensemble_sfm()
   df <- as.data.frame(sfm, properties = "eqn")
   n_stocks <- nrow(df[df[["type"]] == "stock", ])
@@ -134,6 +175,7 @@ test_that("ensemble() respects only_stocks = TRUE", {
 })
 
 test_that("ensemble() returns all variables with only_stocks = FALSE", {
+  skip_if_julia_not_ready()
   sfm <- make_jl_ensemble_sfm()
 
   df <- as.data.frame(sfm, properties = "eqn")
@@ -512,31 +554,6 @@ test_that("ensemble() works with single time point", {
   expect_silent(plot(sims, type = "sims"))
 })
 
-test_that("ensemble() works with units", {
-  skip_if_julia_not_ready()
-  skip("Test no longer works as celsius cannot be multiplied with anything; as it is an affine quantity, and cannot be transformed like this")
-
-  sfm <- sdbuildR("coffee_cup") |>
-    sim_specs(language = "Julia", stop = 10, dt = 0.1) |>
-    update("coffee_temperature", eqn = "runif(1, 20, 150)")
-
-  nr_sims <- 3
-  sims <- silence(ensemble(sfm,
-    n = nr_sims,
-    only_stocks = FALSE, return_sims = TRUE
-  ))
-  expect_true(sims[["success"]])
-  expect_false(is.null(sims[["summary"]]))
-  expect_false(is.null(sims[["df"]]))
-  expect_equal(sims[["n"]], nr_sims)
-  expect_equal(sims[["n_total"]], nr_sims)
-  expect_equal(sort(unique(sims[["df"]][["i"]])), 1:nr_sims)
-  expect_equal(sort(unique(sims[["df"]][["j"]])), 1)
-  expect_equal(sort(unique(sims[["summary"]][["j"]])), 1)
-  expect_silent(plot(sims))
-  expect_silent(plot(sims, type = "sims"))
-})
-
 test_that("ensemble() works with interpolation function", {
   skip_if_julia_not_ready()
 
@@ -792,17 +809,16 @@ cli::test_that_cli(configs = "plain", "print() success with conditions lists cha
   expect_snapshot(print(sims))
 })
 
-cli::test_that_cli(configs = "plain", "print() failure output does not expose raw error text", {
-  sfm <- sdbuildR() |>
-    meta(name = "Demo model") |>
-    update("S", type = "stock", eqn = "u('1 kg')") |>
-    update("F1", type = "flow", eqn = "S", to = "S") |>
-    sim_specs(language = "R")
-
-  sims <- silence(ensemble(sfm, n = 2, verbose = FALSE))
-  expect_false(sims[["success"]])
-
-  expect_snapshot(print(sims))
+cli::test_that_cli(configs = "plain", "ensemble setup rejects malformed equations early", {
+  expect_error(
+    sdbuildR() |>
+      meta(name = "Demo model") |>
+      update("S", type = "stock", eqn = "1 // 2") |>
+      update("F1", type = "flow", eqn = "S", to = "S") |>
+      sim_specs(language = "R"),
+    "Could not parse the equation for .*S",
+    ignore.case = TRUE
+  )
 })
 
 

@@ -19,13 +19,12 @@ An object of class \code{compare_sdbuildR} (a list) containing:
 \item{\code{removed}}{Variables present in \code{sfm1} but not \code{sfm2}.}
 \item{\code{type_changed}}{Variables with different types.}
 \item{\code{eqn_changed}}{Variables with different equations.}
-\item{\code{units_changed}}{Variables with different units.}
 \item{\code{sim_specs_diff}}{Simulation settings that differ.}
 \item{\code{properties}}{Per-model counts and nonlinearity scores.}
 }
 }
 \description{
-Compares the structure, equations, units, and simulation settings of two
+Compares the structure, equations, and simulation settings of two
 \code{sdbuildR} models, and computes a nonlinearity score for each.
 }
 \examples{

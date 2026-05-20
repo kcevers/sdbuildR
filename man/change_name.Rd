@@ -2,7 +2,7 @@
 % Please edit documentation in R/update.R
 \name{change_name}
 \alias{change_name}
-\title{Change name of variable or model unit}
+\title{Change name of variable}
 \usage{
 change_name(object, name, new_name)
 }
@@ -11,13 +11,13 @@ change_name(object, name, new_name)
 
 \item{name}{Variable name. Accepts a bare symbol (e.g., \code{population}), a string (\code{"population"}), or a vector via \code{c()} (e.g., \code{c(a, b)} or \code{c("a", "b")}). Use \verb{!!} to inject from a variable.}
 
-\item{new_name}{New name. Character vector of the same length as \code{name}. Must be unique across all existing variable and model unit names.}
+\item{new_name}{New name. Character vector of the same length as \code{name}. Must be unique across all existing variables.}
 }
 \value{
 A stock-and-flow model object of class \code{\link{sdbuildR}} with the name changed throughout the model.
 }
 \description{
-Change the name of a variable or model unit throughout the model. For variables, this updates the data frame and all references in equations, flow connections, and labels. For model units, this updates the unit data frame and all references in other units' equations and variables' unit specifications.
+Change the name of a variable throughout the model. This updates the data frame and all references in equations, flow connections, and labels.
 }
 \examples{
 sfm <- sdbuildR("SIR")
@@ -31,6 +31,6 @@ as.data.frame(sfm, type = "flow", properties = c("name", "eqn", "to", "from"))
 
 }
 \seealso{
-\code{\link[=update]{update()}}, \code{\link[=custom_unit]{custom_unit()}}, \code{\link[=discard]{discard()}}
+\code{\link[=update]{update()}}, \code{\link[=discard]{discard()}}
 }
 \concept{build}

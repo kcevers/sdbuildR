@@ -12,10 +12,17 @@ script_template <- function() {
 %(times_name)s <- seq(from=%(start)s, to=%(stop)s, by=%(timestep_name)s)
 %(time_name)s = %(times_name)s[1]
 
-# Simulation time unit (smallest time scale in your model)
-%(time_units_name)s = '%(time_units)s'
 ",
-    times_julia = "\n\n# Simulation time unit (smallest time scale in your model)\n%(time_units_name)s = %(time_units_value)s\n# Define time sequence\n%(times_name)s = (%(start)s, %(stop)s)%(times_unit_mult)s\n# Initialize time (only necessary if constants use t)\n%(time_name)s = %(times_name)s[1]\n# Time step\n%(timestep_name)s = %(dt)s%(dt_unit_mult)s\n# Define saving time sequence\n%(tstops_name)s = %(times_name)s[1]:%(timestep_name)s:%(times_name)s[2]\n%(saveat_name)s = %(saveat_expr)s\n",
+    times_julia = "\n
+# Define time sequence
+%(times_name)s = (%(start)s, %(stop)s)
+# Initialize time (only necessary if constants use t)
+%(time_name)s = %(times_name)s[1]
+# Time step
+%(timestep_name)s = %(dt)s
+# Define saving time sequence
+%(tstops_name)s = %(times_name)s[1]:%(timestep_name)s:%(times_name)s[2]
+%(saveat_name)s = %(saveat_expr)s\n",
 
     # -- compile_nonneg_stocks -------------------------------------------------
 
@@ -53,10 +60,6 @@ attributes(%(sim_df_name)s)$valroot
     funcs_r = "\n\n# User-specified funcs\n%(func_body)s\n",
     funcs_julia = "\n\n# User-specified funcs\n%(func_body)s\n\n",
 
-    # -- compile_units ----------------------------------------------------------
-
-    units_julia = "\n# Define custom units; register after each unit as some units may be defined by other units\nold_logger = global_logger(NullLogger())\nmodule %(MyCustomUnits)s\n\tusing Unitful\n\tusing %(jl_pkg_name)s.%(sdbuildR_units)s\n\t%(unit_str)s\n\tUnitful.register(%(MyCustomUnits)s)\nend\n\nUnitful.register(%(MyCustomUnits)s)\nglobal_logger(old_logger)\n",
-
     # -- compile_static ----------------------------------------------------
 
     static_r = "\n\n# Define parameters, initial conditions, and functions in correct order\n%(static_str)s%(constants_def)s%(init_def)s",
@@ -65,8 +68,8 @@ attributes(%(sim_df_name)s)$valroot
     # -- compile_ode -----------------------------------------------------------
 
     ode_r = "\n\n# Define ODE\n%(ode_func_name)s = function(%(time_name)s, %(state_name)s, %(parameter_name)s){\n\n  %(S_str)s\n\n# Compute change in stocks at current time %(time_name)s\n  with(c(%(state_name)s, %(parameter_name)s), {\n\n    # Update auxiliaries and flows\n    %(dynamic_eqn_str)s\n\n    # Collect inflows and outflows for each stock\n    %(stock_change_str)s\n\n    # Combine change in stocks\n    %(state_change_str)s\n\n    return(list(%(change_state_name)s%(save_var_str)s))\n  })\n}",
-    ode_julia = "\n\n# Define ODE\nfunction %(ode_func_name)s!(%(change_state_name)s, %(state_name)s, %(parameter_name)s, %(time_name)s)\n\n\t# Unpack state variables\n\t%(unpack_state_str)s%(add_stock_units)s%(unpack_pars_str)s\n\n\t# Update auxiliaries\n\t%(dynamic_eqn_str)s\n\n\t# Collect inflows and outflows for each stock\n\t%(stock_change_str)s\n\tnothing\nend\n",
-    callback_julia = "\n\n# Define callback function\nfunction %(callback_func_name)s(%(state_name)s, %(time_name)s, integrator)\n\n\t# Unpack state variables\n\t%(unpack_state_str)s%(add_stock_units)s%(unpack_pars_integrator_str)s\n\n\t# Update auxiliaries\n\t%(dynamic_eqn_str)s\n\n\t# Return intermediary values and remove functions\n\treturn filter(x -> !is_function_or_interp(x), (%(intermediary_values)s))\n\n\nend\n\n# Callback setup\n%(callback_setup)s",
+    ode_julia = "\n\n# Define ODE\nfunction %(ode_func_name)s!(%(change_state_name)s, %(state_name)s, %(parameter_name)s, %(time_name)s)\n\n\t# Unpack state variables\n\t%(unpack_state_str)s%(unpack_pars_str)s\n\n\t# Update auxiliaries\n\t%(dynamic_eqn_str)s\n\n\t# Collect inflows and outflows for each stock\n\t%(stock_change_str)s\n\tnothing\nend\n",
+    callback_julia = "\n\n# Define callback function\nfunction %(callback_func_name)s(%(state_name)s, %(time_name)s, integrator)\n\n\t# Unpack state variables\n\t%(unpack_state_str)s%(unpack_pars_integrator_str)s\n\n\t# Update auxiliaries\n\t%(dynamic_eqn_str)s\n\n\t# Return intermediary values and remove functions\n\treturn filter(x -> !is_function_or_interp(x), (%(intermediary_values)s))\n\n\nend\n\n# Callback setup\n%(callback_setup)s",
     callback_empty_julia = "\n\n# Define empty callback function\n%(intermediaries)s = nothing\n%(callback_name)s = nothing\n\n",
 
     # -- compile_run_ode -------------------------------------------------------
@@ -91,7 +94,27 @@ attributes(%(sim_df_name)s)$valroot
 
     # -- compile_run_ode: Julia ensemble problem --------------------------------
 
-    ensemble_prob_julia = "\n\n# Create ODE problem\n%(prob_name)s = ODEProblem(%(ode_func_name)s!, %(model_setup_name)s.%(initial_value_name)s, %(times_name)s, %(model_setup_name)s.%(parameter_name)s)\n\n%(intermediaries_setup)s# Define ensemble problem\nfunction %(ensemble_func_name)s(prob, %(ensemble_iter)s, repeat)\n%(static_str)s%(intermediaries_callback)s\n\tremake(prob, u0 = %(model_setup_name)s.%(initial_value_name)s, p = %(model_setup_name)s.%(parameter_name)s%(intermediaries_remake)s)\nend\n\nfunction %(ensemble_output_func)s(sol, i)\n\t# Save both solution and parameters\n\treturn (t = sol.t, u = sol.u, p = sol.prob.p, u0 = sol.prob.u0), false\nend\n\n%(ensemble_prob_name)s = EnsembleProblem(%(prob_name)s, prob_func = %(ensemble_func_name)s, output_func = %(ensemble_output_func)s)\n%(warmup_str)s%(solution_name)s = solve(%(ensemble_prob_name)s, %(method)s%(threaded_str)s, dt = %(timestep_name)s, saveat = %(saveat_name)s, tstops = %(tstops_name)s, adaptive = false, trajectories = %(ensemble_total_n)s);\n",
+    ensemble_prob_julia = "
+    
+# Create ODE problem
+%(prob_name)s = ODEProblem(%(ode_func_name)s!, %(model_setup_name)s.%(initial_value_name)s, %(times_name)s, %(model_setup_name)s.%(parameter_name)s)
+
+%(intermediaries_setup)s
+
+# Define ensemble problem
+function %(ensemble_func_name)s(prob, %(ensemble_ctx)s)
+\t%(ensemble_iter)s = %(ensemble_ctx)s.sim_id
+%(static_str)s%(intermediaries_callback)s
+\tremake(prob, u0 = %(model_setup_name)s.%(initial_value_name)s, p = %(model_setup_name)s.%(parameter_name)s%(intermediaries_remake)s)
+end
+
+function %(ensemble_output_func)s(sol, %(ensemble_ctx)s)
+\t# Save both solution and parameters
+\treturn (t = sol.t, u = sol.u, p = sol.prob.p, u0 = sol.prob.u0), false
+end
+%(ensemble_prob_name)s = EnsembleProblem(%(prob_name)s, prob_func = %(ensemble_func_name)s, output_func = %(ensemble_output_func)s)
+%(warmup_str)s%(solution_name)s = solve(%(ensemble_prob_name)s, %(method)s%(threaded_str)s, dt = %(timestep_name)s, saveat = %(saveat_name)s, tstops = %(tstops_name)s, adaptive = false, trajectories = %(ensemble_total_n)s);
+    ",
 
     # -- compile_run_ode: Julia ensemble save dataframe -------------------------
 

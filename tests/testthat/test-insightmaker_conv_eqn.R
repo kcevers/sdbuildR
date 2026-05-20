@@ -1,7 +1,6 @@
 test_that("convert_builtin_functions_IM basic functions", {
   sfm <- sdbuildR("predator_prey")
   var_names <- get_model_var(sfm)
-  regex_units <- get_regex_units()
   name <- "test"
   type <- "stock"
 
@@ -66,24 +65,23 @@ test_that("convert_builtin_functions_IM comments", {
 test_that("convert_equations_IM basic math functions", {
   sfm <- sdbuildR("predator_prey")
   var_names <- get_model_var(sfm)
-  regex_units <- get_regex_units()
   name <- var_names[1]
   type <- "aux"
 
   # Arithmetic
-  result <- convert_equations_IM(type, name, "1 + 2", var_names, regex_units)$eqn
+  result <- convert_equations_IM(type, name, "1 + 2", var_names)$eqn
   expect_true(grepl("\\+", result))
 
   # Multiplication
-  result <- convert_equations_IM(type, name, "3 * 4", var_names, regex_units)$eqn
+  result <- convert_equations_IM(type, name, "3 * 4", var_names)$eqn
   expect_true(grepl("\\*", result))
 
   # Division
-  result <- convert_equations_IM(type, name, "10 / 2", var_names, regex_units)$eqn
+  result <- convert_equations_IM(type, name, "10 / 2", var_names)$eqn
   expect_true(grepl("/", result))
 
   # Exponentiation
-  result <- convert_equations_IM(type, name, "2^3", var_names, regex_units)$eqn
+  result <- convert_equations_IM(type, name, "2^3", var_names)$eqn
   expect_true(grepl("\\^", result))
 })
 
@@ -91,18 +89,17 @@ test_that("convert_equations_IM basic math functions", {
 test_that("convert_equations_IM conditional statements", {
   sfm <- sdbuildR("predator_prey")
   var_names <- get_model_var(sfm)
-  regex_units <- get_regex_units()
   name <- var_names[1]
   type <- "aux"
 
   # Simple if statement
   eqn <- "if(x > 0) { 1 } else { 0 }"
-  result <- convert_equations_IM(type, name, eqn, var_names, regex_units)$eqn
+  result <- convert_equations_IM(type, name, eqn, var_names)$eqn
   expect_true(grepl("ifelse", result) || grepl("if", result))
 
   # Nested if
   eqn <- "if(x > 0) { if(x > 10) { 2 } else { 1 } } else { 0 }"
-  result <- convert_equations_IM(type, name, eqn, var_names, regex_units)$eqn
+  result <- convert_equations_IM(type, name, eqn, var_names)$eqn
   expect_true(nchar(result) > 0)
 })
 
@@ -110,20 +107,19 @@ test_that("convert_equations_IM conditional statements", {
 test_that("convert_equations_IM empty and NULL cases", {
   sfm <- sdbuildR("predator_prey")
   var_names <- get_model_var(sfm)
-  regex_units <- get_regex_units()
   name <- var_names[1]
   type <- "aux"
 
   # Empty string
-  result <- convert_equations_IM(type, name, "", var_names, regex_units)$eqn
+  result <- convert_equations_IM(type, name, "", var_names)$eqn
   expect_equal(result, "")
 
   # Null
-  result <- convert_equations_IM(type, name, NULL, var_names, regex_units)$eqn
+  result <- convert_equations_IM(type, name, NULL, var_names)$eqn
   expect_equal(result, "")
 
   # Zero
-  result <- convert_equations_IM(type, name, "0", var_names, regex_units)$eqn
+  result <- convert_equations_IM(type, name, "0", var_names)$eqn
   expect_equal(result, "0")
 })
 

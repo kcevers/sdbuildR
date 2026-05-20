@@ -892,7 +892,7 @@ plot.simulate_sdbuildR <- function(x,
   }
 
   if (nrow(x[["df"]]) == 0) {
-    cli::cli_abort("Simulation data frame has no rows")
+    cli::cli_abort(c("x" = "Simulation data frame has no rows"))
   }
 
   # Validate common plot parameters
@@ -909,10 +909,10 @@ plot.simulate_sdbuildR <- function(x,
   dots <- list(...)
 
   # Extract optional parameters with defaults
-  matched_time_unit <- find_matching_regex(x[["object"]][["sim_specs"]][["time_units"]], get_regex_time_units())
+  time_unit <- x[["object"]][["sim_specs"]][["time_units"]]
   params <- extract_plot_params(dots, defaults = list(
     main = x[["object"]][["meta"]][["name"]],
-    xlab = paste0("Time (", matched_time_unit, ")"),
+    xlab = paste0("Time (", time_unit, ")"),
     ylab = ""
   ))
   main <- params$main
@@ -1049,7 +1049,7 @@ plot.ensemble_sdbuildR <- function(x,
     ))
   }
 
-  if (x[["success"]] == FALSE) {
+  if (isFALSE(x[["success"]])) {
     cli::cli_abort(c(
       "Ensemble simulation failed.",
       ">" = "Check your model specification and try again."
@@ -1121,10 +1121,10 @@ plot.ensemble_sdbuildR <- function(x,
   }
 
   # Extract optional parameters with defaults
-  matched_time_unit <- find_matching_regex(x[["object"]][["sim_specs"]][["time_units"]], get_regex_time_units())
+  time_unit <- x[["object"]][["sim_specs"]][["time_units"]]
   params <- extract_plot_params(dots, defaults = list(
     main = paste0("Ensemble of ", x[["object"]][["meta"]][["name"]]),
-    xlab = paste0("Time (", matched_time_unit, ")"),
+    xlab = paste0("Time (", time_unit, ")"),
     ylab = "",
     sub = default_sub,
     alpha = 0.3
@@ -1164,10 +1164,9 @@ plot.ensemble_sdbuildR <- function(x,
             ">" = "Set {.code j = 1}."
           ))
         } else {
-          min_j <- 1
           cli::cli_abort(c(
             "Invalid {.arg j} indices.",
-            "x" = "The {.arg j} argument must contain integers between {.val {min_j}} and {.val {x[[\"n_conditions\"]]}}."
+            "x" = "The {.arg j} argument must contain integers between {.val 1} and {.val {as.numeric(x[[\"n_conditions\"]])}}."
           ))
         }
       }
@@ -1213,7 +1212,7 @@ plot.ensemble_sdbuildR <- function(x,
             } else {
               cli::cli_abort(c(
                 "Invalid {.arg i} indices.",
-                "x" = "The {.arg i} argument must contain integers between {.val 1} and {.val {x[[\"n\"]]}}."
+                "x" = "The {.arg i} argument must contain integers between {.val 1} and {.val {as.numeric(x[[\"n\"]])}}."
               ))
             }
           }
