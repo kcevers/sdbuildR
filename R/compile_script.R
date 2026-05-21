@@ -164,7 +164,6 @@ compile_times <- function(object, language) {
   if (language == "R") {
     script <- fmt_script("times", "R", ss)
   } else if (language == "Julia") {
-
     save_type <- ss[["save_type"]] %||% "all"
     save_at <- ss[["save_at"]]
     save_n <- ss[["save_n"]]
@@ -199,7 +198,7 @@ compile_times <- function(object, language) {
     )
 
     script <- fmt_script("times", "julia", ss,
-      saveat_expr      = saveat_expr
+      saveat_expr = saveat_expr
     )
   }
 
@@ -812,4 +811,3 @@ compile_ode <- function(object,
 
   script
 }
-

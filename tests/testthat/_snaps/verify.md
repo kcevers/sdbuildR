@@ -4,7 +4,7 @@
       print(unit_tests(sfm))
     Message
       
-      -- Unit Tests in Stock-and-Flow Model ------------------------------------------
+      -- Stock-and-Flow Unit Tests ---------------------------------------------------
       2 tests • 1/2 active • 0/2 include conditions
       [1] S is non-negative
       `all(S >= 0)`
@@ -17,7 +17,7 @@
       print(result)
     Message
       
-      -- Unit Test Results -----------------------------------------------------------
+      -- Stock-and-Flow Unit Test Results --------------------------------------------
       2/2 tests passed.
       v S is non-negative
       v S starts at 100

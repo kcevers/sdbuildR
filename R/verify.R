@@ -7,6 +7,7 @@
 #' @param object A model object to verify.
 #' @param ... Additional arguments passed to specific methods.
 #' @export
+#' @concept unitTest
 verify <- function(object, ...) {
   UseMethod("verify")
 }
@@ -45,7 +46,7 @@ verify <- function(object, ...) {
 #'   }
 #'
 #' @export
-#' @concept verify
+#' @concept unitTest
 #' @method verify sdbuildR
 #' @seealso [unit_test()], [unit_tests()], [simulate.sdbuildR()]
 #'
@@ -175,6 +176,7 @@ verify.sdbuildR <- function(object, verbose = TRUE, return_sims = FALSE, ...) {
 #' @param verbose If `TRUE` (default), print results to the console.
 #' @param ... Additional arguments (not used).
 #' @export
+#' @concept unitTest
 verify.simulate_sdbuildR <- function(object, verbose = TRUE, ...) {
   check_simulate_sdbuildR(object)
   rlang::check_installed("testthat", reason = "to run unit tests with {.fn verify}")
@@ -300,29 +302,31 @@ verify.simulate_sdbuildR <- function(object, verbose = TRUE, ...) {
 #' @returns The model object with the unit test added or modified, invisibly.
 #'
 #' @export
-#' @concept verify
+#' @concept unitTest
 #' @seealso [verify()], [unit_tests()], [discard_unit_test()]
 #'
 #' @examples
 #' sfm <- sdbuildR("SIR") |>
-#'   unit_test(expr = all(Susceptible >= 0)) 
-#' 
+#'   unit_test(expr = all(Susceptible >= 0))
+#'
 #' # Run unit tests
 #' verify(sfm)
-#' 
+#'
 #' # Add test with label
-#' sfm <- unit_test(sfm, label = "Recovered increases", 
-#'                  expr = all(diff(Recovered) >= 0))
+#' sfm <- unit_test(sfm,
+#'   label = "Recovered increases",
+#'   expr = all(diff(Recovered) >= 0)
+#' )
 #' verify(sfm)
-#' 
+#'
 #' # Add test with conditions
 #' sfm <- unit_test(sfm,
-#'     expr = all(Infected == Infected[1]),
-#'     label = "When Beta is zero, no one gets infected",
-#'     conditions = list(Beta = 0)
-#'   )
+#'   expr = all(Infected == Infected[1]),
+#'   label = "When Beta is zero, no one gets infected",
+#'   conditions = list(Beta = 0)
+#' )
 #' verify(sfm)
-#' 
+#'
 #' # View all tests
 #' unit_tests(sfm)
 #'
@@ -336,7 +340,7 @@ verify.simulate_sdbuildR <- function(object, verbose = TRUE, ...) {
 #'   expr = all(diff(Recovered) > -1)
 #' )
 #' verify(sfm)
-#' 
+#'
 unit_test <- function(object, nr, expr, label, conditions = list(), active = TRUE) {
   check_sdbuildR(object)
 
@@ -344,7 +348,7 @@ unit_test <- function(object, nr, expr, label, conditions = list(), active = TRU
   n_tests <- length(tests)
 
   # --- Capture arguments & missingness flags ---
-  expr_captured <- substitute(expr)
+  expr_captured <- rlang::enexpr(expr)
   expr_missing <- missing(expr)
   label_missing <- missing(label)
   cond_missing <- missing(conditions)
@@ -660,7 +664,7 @@ unit_test <- function(object, nr, expr, label, conditions = list(), active = TRU
 #' @returns The model object with the specified test(s) removed.
 #'
 #' @export
-#' @concept verify
+#' @concept unitTest
 #' @seealso [unit_test()], [unit_tests()]
 #'
 #' @examples
@@ -753,14 +757,16 @@ discard_unit_test <- function(object, label, nr) {
 #' @returns An object of class `unit_tests_sdbuildR`, printed automatically.
 #'
 #' @export
-#' @concept verify
+#' @concept unitTest
 #' @seealso [unit_test()], [verify()]
 #'
 #' @examples
 #' sfm <- sdbuildR("SIR") |>
 #'   unit_test(expr = all(Susceptible >= 0)) |>
-#'   unit_test(label = "Recovered increases over time", 
-#'             expr = all(diff(Recovered) >= 0))
+#'   unit_test(
+#'     label = "Recovered increases over time",
+#'     expr = all(diff(Recovered) >= 0)
+#'   )
 #'
 #' unit_tests(sfm)
 unit_tests <- function(object) {
@@ -775,6 +781,7 @@ unit_tests <- function(object) {
 
 
 #' @export
+#' @concept unitTest
 print.unit_tests_sdbuildR <- function(x, ...) {
   if (x$n == 0) {
     cli::cli_inform(c("i" = "No unit tests defined. Add tests with {.fn unit_test}."))
@@ -785,7 +792,7 @@ print.unit_tests_sdbuildR <- function(x, ...) {
   n_active <- sum(vapply(x$tests, function(t) isTRUE(t[["active"]]), logical(1L)))
   n_cond <- sum(vapply(x$tests, function(t) length(t[["conditions"]]) > 0, logical(1L)))
 
-  cli::cli_h1("Unit Tests in Stock-and-Flow Model")
+  cli::cli_h1("Stock-and-Flow Unit Tests")
   cli::cli_text(paste0(c("{x$n} tests", "{n_active}/{x$n} active", "{n_cond}/{x$n} include conditions"), collapse = " \u2022 "))
 
 
@@ -820,6 +827,7 @@ new_verify_sdbuildR <- function(results, object, sims = NULL, sim_index = NULL) 
 
 
 #' @export
+#' @concept unitTest
 print.verify_sdbuildR <- function(x, ...) {
   results <- x[["results"]]
 
@@ -835,7 +843,7 @@ print.verify_sdbuildR <- function(x, ...) {
   n_run <- n_pass + n_fail + n_error
   n_total <- length(results)
 
-  cli::cli_h1("Unit Test Results")
+  cli::cli_h1("Stock-and-Flow Unit Test Results")
 
   if (n_skip > 0 && n_run == 0) {
     cli::cli_text("{n_skip}/{n_total} test{?s} skipped.")

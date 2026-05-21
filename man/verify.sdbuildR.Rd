@@ -60,4 +60,4 @@ verify(sim)
 \seealso{
 \code{\link[=unit_test]{unit_test()}}, \code{\link[=unit_tests]{unit_tests()}}, \code{\link[=simulate.sdbuildR]{simulate.sdbuildR()}}
 }
-\concept{verify}
+\concept{unitTest}

@@ -11,6 +11,7 @@ articles:
   - articles/julia-setup
   - articles/ensemble
   - articles/unit-tests
+  - articles/import-export
 reference:
 - title: Building stock-and-flow models
 - contents:
@@ -18,12 +19,18 @@ reference:
 - title: Simulate stock-and-flow models
 - contents:
   - has_concept("simulate")
+- title: Ensemble simulation
+- contents:
+  - has_concept("ensemble")
+- title: Unit Testing
+- contents:
+  - has_concept("unitTest")
 - title: Set-up and use Julia
 - contents:
   - has_concept("julia")
-- title: Insight Maker
+- title: Importing and exporting models
 - contents:
-  - has_concept("insightmaker")
+  - has_concept("importExport")
 - title: Input functions
 - contents:
   - has_concept("input")

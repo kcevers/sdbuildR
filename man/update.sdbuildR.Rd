@@ -197,8 +197,8 @@ df <- data.frame(
 )
 sfm <- update(sdbuildR(), df = df)
 
-# Check for errors in the model
-diagnose(sfm)
+# Run model diagnostics
+summary(sfm)
 
 # --- Programmatic usage ---
 
@@ -211,6 +211,6 @@ sfm <- update(sfm, "growth", eqn = 0.2)
 
 }
 \seealso{
-\code{\link[=sdbuildR]{sdbuildR()}} to initialize a model, \code{\link[=simulate.sdbuildR]{simulate()}} to simulate a model, and \code{\link[=diagnose]{diagnose()}} to check for errors in a model. Variable-specific helper functions \code{\link[=stock]{stock()}}, \code{\link[=flow]{flow()}}, \code{\link[=constant]{constant()}}, \code{\link[=aux]{aux()}}, and \code{\link[=lookup]{lookup()}} are also available as wrappers around update() that set the "type" argument for convenience. Further helper functions for modifying models are \code{\link[=change_name]{change_name()}} to rename a variable, \code{\link[=change_type]{change_type()}} to change a variable's type, and \code{\link[=discard]{discard()}} to remove a variable.
+\code{\link[=sdbuildR]{sdbuildR()}} to initialize a model, \code{\link[=simulate.sdbuildR]{simulate()}} to simulate a model, and \code{\link[=summary]{summary()}} to run model diagnostics. Variable-specific helper functions \code{\link[=stock]{stock()}}, \code{\link[=flow]{flow()}}, \code{\link[=constant]{constant()}}, \code{\link[=aux]{aux()}}, and \code{\link[=lookup]{lookup()}} are also available as wrappers around update() that set the "type" argument for convenience. Further helper functions for modifying models are \code{\link[=change_name]{change_name()}} to rename a variable, \code{\link[=change_type]{change_type()}} to change a variable's type, and \code{\link[=discard]{discard()}} to remove a variable.
 }
 \concept{build}

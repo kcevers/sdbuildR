@@ -73,7 +73,7 @@ if (recreate_figs) {
   COLORS <- COLORS[c(37, 9, 32, 1, 47, 17)]
   stock_col <- adjustcolor(COLORS[1], alpha.f = .75)
   flow_col <- COLORS[6]
-  
+
 
   health_path <- adjustcolor(COLORS[4], alpha.f = .75)
   motivation_path <- adjustcolor(COLORS[1], alpha.f = .85)
@@ -85,7 +85,7 @@ if (recreate_figs) {
   font_size <- 16
   font_size_xlab <- round(font_size * 1.4)
   font_size_legend <- round(font_size * 1.1)
-  font_size_subplot <- font_size #round(font_size * 1.5)
+  font_size_subplot <- font_size # round(font_size * 1.5)
   xlab <- "Time (days)"
 
   # Finer-grained simulation
@@ -93,39 +93,38 @@ if (recreate_figs) {
 
   # Annotation template
   annot <- list(xanchor = "center", yanchor = "middle", showarrow = FALSE, xref = "paper", yref = "paper", font = list(size = font_size_subplot, family = font_family))
-  annot_font <-list(family = font_family, size = font_size)
+  annot_font <- list(family = font_family, size = font_size)
   annot_legend <- list(
-        orientation = "h", # orientation
-        x = 0.5, # Center horizontally
-        y = -0.15, # Below the plot
-        xanchor = "center",
-        yanchor = "top",
-        # traceorder = "normal",
-        # tracegroupgap = 0,
-        # itemwidth = 15,
-        font = list(size = font_size_legend)
-      )
+    orientation = "h", # orientation
+    x = 0.5, # Center horizontally
+    y = -0.15, # Below the plot
+    xanchor = "center",
+    yanchor = "top",
+    # traceorder = "normal",
+    # tracegroupgap = 0,
+    # itemwidth = 15,
+    font = list(size = font_size_legend)
+  )
   annot_xlab <- list(
-          text = xlab,
-          font = list(
-            family = font_family,
-            size = font_size_xlab
-          ),
-          xref = "paper",
-          yref = "paper",
-          xanchor = "center", 
-          yanchor = "top",
-          x = 0.5, y = -.1,
-          showarrow = FALSE
-        )
+    text = xlab,
+    font = list(
+      family = font_family,
+      size = font_size_xlab
+    ),
+    xref = "paper",
+    yref = "paper",
+    xanchor = "center",
+    yanchor = "top",
+    x = 0.5, y = -.1,
+    showarrow = FALSE
+  )
 
-  rm_grid <- function(pl){
+  rm_grid <- function(pl) {
     plotly::layout(pl,
       xaxis = list(showgrid = FALSE, showline = TRUE),
       yaxis = list(showgrid = FALSE, showline = TRUE)
     )
   }
-
 }
 ```
 
@@ -174,7 +173,7 @@ if (recreate_figs) {
 #       )
 #     ) |> rm_grid()
 #   pl_sim
-  
+
 #   export_plot(pl_sim, file.path(filepath_figs, "sfm_sim_old.pdf"),
 #     width = 4, height = 3
 #   )
@@ -185,48 +184,47 @@ if (recreate_figs) {
 
 ```{r}
 if (recreate_figs) {
+  vars <- c("Stock", "Inflow", "Outflow")
+  colors <- c(stock_col, inflow_col, outflow_col)
+  sfm_list <- list()
+  pl_list <- list()
 
-vars <- c("Stock", "Inflow", "Outflow")
-colors <- c(stock_col, inflow_col, outflow_col)
-sfm_list <- list()
-pl_list <- list()
+  sfm <- sdbuildR() |>
+    sim_specs(only_stocks = FALSE, stop = 1, save_at = .01, dt = .01) |>
+    stock(Stock)
 
-sfm <- sdbuildR() |> 
-sim_specs(only_stocks = FALSE, stop = 1, save_at = .01, dt = .01) |>
-stock(Stock)
+  sfm1 <- sfm |>
+    flow(Inflow, eqn = 1, to = Stock)
+  sfm_list[["A"]] <- sfm1
 
-sfm1 <- sfm |>
-flow(Inflow, eqn = 1, to = Stock)
-sfm_list[["A"]] <- sfm1
+  sfm2 <- sfm |>
+    flow(Outflow, eqn = 1, from = Stock)
+  sfm_list[["B"]] <- sfm2
 
-sfm2 <- sfm |>
-flow(Outflow, eqn = 1, from = Stock) 
-sfm_list[["B"]] <- sfm2
+  sfm3 <- sfm |>
+    flow(Inflow, eqn = 1, to = Stock) |>
+    flow(Outflow, eqn = 5 * Stock, from = Stock)
+  sfm_list[["C"]] <- sfm3
 
-sfm3 <- sfm |>
-flow(Inflow, eqn = 1, to = Stock) |>
-flow(Outflow, eqn = 5 * Stock, from = Stock) 
-sfm_list[["C"]] <- sfm3
+  sfm_big <- sdbuildR() |>
+    stock(stockA, label = "Stock") |>
+    flow(inflowA, label = "Inflow", to = stockA) |>
+    stock(stockB, label = "Stock") |>
+    flow(outflowB, label = "Outflow", from = stockB) |>
+    stock(stockC, label = "Stock") |>
+    flow(inflowC, label = "Inflow", to = stockC) |>
+    flow(outflowC, label = "Outflow", from = stockC)
 
-sfm_big <- sdbuildR() |>
-stock(stockA, label = "Stock") |>
-flow(inflowA, label = "Inflow", to = stockA) |>
-stock(stockB, label = "Stock") |>
-flow(outflowB, label = "Outflow", from = stockB) |>
-stock(stockC, label = "Stock") |>
-flow(inflowC, label = "Inflow", to = stockC) |>
-flow(outflowC, label = "Outflow", from = stockC)
-
-# copy (cat(viz_str))
-{
-viz_str <- "
+  # copy (cat(viz_str))
+  {
+    viz_str <- "
     digraph sfm {
 
       graph [layout = dot, rankdir = LR, center=true, outputorder='edgesfirst', pad=.1, nodesep= .8]
 
       # Rank groupings
       {rank=same; stockA; stockB; stockC}
-    
+
       # Invisible edge to fix order
       stockA -> stockB -> stockC [style=invis]
 
@@ -258,81 +256,81 @@ viz_str <- "
       'outflowC' -> 'Cloud2' [arrowhead='normal', color='black:%(outflow_col)s:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
 
       # Define dependency edges
-      
+
 
       # Define auxiliary nodes
-      
+
 
       # Define constant nodes
-      
+
     }
 
 "
 
 
-viz_str <- sprintf_arg(
-  viz_str,
-  list(
-    inflow_col = inflow_col,
-    outflow_col = outflow_col
-  )
-)
+    viz_str <- sprintf_arg(
+      viz_str,
+      list(
+        inflow_col = inflow_col,
+        outflow_col = outflow_col
+      )
+    )
 
-  pl <- DiagrammeR::grViz(viz_str)
-  pl
-  export_plot(pl, file.path(filepath_figs, "sfm.pdf"))
-
- }
-
-
-for (i in names(sfm_list)) {
-  # pl_sfm <- plot(sfm_list[[i]],
-  #   wrap_width = 9.5,
-  #   font_size = 20, minlen = 1.5,
-  #   stock_col = stock_col,
-  #   flow_col = flow_col,
-  #   font_family = font_family,
-  #   show_constants = FALSE, show_aux = FALSE, 
-  #   show_dependencies = FALSE
-  # )
-  # pl_sfm
-
-  # export_plot(pl_sfm, file.path(filepath_figs, sprintf("sfm_%s.pdf", i)))
-
-  if (i == "A"){
-    idx <- c(1, 2)
-  } else if (i == "B"){
-    idx <- c(1, 3)
-  } else {
-    idx <- 1:3
+    pl <- DiagrammeR::grViz(viz_str)
+    pl
+    export_plot(pl, file.path(filepath_figs, "sfm.pdf"))
   }
-  idx <- rev(idx)
 
-  sim <- simulate(sfm_list[[i]])
-  pl_list[[i]] <- plot(sim,
-    vars = vars[idx],
-    xlab = "", main = "",
-    colors = colors[idx],
-    font_family = font_family,
-    font_size = font_size_subplot,
-    showlegend = (i == "C")
-  )  |> rm_grid()
-}
+
+  for (i in names(sfm_list)) {
+    # pl_sfm <- plot(sfm_list[[i]],
+    #   wrap_width = 9.5,
+    #   font_size = 20, minlen = 1.5,
+    #   stock_col = stock_col,
+    #   flow_col = flow_col,
+    #   font_family = font_family,
+    #   show_constants = FALSE, show_aux = FALSE,
+    #   show_dependencies = FALSE
+    # )
+    # pl_sfm
+
+    # export_plot(pl_sfm, file.path(filepath_figs, sprintf("sfm_%s.pdf", i)))
+
+    if (i == "A") {
+      idx <- c(1, 2)
+    } else if (i == "B") {
+      idx <- c(1, 3)
+    } else {
+      idx <- 1:3
+    }
+    idx <- rev(idx)
+
+    sim <- simulate(sfm_list[[i]])
+    pl_list[[i]] <- plot(sim,
+      vars = vars[idx],
+      xlab = "", main = "",
+      colors = colors[idx],
+      font_family = font_family,
+      font_size = font_size_subplot,
+      showlegend = (i == "C")
+    ) |> rm_grid()
+  }
 
   # Simulation
-#   pl1 <- plot(simulate(sfm1), vars = vars[1:2], 
-# showlegend = FALSE, main = "")
-# pl2 <- plot(simulate(sfm2), vars = vars[c(1, 3)], 
-# showlegend = FALSE, main = "")
-# pl3 <- plot(simulate(sfm3), vars = vars, 
-# showlegend = TRUE, main = "")
+  #   pl1 <- plot(simulate(sfm1), vars = vars[1:2],
+  # showlegend = FALSE, main = "")
+  # pl2 <- plot(simulate(sfm2), vars = vars[c(1, 3)],
+  # showlegend = FALSE, main = "")
+  # pl3 <- plot(simulate(sfm3), vars = vars,
+  # showlegend = TRUE, main = "")
 
-# pl <- plotly::subplot(pl1, pl2, pl3, nrows = 3, shareX = TRUE, margin = .05)
-# pl
+  # pl <- plotly::subplot(pl1, pl2, pl3, nrows = 3, shareX = TRUE, margin = .05)
+  # pl
   # sim <- simulate(sfm, save_at = .01, only_stocks = FALSE)
-  pl_sim <- plotly::subplot(pl_list, nrows = 3,
-   shareX = FALSE, shareY = FALSE, 
-  margin = 0.05, heights = c(.25, .3, .25)
+  pl_sim <- plotly::subplot(pl_list,
+    nrows = 3,
+    shareX = FALSE, shareY = FALSE,
+    margin = 0.05, heights = c(.25, .3, .25)
   ) |>
     plotly::layout(
       # margin = 0.05,
@@ -347,11 +345,10 @@ for (i in names(sfm_list)) {
       )
     )
   pl_sim
-  
+
   export_plot(pl_sim, file.path(filepath_figs, "sfm_sim.pdf"),
     width = 3.25, height = 5.5
   )
-
 }
 ```
 
@@ -364,14 +361,13 @@ def_table <- data.frame(
     "Job Demands", "Job Resources", "Work Engagement", "Exhaustion", "Proactive Behaviour", "Self-Undermining Behaviour", "Job Performance"
   ),
   Definition = c(
-"The physical, psychological, social, or organizational aspects of the job that require sustained physical, cognitive, and/or emotional effort and are therefore associated with certain physiological and/or psychological costs", 
-"The physical, psychological, social, or organizational aspects of the job that have motivating potential, that are functional in achieving work goals, that regulate the impact of job demands, and that stimulate learning and personal growth",
-"a positive, fulfilling, work-related state of mind that is characterized by vigor, dedication, and absorption. Vigor refers to high levels of energy and mental resilience while working, the willingness to invest effort in one’s work, and persistence even in the face of difficulties. Dedication implies being strongly involved in one’s work and experiencing a sense of significance, enthusiasm, and challenge. Absorption refers to being fully concentrated and happily engrossed in one’s work, whereby time passes quickly. Thus, work engagement is characterized by a high level of energy and strong identification with one’s work, whereas burnout is characterized by the opposite: a low level of energy and poor identification with one’s work",
-"Depletion of energy resources; also used interchangeable or as part of job strain",
-"Also called job crafting; employees’ personal initiative to change their job demands and job resources in order to better align the design of the job with their own abilities and preferences",
-"Employees’ dysfunctional behaviors (e.g., poor communication, conflict behaviors) that create obstacles and may undermine performance.",
-"Undefined in the literature; refers to the extent to which an individual performs well at their job (e.g., fulfilling responsibilities)"
-
+    "The physical, psychological, social, or organizational aspects of the job that require sustained physical, cognitive, and/or emotional effort and are therefore associated with certain physiological and/or psychological costs",
+    "The physical, psychological, social, or organizational aspects of the job that have motivating potential, that are functional in achieving work goals, that regulate the impact of job demands, and that stimulate learning and personal growth",
+    "a positive, fulfilling, work-related state of mind that is characterized by vigor, dedication, and absorption. Vigor refers to high levels of energy and mental resilience while working, the willingness to invest effort in one’s work, and persistence even in the face of difficulties. Dedication implies being strongly involved in one’s work and experiencing a sense of significance, enthusiasm, and challenge. Absorption refers to being fully concentrated and happily engrossed in one’s work, whereby time passes quickly. Thus, work engagement is characterized by a high level of energy and strong identification with one’s work, whereas burnout is characterized by the opposite: a low level of energy and poor identification with one’s work",
+    "Depletion of energy resources; also used interchangeable or as part of job strain",
+    "Also called job crafting; employees’ personal initiative to change their job demands and job resources in order to better align the design of the job with their own abilities and preferences",
+    "Employees’ dysfunctional behaviors (e.g., poor communication, conflict behaviors) that create obstacles and may undermine performance.",
+    "Undefined in the literature; refers to the extent to which an individual performs well at their job (e.g., fulfilling responsibilities)"
   )
 )
 
@@ -395,7 +391,7 @@ kableExtra::kbl(def_table,
 
 ```{r}
 {
-viz_str <- "
+  viz_str <- "
 digraph flowchart {
 
   graph [layout = dot,
@@ -570,7 +566,7 @@ if (recreate_figs) {
 
 
 ```{r}
-diagnose(sfm)
+summary(sfm)
 ```
 
 
@@ -581,8 +577,10 @@ sfm <- sfm |>
 
 ```{r}
 sfm <- sfm |>
-  flow(work, eqn = work_rate,
-  from = energy, label = "Depletion from work")
+  flow(work,
+    eqn = work_rate,
+    from = energy, label = "Depletion from work"
+  )
 
 sim <- simulate(sfm)
 plot(sim)
@@ -640,9 +638,11 @@ sfm <- sfm |>
 
 ```{r}
 sfm <- sfm |>
-  flow(erosion, eqn = recovery_rate * work, 
-    # eqn = capacity * work / (1 + energy), 
-  from = recovery_rate, label = "Recovery Erosion")
+  flow(erosion,
+    eqn = recovery_rate * work,
+    # eqn = capacity * work / (1 + energy),
+    from = recovery_rate, label = "Recovery Erosion"
+  )
 
 sim <- simulate(sfm)
 plot(sim)
@@ -675,9 +675,11 @@ if (recreate_figs) {
   max_letter <- max(names(sfm_list))
   VARS_example <- c("energy", "work", "recovery", "recovery_rate", "net_change")
 
-  VARS_example <- c("energy", "work", "recovery", 
-  # "recovery_rate", 
-  "net_change")
+  VARS_example <- c(
+    "energy", "work", "recovery",
+    # "recovery_rate",
+    "net_change"
+  )
 
   # Recovery = recovery_rate so plot as one line
   sfm_list[["E"]] <- sfm_list[["E"]] |>
@@ -686,20 +688,23 @@ if (recreate_figs) {
   COLORS_example <- COLORS[seq_along(VARS_example)]
 
   titles <- paste0(
-    paste0("<i>", LETTERS[seq_along(sfm_list)], ". ", 
-    c("Static Stock", 
-    "Constant Outflow", 
-    "Stock-Dependent<br>Outflow", 
-    "Constant Inflow",
-    "Erosion of Recovery Rate" 
-    # "Auxiliary variable tracking net change in energy"
-    ), "</i>")
+    paste0(
+      "<i>", LETTERS[seq_along(sfm_list)], ". ",
+      c(
+        "Static Stock",
+        "Constant Outflow",
+        "Stock-Dependent<br>Outflow",
+        "Constant Inflow",
+        "Erosion of Recovery Rate"
+        # "Auxiliary variable tracking net change in energy"
+      ), "</i>"
+    )
   )
   titles <- stats::setNames(titles, names(sfm_list))
 
   for (letter in names(sfm_list)) {
-    sim <- simulate(sfm_list[[letter]], 
-    save_at = .01, only_stocks = FALSE
+    sim <- simulate(sfm_list[[letter]],
+      save_at = .01, only_stocks = FALSE
     )
 
     # vars_in_sim <- intersect(vars, unique(sim$df$variable))
@@ -712,14 +717,15 @@ if (recreate_figs) {
     pl_list[[letter]] <- plot(sim,
       vars = vars_,
       colors = colors_,
-      main = "", 
+      main = "",
       # ylim = ylim,
       showlegend = (letter == max_letter)
-    ) |> rm_grid() |>
-    plotly::layout(yaxis = list(
-      nticks = 3
+    ) |>
+      rm_grid() |>
+      plotly::layout(yaxis = list(
+        nticks = 3
       ), xaxis = list(
-      tickvals = list(0, 7.5, 15)
+        tickvals = list(0, 7.5, 15)
       ))
   }
 
@@ -738,19 +744,19 @@ if (recreate_figs) {
   # y3 <- 0.45
 
   annot_ <- utils::modifyList(annot, list(
-    font = list(size = font_size_subplot + 4, family = font_family))
-  )
+    font = list(size = font_size_subplot + 4, family = font_family)
+  ))
 
   pl <- plotly::subplot(
     plotly::subplot(pl_list[1:4],
-    nrows = 2,
-    shareX = TRUE,
-    shareY = FALSE,
-    titleY = FALSE,
-    titleX = FALSE,
-    margin = 0.075
-  ), plotly::subplot(pl_list[5]), 
-  nrows = 1,
+      nrows = 2,
+      shareX = TRUE,
+      shareY = FALSE,
+      titleY = FALSE,
+      titleX = FALSE,
+      margin = 0.075
+    ), plotly::subplot(pl_list[5]),
+    nrows = 1,
     # shareX = TRUE
     # shareY = FALSE,
     # titleY = FALSE,
@@ -763,8 +769,10 @@ if (recreate_figs) {
       font = annot_font,
       # legend = annot_legend,
       # legend = utils::modifyList(annot_legend, list(x = 1.4, y = 0.8)),
-      legend = utils::modifyList(annot_legend, list(y = -.16, 
-      font = list(size = font_size_legend))),
+      legend = utils::modifyList(annot_legend, list(
+        y = -.16,
+        font = list(size = font_size_legend)
+      )),
       annotations = list(
         utils::modifyList(annot_xlab, list(x = 0.5, y = -0.075))
       )
@@ -772,8 +780,8 @@ if (recreate_figs) {
     plotly::layout(annotations = list(
       utils::modifyList(annot_, list(x = x1, y = y1, text = titles[["A"]])),
       utils::modifyList(annot_, list(x = x2, y = y1, text = titles[["B"]])),
-      utils::modifyList(annot_, list(x = x1, y = y2-.005, text = titles[["C"]])),
-      utils::modifyList(annot_, list(x = x2, y = y2+.005, text = titles[["D"]])),
+      utils::modifyList(annot_, list(x = x1, y = y2 - .005, text = titles[["C"]])),
+      utils::modifyList(annot_, list(x = x2, y = y2 + .005, text = titles[["D"]])),
       utils::modifyList(annot_, list(x = x3, y = y1, text = titles[["E"]]))
       # utils::modifyList(annot_, list(x = .5, y = -.5, text = "F. Stock-and-Flow Diagram"))
     ))
@@ -788,12 +796,11 @@ if (recreate_figs) {
 
 
 ```{r}
-if (recreate_figs){
-  
+if (recreate_figs) {
   # copy cat(viz_str) from plot.sdbuildR() with minlen=1.5
   {
     viz_str <- "
-    
+
     digraph sfm {
 
       graph [layout = dot, rankdir = LR, center=true, outputorder='edgesfirst', pad=.1, nodesep= .15]
@@ -806,7 +813,7 @@ if (recreate_figs){
 
       # Define stock nodes
       'recovery_rate' [id='recovery_rate',label='Recovery Rate',tooltip = 'eqn = 1',shape=box,style=filled,fillcolor='#09B0ACBF',fontsize=18,fontname='Times New Roman']
-      
+
      # Define invisible node
       'invisnode1' [id='invisnode1',label='Invisible Node',shape=box,style=invis,fontsize=12,fontname='Times New Roman', width=.2, height=.1, fixedsize=true]
       'invisnode2' [id='invisnode2',label='Invisible Node',shape=box,style=invis,fontsize=12,fontname='Times New Roman', width=.2, height=.1, fixedsize=true]
@@ -846,10 +853,10 @@ if (recreate_figs){
 
     }
     "
-  
 
-  pl <- DiagrammeR::grViz(viz_str)
-  pl
+
+    pl <- DiagrammeR::grViz(viz_str)
+    pl
   }
 
   export_plot(pl, file.path(filepath_figs, "sfm_burnout_simple.pdf"))
@@ -862,14 +869,14 @@ if (recreate_figs){
 ```{r} 
 sfm <- sdbuildR() |>
   stock(c("E", "R", "D", "X"), label = c("Engagement", "Job Resources", "Job Demands", "Energy")) |>
-  flow("motivation", to = "E", label = "Motivation", eqn = R * D) |>#  "Boost hypothesis: Job demands amplify the impact of job resources on work engagement (and more generally on work motivation)."
+  flow("motivation", to = "E", label = "Motivation", eqn = R * D) |> #  "Boost hypothesis: Job demands amplify the impact of job resources on work engagement (and more generally on work motivation)."
   flow("proactive_R", to = "R", label = "Proactive Behaviour", eqn = E) |> # "Engaged employees are intrinsically motivated to stay engaged and therefore start to proactively optimize their job (increase resources and optimize demands)"
   flow("proactive_D", from = "D", label = "Proactive Behaviour", eqn = E) |> # "Engaged employees are intrinsically motivated to stay engaged and therefore start to proactively optimize their job (increase resources and optimize demands)"
   flow("undermining", to = "D", label = "Undermining", eq = D - X) |> # "Proposition 8: Job demands and strain may lead to maladaptive self-regulation cognitions and behaviors (self-undermining)"
   flow("effort", from = "X", label = "Effort", eqn = D - R) |> # "Buffer hypothesis: Job resources weaken the impact of job demands on strain."
-  flow("R_X", from = "R", label = "Depletion from Exhaustion", eqn = -X) |> 
-  flow("E_X", from = "E", label = "Depletion from Exhaustion", eqn = -X) |> 
-  aux(P, label = "Job Performance", eqn = E + X) 
+  flow("R_X", from = "R", label = "Depletion from Exhaustion", eqn = -X) |>
+  flow("E_X", from = "E", label = "Depletion from Exhaustion", eqn = -X) |>
+  aux(P, label = "Job Performance", eqn = E + X)
 
 plot(sfm, show_constants = TRUE, show_aux = TRUE, show_dependencies = TRUE)
 ```
@@ -881,12 +888,14 @@ sfm <- sdbuildR() |>
   meta(name = "Job Demands and Resources (JD-R) Theory") |>
   # Add a seed for reproducibility:
   sim_specs(seed = 123) |>
-  sim_specs(time_units = "day", 
-  stop = 365 / 2, 
-  # stop = 90, 
-  only_stocks = FALSE) |>
+  sim_specs(
+    time_units = "day",
+    stop = 365 / 2,
+    # stop = 90,
+    only_stocks = FALSE
+  ) |>
   # Make save_at larger to reduce image file size
-  sim_specs(save_at = .1, dt  =.01)
+  sim_specs(save_at = .1, dt = .01)
 ```
 
 ```{r, fig.width = 1, fig.height=1}
@@ -905,12 +914,14 @@ plot(sim)
 We now implement the positive feedback loop between engagement and job resources. As a first functional form, we try a linear effect of resources on motivation, and of motivation on engagement:
 
 ```{r, fig.width = 1, fig.height=1}
-sfm <- sfm |> 
+sfm <- sfm |>
   constant(motivation_rate, eqn = .3, label = "Motivation Rate") |>
   flow(motivation, motivation_rate * resources, to = engagement, label = "Motivation") |>
   constant(proactive_rate, eqn = 0.2, label = "Proactive Behaviour Rate") |>
-  flow(proactive, eqn = proactive_rate * engagement, to = resources,
-   label = "Proactive behaviour" )
+  flow(proactive,
+    eqn = proactive_rate * engagement, to = resources,
+    label = "Proactive behaviour"
+  )
 
 sim <- simulate(sfm)
 plot(sim)
@@ -927,7 +938,7 @@ if (recreate_figs) {
 Both resources and engagement grow exponentially to extremely high levels, which is not very realistic. We could add a negative feedback loop to limit this growth, for example by adding a (linear) decay flow from engagement and resources:
 
 ```{r, fig.width = 1, fig.height=1}
-sfm <- sfm |> 
+sfm <- sfm |>
   constant(engagement_decay_rate, eqn = 0.2, label = "Engagement Decay Rate") |>
   flow(engagement_decay, eqn = engagement_decay_rate * engagement, from = engagement, label = "Decay") |>
   constant(resource_decay_rate, eqn = 0.1, label = "Resource Decay Rate") |>
@@ -958,8 +969,12 @@ Instead, we can implement a more realistic functional form which follows an S-cu
 
 ```{r, echo=FALSE}
 # Functional forms
-linear <- function(x, a) {a * x}
-hill <- function(x, midpoint, slope) {x^slope / (midpoint^slope + x^slope)}
+linear <- function(x, a) {
+  a * x
+}
+hill <- function(x, midpoint, slope) {
+  x^slope / (midpoint^slope + x^slope)
+}
 x <- seq(0, 1, by = .01)
 
 # Linear function
@@ -999,7 +1014,8 @@ pl_linear <- plotly::plot_ly() |>
     legendgroup = ~type,
     type = "scatter",
     mode = "lines"
-  ) |> rm_grid()
+  ) |>
+  rm_grid()
 
 pl_hill <- plotly::plot_ly() |>
   plotly::add_trace(
@@ -1010,198 +1026,213 @@ pl_hill <- plotly::plot_ly() |>
     legendgroup = ~type,
     type = "scatter",
     mode = "lines"
-  ) |> rm_grid()
+  ) |>
+  rm_grid()
 
-pl_func_form <- plotly::subplot(pl_linear, pl_hill, 
-      nrows = 1,
-    shareX = TRUE,
-    shareY = TRUE,
-    titleY = TRUE,
-    titleX = FALSE,
-    margin = c(0.1, 0.05, 0.05, 0.05)
+pl_func_form <- plotly::subplot(pl_linear, pl_hill,
+  nrows = 1,
+  shareX = TRUE,
+  shareY = TRUE,
+  titleY = TRUE,
+  titleX = FALSE,
+  margin = c(0.1, 0.05, 0.05, 0.05)
 ) |>
-  plotly::layout(title = "", 
-  yaxis = list(title = "Output"),
-  font = annot_font,
-  legend = utils::modifyList(annot_legend, list(
-        y = -0.2, 
-        title = list(text = "Slope", font = list(size = font_size_legend)),
-        traceorder = "normal",
-        tracegroupgap = 0,
-        itemwidth = 15,
-        font = list(size = font_size_legend)
-      )),
-      annotations = list(
-        utils::modifyList(annot_xlab, 
+  plotly::layout(
+    title = "",
+    yaxis = list(title = "Output"),
+    font = annot_font,
+    legend = utils::modifyList(annot_legend, list(
+      y = -0.2,
+      title = list(text = "Slope", font = list(size = font_size_legend)),
+      traceorder = "normal",
+      tracegroupgap = 0,
+      itemwidth = 15,
+      font = list(size = font_size_legend)
+    )),
+    annotations = list(
+      utils::modifyList(
+        annot_xlab,
         list(text = "Input", y = -.05)
-        )
       )
     )
+  )
 pl_func_form
-
 ```
 
 
 ```{r, include=FALSE}
 if (recreate_figs) {
+  # Functional forms
+  logistic_eq <- function(x, midpoint, slope) {
+    slope * x * (1 - x / midpoint)
+  }
+  probit <- function(x, mean, sd) {
+    pnorm(x, mean = mean, sd = sd)
+  }
+  hill <- function(x, midpoint, slope) {
+    x^slope / (midpoint^slope + x^slope)
+  }
+  x <- seq(0, 1, by = .01)
+  midpoint <- 0.5
+  ylim <- c(-0.3, 1.1)
 
-# Functional forms
-logistic_eq <- function(x, midpoint, slope) {slope * x * (1 - x / midpoint)}
-probit <- function(x, mean, sd) {pnorm(x, mean = mean, sd = sd)}
-hill <- function(x, midpoint, slope) {x^slope / (midpoint^slope + x^slope)}
-x <- seq(0, 1, by = .01)
-midpoint <- 0.5
-ylim <- c(-0.3, 1.1)
+  # Logistic function
+  slopes <- c(1, 5, 8)
+  df_logistic <- data.frame(
+    x = rep(x, length(slopes)),
+    value = unlist(lapply(slopes, function(a) logistic_eq(x, midpoint = midpoint, slope = a))),
+    type = rep(slopes, each = length(x))
+  )
 
-# Logistic function
-slopes <- c(1, 5, 8)
-df_logistic <- data.frame(
-  x = rep(x, length(slopes)),
-  value = unlist(lapply(slopes, function(a) logistic_eq(x, midpoint = midpoint, slope = a))),
-  type = rep(slopes, each = length(x))
-)
+  # Order legend increasingly by slope
+  df_logistic$type <- factor(df_logistic$type, levels = as.character(sort(slopes)))
 
-# Order legend increasingly by slope
-df_logistic$type <- factor(df_logistic$type, levels = as.character(sort(slopes)))
+  # Probit function
+  slopes <- c(0.1, 0.3, 1)
+  df_probit <- data.frame(
+    x = rep(x, length(slopes)),
+    value = unlist(lapply(slopes, function(sd) probit(x, mean = midpoint, sd = sd))),
+    type = rep(slopes, each = length(x))
+  )
 
-# Probit function
-slopes <- c(0.1, 0.3, 1)
-df_probit <- data.frame(
-  x = rep(x, length(slopes)),
-  value = unlist(lapply(slopes, function(sd) probit(x, mean = midpoint, sd = sd))),
-  type = rep(slopes, each = length(x))
-)
+  # Order legend increasingly by slope
+  df_probit$type <- factor(df_probit$type, levels = as.character(sort(slopes)))
 
-# Order legend increasingly by slope
-df_probit$type <- factor(df_probit$type, levels = as.character(sort(slopes)))
+  # Hill function
+  slopes <- c(1, 3, 10)
+  df_hill <- data.frame(
+    x = rep(x, length(slopes)),
+    value = unlist(lapply(slopes, function(slope) hill(x, midpoint = midpoint, slope = slope))),
+    type = rep(slopes, each = length(x))
+  )
 
-# Hill function
-slopes <- c(1, 3, 10)
-df_hill <- data.frame(
-  x = rep(x, length(slopes)),
-  value = unlist(lapply(slopes, function(slope) hill(x, midpoint = midpoint, slope = slope))),
-  type = rep(slopes, each = length(x))
-)
+  # Order legend increasingly by slope
+  df_hill$type <- factor(df_hill$type, levels = as.character(sort(slopes)))
 
-# Order legend increasingly by slope
-df_hill$type <- factor(df_hill$type, levels = as.character(sort(slopes)))
+  # Simulate three models with different functional forms
+  sfm0_rev <- sdbuildR() |>
+    stock(Stock, eqn = 0.1) |>
+    sim_specs(only_stocks = FALSE, stop = 10)
+  sfm1_rev <- sfm0_rev |> flow(Inflow, eqn = 1 * Stock * (1 - Stock / 0.5), to = Stock)
+  sfm2_rev <- sfm0_rev |> flow(Inflow, eqn = pnorm(Stock, mean = 0.5, sd = 0.3), to = Stock)
+  sfm3_rev <- sfm0_rev |> flow(Inflow, eqn = Stock^3 / (0.5^3 + Stock^3), to = Stock)
+  vars <- c("Stock", "Inflow")
 
-# Simulate three models with different functional forms
-sfm0_rev <- sdbuildR() |> stock(Stock, eqn = 0.1) |> sim_specs(only_stocks = FALSE, stop = 10)
-sfm1_rev <- sfm0_rev |> flow(Inflow, eqn = 1 * Stock * (1 - Stock / 0.5), to = Stock)
-sfm2_rev <- sfm0_rev |> flow(Inflow, eqn = pnorm(Stock, mean = 0.5, sd = 0.3), to = Stock)
-sfm3_rev <- sfm0_rev |> flow(Inflow, eqn = Stock^3 / (0.5^3 + Stock^3), to = Stock)
-vars <- c("Stock", "Inflow")
-
-pl1 <- plot(simulate(sfm1_rev), vars = vars)
-pl2 <- plot(simulate(sfm2_rev), showlegend = FALSE, vars = vars)
-pl3 <- plot(simulate(sfm3_rev), showlegend = FALSE, vars = vars)
-pl_sim_rev <- plotly::subplot(pl1, pl2, pl3, nrows = 1, shareX = TRUE, shareY = FALSE)
+  pl1 <- plot(simulate(sfm1_rev), vars = vars)
+  pl2 <- plot(simulate(sfm2_rev), showlegend = FALSE, vars = vars)
+  pl3 <- plot(simulate(sfm3_rev), showlegend = FALSE, vars = vars)
+  pl_sim_rev <- plotly::subplot(pl1, pl2, pl3, nrows = 1, shareX = TRUE, shareY = FALSE)
 
 
-# Pick colours for linear and hill functional form
-colors_logistic <- grDevices::hcl.colors(n = 100, palette = "Roma")[c(1, 15, 30)]
-colors_probit <- grDevices::hcl.colors(n = 100, palette = "Roma")[c(40, 55, 68)]
-colors_hill <- grDevices::hcl.colors(n = 100, palette = "Roma")[c(72, 83, 100)]
+  # Pick colours for linear and hill functional form
+  colors_logistic <- grDevices::hcl.colors(n = 100, palette = "Roma")[c(1, 15, 30)]
+  colors_probit <- grDevices::hcl.colors(n = 100, palette = "Roma")[c(40, 55, 68)]
+  colors_hill <- grDevices::hcl.colors(n = 100, palette = "Roma")[c(72, 83, 100)]
 
-# cl <- grDevices::hcl.colors(n = 100, palette = "Roma")
-# scales::show_col(cl)
+  # cl <- grDevices::hcl.colors(n = 100, palette = "Roma")
+  # scales::show_col(cl)
 
-titles_top <- paste0("<i>", c("A. Logistic Function", "B. Probit Function", "C. Hill Function"), "</i>")
-titles_bottom <- paste0("<i>", c(
-  "D. Inflow =<br>s * Stock * (1 - Stock / K)<br>s = 1, K = 0.5",
-  "E. Inflow =<br>pnorm(Stock, mu, s)<br>s = 0.3, mu = 0.5",
-  "F. Inflow =<br>Stock^s / (K^s + Stock^s)<br>s = 3, K = 0.5"
-), "</i>")
+  titles_top <- paste0("<i>", c("A. Logistic Function", "B. Probit Function", "C. Hill Function"), "</i>")
+  titles_bottom <- paste0("<i>", c(
+    "D. Inflow =<br>s * Stock * (1 - Stock / K)<br>s = 1, K = 0.5",
+    "E. Inflow =<br>pnorm(Stock, mu, s)<br>s = 0.3, mu = 0.5",
+    "F. Inflow =<br>Stock^s / (K^s + Stock^s)<br>s = 3, K = 0.5"
+  ), "</i>")
 
-x1 <- 0.16
-x2 <- 0.50
-x3 <- 0.85
-y1 <- 1.15
-y2 <- 0.4
+  x1 <- 0.16
+  x2 <- 0.50
+  x3 <- 0.85
+  y1 <- 1.15
+  y2 <- 0.4
 
-annot_ <- list(
-  size = font_size_subplot - 4,
-  xanchor = "center",
-  yanchor = "middle",
-  showarrow = FALSE,
-  xref = "paper",
-  yref = "paper"
-)
+  annot_ <- list(
+    size = font_size_subplot - 4,
+    xanchor = "center",
+    yanchor = "middle",
+    showarrow = FALSE,
+    xref = "paper",
+    yref = "paper"
+  )
 
-# Plot functional form
-pl1 <- plotly::plot_ly() |>
-  plotly::add_trace(
-    data = df_logistic, x = ~x,
-    y = ~value,
-    colors = colors_logistic,
-    color = ~type,
-    legendgroup = ~type,
-    type = "scatter",
-    mode = "lines"
-  ) |>
-  plotly::layout(
-    yaxis = list(range = ylim, title = list(text = ""))
-    # margin = list(t = 0, b = 0, l = 0, r = 0)
-  ) |> rm_grid()
+  # Plot functional form
+  pl1 <- plotly::plot_ly() |>
+    plotly::add_trace(
+      data = df_logistic, x = ~x,
+      y = ~value,
+      colors = colors_logistic,
+      color = ~type,
+      legendgroup = ~type,
+      type = "scatter",
+      mode = "lines"
+    ) |>
+    plotly::layout(
+      yaxis = list(range = ylim, title = list(text = ""))
+      # margin = list(t = 0, b = 0, l = 0, r = 0)
+    ) |>
+    rm_grid()
 
-pl2 <- plotly::plot_ly() |>
-  plotly::add_trace(
-    data = df_probit, x = ~x,
-    y = ~value,
-    colors = colors_probit,
-    color = ~type,
-    legendgroup = ~type,
-    type = "scatter",
-    mode = "lines"
-  ) |>
-  plotly::layout(
-    yaxis = list(range = ylim, title = list(text = ""))
-    # margin = list(t = 0, b = 0, l = 0, r = 0)
-  ) |> rm_grid()
+  pl2 <- plotly::plot_ly() |>
+    plotly::add_trace(
+      data = df_probit, x = ~x,
+      y = ~value,
+      colors = colors_probit,
+      color = ~type,
+      legendgroup = ~type,
+      type = "scatter",
+      mode = "lines"
+    ) |>
+    plotly::layout(
+      yaxis = list(range = ylim, title = list(text = ""))
+      # margin = list(t = 0, b = 0, l = 0, r = 0)
+    ) |>
+    rm_grid()
 
-pl3 <- plotly::plot_ly() |>
-  plotly::add_trace(
-    data = df_hill, x = ~x,
-    y = ~value,
-    colors = colors_hill,
-    color = ~type,
-    legendgroup = ~type,
-    type = "scatter",
-    mode = "lines"
-  ) |>
-  plotly::layout(
-    yaxis = list(range = ylim, title = list(text = ""))
-    # margin = list(t = 0, b = 0, l = 0, r = 0)
-  ) |> rm_grid()
+  pl3 <- plotly::plot_ly() |>
+    plotly::add_trace(
+      data = df_hill, x = ~x,
+      y = ~value,
+      colors = colors_hill,
+      color = ~type,
+      legendgroup = ~type,
+      type = "scatter",
+      mode = "lines"
+    ) |>
+    plotly::layout(
+      yaxis = list(range = ylim, title = list(text = ""))
+      # margin = list(t = 0, b = 0, l = 0, r = 0)
+    ) |>
+    rm_grid()
 
-sim1_rev <- plot(simulate(sfm1_rev), vars = vars,
- xlab = "", ylab = "", showlegend = TRUE, main = "")
-sim2_rev <- plot(simulate(sfm2_rev), vars = vars, xlab = "", ylab = "",showlegend = FALSE, main = "")
-sim3_rev <- plot(simulate(sfm3_rev), vars = vars, xlab = "", ylab = "", showlegend = FALSE, main = "")
+  sim1_rev <- plot(simulate(sfm1_rev),
+    vars = vars,
+    xlab = "", ylab = "", showlegend = TRUE, main = ""
+  )
+  sim2_rev <- plot(simulate(sfm2_rev), vars = vars, xlab = "", ylab = "", showlegend = FALSE, main = "")
+  sim3_rev <- plot(simulate(sfm3_rev), vars = vars, xlab = "", ylab = "", showlegend = FALSE, main = "")
 
-# Route bottom row traces to legend2
-sim1_rev <- plotly::style(sim1_rev, legend = "legend2") |> rm_grid()
-sim2_rev <- plotly::style(sim2_rev, legend = "legend2") |> rm_grid()
-sim3_rev <- plotly::style(sim3_rev, legend = "legend2") |> rm_grid()
+  # Route bottom row traces to legend2
+  sim1_rev <- plotly::style(sim1_rev, legend = "legend2") |> rm_grid()
+  sim2_rev <- plotly::style(sim2_rev, legend = "legend2") |> rm_grid()
+  sim3_rev <- plotly::style(sim3_rev, legend = "legend2") |> rm_grid()
 
-pl_func_form_rev <- plotly::subplot(pl1, pl2, pl3,
+  pl_func_form_rev <- plotly::subplot(pl1, pl2, pl3,
     nrows = 1,
     shareX = TRUE,
     shareY = TRUE,
     titleY = TRUE,
     titleX = FALSE,
     margin = 0.025
-) |>
-  plotly::layout(title = "", yaxis = list(title = "")) |>
+  ) |>
+    plotly::layout(title = "", yaxis = list(title = "")) |>
     plotly::layout(
       font = annot_font,
       legend = utils::modifyList(annot_legend, list(
-        y = 0,        
+        y = 0,
         traceorder = "normal",
         tracegroupgap = 0,
         itemwidth = 15,
-        title = list(text = "Slope", font = list(size = font_size_legend))))
+        title = list(text = "Slope", font = list(size = font_size_legend))
+      ))
     ) |>
     plotly::layout(annotations = list(
       utils::modifyList(annot_, list(x = x1, y = y1, text = titles_top[[1]])),
@@ -1209,128 +1240,131 @@ pl_func_form_rev <- plotly::subplot(pl1, pl2, pl3,
       utils::modifyList(annot_, list(x = x3, y = y1, text = titles_top[[3]]))
     ))
 
-pl_bottom_rev <- plotly::subplot(
-  sim1_rev, sim2_rev, sim3_rev,
-  nrows = 1,
-  shareX = TRUE,
-  shareY = FALSE,
-  titleY = FALSE,
-  titleX = FALSE,
-  margin = 0.025
-) |>
-  plotly::layout(title = "", yaxis = list(title = ""))
+  pl_bottom_rev <- plotly::subplot(
+    sim1_rev, sim2_rev, sim3_rev,
+    nrows = 1,
+    shareX = TRUE,
+    shareY = FALSE,
+    titleY = FALSE,
+    titleX = FALSE,
+    margin = 0.025
+  ) |>
+    plotly::layout(title = "", yaxis = list(title = ""))
 
-pl_spacer_rev <- plotly::plot_ly(
-  x = 0,
-  y = 0,
-  type = "scatter",
-  mode = "markers",
-  visible = FALSE,
-  showlegend = FALSE,
-  hoverinfo = "skip"
-) |>
-  plotly::layout(
-    xaxis = list(
-      visible = FALSE,
-      showgrid = FALSE,
-      zeroline = FALSE,
-      showticklabels = FALSE
-    ),
-    yaxis = list(
-      visible = FALSE,
-      showgrid = FALSE,
-      zeroline = FALSE,
-      showticklabels = FALSE
+  pl_spacer_rev <- plotly::plot_ly(
+    x = 0,
+    y = 0,
+    type = "scatter",
+    mode = "markers",
+    visible = FALSE,
+    showlegend = FALSE,
+    hoverinfo = "skip"
+  ) |>
+    plotly::layout(
+      xaxis = list(
+        visible = FALSE,
+        showgrid = FALSE,
+        zeroline = FALSE,
+        showticklabels = FALSE
+      ),
+      yaxis = list(
+        visible = FALSE,
+        showgrid = FALSE,
+        zeroline = FALSE,
+        showticklabels = FALSE
+      )
+      # margin = c(0.05, 0.05, 0.05, 0.05)
     )
-    # margin = c(0.05, 0.05, 0.05, 0.05)
-  )
 
-pl_final_rev <- plotly::subplot(
-  pl_spacer_rev,
-  pl_func_form_rev,
-  pl_spacer_rev,
-  pl_bottom_rev,
-  pl_spacer_rev,
-  nrows = 5,
-  titleY = TRUE,
-  heights = c(0.001, 0.35, 0.28, 0.35, 0.01),
-  margin = c(0.05, 0.05, 0.05, 0.05)
-) |>
-  plotly::layout(
-    margin = 0,
-    font = annot_font,
-    legend = utils::modifyList(annot_legend, list(
-      orientation = "v",
-      x = 1.1,
-      y = 1,
-      traceorder = "normal",
-      tracegroupgap = 0,
-      itemwidth = 15,
-      title = list(text = "Slope (s)", font = list(size = font_size_legend)))
-    ),
-    legend2 = utils::modifyList(annot_legend, list(
-      orientation = "v",
-      x = 1.1,
-      y = y2 - .15,
-      traceorder = "normal",
-      tracegroupgap = 0,
-      itemwidth = 15)
-    ),
-    annotations = list(
-      utils::modifyList(annot_, list(
-        text = "<i>Functional Forms</i>",
-        x = 0.5,
-        y = 1.08,
-        yanchor = "top",
-        font = list(size = font_size_xlab)
+  pl_final_rev <- plotly::subplot(
+    pl_spacer_rev,
+    pl_func_form_rev,
+    pl_spacer_rev,
+    pl_bottom_rev,
+    pl_spacer_rev,
+    nrows = 5,
+    titleY = TRUE,
+    heights = c(0.001, 0.35, 0.28, 0.35, 0.01),
+    margin = c(0.05, 0.05, 0.05, 0.05)
+  ) |>
+    plotly::layout(
+      margin = 0,
+      font = annot_font,
+      legend = utils::modifyList(annot_legend, list(
+        orientation = "v",
+        x = 1.1,
+        y = 1,
+        traceorder = "normal",
+        tracegroupgap = 0,
+        itemwidth = 15,
+        title = list(text = "Slope (s)", font = list(size = font_size_legend))
       )),
-      utils::modifyList(annot_, list(
-        text = "<i>Timeseries</i>",
-        x = 0.5,
-        y = y2 + 0.08,
-        yanchor = "bottom",
-        font = list(size = font_size_xlab)
+      legend2 = utils::modifyList(annot_legend, list(
+        orientation = "v",
+        x = 1.1,
+        y = y2 - .15,
+        traceorder = "normal",
+        tracegroupgap = 0,
+        itemwidth = 15
       )),
-      utils::modifyList(annot_, list(x = x1, y = y2, text = titles_bottom[[1]])),
-      utils::modifyList(annot_, list(x = x2, y = y2, text = titles_bottom[[2]])),
-      utils::modifyList(annot_, list(x = x3, y = y2, text = titles_bottom[[3]])),
-      utils::modifyList(annot_, list(text = "Input",
-        x = 0.5,
-        y = y2 + 0.24,
-        yanchor = "top",
-        font = list(size = font_size_xlab - 2)
-      )),
-      utils::modifyList(annot_, list(text = "Output",
-        x = -.09,
-        y = 0.91,
-        yanchor = "top", textangle = -90,
-        font = list(size = font_size_xlab - 2)
-      )),
-      utils::modifyList(annot_, list(
-        text = "Time",
-        x = 0.5,
-        y = 0.01,
-        yanchor = "top",
-        font = list(size = font_size_xlab - 2)
-      ))
+      annotations = list(
+        utils::modifyList(annot_, list(
+          text = "<i>Functional Forms</i>",
+          x = 0.5,
+          y = 1.08,
+          yanchor = "top",
+          font = list(size = font_size_xlab)
+        )),
+        utils::modifyList(annot_, list(
+          text = "<i>Timeseries</i>",
+          x = 0.5,
+          y = y2 + 0.08,
+          yanchor = "bottom",
+          font = list(size = font_size_xlab)
+        )),
+        utils::modifyList(annot_, list(x = x1, y = y2, text = titles_bottom[[1]])),
+        utils::modifyList(annot_, list(x = x2, y = y2, text = titles_bottom[[2]])),
+        utils::modifyList(annot_, list(x = x3, y = y2, text = titles_bottom[[3]])),
+        utils::modifyList(annot_, list(
+          text = "Input",
+          x = 0.5,
+          y = y2 + 0.24,
+          yanchor = "top",
+          font = list(size = font_size_xlab - 2)
+        )),
+        utils::modifyList(annot_, list(
+          text = "Output",
+          x = -.09,
+          y = 0.91,
+          yanchor = "top", textangle = -90,
+          font = list(size = font_size_xlab - 2)
+        )),
+        utils::modifyList(annot_, list(
+          text = "Time",
+          x = 0.5,
+          y = 0.01,
+          yanchor = "top",
+          font = list(size = font_size_xlab - 2)
+        ))
+      )
     )
+  pl_final_rev
+
+
+  export_plot(pl_final_rev, file.path(filepath_figs, "revision_functional_forms.pdf"),
+    width = 6, height = 5
   )
-pl_final_rev
-
-
-export_plot(pl_final_rev, file.path(filepath_figs, "revision_functional_forms.pdf"),
-  width = 6, height = 5
-)
 }
-
 ```
 
 
 ```{r, fig.width = 1, fig.height=1}
-sfm <- sfm |> 
-  custom_func(hill, label = "Hill function", 
+sfm <- sfm |>
+  custom_func(hill,
+    label = "Hill function",
     eqn = "function(x, slope, midpoint = 0.5) {x^slope / (midpoint^slope + x^slope)}",
-    doc = "S-shaped functional form used to capture saturation effects. The midpoint determines the inflection point of the curve where the function reaches half its maximum value. The slope determines the steepness of the curve, where slope > 1 creates an S-shaped curve.") |>
+    doc = "S-shaped functional form used to capture saturation effects. The midpoint determines the inflection point of the curve where the function reaches half its maximum value. The slope determines the steepness of the curve, where slope > 1 creates an S-shaped curve."
+  ) |>
   constant(m_slope, eqn = 3, label = "Medium Slope") |>
   update(motivation, eqn = motivation_rate * hill(resources, m_slope)) |>
   update(proactive, eqn = proactive_rate * hill(engagement, m_slope))
@@ -1351,7 +1385,7 @@ However, this formalization of the positive feedback loop still requires the out
 
 
 ```{r, fig.width = 1, fig.height=1}
-sfm2 <- sfm |> 
+sfm2 <- sfm |>
   discard(c(engagement_decay, resource_decay))
 
 sim <- simulate(sfm2)
@@ -1382,45 +1416,47 @@ if (recreate_figs) {
   # COLORS_example <- grDevices::hcl.colors(n = 50, palette = PALETTE)
   COLORS_example <- COLORS[seq_along(VARS_example)]
 
-  titles <- paste0("<i>",
+  titles <- paste0(
+    "<i>",
     paste0(LETTERS[1:6], ". ", c(
-      "Linear Functional Form", 
-      "Linear Feedback Loop", 
-       "Linear Feedback Loop with Outflows", 
-      "Hill Functional Form", 
-      "Hill Feedback Loop", 
+      "Linear Functional Form",
+      "Linear Feedback Loop",
+      "Linear Feedback Loop with Outflows",
+      "Hill Functional Form",
+      "Hill Feedback Loop",
       "Hill Feedback Loop with Outflows"
     )), "</i>"
   )
 
-# Functional form
-pl_func_form <- plotly::subplot(pl_linear, pl_hill, 
+  # Functional form
+  pl_func_form <- plotly::subplot(pl_linear, pl_hill,
     nrows = 2,
     shareX = TRUE,
     shareY = TRUE,
     titleY = TRUE,
     titleX = TRUE,
     margin = c(0.1, 0.05, 0.05, 0.05)
-) |>
-  plotly::layout(title = "", 
-  yaxis = list(title = "", range = c(0, 1)),
-  yaxis2 = list(title = "", range = c(0, 1)),
-  # yaxis2 = list(title = ""),
-  font = annot_font
-  # legend = utils::modifyList(annot_legend, list(
-  #       y = -0.2, 
-  #       title = list(text = "Slope", font = list(size = font_size_legend)),
-  #       traceorder = "normal",
-  #       tracegroupgap = 0,
-  #       itemwidth = 15,
-  #       font = list(size = font_size_legend)
-  #     ))
+  ) |>
+    plotly::layout(
+      title = "",
+      yaxis = list(title = "", range = c(0, 1)),
+      yaxis2 = list(title = "", range = c(0, 1)),
+      # yaxis2 = list(title = ""),
+      font = annot_font
+      # legend = utils::modifyList(annot_legend, list(
+      #       y = -0.2,
+      #       title = list(text = "Slope", font = list(size = font_size_legend)),
+      #       traceorder = "normal",
+      #       tracegroupgap = 0,
+      #       itemwidth = 15,
+      #       font = list(size = font_size_legend)
+      #     ))
     )
 
   # Timeseries
   for (letter in names(func_form_list)) {
-    sim <- simulate(func_form_list[[letter]], 
-    save_at = .01, only_stocks = FALSE
+    sim <- simulate(func_form_list[[letter]],
+      save_at = .01, only_stocks = FALSE
     )
 
     vars_in_sim <- unique(sim$df$variable)
@@ -1434,8 +1470,7 @@ pl_func_form <- plotly::subplot(pl_linear, pl_hill,
       showlegend = (letter == max_letter)
     ) |> plotly::layout(xaxis = list(
       nticks = 3
-      ))
-
+    ))
   }
 
   # Route simulation traces to legend2 and fix margins/automargin for equal widths
@@ -1444,7 +1479,8 @@ pl_func_form <- plotly::subplot(pl_linear, pl_hill,
       plotly::layout(
         margin = list(t = 0, b = 0, l = 0, r = 0),
         yaxis = list(automargin = FALSE)
-      ) |> rm_grid()
+      ) |>
+      rm_grid()
   })
 
   x1 <- 0.18
@@ -1457,7 +1493,7 @@ pl_func_form <- plotly::subplot(pl_linear, pl_hill,
   y2 <- 0.75
   y3 <- 0.49
   y4 <- 0.25
-  
+
 
   annot_ <- list(size = font_size_subplot - 4, xanchor = "center", yanchor = "middle", showarrow = FALSE, xref = "paper", yref = "paper")
 
@@ -1468,33 +1504,35 @@ pl_func_form <- plotly::subplot(pl_linear, pl_hill,
     titleY = FALSE,
     titleX = FALSE,
     margin = 0.05,
-    heights = c(1/4, 1/4, 1/4, 1/4)
-  ) 
+    heights = c(1 / 4, 1 / 4, 1 / 4, 1 / 4)
+  )
 
   pl <- plotly::subplot(
     pl_func_form,
     inner_pl,
     nrows = 1, titleY = FALSE, titleX = FALSE,
-    widths = c(5/10, 5/10),
+    widths = c(5 / 10, 5 / 10),
     margin = 0.14
   ) |>
-  plotly::layout(
-    margin = 0,
-    font = list(family = font_family, size = font_size),
-    legend = utils::modifyList(annot_legend, list(
-      # y = -0.16, x = 0.1, orientation = "v",
-      y = 0.7, x = 0.45, orientation = "v",
-      traceorder = "normal",
-      # tracegroupgap = 0,
-      # itemwidth = 15,
-      title = list(text = "Slope", side = "top",
-      font = list(size = font_size_legend))),
-    ),
-    legend2 = utils::modifyList(annot_legend, list(
-      y = 0.625, x = 1.15, orientation = "v", itemwidth = 10
-      # y = -0.14, x = x2, orientation = "h"
-    ))
-  ) |>
+    plotly::layout(
+      margin = 0,
+      font = list(family = font_family, size = font_size),
+      legend = utils::modifyList(annot_legend, list(
+        # y = -0.16, x = 0.1, orientation = "v",
+        y = 0.7, x = 0.45, orientation = "v",
+        traceorder = "normal",
+        # tracegroupgap = 0,
+        # itemwidth = 15,
+        title = list(
+          text = "Slope", side = "top",
+          font = list(size = font_size_legend)
+        )
+      ), ),
+      legend2 = utils::modifyList(annot_legend, list(
+        y = 0.625, x = 1.15, orientation = "v", itemwidth = 10
+        # y = -0.14, x = x2, orientation = "h"
+      ))
+    ) |>
     plotly::layout(annotations = list(
       utils::modifyList(annot_xlab, list(y = -0.05, x = x1, text = "Input")),
       utils::modifyList(annot_xlab, list(y = -0.05, x = x2)),
@@ -1512,7 +1550,6 @@ pl_func_form <- plotly::subplot(pl_linear, pl_hill,
   export_plot(pl, file.path(filepath_figs, "JDR_functional_forms.pdf"),
     width = 6.5, height = 5
   )
-
 }
 ```
 
@@ -1531,7 +1568,6 @@ if (recreate_figs) {
 
   export_plot(pl, file.path(filepath_figs, "sfm_feedback_loop.pdf"))
 }
-
 ```
 
 
@@ -1551,13 +1587,14 @@ We next implement the boost and buffer hypothesis.
 
 ```{r }
 sfm <- sfm |>
-  constant(effort_rate, 
-  eqn = 0.5, 
-  # eqn = 0.4,
-  label = "Effort Rate") |>
-  flow(effort, 
-  eqn = effort_rate / (1 + engagement) * energy * demands / (1 + resources),
-    from = energy, label = "Effort", 
+  constant(effort_rate,
+    eqn = 0.5,
+    # eqn = 0.4,
+    label = "Effort Rate"
+  ) |>
+  flow(effort,
+    eqn = effort_rate / (1 + engagement) * energy * demands / (1 + resources),
+    from = energy, label = "Effort",
     doc = "Decreases in energy are induced by job demands, but buffered by resources (i.e., buffer hypothesis). Additionally, engaged employees optimize job demands, so the effect of demands on energy is smaller when engagement is higher. These effects are multiplied by energy to avoid depleting energy past zero."
   ) |>
   flow(motivation,
@@ -1577,14 +1614,15 @@ Now that energy has been added to the model, we can implement the draining effec
 
 ```{r}
 sfm <- sfm |>
-  flow(resource_decay, eqn = resource_decay_rate * resources / (1 + energy),
-  doc = "Resource decay is larger when energy is low, reflecting the idea that exhaustion depletes resources"
-  ) |> 
+  flow(resource_decay,
+    eqn = resource_decay_rate * resources / (1 + energy),
+    doc = "Resource decay is larger when energy is low, reflecting the idea that exhaustion depletes resources"
+  ) |>
   flow(engagement_decay,
-     eqn = engagement_decay_rate * engagement / (1 + energy),
-     doc = "Disengagement is larger when energy is low, reflecting the idea that exhaustion depletes engagement"
-  ) 
-  
+    eqn = engagement_decay_rate * engagement / (1 + energy),
+    doc = "Disengagement is larger when energy is low, reflecting the idea that exhaustion depletes engagement"
+  )
+
 sim <- simulate(sfm)
 plot(sim, vars = vars)
 ```
@@ -1596,15 +1634,17 @@ We next allow energy to recover with a new inflow:
 
 ```{r}  
 sfm <- sfm |>
-  constant(recovery_rate, 
-  # eqn = 0.5, 
-  eqn = 0.3,
-  label = "Recovery Rate") |>
+  constant(recovery_rate,
+    # eqn = 0.5,
+    eqn = 0.3,
+    label = "Recovery Rate"
+  ) |>
   constant(s_slope, eqn = 5, label = "Steep Slope") |>
-  flow(recovery, eqn = recovery_rate * energy * exp(-s_slope * energy), 
+  flow(recovery,
+    eqn = recovery_rate * energy * exp(-s_slope * energy),
     to = energy, label = "Recovery",
     doc = "Energy is restored as a Ricker function, meaning that energy recovery is zero when energy is zero (some energy is needed to recover), recovery is highest at mid-levels of energy, and drops off at higher levels of energy (where recovery is not needed)"
-  ) 
+  )
 
 sim <- simulate(sfm)
 plot(sim, vars = vars)
@@ -1614,17 +1654,20 @@ plot(sim, vars = vars)
 ```{r}
 sfm <- sfm |>
   constant(work_rate, eqn = 0.5, label = "Demand Reduction Rate") |>
-  flow(work, eqn = work_rate * energy * demands * (1 + engagement), 
+  flow(work,
+    eqn = work_rate * energy * demands * (1 + engagement),
     from = demands,
     label = "Work",
     doc = "Job demands are reduced by expending energy. Engaged employees optimize job demands and are thus more effective at reducing demands. However, by specifying (1 + engagement), it captures the idea that engagement is not *necessary* for reducing demands (whereas * engagement would turn the outflow from demands to zero when engagement is zero). The effect is multiplied by demands to prevent reducing demands past zero."
   ) |>
   constant(e_slope, eqn = 10, label = "Extreme Slope") |>
-  constant(undermining_rate, 
-  eqn = 5, 
-  # eqn = 4,
-  label = "Self-undermining Rate") |>
-  flow(undermining, eqn = undermining_rate * energy * exp(-e_slope * energy), to = demands,
+  constant(undermining_rate,
+    eqn = 5,
+    # eqn = 4,
+    label = "Self-undermining Rate"
+  ) |>
+  flow(undermining,
+    eqn = undermining_rate * energy * exp(-e_slope * energy), to = demands,
     label = "Self-undermining",
     doc = "Self-undermining behaviour is implemented as a steep Ricker function: it is zero when energy is zero (some energy is needed to self-undermine), increases steeply at low levels of energy where self-undermining is highest, and drops off quickly to represent the idea that only exhausted individuals self-undermine. The effect is independent of demands because self-undermining behaviour creates new demands even when there are no existing demands."
   )
@@ -1654,7 +1697,8 @@ In the absence of more information about the functional form of exogenous demand
 ```{r}
 sfm <- sfm |>
   constant(exo_demand_rate, eqn = .1, label = "New task rate") |>
-  flow(exo_demands, eqn = exo_demand_rate * exp(-s_slope * demands), to = demands,
+  flow(exo_demands,
+    eqn = exo_demand_rate * exp(-s_slope * demands), to = demands,
     label = "Exogenous tasks",
     doc = "Exogenously provided demands drop off exponentially at higher levels of demands, reflecting the idea that employers are less likely to assign new tasks when employees are already at high workloads"
   )
@@ -1680,10 +1724,10 @@ plot(sfm, minlen = 1.5, font_size = 22)
 
 ```{r eval=FALSE, include=FALSE}
 if (recreate_figs) {
-# copy cat(viz_str) from plot.sdbuildR() with minlen=1.5
+  # copy cat(viz_str) from plot.sdbuildR() with minlen=1.5
   {
     viz_str <- "
-    
+
     digraph sfm {
 
       graph [layout = dot, rankdir = LR, center=true, outputorder='edgesfirst', pad=.1, nodesep= .3]
@@ -1696,11 +1740,11 @@ E -> P -> X -> R -> D [style=invis]
 
       # Define stock + auxiliary nodes
        'R' [id='R',label='Job Resources',tooltip = 'eqn = runif(1, 0.01, 2)',shape=box,style=filled,fillcolor='#35B7ADBF',fontsize=18,fontname='Times New Roman']
-       'D' [id='D',label='Job Demands',tooltip = 'eqn = runif(1, 0.01, 2)',shape=box,style=filled,fillcolor='#35B7ADBF',fontsize=18,fontname='Times New Roman']  
+       'D' [id='D',label='Job Demands',tooltip = 'eqn = runif(1, 0.01, 2)',shape=box,style=filled,fillcolor='#35B7ADBF',fontsize=18,fontname='Times New Roman']
        'P' [id='P',label='Job Performance',tooltip = 'eqn = E + X',shape=plaintext,fontsize=16,fontname='Times New Roman', width=0.6, height=0.3]
        'X' [id='X',label='Energy',tooltip = 'eqn = runif(1, 0.01, 2)',shape=box,style=filled,fillcolor='#35B7ADBF',fontsize=18,fontname='Times New Roman']
-      'E' [id='E',label='Engagement',tooltip = 'eqn = runif(1, 0.01, 2)',shape=box,style=filled,fillcolor='#35B7ADBF',fontsize=18,fontname='Times New Roman']   
-                
+      'E' [id='E',label='Engagement',tooltip = 'eqn = runif(1, 0.01, 2)',shape=box,style=filled,fillcolor='#35B7ADBF',fontsize=18,fontname='Times New Roman']
+
       'E' -> 'P' [color='#999999', arrowsize=0.8, penwidth=1, splines=false, constraint=false, tailport='_']
       'X' -> 'P' [color='#999999', arrowsize=0.8, penwidth=1, splines=false, constraint=false, tailport='_']
 
@@ -1775,10 +1819,10 @@ E -> P -> X -> R -> D [style=invis]
 
     }
     "
-  
 
-  pl <- DiagrammeR::grViz(viz_str)
-  pl
+
+    pl <- DiagrammeR::grViz(viz_str)
+    pl
   }
 
   export_plot(pl, file.path(filepath_figs, "sfm_JDR_full.pdf"))
@@ -1834,7 +1878,6 @@ if (recreate_figs) {
 
 ```{r include=FALSE}
 if (recreate_figs) {
-
   # Create subplot figure
   pl_list <- list()
   min_letter <- min(names(sfm_list))
@@ -1843,8 +1886,8 @@ if (recreate_figs) {
   COLORS_example <- COLORS[seq_along(VARS_example)]
 
   for (letter in names(sfm_list)) {
-    sim <- simulate(sfm_list[[letter]], 
-    save_at = .01, only_stocks = FALSE
+    sim <- simulate(sfm_list[[letter]],
+      save_at = .01, only_stocks = FALSE
     )
 
     vars_in_sim <- unique(sim$df$variable)
@@ -1861,29 +1904,29 @@ if (recreate_figs) {
 
     if (letter != min_letter) {
       # Remove x-axis labels and ticks
-      pl_list[[letter]] <- pl_list[[letter]] |> 
-      plotly::layout(xaxis = list(
-        tickvals = list(0, 150),
-        showticklabels = FALSE
-      )) |> rm_grid()
+      pl_list[[letter]] <- pl_list[[letter]] |>
+        plotly::layout(xaxis = list(
+          tickvals = list(0, 150),
+          showticklabels = FALSE
+        )) |>
+        rm_grid()
     }
-
   }
-  
-  inner_pl <- plotly::subplot(pl_list[c(2,3,4)],
+
+  inner_pl <- plotly::subplot(pl_list[c(2, 3, 4)],
     nrows = 1,
     shareX = TRUE,
     shareY = TRUE,
     titleY = FALSE,
     titleX = FALSE,
     margin = c(0.025, 0.025, 0.025, 0.025)
-  ) 
+  )
 
   pl <- plotly::subplot(
     inner_pl,
     plotly::subplot(pl_list[1]),
     nrows = 2, titleY = TRUE, shareY = TRUE,
-    heights = c(1/3, 2/3),
+    heights = c(1 / 3, 2 / 3),
     margin = c(0.025, 0.025, 0.025, 0.025)
   ) |>
     plotly::layout(
@@ -1893,16 +1936,16 @@ if (recreate_figs) {
         traceorder = "normal",
         tracegroupgap = 0,
         itemwidth = 8,
-        entrywidth = 100,          # removes left/right padding between entries
+        entrywidth = 100, # removes left/right padding between entries
         entrywidthmode = "pixels",
-        borderpad = 0           # removes padding inside legend border
+        borderpad = 0 # removes padding inside legend border
       ))
-    ) |> 
+    ) |>
     plotly::layout(
       annotations = list(
         utils::modifyList(annot_xlab, list(y = -.075))
       )
-    ) 
+    )
 
   pl
 
@@ -1970,8 +2013,10 @@ With zero job demands, we would expect job performance to be low.
 ```
 
 ```{r}
-sfm <- unit_test(sfm, expr = tail(performance, 1) < 0.1, 
-                conditions = list(demands = 0, exo_demand_rate = 0, undermining_rate = 0))
+sfm <- unit_test(sfm,
+  expr = tail(performance, 1) < 0.1,
+  conditions = list(demands = 0, exo_demand_rate = 0, undermining_rate = 0)
+)
 verify(sfm)
 ```
 
@@ -2010,8 +2055,10 @@ We include some additional verification tests checks that are omitted from the p
 
 
 ```{r}
-sfm <- unit_test(sfm, expr = all(motivation == 0),
-                conditions = list(motivation_rate = 0))
+sfm <- unit_test(sfm,
+  expr = all(motivation == 0),
+  conditions = list(motivation_rate = 0)
+)
 verify(sfm)
 ```
 
@@ -2020,8 +2067,10 @@ verify(sfm)
 We would expect that when resources are zero, engagement decays to zero, which is indeed what we find.
 
 ```{r}
-sfm <- unit_test(sfm, expr = tail(engagement, 1) < 0.01, 
-  conditions = list(resources = 0, exo_resource_rate = 0))
+sfm <- unit_test(sfm,
+  expr = tail(engagement, 1) < 0.01,
+  conditions = list(resources = 0, exo_resource_rate = 0)
+)
 verify(sfm)
 
 sfm2 <- sfm0 |> update(c(resources, exo_resource_rate), eqn = 0)
@@ -2033,8 +2082,10 @@ plot(sim, vars = vars)
 When engagement is zero, job performance is not necessarily zero (see beginning peak).
 
 ```{r}
-sfm <- unit_test(sfm, expr = all(head(performance, 100) > 0.2), 
-  conditions = list(engagement = 0, motivation_rate = 0))
+sfm <- unit_test(sfm,
+  expr = all(head(performance, 100) > 0.2),
+  conditions = list(engagement = 0, motivation_rate = 0)
+)
 verify(sfm)
 
 sfm2 <- sfm0 |> update(c(engagement, motivation_rate), eqn = 0)
@@ -2046,9 +2097,11 @@ plot(sim, vars = vars)
 Similarly, when energy is set to zero, job performance is not necessarily zero (see beginning peak).
 
 ```{r}
-sfm <- unit_test(sfm, expr = all(head(performance, 100) > 0.2), 
-  conditions = list(energy = 0, engagement_decay_rate = 0), 
-  label = "Performance should not be zero in the beginning when energy is zero")
+sfm <- unit_test(sfm,
+  expr = all(head(performance, 100) > 0.2),
+  conditions = list(energy = 0, engagement_decay_rate = 0),
+  label = "Performance should not be zero in the beginning when energy is zero"
+)
 verify(sfm)
 
 
@@ -2071,8 +2124,10 @@ plot(sim, vars = vars)
 As a robustness check, we initialize all stocks at high values, which the model is able to handle.
 
 ```{r}
-sfm <- unit_test(sfm, expr = all(is.finite(c(engagement, resources, energy, demands))), 
-  conditions = list(engagement = 5, resources = 5, energy = 5, demands = 5))
+sfm <- unit_test(sfm,
+  expr = all(is.finite(c(engagement, resources, energy, demands))),
+  conditions = list(engagement = 5, resources = 5, energy = 5, demands = 5)
+)
 verify(sfm)
 
 sfm2 <- sfm0 |> update(c(engagement, resources, energy, demands),
@@ -2093,12 +2148,12 @@ To illustrate the impact of aleatory uncertainty in our JD-R model, we substitut
 
 ```{r}
 sfm <- sfm0 |>
-    constant(demand_mean, eqn = 1) |>
-    constant(demand_sigma, eqn = 1) |>
-    constant(exo_demand_rate, eqn = .25) |>
-    aux(D_deterministic, eqn = exo_demand_rate * (demand_mean - demands)) |>
-    aux(D_stochastic, eqn = demand_sigma * sqrt(demands) * rnorm(1)) |>
-    update(exo_demands, eqn = D_deterministic + D_stochastic)
+  constant(demand_mean, eqn = 1) |>
+  constant(demand_sigma, eqn = 1) |>
+  constant(exo_demand_rate, eqn = .25) |>
+  aux(D_deterministic, eqn = exo_demand_rate * (demand_mean - demands)) |>
+  aux(D_stochastic, eqn = demand_sigma * sqrt(demands) * rnorm(1)) |>
+  update(exo_demands, eqn = D_deterministic + D_stochastic)
 
 sim <- simulate(sfm, only_stocks = FALSE, seed = 123, save_at = .1)
 plot(sim, vars = vars)
@@ -2111,7 +2166,7 @@ if (recreate_figs) {
   vars_ <- VARS[VARS %in% show_vars]
   colors_ <- COLORS[VARS %in% show_vars]
 
-  pl <- plot(sim, vars = vars_, colors = colors_, xlab = "", main = "") |>    
+  pl <- plot(sim, vars = vars_, colors = colors_, xlab = "", main = "") |>
     rm_grid()
 
   pl <- pl |>
@@ -2155,13 +2210,13 @@ pl
 As of now, job performance is merely an output of the model. Job performance depends on other variables:
 
 ```{r}
-dependencies(sfm0, name = "performance")
+dependencies(sfm0, name = performance)
 ```
 
 But no other variable depends on job performance:
 
 ```{r}
-dependencies(sfm0, name = "performance", reverse = TRUE)
+dependencies(sfm0, name = performance, reverse = TRUE)
 ```
 
 However, it is plausible that job performance also feeds back into work engagement (e.g., through feelings of pride). We can easily test this by adding a feedback loop from job performance to work engagement.
@@ -2169,11 +2224,13 @@ However, it is plausible that job performance also feeds back into work engageme
 ```{r, fig.height=3}
 # Make performance feedback to the system
 sfm2 <- sfm0 |>
-  constant(performance_effect, eqn = .1, 
-  label = "Effect Job Performance on Work Engagement") |>
+  constant(performance_effect,
+    eqn = .1,
+    label = "Effect Job Performance on Work Engagement"
+  ) |>
   flow(pride, eqn = performance_effect * performance, to = engagement) #|>
-# ** 
-  # update(c(demands, resources, engagement, energy), eqn = c(0.2, 0.5, 0.7, 0.7))
+# **
+# update(c(demands, resources, engagement, energy), eqn = c(0.2, 0.5, 0.7, 0.7))
 
 sim1 <- simulate(sfm0, stop = 500, only_stocks = FALSE)
 pl1 <- plot(sim1, vars = vars)
@@ -2196,12 +2253,16 @@ if (recreate_figs) {
   vars_ <- VARS[VARS %in% show_vars]
   colors_ <- COLORS[VARS %in% show_vars]
 
-  sim1 <- simulate(sfm0, save_at = dt, 
-  stop = 500, only_stocks = FALSE)
+  sim1 <- simulate(sfm0,
+    save_at = dt,
+    stop = 500, only_stocks = FALSE
+  )
   pl1 <- plot(sim1, vars = vars_, colors = colors_, main = "")
 
-  sim2 <- simulate(sfm2, save_at = dt, 
-  stop = 500, only_stocks = FALSE)
+  sim2 <- simulate(sfm2,
+    save_at = dt,
+    stop = 500, only_stocks = FALSE
+  )
   pl2 <- plot(sim2, vars = vars_, colors = colors_, main = "", showlegend = FALSE)
 
 
@@ -2220,7 +2281,8 @@ if (recreate_figs) {
       annotations = list(
         utils::modifyList(annot_xlab, list(y = -0.12))
       )
-    ) |> rm_grid() |>
+    ) |>
+    rm_grid() |>
     # Remove grid lines
     plotly::layout(
       xaxis2 = list(showgrid = FALSE, showline = TRUE),
@@ -2245,35 +2307,41 @@ if (recreate_figs) {
   vars_ <- VARS[VARS %in% show_vars]
   colors_ <- COLORS[VARS %in% show_vars]
 
-  sim1 <- simulate(sfm0, save_at = dt, 
-  stop = 500, only_stocks = FALSE)
+  sim1 <- simulate(sfm0,
+    save_at = dt,
+    stop = 500, only_stocks = FALSE
+  )
   pl1 <- plot(sim1, vars = vars_, colors = colors_, main = "", xlab = "")
 
-  sim2 <- simulate(sfm2, save_at = dt, 
-  stop = 500, only_stocks = FALSE)
+  sim2 <- simulate(sfm2,
+    save_at = dt,
+    stop = 500, only_stocks = FALSE
+  )
   pl2 <- plot(sim2, vars = vars_, colors = colors_, main = "", xlab = "")
 
-  plot_func <- function(pl){
+  plot_func <- function(pl) {
     pl |>
-    plotly::layout(
-      margin = list(autoexpand = FALSE, t = 0, b = 100, l = 50, r = 0),
-      margin = c(0, 0, 0, 0), 
-      font = annot_font,
-      legend = utils::modifyList(annot_legend, list(y = -0.35,
-      margin = list(t = 0, b = 0, l = 0, r = 0, pad = 0), # remove legend margins
-      font = list(size = font_size_legend + 1),
-  tracegroupgap = 0,    # remove gap between legend items
-  # itemwidth = 30,        # shrink the line swatch width (default 30)
-  entrywidth = 0,
-  entrywidthmode = "pixels",
-  x = 0.5
-    )),
-      annotations = list(
-        utils::modifyList(annot_xlab, list(y = -0.14))
-      )
-    ) |> rm_grid()
+      plotly::layout(
+        margin = list(autoexpand = FALSE, t = 0, b = 100, l = 50, r = 0),
+        margin = c(0, 0, 0, 0),
+        font = annot_font,
+        legend = utils::modifyList(annot_legend, list(
+          y = -0.35,
+          margin = list(t = 0, b = 0, l = 0, r = 0, pad = 0), # remove legend margins
+          font = list(size = font_size_legend + 1),
+          tracegroupgap = 0, # remove gap between legend items
+          # itemwidth = 30,        # shrink the line swatch width (default 30)
+          entrywidth = 0,
+          entrywidthmode = "pixels",
+          x = 0.5
+        )),
+        annotations = list(
+          utils::modifyList(annot_xlab, list(y = -0.14))
+        )
+      ) |>
+      rm_grid()
   }
-  
+
   export_plot(plot_func(pl1),
     file.path(filepath_figs, "challenging_boundary_ts_JDR_A.pdf"),
     width = 4.75, height = 2.5
@@ -2311,9 +2379,11 @@ Set up model for ensemble simulation:
 
 ```{r, fig.height=4}
 # Simulation study
-sfm0 <- sfm0 |> sim_specs(save_n = 100, 
-   language = "julia",
-   seed = 123) |>
+sfm0 <- sfm0 |> sim_specs(
+  save_n = 100,
+  language = "julia",
+  seed = 123
+) |>
   # Random initial conditions
   update(c(demands, resources, engagement, energy), eqn = runif(1, 0.01, 2))
 sfm <- sfm0
@@ -2333,7 +2403,7 @@ Vary `motivation_rate`: the rate at which resources increase engagement.
 
 ```{r, fig.height = 8}
 n <- 100
-motivation_rates = c(0.2, 0.7, 2) 
+motivation_rates <- c(0.2, 0.7, 2)
 
 sims <- ensemble(sfm0,
   n = n,
@@ -2344,7 +2414,7 @@ sims <- ensemble(sfm0,
 plot(sims,
   type = "sims", i = 1:n, alpha = .25,
   nrows = 3,
-   central_tendency = FALSE, 
+  central_tendency = FALSE,
   vars = c("engagement", "demands")
   # vars = c("engagement", "energy", "demands")
 )
@@ -2368,8 +2438,8 @@ if (recreate_figs) {
 #   constant(input, eqn = pulse(times, start,
 #    height = .15, width = 14)) |>
 #   change_type(effort_rate, new_type = stock) |>
-#   flow(intervention, from = effort_rate, 
-#   eqn = effort_rate * input(t), 
+#   flow(intervention, from = effort_rate,
+#   eqn = effort_rate * input(t),
 #   label = "Intervention")
 
 sfm <- sfm0 |>
@@ -2377,9 +2447,11 @@ sfm <- sfm0 |>
   constant(duration, eqn = 14) |>
   constant(intervention, eqn = pulse(times, start, width = duration)) |>
   change_type(motivation_rate, new_type = stock) |>
-  flow(intervention_effect, to = motivation_rate, 
-  eqn = .05 * intervention(t), 
-  label = "Intervention Effect")
+  flow(intervention_effect,
+    to = motivation_rate,
+    eqn = .05 * intervention(t),
+    label = "Intervention Effect"
+  )
 
 # Specify seed, as not all initial conditions will show improvement from intervention
 sim <- simulate(sfm, seed = 123)
@@ -2459,7 +2531,7 @@ if (recreate_figs) {
   sims <- ensemble(sfm,
     n = n_ens_par,
     conditions = list(motivation_rate = motivation_rates),
-     return_sims = TRUE
+    return_sims = TRUE
   )
 
   pl_par <- plot(sims,
@@ -2468,7 +2540,7 @@ if (recreate_figs) {
     main = "", sub = "", shareY = TRUE,
     nrows = 3, central_tendency = FALSE, margin = margin,
     showlegend = FALSE, j_labels = FALSE, xlab = ""
-  ) |> rm_grid()  |>
+  ) |> rm_grid() |>
     # Remove grid lines
     plotly::layout(
       xaxis2 = list(showgrid = FALSE, showline = TRUE),
@@ -2499,10 +2571,10 @@ if (recreate_figs) {
     # type = "summary",
     showlegend = TRUE,
     vars = vars_, colors = colors_, ylim = ylim,
-    main = "", sub = "", 
+    main = "", sub = "",
     wrap_width = 40
   ) |> rm_grid()
-    
+
   pl_int
 
   # Plot thicker line for motivation_rate
@@ -2590,7 +2662,7 @@ vars0 <- c("energy", "demands", "engagement", "resources", "performance")
 df <- as.data.frame(sfm0, type = "constant", properties = "eqn")
 
 # Update all constants to runif()
-create_runif <- function(x, factor = 0.5){
+create_runif <- function(x, factor = 0.5) {
   eqn <- paste0("runif(1, ", max(c(0, x - x * factor)), ", ", x + x * factor, ")")
   return(eqn)
 }
@@ -2610,7 +2682,7 @@ print(df)
 sfm <- sfm0 |> update(df = df)
 
 # # Simulation study
-# sfm <- sfm0 |> 
+# sfm <- sfm0 |>
 #   # Bistable parameters
 #   update(effort_rate, eqn = runif(1, 0.05, 0.6)) |>
 #   update(motivation_rate, eqn = runif(1, .2, 1)) |>
@@ -2631,11 +2703,11 @@ sfm <- sfm |>
     save_at = 1,
     # save_at = c(20, 60, 100), stop = 100,
     # save_at = seq(0, 200, by = 1),
-     stop = 200,
-  language = "julia", only_stocks = FALSE,
-  # language = "R",
+    stop = 200,
+    language = "julia", only_stocks = FALSE,
+    # language = "R",
     seed = 123 # ensemble seed
-    ) |>
+  ) |>
   # Random initial conditions
   update(c(demands, resources, engagement, energy), eqn = runif(1, 0.01, 2))
 
@@ -2654,13 +2726,25 @@ wave1 <- 20
 x1 <- "engagement"
 x2 <- "demands"
 lags <- seq(10, as.numeric(sfm$sim_specs$stop) - wave1, by = 1)
+
 df <- as.data.frame(sims, direction = "wide", type = "sims")
-dfX <- df[, c("i", "time", x1)] 
-dfD <- df[, c("i", "time", x2)] 
+dfX <- df[, c("i", "time", x1)]
+dfD <- df[, c("i", "time", x2)]
 dfX_wave1 <- dfX[dfX$time == wave1, setdiff(names(dfX), "time")]
 colnames(dfX_wave1) <- gsub(x1, paste0(x1, "_wave1"), colnames(dfX_wave1))
 dfD_wave1 <- dfD[dfD$time == wave1, setdiff(names(dfD), "time")]
 colnames(dfD_wave1) <- gsub(x2, paste0(x2, "_wave1"), colnames(dfD_wave1))
+
+build_wave_data <- function(dfX, dfD, wave1, lag, x1, x2) {
+  dfX_wave2 <- dfX[dfX$time == (wave1 + lag), setdiff(names(dfX), "time")]
+  colnames(dfX_wave2) <- gsub(x1, paste0(x1, "_wave2"), colnames(dfX_wave2))
+  dfD_wave2 <- dfD[dfD$time == (wave1 + lag), setdiff(names(dfD), "time")]
+  colnames(dfD_wave2) <- gsub(x2, paste0(x2, "_wave2"), colnames(dfD_wave2))
+  dfX_wave1 |>
+    dplyr::left_join(dfX_wave2, by = "i") |>
+    dplyr::left_join(dfD_wave1, by = "i") |>
+    dplyr::left_join(dfD_wave2, by = "i")
+}
 
 model <- sprintf(" # wave 1 -> wave 2
   %s_wave2  ~ 1 + %s_wave1 + %s_wave1
@@ -2669,7 +2753,7 @@ model <- sprintf(" # wave 1 -> wave 2
   # concurrent covariances
   %s_wave1  ~~ %s_wave1
   %s_wave2  ~~ %s_wave2
-", x1, x1, x2, x2, x1, x2, x1, x2, x1, x2) 
+", x1, x1, x2, x2, x1, x2, x1, x2, x1, x2)
 ```
 
 
@@ -2678,22 +2762,25 @@ model <- sprintf(" # wave 1 -> wave 2
 lag <- chosen_lag <- 90
 
 # Create wide format data for lavaan
-dfX_wave2 <- dfX[dfX$time == (wave1 + lag), setdiff(names(dfX), "time")]
-colnames(dfX_wave2) <- gsub(x1, paste0(x1, "_wave2"), colnames(dfX_wave2))
-dfD_wave2 <- dfD[dfD$time == (wave1 + lag), setdiff(names(dfD), "time")]
-colnames(dfD_wave2) <- gsub(x2, paste0(x2, "_wave2"), colnames(dfD_wave2))
+data_wide <- build_wave_data(dfX, dfD, wave1, lag, x1, x2)
+# dfX_wave2 <- dfX[dfX$time == (wave1 + lag), setdiff(names(dfX), "time")]
+# colnames(dfX_wave2) <- gsub(x1, paste0(x1, "_wave2"), colnames(dfX_wave2))
+# dfD_wave2 <- dfD[dfD$time == (wave1 + lag), setdiff(names(dfD), "time")]
+# colnames(dfD_wave2) <- gsub(x2, paste0(x2, "_wave2"), colnames(dfD_wave2))
 
-data_wide <- dfX_wave1 |>
-  dplyr::left_join(dfX_wave2, by = "i") |>
-  dplyr::left_join(dfD_wave1, by = "i") |>
-  dplyr::left_join(dfD_wave2, by = "i")
+# data_wide <- dfX_wave1 |>
+#   dplyr::left_join(dfX_wave2, by = "i") |>
+#   dplyr::left_join(dfD_wave1, by = "i") |>
+#   dplyr::left_join(dfD_wave2, by = "i")
 
 # Fit lavaan model
-m1 <- lavaan::sem(model, data = data_wide, 
-# robust to non-normality
-estimator = "MLR")
-          
-# # summary(m1, standardized = TRUE) 
+m1 <- lavaan::sem(model,
+  data = data_wide,
+  # robust to non-normality
+  estimator = "MLR"
+)
+
+# # summary(m1, standardized = TRUE)
 # parameterEstimates(m1, standardized = TRUE, boot.ci.type = "bca.simple")
 
 # # Fit statistics:
@@ -2712,7 +2799,7 @@ estimator = "MLR")
 
 # # Plot
 # semPaths(m1, whatLabels = "std",
-# #  layout = "spring", 
+# #  layout = "spring",
 # #  edge.color = "black", sizeMan = 5, sizeLat = 7, nCharNodes = 0
 # )
 
@@ -2736,7 +2823,6 @@ semPlot::semPaths(m1,
   sizeMan = 5, sizeLat = 7, nCharNodes = 0
   # layout = "spring"
 )
-
 ```
 
 ```{r}
@@ -2745,23 +2831,24 @@ results <- vector("list", length(lags))
 
 # Loop over lags
 for (lag in lags) {
+  # # Create wide format data for lavaan
+  # dfX_wave2 <- dfX[dfX$time == (wave1 + lag), setdiff(names(dfX), "time")]
+  # colnames(dfX_wave2) <- gsub(x1, paste0(x1, "_wave2"), colnames(dfX_wave2))
+  # dfD_wave2 <- dfD[dfD$time == (wave1 + lag), setdiff(names(dfD), "time")]
+  # colnames(dfD_wave2) <- gsub(x2, paste0(x2, "_wave2"), colnames(dfD_wave2))
 
-  # Create wide format data for lavaan
-  dfX_wave2 <- dfX[dfX$time == (wave1 + lag), setdiff(names(dfX), "time")] 
-  colnames(dfX_wave2) <- gsub(x1, paste0(x1, "_wave2"), colnames(dfX_wave2))
-  dfD_wave2 <- dfD[dfD$time == (wave1 + lag), setdiff(names(dfD), "time")]
-  colnames(dfD_wave2) <- gsub(x2, paste0(x2, "_wave2"), colnames(dfD_wave2))
-
-  data_wide <- dfX_wave1 |>
-    dplyr::left_join(dfX_wave2, by = "i") |>
-    dplyr::left_join(dfD_wave1, by = "i") |>
-    dplyr::left_join(dfD_wave2, by = "i")
+  # data_wide <- dfX_wave1 |>
+  #   dplyr::left_join(dfX_wave2, by = "i") |>
+  #   dplyr::left_join(dfD_wave1, by = "i") |>
+  #   dplyr::left_join(dfD_wave2, by = "i")
+  data_wide <- build_wave_data(dfX, dfD, wave1, lag, x1, x2)
 
   # Fit lavaan model
-  m1 <- lavaan::sem(model, data = data_wide, estimator = "MLR", # robust to non-normality
-          #  se = "bootstrap", bootstrap = 5000
-           )
-  # summary(m1, standardized = TRUE) 
+  m1 <- lavaan::sem(model,
+    data = data_wide, estimator = "MLR", # robust to non-normality
+    #  se = "bootstrap", bootstrap = 5000
+  )
+  # summary(m1, standardized = TRUE)
 
   # Store standardized parameter estimates (including standardized SEs and CIs)
   out <- lavaan::standardizedSolution(
@@ -2770,15 +2857,16 @@ for (lag in lags) {
     se = TRUE,
     pvalue = TRUE,
     ci = TRUE
-  ) 
-  out <- out[out[["op"]] == "~", c("lhs", "rhs", 
-  "est.std", "se", "ci.lower", "ci.upper")]
+  )
+  out <- out[out[["op"]] == "~", c(
+    "lhs", "rhs",
+    "est.std", "se", "ci.lower", "ci.upper"
+  )]
   out[["lag"]] <- lag
   out[["est"]] <- out[["est.std"]]
   out[["est.std"]] <- NULL
   out <- out[, c("lhs", "rhs", "est", "se", "ci.lower", "ci.upper", "lag")]
   results[[as.character(lag)]] <- out
-
 }
 
 # Plot
@@ -2795,8 +2883,6 @@ results_max_lag[order(results_max_lag$est, decreasing = TRUE), ]
 
 # Chosen lag
 results_df[results_df$lag == chosen_lag, ]
-
-
 ```
 
 ```{r}
@@ -2833,12 +2919,14 @@ names(colors) <- unname(label_map)
 scales::show_col(colors)
 
 # Plot lag-dependent parameter estimates with confidence intervals
-pl <- plotly::plot_ly(results_df, x = ~lag, y = ~est, 
-color = ~path, split = ~path, legendgroup = ~path,
-    colors = colors,
-    type = 'scatter', mode = 'lines',
-        line = list(),
-        showlegend = TRUE) |> 
+pl <- plotly::plot_ly(results_df,
+  x = ~lag, y = ~est,
+  color = ~path, split = ~path, legendgroup = ~path,
+  colors = colors,
+  type = "scatter", mode = "lines",
+  line = list(),
+  showlegend = TRUE
+) |>
   #       # Add vertical rectangle for chosen lag
   #       plotly::layout(
   # shapes = list(
@@ -2851,35 +2939,38 @@ color = ~path, split = ~path, legendgroup = ~path,
   #     # opacity = 0.7,
   #     line = list(width = 0),
   #       layer = "below"
-  #     # line = list(color = COLORS[VARS == "demands"], 
+  #     # line = list(color = COLORS[VARS == "demands"],
   #     # width = 2
   #     # dash = "dash"
   #     )
   #   )
   # ) |>
-   plotly::add_ribbons(x = ~lag, ymin = ~ci.lower, 
-   ymax = ~ci.upper, color = ~path, split = ~path,
-    line = list(color = 'transparent'),
-            showlegend = FALSE) |>
-    plotly::layout(
-      showlegend = TRUE,
-      title = "",
-      xaxis = list(
-        title = "Time between waves (days)",
-        font = list(size = font_size)
-      ),
-      yaxis = list(
-        title = "Parameter estimate (standardized)",
-        font = list(size = font_size)
-      ),
-      font = annot_font
-    ) |> rm_grid() |>
-    plotly::layout(
-      xaxis = list(tickvals = list(10, 50, 90, 130, 170)),
-      font = annot_font,
-      # legend = utils::modifyList(annot_legend, list(x = 0.5, y = -0.3))
-      legend = utils::modifyList(annot_legend, list(x = 1.7, y = 0.6))
-    )  
+  plotly::add_ribbons(
+    x = ~lag, ymin = ~ci.lower,
+    ymax = ~ci.upper, color = ~path, split = ~path,
+    line = list(color = "transparent"),
+    showlegend = FALSE
+  ) |>
+  plotly::layout(
+    showlegend = TRUE,
+    title = "",
+    xaxis = list(
+      title = "Time between waves (days)",
+      font = list(size = font_size)
+    ),
+    yaxis = list(
+      title = "Parameter estimate (standardized)",
+      font = list(size = font_size)
+    ),
+    font = annot_font
+  ) |>
+  rm_grid() |>
+  plotly::layout(
+    xaxis = list(tickvals = list(10, 50, 90, 130, 170)),
+    font = annot_font,
+    # legend = utils::modifyList(annot_legend, list(x = 0.5, y = -0.3))
+    legend = utils::modifyList(annot_legend, list(x = 1.7, y = 0.6))
+  )
 
 
 if (recreate_figs) {
@@ -2889,7 +2980,6 @@ if (recreate_figs) {
     width = 7, height = 3
   )
 }
-
 ```
 
 ## Session Information

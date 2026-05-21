@@ -73,7 +73,7 @@
 #'  \item{...}{Other parameters passed to ensemble}
 #'  }
 #' @export
-#' @concept simulate
+#' @concept ensemble
 #' @seealso [update()], [sdbuildR()], [sim_specs()], [use_julia()],
 #'   [future::plan()]
 #'
@@ -95,7 +95,7 @@
 #' sims <- ensemble(sfm, n = 10)
 #' plot(sims)
 #'
-#' # To plot individual trajectories, rerun the ensemble with return_sims = TRUE. 
+#' # To plot individual trajectories, rerun the ensemble with return_sims = TRUE.
 #' # Note that this can consume a lot of memory for large simulations.
 #' sims <- ensemble(sfm, n = 10, return_sims = TRUE)
 #' plot(sims, type = "sims")
@@ -106,7 +106,7 @@
 #' # Plot the median with lighter individual trajectories
 #' plot(sims, central_tendency = "median", type = "sims", alpha = 0.1)
 #'
-#' @examplesIf Sys.getenv("NOT_CRAN") == "true"
+#' @examplesIf Sys.getenv("NOT_CRAN") == "true" && julia_env_ready()
 #' # For larger ensembles, we can use parallelization with future
 #' if (requireNamespace("future", quietly = TRUE) &&
 #'   requireNamespace("future.apply", quietly = TRUE)) {
@@ -406,6 +406,7 @@ check_ensemble_sdbuildR <- function(x) {
 
 
 #' @export
+#' @concept ensemble
 #' @method print ensemble_sdbuildR
 print.ensemble_sdbuildR <- function(x, ...) {
   model_name <- x[["object"]][["meta"]][["name"]]
@@ -413,9 +414,9 @@ print.ensemble_sdbuildR <- function(x, ...) {
   has_name <- !is.null(model_name) && nzchar(model_name) && model_name != default_name
 
   if (has_name) {
-    cli::cli_h1("Ensemble simulation: {model_name}")
+    cli::cli_h1("Stock-and-Flow Ensemble Simulation: {model_name}")
   } else {
-    cli::cli_h1("Ensemble simulation")
+    cli::cli_h1("Stock-and-Flow Ensemble Simulation")
   }
 
   has_counts <- all(!vapply(x[c("n_total", "n_conditions", "n")], is.null, logical(1)))
@@ -464,6 +465,7 @@ print.ensemble_sdbuildR <- function(x, ...) {
 
 
 #' @export
+#' @concept ensemble
 #' @method as.data.frame ensemble_sdbuildR
 as.data.frame.ensemble_sdbuildR <- function(x, row.names = NULL, optional = FALSE,
                                             type = c("summary", "sims"),
@@ -524,6 +526,7 @@ as.data.frame.ensemble_sdbuildR <- function(x, row.names = NULL, optional = FALS
 }
 
 #' @export
+#' @concept ensemble
 #' @method head ensemble_sdbuildR
 head.ensemble_sdbuildR <- function(x, n = 6L, ...) {
   check_ensemble_sdbuildR(x)
@@ -533,6 +536,7 @@ head.ensemble_sdbuildR <- function(x, n = 6L, ...) {
 
 
 #' @export
+#' @concept ensemble
 #' @method tail ensemble_sdbuildR
 tail.ensemble_sdbuildR <- function(x, n = 6L, ...) {
   check_ensemble_sdbuildR(x)
@@ -542,6 +546,7 @@ tail.ensemble_sdbuildR <- function(x, n = 6L, ...) {
 
 
 #' @export
+#' @concept ensemble
 #' @method summary ensemble_sdbuildR
 summary.ensemble_sdbuildR <- function(object, ...) {
   check_ensemble_sdbuildR(object)

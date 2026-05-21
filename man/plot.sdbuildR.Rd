@@ -68,6 +68,6 @@ plot(sfm, vars = "Susceptible")
 
 }
 \seealso{
-\code{\link[=insightmaker_to_sfm]{insightmaker_to_sfm()}}, \code{\link[=sdbuildR]{sdbuildR()}}, \code{\link[=plot.simulate_sdbuildR]{plot.simulate_sdbuildR()}}
+\code{\link[=import_insightmaker]{import_insightmaker()}}, \code{\link[=sdbuildR]{sdbuildR()}}, \code{\link[=plot.simulate_sdbuildR]{plot.simulate_sdbuildR()}}
 }
 \concept{build}

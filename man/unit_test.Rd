@@ -79,22 +79,24 @@ an error is thrown if an identical \code{expr} already exists on another test.
 
 \examples{
 sfm <- sdbuildR("SIR") |>
-  unit_test(expr = all(Susceptible >= 0)) 
+  unit_test(expr = all(Susceptible >= 0))
 
 # Run unit tests
 verify(sfm)
 
 # Add test with label
-sfm <- unit_test(sfm, label = "Recovered increases", 
-                 expr = all(diff(Recovered) >= 0))
+sfm <- unit_test(sfm,
+  label = "Recovered increases",
+  expr = all(diff(Recovered) >= 0)
+)
 verify(sfm)
 
 # Add test with conditions
 sfm <- unit_test(sfm,
-    expr = all(Infected == Infected[1]),
-    label = "When Beta is zero, no one gets infected",
-    conditions = list(Beta = 0)
-  )
+  expr = all(Infected == Infected[1]),
+  label = "When Beta is zero, no one gets infected",
+  conditions = list(Beta = 0)
+)
 verify(sfm)
 
 # View all tests
@@ -115,4 +117,4 @@ verify(sfm)
 \seealso{
 \code{\link[=verify]{verify()}}, \code{\link[=unit_tests]{unit_tests()}}, \code{\link[=discard_unit_test]{discard_unit_test()}}
 }
-\concept{verify}
+\concept{unitTest}

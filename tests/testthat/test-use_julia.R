@@ -5,7 +5,8 @@ test_that("use_julia() works", {
   expect_no_error(expect_no_warning(JuliaConnectoR::stopJulia()))
 
   # This starts Julia
-  expect_true(is_julia_ok())
+  expect_true(is_julia_working())
+  expect_true(is_julia_version_ok())
 
   # Check if environment was initialized; now this should be false
   expect_false(is_julia_init())
@@ -14,7 +15,7 @@ test_that("use_julia() works", {
   expect_no_error(expect_no_warning(expect_message(use_julia())))
 
   # But the environment should be installed after calling use_julia()
-  expect_true(is_julia_env_installed())
+  expect_true(is_julia_env_setup())
   expect_true(is_julia_init())
 
   # Close Julia again
@@ -22,8 +23,8 @@ test_that("use_julia() works", {
 
   # Start Julia again
   expect_no_error(expect_no_warning(expect_message(use_julia())))
-  expect_true(is_julia_ok())
-  expect_true(is_julia_env_installed())
+  expect_true(is_julia_working())
+  expect_true(is_julia_env_setup())
   expect_true(is_julia_init())
 })
 
@@ -51,8 +52,14 @@ test_that("install_julia_env() works", {
   # Test installation
   expect_no_error(install_julia_env())
   expect_no_error(install_julia_env(remove = TRUE))
+  expect_false(julia_env_ready())
+  expect_false(is_julia_env_setup())
 
   # Removing again should not cause an error
   expect_no_error(install_julia_env(remove = TRUE))
+
+  # Install again and check that environment is ready
   expect_no_error(install_julia_env())
+  expect_true(julia_env_ready())
+  expect_true(is_julia_env_setup())
 })

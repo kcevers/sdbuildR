@@ -1,4 +1,4 @@
-#' Debug stock-and-flow model
+#' Run Model Diagnostics
 #'
 #' Check for common formulation problems in a stock-and-flow model.
 #'
@@ -16,32 +16,33 @@
 #'
 #' @inheritParams update.sdbuildR
 #'
-#' @returns Object of class `diagnose_sdbuildR`. A flat named list with one
+#' @returns Object of class `summary_sdbuildR`. A flat named list with one
 #'   entry per check. Each entry contains a `problem` field (`"none"`,
 #'   `"warning"`, or `"error"`) and type-specific data fields.
 #' @concept build
+#' @method summary sdbuildR
 #' @export
 #'
 #' @examples
 #' # No issues
 #' sfm <- sdbuildR("SIR")
-#' diagnose(sfm)
+#' summary(sfm)
 #'
 #' # Detect absence of stocks or flows
 #' sfm <- sdbuildR()
-#' diagnose(sfm)
+#' summary(sfm)
 #'
 #' # Detect stocks without inflows or outflows
 #' sfm <- sdbuildR() |> update("Prey", "stock")
-#' diagnose(sfm)
+#' summary(sfm)
 #'
 #' # Detect circularity in equation definitions
 #' sfm <- sdbuildR() |>
 #'   update("Prey", "stock", eqn = "Predator") |>
 #'   update("Predator", "stock", eqn = "Prey")
-#' diagnose(sfm)
+#' summary(sfm)
 #'
-diagnose <- function(object) {
+summary.sdbuildR <- function(object, ...) {
   check_sdbuildR(object)
 
   # Initialize all checks with "none" (all data fields empty)
@@ -151,32 +152,35 @@ diagnose <- function(object) {
     )
   }
 
-  result <- new_diagnose_sdbuildR(checks)
+  result <- new_summary_sdbuildR(checks)
   result
 }
 
 
-#' Constructor for diagnose_sdbuildR class
+#' Constructor for summary_sdbuildR class
 #'
 #' @param checks Flat named list of check results, one entry per check.
 #'   Each entry has a `problem` field (`"none"`, `"warning"`, or `"error"`)
 #'   and type-specific data fields.
 #'
-#' @returns Object of class `diagnose_sdbuildR`
+#' @returns Object of class `summary_sdbuildR`
 #' @noRd
-new_diagnose_sdbuildR <- function(checks) {
-  structure(checks, class = "diagnose_sdbuildR")
+new_summary_sdbuildR <- function(checks) {
+  structure(checks, class = "summary_sdbuildR")
 }
 
 
-#' Print method for diagnose_sdbuildR
+#' Print method for summary_sdbuildR
 #'
-#' @param x Object of class `diagnose_sdbuildR`
+#' @param x Object of class `summary_sdbuildR`
 #' @param ... Ignored
 #'
 #' @returns `x` invisibly
 #' @export
-print.diagnose_sdbuildR <- function(x, ...) {
+#' @concept build
+print.summary_sdbuildR <- function(x, ...) {
+  cli::cli_h1("Stock-and-Flow Model Diagnostics")
+
   errors <- Filter(function(y) y$problem == "error", x)
   warnings <- Filter(function(y) y$problem == "warning", x)
 
@@ -204,7 +208,7 @@ print.diagnose_sdbuildR <- function(x, ...) {
 
 #' Format and print a single check entry
 #'
-#' @param nm Component name (key in the diagnose_sdbuildR list)
+#' @param nm Component name (key in the summary_sdbuildR list)
 #' @param check Named list with `problem` field and type-specific data fields
 #'
 #' @noRd
@@ -410,7 +414,7 @@ detect_undefined_var <- function(object) {
 #' (shared helper in R/verify.R) to extract variable-like symbols from each unit
 #' test's `expr_str` and `conditions`.
 #'
-#' @inheritParams diagnose
+#' @inheritParams update.sdbuildR
 #' @return List with `issue` (logical) and `data` (list of refs)
 #' @noRd
 .detect_undefined_unit_test_vars <- function(object) {

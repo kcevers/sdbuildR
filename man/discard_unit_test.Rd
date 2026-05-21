@@ -38,4 +38,4 @@ sfm <- discard_unit_test(sfm, label = "Recovered increases")
 \seealso{
 \code{\link[=unit_test]{unit_test()}}, \code{\link[=unit_tests]{unit_tests()}}
 }
-\concept{verify}
+\concept{unitTest}

@@ -1,33 +1,33 @@
 # Tests for Insight Maker model import functionality
 
-test_that("insightmaker_to_sfm() validates input arguments", {
+test_that("import_insightmaker() validates input arguments", {
   # No arguments
   expect_error(
-    insightmaker_to_sfm(),
+    import_insightmaker(),
     class = "rlang_error"
   )
 
   # Invalid URL
   expect_error(
-    insightmaker_to_sfm(URL = "https://example.com"),
+    import_insightmaker(URL = "https://example.com"),
     class = "rlang_error"
   )
 
   # Non-existent file
   expect_error(
-    insightmaker_to_sfm(file = "nonexistent.InsightMaker"),
+    import_insightmaker(file = "nonexistent.InsightMaker"),
     class = "rlang_error"
   )
 
   # Wrong file extension
   expect_error(
-    insightmaker_to_sfm(file = "test.txt"),
+    import_insightmaker(file = "test.txt"),
     class = "rlang_error"
   )
 
   # Both URL and file specified
   expect_error(
-    insightmaker_to_sfm(
+    import_insightmaker(
       URL = "https://insightmaker.com/test",
       file = "test.InsightMaker"
     ),
@@ -49,7 +49,7 @@ test_that("import_metadata structure is created correctly", {
 
   sfm <- expect_no_error({
     suppressWarnings({
-      insightmaker_to_sfm(file = model_file)
+      import_insightmaker(file = model_file)
     })
   })
 
@@ -90,7 +90,7 @@ test_that("import_metadata preserves original InsightMaker info", {
 
   sfm <- expect_no_error({
     suppressWarnings({
-      insightmaker_to_sfm(file = model_file)
+      import_insightmaker(file = model_file)
     })
   })
 
@@ -121,7 +121,7 @@ test_that("import_metadata is NOT in as.data.frame() output", {
 
   sfm <- expect_no_error({
     suppressWarnings({
-      insightmaker_to_sfm(file = model_file)
+      import_insightmaker(file = model_file)
     })
   })
 
@@ -152,7 +152,7 @@ test_that("import_metadata raw_model contains the complete original model", {
   # Test InsightMaker format
   sfm_im <- expect_no_error({
     suppressWarnings({
-      insightmaker_to_sfm(file = model_file_im)
+      import_insightmaker(file = model_file_im)
     })
   })
 
@@ -162,7 +162,7 @@ test_that("import_metadata raw_model contains the complete original model", {
   # Test JSON format
   sfm_json <- expect_no_error({
     suppressWarnings({
-      insightmaker_to_sfm(file = model_file_json)
+      import_insightmaker(file = model_file_json)
     })
   })
 
@@ -198,7 +198,7 @@ test_that("translating .InsightMaker models works", {
 
     sfm_IM <- expect_no_error({
       silence(
-        insightmaker_to_sfm(
+        import_insightmaker(
           file = model_files_IM[i],
           keep_nonnegative_flow = keep_nonnegative_flow,
           keep_nonnegative_stock = keep_nonnegative_stock
@@ -230,7 +230,7 @@ test_that("translating .InsightMaker models works", {
     # Test JSON version
     sfm_json <- expect_no_error({
       silence(
-        insightmaker_to_sfm(
+        import_insightmaker(
           file = model_files_json[i],
           keep_nonnegative_flow = keep_nonnegative_flow,
           keep_nonnegative_stock = keep_nonnegative_stock
@@ -283,14 +283,14 @@ test_that("ABM model issues error", {
 
   for (file in model_files_IM) {
     expect_error(
-      insightmaker_to_sfm(file = file),
+      import_insightmaker(file = file),
       "Agent-Based Modelling"
     )
   }
 
   for (file in model_files_json) {
     expect_error(
-      insightmaker_to_sfm(file = file),
+      import_insightmaker(file = file),
       "Agent-Based Modelling"
     )
   }

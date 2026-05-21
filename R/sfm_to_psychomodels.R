@@ -37,16 +37,8 @@
 #'
 #' @returns If `destfile` is not provided; JSON string.
 #'  If `destfile` provided, invisibly returns destination file path.
-#' @export
-#'
-#' @examples
-#' sfm <- sdbuildR("SIR")
-#' json <- sfm_to_psychomodels(
-#'   sfm,
-#'   publication_doi = "10.0000/example"
-#' )
-#' 
-sfm_to_psychomodels <- function(object,
+#' @noRd
+export_psychomodels <- function(object,
                                 include_latex = TRUE,
                                 destfile = NULL,
                                 title = object[["meta"]][["name"]],

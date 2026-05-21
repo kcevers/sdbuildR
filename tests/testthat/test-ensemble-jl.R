@@ -143,9 +143,9 @@ test_that("ensemble() handles models with no constants", {
 test_that("ensemble() of model with only stocks", {
   skip_if_julia_not_ready()
   sfm <- sdbuildR() |>
-  stock("Stock1", eqn = 100) |>
-  stock("Stock2", eqn = 50) |>
-  sim_specs(language = "Julia", start = 0, stop = 10, dt = 0.1, save_at = 1)
+    stock("Stock1", eqn = 100) |>
+    stock("Stock2", eqn = 50) |>
+    sim_specs(language = "Julia", start = 0, stop = 10, dt = 0.1, save_at = 1)
 
   sims <- silence(ensemble(sfm, n = 3, only_stocks = TRUE, return_sims = TRUE, verbose = FALSE))
   expect_true(sims[["success"]])
@@ -153,7 +153,6 @@ test_that("ensemble() of model with only stocks", {
     sort(unique(sims[["summary"]][["variable"]])),
     c("Stock1", "Stock2")
   )
-
 })
 
 

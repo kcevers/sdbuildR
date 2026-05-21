@@ -34,7 +34,7 @@
 #'  \item{model}{Model variables, grouped under the variable types stock, flow, aux (auxiliaries), constant, gf (graphical functions), and func (custom functions). Each variable contains arguments as listed in [update()].}
 #'  }
 #'
-#' Use [summary()] to summarize, [as.data.frame()] to convert to a data.frame, [plot()] to visualize.
+#' Use [summary()] to run model diagnostics, [as.data.frame()] to convert to a data.frame, [plot()] to visualize.
 #'
 #' @export
 #' @concept build
@@ -79,7 +79,7 @@ empty_assemble <- function() {
     post = "",
     intermediaries = list(),
     ensemble = list(),
-    diagnose = NULL, # cached result: list(problems="", potential_problems="")
+    summary = NULL, # cached diagnostics result
     unit_tests = list(deps = NULL) # cached unit test dependencies (positionally indexed)
   )
 }
@@ -88,7 +88,6 @@ empty_assemble <- function() {
 empty_unit_tests <- function() {
   list()
 }
-
 
 
 empty_variables <- function() {
@@ -295,7 +294,7 @@ check_sdbuildR <- function(object) {
   if (!inherits(object, "sdbuildR")) {
     cli::cli_abort(c(
       "Expected object of class {.cls sdbuildR}.",
-      "i" = "Create a stock-and-flow model with {.fn sdbuildR} or {.fn insightmaker_to_sfm}."
+      "i" = "Create a stock-and-flow model with {.fn sdbuildR} or {.fn import_insightmaker}."
     ))
   }
   invisible(TRUE)
@@ -488,16 +487,14 @@ meta <- function(object, name = "My Model", caption = "My Model Description",
 
   check_sdbuildR(object)
 
-  # Get names of passed arguments
-  passed_arg <- names(as.list(match.call())[-1]) |>
-    # Remove some arguments
-    setdiff(c("object", "..."))
-
-  # Collect all arguments
-  argg <- c(
-    as.list(environment()),
-    list(...)
-  )[unique(passed_arg)]
+  argg <- list(...)
+  if (!missing(name)) argg$name <- name
+  if (!missing(caption)) argg$caption <- caption
+  if (!missing(created)) argg$created <- created
+  if (!missing(author)) argg$author <- author
+  if (!missing(version)) argg$version <- version
+  if (!missing(URL)) argg$URL <- URL
+  if (!missing(doi)) argg$doi <- doi
 
   object[["meta"]] <- utils::modifyList(object[["meta"]], argg)
 
@@ -594,6 +591,8 @@ as.data.frame.sdbuildR <- function(x,
                                    row.names = NULL, optional = FALSE,
                                    name = NULL, type = NULL,
                                    properties = NULL, ...) {
+  name <- .expr_to_char(rlang::enexpr(name))
+  type <- .expr_to_char(rlang::enexpr(type))
   check_sdbuildR(x)
   sfm <- x
   rm(x)
@@ -751,8 +750,8 @@ as.data.frame.sdbuildR <- function(x,
 #' Print overview of stock-and-flow model
 #'
 #' Prints a descriptive overview of the model structure, including stock-flow
-#' topology, variable names, and simulation settings. For computed properties
-#' such as variable dependencies and diagnostics, use [`summary()`][summary.sdbuildR()].
+#' topology, variable names, and simulation settings. For model diagnostics,
+#' use [`summary()`][summary.sdbuildR()].
 #'
 #' @param x A stock-and-flow model object of class [`sdbuildR`][sdbuildR]
 #' @param ... Additional arguments (unused)
@@ -760,7 +759,7 @@ as.data.frame.sdbuildR <- function(x,
 #' @returns Invisibly returns `x`
 #' @export
 #' @concept build
-#' @seealso [summary.sdbuildR()], [diagnose()]
+#' @seealso [summary.sdbuildR()], [dependencies()]
 #'
 #' @examples
 #' sfm <- sdbuildR("SIR")
@@ -869,89 +868,6 @@ print.sdbuildR <- function(x, ...) {
   if (n_ut > 0L) {
     n_active <- sum(vapply(x[["unit_tests"]], function(t) isTRUE(t[["active"]]), logical(1)))
     cli::cli_text("  {n_ut} unit test{?s} defined ({n_active} active) \u2022 Run with {.fn verify}.")
-  }
-
-  invisible(x)
-}
-
-
-#' Summarise stock-and-flow model
-#'
-#' Computes and displays derived properties of the model: variable dependencies
-#' and a structural diagnostics summary. For the descriptive structural overview
-#' (topology, variable names, sim specs), simply print the object with
-#' [print.sdbuildR()].
-#'
-#' @param object A stock-and-flow model object of class [`sdbuildR`][sdbuildR]
-#' @inheritParams plot.sdbuildR
-#'
-#' @returns Summary object of class [summary_sdbuildR][summary.sdbuildR()]
-#' @concept build
-#' @export
-#' @seealso [print.sdbuildR()], [diagnose()], [dependencies()]
-#'
-#' @examples
-#' sfm <- sdbuildR("SIR")
-#' summary(sfm)
-#'
-summary.sdbuildR <- function(object, ...) {
-  # Compute variable dependencies
-  all_deps <- dependencies(object)
-  # Keep only variables that have at least one dependency
-  deps_with_deps <- Filter(function(d) length(d) > 0, all_deps)
-
-  # Run structural diagnostics
-  diag_result <- diagnose(object)
-  n_errors <- sum(vapply(diag_result, function(chk) chk$problem == "error", logical(1)))
-  n_warnings <- sum(vapply(diag_result, function(chk) chk$problem == "warning", logical(1)))
-
-  summary_obj <- list(
-    dependencies = deps_with_deps,
-    n_errors     = n_errors,
-    n_warnings   = n_warnings
-  )
-
-  class(summary_obj) <- "summary_sdbuildR"
-  summary_obj
-}
-
-
-#' Print summary of stock-and-flow model
-#'
-#' @param x A summary object of class [`summary_sdbuildR`][summary.sdbuildR()]
-#' @param ... Additional arguments (unused)
-#'
-#' @returns Invisibly returns the summary object of class [`summary_sdbuildR`][summary.sdbuildR()]
-#' @export
-#' @concept build
-print.summary_sdbuildR <- function(x, ...) {
-  cli::cli_h1("Stock-and-Flow Model Summary")
-
-  # Dependencies section
-  cli::cli_h2("Dependencies")
-
-  if (length(x$dependencies) == 0) {
-    cli::cli_alert_info("No variables with dependencies.")
-  } else {
-    max_width <- max(nchar(names(x$dependencies)))
-    for (var_name in names(x$dependencies)) {
-      deps_str <- paste(x$dependencies[[var_name]], collapse = ", ")
-      padded <- formatC(var_name, width = max_width, flag = "-")
-      cli::cli_text("  {.code {padded}}: {deps_str}")
-    }
-  }
-
-  # Diagnostics section
-  cli::cli_h2("Diagnostics")
-
-  if (x$n_errors == 0 && x$n_warnings == 0) {
-    cli::cli_bullets(c("v" = "No issues detected."))
-  } else {
-    parts <- c()
-    if (x$n_errors > 0) parts <- c(parts, paste0(x$n_errors, " error", if (x$n_errors != 1) "s"))
-    if (x$n_warnings > 0) parts <- c(parts, paste0(x$n_warnings, " warning", if (x$n_warnings != 1) "s"))
-    msg <- paste(parts, collapse = ", ")
-    cli::cli_bullets(c("x" = "{msg} \u2014 run {.fn diagnose} for details."))
   }
 
   invisible(x)

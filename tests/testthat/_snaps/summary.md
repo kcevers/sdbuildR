@@ -1,70 +1,53 @@
-# print(summary(sfm)) shows Dependencies section
+# summary() detects stocks not connected to flows
 
     Code
-      print(summary(sfm))
+      print(result)
     Message
       
-      -- Stock-and-Flow Model Summary ------------------------------------------------
+      -- Stock-and-Flow Model Diagnostics --------------------------------------------
       
-      -- Dependencies --
+      -- Potential problems (3) --
       
-      `Beta `: Effective_Contact_Rate, Total_Population
-      `Lambda `: Beta, Infected
-      `Infection_Rate`: Susceptible, Lambda
-      `Recovery_Rate `: Infected, Delay
-      
-      -- Diagnostics --
-      
-      x 1 warning — run `diagnose()` for details.
+      * Model has no flows.
+      > Add flows with `flow()` or `update()`.
+      * Stocks not connected to any flow: `Stock1` and `Stock2`.
+      * `Stock1` and `Stock2` have an equation of 0.
 
-# print(summary(sfm)) shows Diagnostics section
+# summary() warns about zero equations
 
     Code
-      print(summary(sfm))
+      print(result)
     Message
       
-      -- Stock-and-Flow Model Summary ------------------------------------------------
+      -- Stock-and-Flow Model Diagnostics --------------------------------------------
       
-      -- Dependencies --
+      -- Potential problem (1) --
       
-      `Beta `: Effective_Contact_Rate, Total_Population
-      `Lambda `: Beta, Infected
-      `Infection_Rate`: Susceptible, Lambda
-      `Recovery_Rate `: Infected, Delay
-      
-      -- Diagnostics --
-      
-      x 1 warning — run `diagnose()` for details.
+      * `Stock1` and `Flow1` have an equation of 0.
 
-# print(summary(sfm)) reports no issues for valid model
+# print.summary_sdbuildR() shows header and 'No problems detected!' for valid model
 
     Code
-      print(summary(sfm))
+      print(result)
     Message
       
-      -- Stock-and-Flow Model Summary ------------------------------------------------
-      
-      -- Dependencies --
-      
-      `Flow1`: S
-      
-      -- Diagnostics --
-      
-      v No issues detected.
+      -- Stock-and-Flow Model Diagnostics --------------------------------------------
+      v No problems detected!
 
-# print(summary(sfm)) reports errors for invalid model
+# summary() warns when unit test eqn reference undefined variable
 
     Code
-      print(summary(sfm))
+      print(result)
     Message
       
-      -- Stock-and-Flow Model Summary ------------------------------------------------
+      -- Stock-and-Flow Model Diagnostics --------------------------------------------
       
-      -- Dependencies --
+      -- Potential problems (3) --
       
-      i No variables with dependencies.
-      
-      -- Diagnostics --
-      
-      x 1 error, 1 warning — run `diagnose()` for details.
+      * Model has no flows.
+      > Add flows with `flow()` or `update()`.
+      * Stock not connected to any flow: `S`.
+      * Unit test reference undefined variable.
+        [1] "valid" expr: `drain` is undefined.
+      > Update the affected tests or add the missing variables.
 

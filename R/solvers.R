@@ -7,6 +7,7 @@
 #'
 #' @return A character scalar, a character vector of solver names, or a solver metadata list when `show_info = TRUE`.
 #' @export
+#' @concept simulate
 solvers <- function(method, from = NULL, to = NULL, show_info = FALSE) {
   valid_source <- c("R", "Julia")
 

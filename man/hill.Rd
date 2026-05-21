@@ -4,19 +4,19 @@
 \alias{hill}
 \title{Hill function}
 \usage{
-hill(x, slope = 1, midpoint = 0, upper = 1)
+hill(x, slope = 1, midpoint = 0.5, upper = 1)
 }
 \arguments{
 \item{x}{Value at which to evaluate the function}
 
 \item{slope}{Slope of Hill function at the midpoint. Defaults to 1.}
 
-\item{midpoint}{Midpoint of Hill function where the output is \code{upper/2}. Defaults to 0.}
+\item{midpoint}{Midpoint of Hill function where the output is \code{upper/2}. Defaults to 0.5.}
 
 \item{upper}{Upper asymptote (maximal value) of the Hill function. Defaults to 1.}
 }
 \value{
-Numeric value given by \deqn{f(x) = \frac{upper}{1 + e^{-slope \cdot (x - midpoint)}}}
+Numeric value given by \deqn{f(x) = \frac{upper \cdot x^{slope}}{midpoint^{slope} + x^{slope}}}
 }
 \description{
 Computes the Hill function with configurable slope, midpoint, and upper asymptote.

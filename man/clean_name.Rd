@@ -20,7 +20,7 @@ Clean variable name(s) to create syntactically valid, unique names for use in R 
 \examples{
 sfm <- sdbuildR("predator_prey")
 # As the variable name "predator" is already taken, clean_name() will create
-# an unique name
+# a unique name
 clean_name("predator", as.data.frame(sfm)[["name"]])
 
 }

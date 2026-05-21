@@ -329,7 +329,7 @@ test_that("update() with type = 'gf' still works (backward compat)", {
 test_that("stock() creates a stock and forwards all parameters", {
   sfm <- sdbuildR()
   sfm <- stock(sfm, "Pop",
-    eqn = "100", 
+    eqn = "100",
     label = "Population", doc = "total pop", non_negative = TRUE
   )
 

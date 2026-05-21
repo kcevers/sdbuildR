@@ -191,25 +191,25 @@ test_that("targeted invalidation produces same simulation as full invalidation",
 })
 
 
-# --- diagnose cache fields -----------------------------------
+# --- summary cache fields -----------------------------------
 
-test_that("pre_assemble_components populates diagnose cache", {
+test_that("pre_assemble_components populates summary cache", {
   sfm <- sdbuildR("SIR")
-  expect_false(is.null(sfm[["assemble"]][["diagnose"]]))
-  expect_true(is.list(sfm[["assemble"]][["diagnose"]]))
-  expect_equal(sfm[["assemble"]][["diagnose"]][["zero_equations"]][["problem"]], "warning")
+  expect_false(is.null(sfm[["assemble"]][["summary"]]))
+  expect_true(is.list(sfm[["assemble"]][["summary"]]))
+  expect_equal(sfm[["assemble"]][["summary"]][["zero_equations"]][["problem"]], "warning")
 })
 
 
-test_that("invalidate_assemble 'all' clears diagnose", {
+test_that("invalidate_assemble 'all' clears summary", {
   sfm <- sdbuildR("SIR")
   sfm <- invalidate_assemble(sfm, "all")
-  expect_null(sfm[["assemble"]][["diagnose"]])
+  expect_null(sfm[["assemble"]][["summary"]])
 })
 
 
-test_that("invalidate_assemble 'variables' clears diagnose", {
+test_that("invalidate_assemble 'variables' clears summary", {
   sfm <- sdbuildR("SIR")
   sfm <- invalidate_assemble(sfm, "variables")
-  expect_null(sfm[["assemble"]][["diagnose"]])
+  expect_null(sfm[["assemble"]][["summary"]])
 })

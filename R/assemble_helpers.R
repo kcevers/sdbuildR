@@ -19,7 +19,7 @@
 #'     \item{"dynamic"}{Clear only dynamic equations (ode, callback, intermediaries)}
 #'     \item{"times"}{Clear time sequence}
 #'     \item{"funcs"}{Clear func definitions}
-  
+
 #'     \item{"nonneg"}{Clear non-negative stock handling}
 #'     \item{"unit_tests"}{Clear cached unit test dependencies}
 #'   }
@@ -27,7 +27,6 @@
 #' @returns A stock-and-flow model with selectively cleared assembly cache
 #' @noRd
 invalidate_assemble <- function(object, what = "all") {
-  
   no_assemble <- empty_assemble()
 
   if ("all" %in% what) {
@@ -45,7 +44,7 @@ invalidate_assemble <- function(object, what = "all") {
     a[["intermediaries"]] <- no_assemble[["intermediaries"]]
     a[["nonneg_stocks"]] <- no_assemble[["nonneg_stocks"]]
     a[["ensemble"]] <- no_assemble[["ensemble"]]
-    a[["diagnose"]] <- no_assemble[["diagnose"]]
+    a[["summary"]] <- no_assemble[["summary"]]
   }
   if ("static" %in% what && !"variables" %in% what) {
     a[["static"]] <- no_assemble[["static"]]
@@ -597,8 +596,8 @@ pre_assemble_components <- function(object) {
   }
 
   # --- Populate validation caches --------------------------------------------
-  if (is.null(object[["assemble"]][["diagnose"]])) {
-    object[["assemble"]][["diagnose"]] <- diagnose(object)
+  if (is.null(object[["assemble"]][["summary"]])) {
+    object[["assemble"]][["summary"]] <- summary(object)
   }
 
 

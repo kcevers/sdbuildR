@@ -9,7 +9,7 @@
 \arguments{
 \item{object}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
 
-\item{nsim}{Number of simulations to run (currently unused; see \code{\link[=ensemble]{ensemble()}} for running multiple simulations).}
+\item{nsim}{Number of simulations to run (unused; see \code{\link[=ensemble]{ensemble()}} for running multiple simulations).}
 
 \item{seed}{Seed number to ensure reproducibility across runs in case of
 random elements. Must be an integer. Defaults to \code{NULL} (no seed).}
@@ -34,7 +34,7 @@ Object of class \code{\link[=simulate.sdbuildR]{simulate_sdbuildR}}, a list cont
 Use \link[=as.data.frame.simulate_sdbuildR]{as.data.frame()} to extract results, \link[=plot.simulate_sdbuildR]{plot()} to visualize.
 }
 \description{
-Simulate a stock-and-flow model with simulation specifications defined by \code{\link[=sim_specs]{sim_specs()}}. If \code{sim_specs(language = "julia")}, the Julia environment will first be set up with \code{\link[=use_julia]{use_julia()}}. If any problems are detected by \code{\link[=diagnose]{diagnose()}}, the model cannot be simulated.
+Simulate a stock-and-flow model with simulation specifications defined by \code{\link[=sim_specs]{sim_specs()}}. If \code{sim_specs(language = "julia")}, the Julia environment will first be set up with \code{\link[=use_julia]{use_julia()}}. If any problems are detected by \code{\link[=summary]{summary()}}, the model cannot be simulated.
 }
 \examples{
 sfm <- sdbuildR("SIR")
@@ -47,6 +47,6 @@ plot(sim, add_constants = TRUE)
 
 }
 \seealso{
-\code{\link[=update]{update()}}, \code{\link[=sdbuildR]{sdbuildR()}}, \code{\link[=diagnose]{diagnose()}}, \code{\link[=sim_specs]{sim_specs()}}, \code{\link[=use_julia]{use_julia()}}
+\code{\link[=update]{update()}}, \code{\link[=sdbuildR]{sdbuildR()}}, \code{\link[=summary]{summary()}}, \code{\link[=sim_specs]{sim_specs()}}, \code{\link[=use_julia]{use_julia()}}
 }
 \concept{simulate}

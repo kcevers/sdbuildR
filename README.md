@@ -133,5 +133,5 @@ sdbuildR is under active development. While thoroughly tested, the
 package may have bugs, particularly in complex model translations. We
 encourage users to report [issues on
 GitHub](https://github.com/KCEvers/sdbuildR/issues) - your input helps
-the package improve\! Use `diagnose()` to diagnose model errors, and use
+the package improve\! Use `summary()` to run model diagnostics, and use
 the vignettes for guidance.

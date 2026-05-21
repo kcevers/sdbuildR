@@ -95,7 +95,7 @@ attributes(%(sim_df_name)s)$valroot
     # -- compile_run_ode: Julia ensemble problem --------------------------------
 
     ensemble_prob_julia = "
-    
+
 # Create ODE problem
 %(prob_name)s = ODEProblem(%(ode_func_name)s!, %(model_setup_name)s.%(initial_value_name)s, %(times_name)s, %(model_setup_name)s.%(parameter_name)s)
 

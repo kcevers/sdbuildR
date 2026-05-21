@@ -115,7 +115,7 @@ sfm <- sim_specs(sfm, save_n = 100)
 sims <- ensemble(sfm, n = 10)
 plot(sims)
 
-# To plot individual trajectories, rerun the ensemble with return_sims = TRUE. 
+# To plot individual trajectories, rerun the ensemble with return_sims = TRUE.
 # Note that this can consume a lot of memory for large simulations.
 sims <- ensemble(sfm, n = 10, return_sims = TRUE)
 plot(sims, type = "sims")
@@ -126,7 +126,7 @@ plot(sims, type = "sims", i = 1)
 # Plot the median with lighter individual trajectories
 plot(sims, central_tendency = "median", type = "sims", alpha = 0.1)
 
-\dontshow{if (Sys.getenv("NOT_CRAN") == "true") withAutoprint(\{ # examplesIf}
+\dontshow{if (Sys.getenv("NOT_CRAN") == "true" && julia_env_ready()) withAutoprint(\{ # examplesIf}
 # For larger ensembles, we can use parallelization with future
 if (requireNamespace("future", quietly = TRUE) &&
   requireNamespace("future.apply", quietly = TRUE)) {
@@ -171,4 +171,4 @@ if (requireNamespace("future", quietly = TRUE) &&
 \code{\link[=update]{update()}}, \code{\link[=sdbuildR]{sdbuildR()}}, \code{\link[=sim_specs]{sim_specs()}}, \code{\link[=use_julia]{use_julia()}},
 \code{\link[future:plan]{future::plan()}}
 }
-\concept{simulate}
+\concept{ensemble}

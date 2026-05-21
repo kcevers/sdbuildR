@@ -77,4 +77,4 @@ Visualize ensemble simulation results of a stock-and-flow model. Either summary 
 \seealso{
 \code{\link[=ensemble]{ensemble()}}
 }
-\concept{simulate}
+\concept{ensemble}

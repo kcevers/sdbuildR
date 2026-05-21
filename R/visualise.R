@@ -316,7 +316,7 @@ export_plotly <- function(pl, file, format, width, height) {
 #' @export
 #' @concept build
 #' @method plot sdbuildR
-#' @seealso [insightmaker_to_sfm()], [sdbuildR()], [plot.simulate_sdbuildR()]
+#' @seealso [import_insightmaker()], [sdbuildR()], [plot.simulate_sdbuildR()]
 #'
 #' @examples
 #' sfm <- sdbuildR("SIR")
@@ -721,7 +721,6 @@ plot.sdbuildR <- function(x,
 }
 
 
-
 #' Prepare for plotting simulation
 #'
 #' @param type_sim Either "sim" or "ensemble"
@@ -1009,7 +1008,7 @@ plot.simulate_sdbuildR <- function(x,
 #'
 #' @returns Plotly object
 #' @export
-#' @concept simulate
+#' @concept ensemble
 #' @seealso [ensemble()]
 #' @method plot ensemble_sdbuildR
 #'

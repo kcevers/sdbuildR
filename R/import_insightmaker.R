@@ -11,12 +11,12 @@
 #'
 #' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR].
 #' @export
-#' @concept insightmaker
+#' @concept importExport
 #' @seealso [update()], [sdbuildR()]
 #'
 #' @examplesIf has_internet() && Sys.getenv("NOT_CRAN") == "true"
 #' # Load a model from Insight Maker
-#' sfm <- insightmaker_to_sfm(
+#' sfm <- import_insightmaker(
 #'   URL =
 #'     "https://insightmaker.com/insight/43tz1nvUgbIiIOGSGtzIzj/Romeo-Juliet"
 #' )
@@ -30,7 +30,7 @@
 #' sim <- simulate(sfm)
 #' plot(sim)
 #'
-insightmaker_to_sfm <- function(URL,
+import_insightmaker <- function(URL,
                                 file,
                                 keep_nonnegative_flow = TRUE,
                                 keep_nonnegative_stock = FALSE) {
@@ -57,7 +57,8 @@ insightmaker_to_sfm <- function(URL,
     },
     error = function(e) {
       cli::cli_abort(
-        c("x" = "Failed to convert Insight Maker model structure to XMILE format.",
+        c(
+          "x" = "Failed to convert Insight Maker model structure to XMILE format.",
           "i" = "Check for unsupported Insight Maker syntax or model structure.",
           ">" = "Original error: {conditionMessage(e)}"
         ),
@@ -86,7 +87,8 @@ insightmaker_to_sfm <- function(URL,
     },
     error = function(e) {
       cli::cli_abort(
-        c("x" = "Failed to check non-negativity constraints.",
+        c(
+          "x" = "Failed to check non-negativity constraints.",
           "i" = "Review your keep_nonnegative_flow and keep_nonnegative_stock settings.",
           ">" = "Original error: {conditionMessage(e)}"
         ),
@@ -106,7 +108,8 @@ insightmaker_to_sfm <- function(URL,
     },
     error = function(e) {
       cli::cli_abort(
-        c("x" = "Failed to convert macros from Insight Maker format.",
+        c(
+          "x" = "Failed to convert macros from Insight Maker format.",
           "i" = "Check for unsupported macro syntax or functions.",
           ">" = "Original error: {conditionMessage(e)}"
         ),
@@ -126,7 +129,8 @@ insightmaker_to_sfm <- function(URL,
     },
     error = function(e) {
       cli::cli_abort(
-        c("x" = "Failed to convert equations from Insight Maker format.",
+        c(
+          "x" = "Failed to convert equations from Insight Maker format.",
           "i" = "Check for unsupported functions or syntax in your model equations.",
           ">" = "Original error: {conditionMessage(e)}"
         ),
@@ -142,7 +146,8 @@ insightmaker_to_sfm <- function(URL,
     },
     error = function(e) {
       cli::cli_abort(
-        c("x" = "Failed to clean variable names.",
+        c(
+          "x" = "Failed to clean variable names.",
           "i" = "Original error: {conditionMessage(e)}"
         ),
         call = NULL
@@ -157,7 +162,8 @@ insightmaker_to_sfm <- function(URL,
     },
     error = function(e) {
       cli::cli_abort(
-        c("x" = "Failed to split auxiliary variables into constants and auxiliaries.",
+        c(
+          "x" = "Failed to split auxiliary variables into constants and auxiliaries.",
           "i" = "Original error: {conditionMessage(e)}"
         ),
         call = NULL

@@ -24,3 +24,4 @@ sfm <- sdbuildR("SIR")
 sim <- simulate(sfm)
 tail(sim)
 }
+\concept{simulate}

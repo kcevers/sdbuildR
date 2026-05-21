@@ -20,7 +20,7 @@
 #' @seealso [use_julia()]
 #' @concept julia
 #'
-#' @examplesIf Sys.getenv("NOT_CRAN") == "true"
+#' @examplesIf Sys.getenv("NOT_CRAN") == "true" && julia_env_ready()
 #' \dontrun{
 #' install_julia_env()
 #'
@@ -29,18 +29,24 @@
 #' }
 install_julia_env <- function(remove = FALSE) {
   # Julia should be able to be started; JuliaConnectoR will handle errors if this is not the case
-  is_julia_ok()
+  is_julia_working()
+
+  # Julia version needs to be correct
+  is_julia_version_ok()
+
+  # Invalidate cached env check
+  .sdbuildR_env[["jl"]][["env_checked"]] <- FALSE
 
   if (remove) {
     # Find set-up location for sdbuildR in Julia
-    env_path <- system.file(package = "sdbuildR")
+    env_path <- dirname(system.file("Project.toml", package = "sdbuildR"))
 
     # Activate the Julia environment for sdbuildR; juliaEval() automatically starts Julia
     julia_cmd <- sprintf("using Pkg; Pkg.activate(\"%s\")", jl_path(env_path))
     JuliaConnectoR::juliaEval(julia_cmd)
 
     # Delete StockFlowRSupport.jl, but only if it is installed, to avoid unnecessary warnings
-    status <- is_julia_env_installed(force = TRUE, error = FALSE)
+    status <- is_julia_env_setup(force = TRUE, error = FALSE)
     if (!isTRUE(status)) {
       cli::cli_inform(c("i" = paste0(P[["jl_pkg_name"]], ".jl not found in Julia environment; no need to remove.")))
       return(invisible())
@@ -56,7 +62,7 @@ install_julia_env <- function(remove = FALSE) {
       file.remove(manifest_file)
     }
     JuliaConnectoR::juliaEval("Pkg.gc()")
-    status <- is_julia_env_installed(force = TRUE, error = FALSE)
+    status <- is_julia_env_setup(force = TRUE, error = FALSE)
 
     if (isTRUE(status)) {
       cli::cli_inform(c("x" = "Failed to remove Julia environment."))
@@ -64,7 +70,6 @@ install_julia_env <- function(remove = FALSE) {
       cli::cli_inform(c("v" = "Julia environment removed."))
     }
   } else {
-
     # First stop Julia for a clean installation
     JuliaConnectoR::stopJulia()
 
@@ -84,16 +89,12 @@ install_julia_env <- function(remove = FALSE) {
       error = function(e) {
         cli::cli_inform(c("!" = paste0("Could not remove SystemDynamicsBuildR.jl (older version of StockFlowRSupport.jl): ", e$message)))
       }
-    )    
+    )
 
     # Run the setup script
     setup_script <- system.file("setup.jl", package = "sdbuildR")
-    # # Set the required version of the Julia package in the setup script
-    # JuliaConnectoR::juliaEval(sprintf(
-    #   'jl_pkg_version_github_release = \"v%s\";', P[["jl_pkg_version_github_release"]]
-    # ))
     JuliaConnectoR::juliaEval(sprintf('include("%s")', jl_path(setup_script)))
-    status <- is_julia_env_installed(force = TRUE)
+    status <- is_julia_env_setup(force = TRUE)
 
     if (isTRUE(status)) {
       cli::cli_inform(c("v" = "Julia environment installed."))
@@ -101,9 +102,6 @@ install_julia_env <- function(remove = FALSE) {
       cli::cli_inform(c("x" = "Failed to install Julia environment."))
     }
   }
-
-  # Invalidate cached env check
-  .sdbuildR_env[["jl"]][["env_checked"]] <- FALSE
 
   # Stop Julia
   JuliaConnectoR::stopJulia()
@@ -127,7 +125,7 @@ install_julia_env <- function(remove = FALSE) {
 #' @seealso [install_julia_env()]
 #' @concept julia
 #'
-#' @examplesIf Sys.getenv("NOT_CRAN") == "true" && is_julia_ready()
+#' @examplesIf Sys.getenv("NOT_CRAN") == "true" && julia_env_ready()
 #' # Start a Julia session and activate the Julia environment for sdbuildR
 #' use_julia()
 #'
@@ -168,12 +166,21 @@ use_julia <- function(
     }
   }
 
+
+  # First check if Julia environment was already initialized. If so, we know:
+  # - Julia is working
+  # - Julia version is ok
+  # - Julia environment is set up and up to date
   status <- is_julia_init()
   if (!force && is.null(nthreads) && status) {
     return(invisible())
   }
 
-  if (!status) {
+  # If not, check whether install_julia_env() has been run
+  env_checked <- is_julia_env_setup(error = TRUE)
+
+  # If Julia environment is set up, it just has not been initialized
+  if (!status && env_checked) {
     run_init_julia_env()
     status <- is_julia_init()
   }
@@ -196,41 +203,21 @@ use_julia <- function(
     cli::cli_abort(c("x" = "Julia environment setup failed."))
   }
 
-  invisible()
+  invisible(TRUE)
 }
 
-
-#' Check if Julia is ready to be used with sdbuildR
+#' Check whether the Julia environment for sdbuildR has been verified
 #'
-#' Check if Julia can be started and if the Julia environment for sdbuildR has been instantiated.
+#' Returns `TRUE` if `use_julia()` has
+#' successfully verified the Julia installation in the current R session,
+#' `FALSE` otherwise.  Safe to call even when Julia is not installed.
 #'
-#' @return Logical value. `TRUE` if Julia is ready to be used with sdbuildR, `FALSE` otherwise.
+#' @return logical
 #' @export
-#' @seealso [install_julia_env()], [use_julia()]
-#' @examplesIf Sys.getenv("NOT_CRAN") == "true"
-#' # Check if Julia is ready; this automatically opens a Julia session if possible
-#' is_julia_ready()
-#'
-#' # Close Julia session
-#' use_julia(stop = TRUE)
-#'
-is_julia_ready <- function() {
-  if (Sys.getenv("NOT_CRAN") != "true") {
-    return(FALSE)
-  }
-
-  tryCatch(
-    {
-      suppressWarnings({
-        is_julia_ok() && is_julia_env_installed()
-      })
-    },
-    error = function(e) {
-      return(FALSE)
-    }
-  )
+#' @concept julia
+julia_env_ready <- function() {
+  isTRUE(.sdbuildR_env[["jl"]][["env_checked"]])
 }
-
 
 #' Check Julia environment was initialized
 #'
@@ -246,7 +233,7 @@ is_julia_init <- function() {
         string(isdefined(Main, :%s)),
         string(isdefined(Main, :%s))
       ]
-    ", P[["jl_pkg_name"]], P[["init_sdbuildR"]]) )
+    ", P[["jl_pkg_name"]], P[["init_sdbuildR"]]))
       isTRUE(vals[1] == "true") && isTRUE(vals[2] == "true")
     },
     error = function(e) {
@@ -255,16 +242,22 @@ is_julia_init <- function() {
   )
 }
 
-
-is_julia_ok <- function() {
+#' Check if Julia can be started and is the correct version
+#'
+#' @noRd
+#'
+is_julia_working <- function() {
   x <- JuliaConnectoR::juliaEval("0")
-
-  # Julia version needs to be correct
-  is_julia_version_ok()
 
   invisible(TRUE)
 }
 
+
+#' Check Julia version is sufficient for sdbuildR
+#'
+#' Checks if the version of Julia that can be started from R meets the minimum required version for sdbuildR. This should only be run if a Julia session was already initialized with JuliaConnectoR.
+#'
+#' @noRd
 is_julia_version_ok <- function() {
   v <- JuliaConnectoR::juliaEval("string(VERSION)")
 
@@ -284,24 +277,37 @@ is_julia_version_ok <- function() {
 }
 
 
-is_julia_env_installed <- function(force = FALSE, error = TRUE) {
+#' Check if Julia environment for sdbuildR is set up and up to date
+#'
+#' Checks if the Julia environment for sdbuildR has been instantiated by verifying that the required package is installed and up to date. This should only be run if a Julia session was already initialized with JuliaConnectoR.
+#' @param force If `TRUE`, force the check to run again even if it was already run in this session, which can be useful after installing or removing the Julia environment without restarting R. Defaults to `FALSE`.
+#' @param error If `TRUE`, throw an error if the environment is not set up or not up to date. If `FALSE`, return `FALSE` invisibly instead of throwing an error. Defaults to `TRUE`.
+#'
+#' @returns Logical value. `TRUE` if the Julia environment for sdbuildR is set up and up to date, `FALSE` otherwise (if `error = FALSE`).
+#' @noRd
+is_julia_env_setup <- function(force = FALSE, error = TRUE) {
   # Return cached result if available (within same session)
   if (!force && isTRUE(.sdbuildR_env[["jl"]][["env_checked"]])) {
     return(invisible(TRUE))
   }
 
+  # Julia version needs to be correct
+  is_julia_version_ok()
+
   # Manifest.toml should exist in sdbuildR package to indicate Julia environment was instantiated
   # Check sdbuildR environment files
-  env_path <- system.file(package = "sdbuildR")
-  project_file <- file.path(env_path, "Project.toml")
-  manifest_file <- file.path(env_path, "Manifest.toml")
+  project_file <- system.file("Project.toml", package = "sdbuildR")
+  manifest_file <- file.path(dirname(project_file), "Manifest.toml")
 
-  env_exists <- file.exists(project_file)
+  env_exists <- nzchar(project_file)
   env_instantiated <- file.exists(manifest_file)
 
   if (!env_exists) {
     if (error) {
-      cli::cli_abort(c("x" = "sdbuildR {.file Project.toml} not found. Try reinstalling {.pkg sdbuildR}."))
+      cli::cli_abort(c(
+        "x" = "sdbuildR {.file Project.toml} not found.",
+        ">" = "Try reinstalling {.pkg sdbuildR}."
+      ))
     } else {
       return(invisible(FALSE))
     }
@@ -309,7 +315,10 @@ is_julia_env_installed <- function(force = FALSE, error = TRUE) {
 
   if (!env_instantiated) {
     if (error) {
-      cli::cli_abort(c("x" = "Julia environment not instantiated. Run {.fn install_julia_env}."))
+      cli::cli_abort(c(
+        "x" = "Julia environment for sdbuildR has not been set up.",
+        ">" = "Run {.fn install_julia_env}."
+      ))
     } else {
       return(invisible(FALSE))
     }
@@ -520,16 +529,10 @@ jl_path <- function(path) {
 #' @returns NULL
 #' @noRd
 run_init_julia_env <- function() {
-  cli::cli_inform(c("i" = "Setting up Julia environment for {.pkg sdbuildR}..."))
-
-  # Julia should be able to be started; JuliaConnectoR will handle errors if this is not the case
-  is_julia_ok()
-
-  # Julia environment needs to be have been instantiated with required packages
-  is_julia_env_installed()
+  cli::cli_inform(c("i" = "Activating Julia environment for {.pkg sdbuildR}..."))
 
   # Find set-up location for sdbuildR in Julia
-  env_path <- system.file(package = "sdbuildR")
+  env_path <- dirname(system.file("Project.toml", package = "sdbuildR"))
 
   # Activate the Julia environment for sdbuildR
   julia_cmd <- sprintf("using Pkg; Pkg.activate(\"%s\")", jl_path(env_path))
@@ -554,12 +557,12 @@ run_init_julia_env <- function() {
 #' @noRd
 #'
 create_julia_setup <- function() {
-
   pkg_name <- "sdbuildR"
   use_github_release <- TRUE
   jl_pkg_name <- P[["jl_pkg_name"]]
-  
-  script_setup <- sprintf('# setup.jl - One-time setup script for %s Julia environment
+
+  script_setup <- sprintf(
+    '# setup.jl - One-time setup script for %s Julia environment
 
 println("Setting up Julia environment for %s...\\n\\n")
 
@@ -589,13 +592,13 @@ Pkg.precompile()
 
 println("\\nSetup complete!")
 ', pkg_name, pkg_name, pkg_name,
-jl_pkg_name, jl_pkg_name, jl_pkg_name,
-ifelse(use_github_release, paste0(", rev = \"v", P[["jl_pkg_version_github_release"]], "\""), "")
-)
+    jl_pkg_name, jl_pkg_name, jl_pkg_name,
+    ifelse(use_github_release, paste0(", rev = \"v", P[["jl_pkg_version_github_release"]], "\""), "")
+  )
 
   # Write scripts
-  env_path <- system.file(package = "sdbuildR")
-  filepath <- file.path(env_path, "setup.jl")
+  # filepath <- file.path(system.file(package = "sdbuildR"), "inst", "setup.jl")
+  filepath <- system.file("setup.jl", package = "sdbuildR")
   write_script(script_setup, filepath)
 
   invisible()
@@ -608,7 +611,6 @@ ifelse(use_github_release, paste0(", rev = \"v", P[["jl_pkg_version_github_relea
 #' @noRd
 #'
 create_julia_project_toml_init <- function() {
-
   # Download Project.toml from StockFlowRSupport.jl
   use_github_release <- TRUE
   ref <- ifelse(use_github_release, paste0("v", P[["jl_pkg_version_github_release"]]), "main")
@@ -636,7 +638,7 @@ create_julia_project_toml_init <- function() {
   }
 
   # Replace package name with sdbuildR
-  pkg_name = "sdbuildR"
+  pkg_name <- "sdbuildR"
   lines <- gsub(
     sprintf('^name\\s*=\\s*"%s"', P[["jl_pkg_name"]]),
     sprintf('name = "%s"', pkg_name),
@@ -644,10 +646,10 @@ create_julia_project_toml_init <- function() {
   )
 
   script_project_toml <- paste(lines, collapse = "\n")
-  
+
   # Write script
-  env_path <- system.file(package = "sdbuildR")
-  filepath <- file.path(env_path, "Project.toml")
+  # filepath <- file.path(system.file(package = "sdbuildR"), "inst", "Project.toml")
+  filepath <- system.file("Project.toml", package = "sdbuildR")
   write_script(script_project_toml, filepath)
 
   # init.jl
@@ -665,7 +667,8 @@ create_julia_project_toml_init <- function() {
     P[["init_sdbuildR"]], " = true\n"
   )
 
-  filepath <- file.path(env_path, "init.jl")
+  # filepath <- file.path(env_path, "init.jl")
+  filepath <- system.file("init.jl", package = "sdbuildR")
   write_script(script_init, filepath)
 
   invisible()

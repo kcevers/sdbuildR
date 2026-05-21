@@ -572,6 +572,7 @@ rem <- function(a, b) {
 
 
 #' @export
+#' @concept custom
 #' @rdname rem_mod
 mod <- function(a, b) {
   a %% b
@@ -579,6 +580,7 @@ mod <- function(a, b) {
 
 
 #' @export
+#' @concept custom
 #' @rdname rem_mod
 `%REM%` <- function(a, b) {
   rem(a, b)
@@ -664,6 +666,7 @@ logistic <- function(x, slope = 1, midpoint = 0, upper = 1) {
 
 
 #' @rdname logistic
+#' @concept custom
 #' @export
 sigmoid <- logistic
 
@@ -674,10 +677,10 @@ sigmoid <- logistic
 #'
 #' @param x Value at which to evaluate the function
 #' @param slope Slope of Hill function at the midpoint. Defaults to 1.
-#' @param midpoint Midpoint of Hill function where the output is `upper/2`. Defaults to 0.
+#' @param midpoint Midpoint of Hill function where the output is `upper/2`. Defaults to 0.5.
 #' @param upper Upper asymptote (maximal value) of the Hill function. Defaults to 1.
 #'
-#' @returns Numeric value given by \deqn{f(x) = \frac{upper}{1 + e^{-slope \cdot (x - midpoint)}}}
+#' @returns Numeric value given by \deqn{f(x) = \frac{upper \cdot x^{slope}}{midpoint^{slope} + x^{slope}}}
 #'
 #' @details
 #' The Hill function is a smooth S-shaped curve (when slope > 1) bounded between 0 and `upper`.
@@ -689,11 +692,11 @@ sigmoid <- logistic
 #'
 #' @examples
 #' hill(0)
-#' 
+#'
 #' # Adjust parameters
 #' hill(0, slope = 5, midpoint = 0.5, upper = 10)
-#' 
-hill <- function(x, slope = 1, midpoint = 0, upper = 1) {
+#'
+hill <- function(x, slope = 1, midpoint = 0.5, upper = 1) {
   if (!is.numeric(slope)) {
     cli::cli_abort(c(
       "Invalid {.arg slope} parameter.",
@@ -714,7 +717,7 @@ hill <- function(x, slope = 1, midpoint = 0, upper = 1) {
       "x" = "The {.arg upper} parameter must be numeric."
     ))
   }
-  
+
   upper * x^slope / (midpoint^slope + x^slope)
 }
 

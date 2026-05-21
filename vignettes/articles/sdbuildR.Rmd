@@ -76,7 +76,7 @@ sim <- simulate(sfm)
 plot(sim)
 ```
 
-An overview of the model components and simulation specifications can be accessed with `summary()`:
+Run `summary()` to check the model for common formulation problems:
 
 ```{r summary}
 summary(sfm)

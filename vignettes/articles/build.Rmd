@@ -124,10 +124,10 @@ sim <- simulate(sfm)
 plot(sim)
 ```
 
-The stocks are static! Stocks can only change through flows, and we have not yet added any flows to the model. We could also have noticed this by running `diagnose()`:
+The stocks are static! Stocks can only change through flows, and we have not yet added any flows to the model. We could also have noticed this by running `summary()`:
 
 ```{r}
-diagnose(sfm)
+summary(sfm)
 ```
 
 We create four flows: the births and deaths of both the predators and prey. The rate of the flow is indicated in `eqn`. In addition, flows have to be connected to at least one stock: a stock the flow is coming from (`from`) and/or a stock the flow is flowing to (`to`). Inflows add to the stock, and outflows subtract from the stock.
@@ -319,8 +319,8 @@ We've created oscillations in the system! Maya is now trapped in a cycle of over
 
 ```{r echo=FALSE}
 functions_table <- data.frame(
-  Function = c("`sdbuildR()`", "`insightmaker_to_sfm()`", "`build()`", "`simulate()`", "`plot()`", "`summary()`", "`as.data.frame()`", "`diagnose()`", "`get_build_code()`", "`sim_specs()`", "`macro()`", "`meta()`"),
-  Purpose = c("Create empty model or load template", "Import Insight Maker model", "Create, modify, or remove variable from the model", "Simulate model", "Plot model diagram or simulation", "Print summary of building blocks and variables", "Get model properties in a dataframe", "Find problems in your model formulation", "Get code to build model from scratch", "Modify simulation specifications", "Create, modify, or remove global variables", "Modify model meta")
+  Function = c("`sdbuildR()`", "`insightmaker_to_sfm()`", "`build()`", "`simulate()`", "`plot()`", "`summary()`", "`as.data.frame()`", "`get_build_code()`", "`sim_specs()`", "`macro()`", "`meta()`"),
+  Purpose = c("Create empty model or load template", "Import Insight Maker model", "Create, modify, or remove variable from the model", "Simulate model", "Plot model diagram or simulation", "Run model diagnostics", "Get model properties in a dataframe", "Get code to build model from scratch", "Modify simulation specifications", "Create, modify, or remove global variables", "Modify model meta")
 )
 
 kableExtra::kbl(functions_table,

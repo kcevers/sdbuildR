@@ -1,11 +1,11 @@
 #' Simulate stock-and-flow model
 #'
-#' Simulate a stock-and-flow model with simulation specifications defined by [sim_specs()]. If `sim_specs(language = "julia")`, the Julia environment will first be set up with [use_julia()]. If any problems are detected by [diagnose()], the model cannot be simulated.
+#' Simulate a stock-and-flow model with simulation specifications defined by [sim_specs()]. If `sim_specs(language = "julia")`, the Julia environment will first be set up with [use_julia()]. If any problems are detected by [summary()], the model cannot be simulated.
 #'
-#' @inheritParams insightmaker_to_sfm
+#' @inheritParams import_insightmaker
 #' @inheritParams update.sdbuildR
 #' @inheritParams sim_specs
-#' @param nsim Number of simulations to run (currently unused; see [ensemble()] for running multiple simulations).
+#' @param nsim Number of simulations to run (unused; see [ensemble()] for running multiple simulations).
 #' @param verbose If `TRUE`, print duration of simulation. Defaults to `FALSE`.
 #' @param ... Optional arguments passed to [sim_specs()]; these can be used to override the simulation specifications set in the model object.
 #'
@@ -28,7 +28,7 @@
 #' @importFrom stats simulate
 #' @method simulate sdbuildR
 #' @concept simulate
-#' @seealso [update()], [sdbuildR()], [diagnose()], [sim_specs()], [use_julia()]
+#' @seealso [update()], [sdbuildR()], [summary()], [sim_specs()], [use_julia()]
 #'
 #' @examples
 #' sfm <- sdbuildR("SIR")
@@ -48,17 +48,17 @@ simulate.sdbuildR <- function(
   check_sdbuildR(object)
 
   # First assess whether the model is valid
-  if (is.null(object[["assemble"]][["diagnose"]])) {
-    object[["assemble"]][["diagnose"]] <- diagnose(object)
+  if (is.null(object[["assemble"]][["summary"]])) {
+    object[["assemble"]][["summary"]] <- summary(object)
   }
-  debug_result <- object[["assemble"]][["diagnose"]]
+  debug_result <- object[["assemble"]][["summary"]]
   errors <- Filter(function(c) c$problem == "error", debug_result)
   if (length(errors) > 0) {
     n <- length(errors)
     labels <- vapply(names(errors), .problem_label, character(1))
     names(labels) <- rep("x", n)
     cli::cli_abort(c(
-      "{cli::qty(n)}Model has {n} problem{?s}. Run {.fn diagnose} for details.",
+      "{cli::qty(n)}Model has {n} problem{?s}. Run {.fn summary} for details.",
       labels
     ))
   }
@@ -89,7 +89,6 @@ simulate.sdbuildR <- function(
       verbose = verbose
     ))
   } else if (tolower(object[["sim_specs"]][["language"]]) == "r") {
-
     return(simulate_r(object,
       only_stocks = only_stocks,
       vars = vars,
@@ -182,6 +181,59 @@ check_simulate_sdbuildR <- function(x) {
       ))
     }
   }
+
+  invisible(x)
+}
+
+
+#' Print simulation of a stock-and-flow model
+#'
+#' Prints the first rows of the simulation results in wide format. For a
+#' statistical summary per variable use [summary()][summary.simulate_sdbuildR()].
+#'
+#' @param x A simulation result of class [`simulate_sdbuildR`][simulate.sdbuildR()]
+#' @param ... Additional arguments (unused)
+#'
+#' @returns Invisibly returns `x`
+#' @export
+#' @concept build
+#' @method print simulate_sdbuildR
+#' @seealso [simulate.sdbuildR()], [summary.simulate_sdbuildR()],
+#'   [plot.simulate_sdbuildR()], [as.data.frame.simulate_sdbuildR()]
+#'
+#' @examples
+#' sfm <- sdbuildR("SIR")
+#' sim <- simulate(sfm)
+#' print(sim)
+#'
+print.simulate_sdbuildR <- function(x, ...) {
+  check_simulate_sdbuildR(x)
+
+  model_name <- x[["object"]][["meta"]][["name"]]
+  default_name <- formals(meta)[["name"]]
+  has_name <- !is.null(model_name) && nzchar(model_name) && model_name != default_name
+
+  if (has_name) {
+    cli::cli_h1("Stock-and-Flow Simulation: {model_name}")
+  } else {
+    cli::cli_h1("Stock-and-Flow Simulation")
+  }
+
+  if (!x[["success"]]) {
+    cli::cli_inform(c("x" = "Simulation failed"))
+    cli::cli_inform(c("i" = "Inspect the error message with: {.code x$error_message}"))
+    return(invisible(x))
+  }
+
+  df <- x[["df"]]
+  if (!is.null(df) && nrow(df) > 0) {
+    cli::cli_h2("Data (wide format, first rows)")
+    print(head(as.data.frame(x, direction = "wide"), 5))
+  }
+
+  cli::cli_inform(c(
+    "i" = "Access data with {.fn as.data.frame}, {.fn head}, or {.fn tail} \u2022 Visualise with {.fn plot}"
+  ))
 
   invisible(x)
 }
@@ -300,8 +352,8 @@ model_properties <- function(object) {
 #' compare_models(sfm1, sfm2)
 #'
 compare_models <- function(sfm1, sfm2) {
-  label1 <- deparse(substitute(sfm1))
-  label2 <- deparse(substitute(sfm2))
+  label1 <- rlang::expr_deparse(rlang::enexpr(sfm1))
+  label2 <- rlang::expr_deparse(rlang::enexpr(sfm2))
 
   check_sdbuildR(sfm1)
   check_sdbuildR(sfm2)
@@ -410,7 +462,7 @@ print.compare_sdbuildR <- function(x, ...) {
   l1 <- x[["labels"]][1]
   l2 <- x[["labels"]][2]
 
-  cli::cli_h1("Model Comparison: {l1} vs {l2}")
+  cli::cli_h1("Stock-and-Flow Comparison: {l1} vs {l2}")
 
   # ── Structural Differences ──────────────────────────────────────
   cli::cli_h2("Structural Differences")
@@ -697,6 +749,7 @@ as.data.frame.simulate_sdbuildR <- function(x,
 #'
 #' @returns A data.frame with the first rows of the simulation results.
 #' @export
+#' @concept simulate
 #' @importFrom utils head
 #' @examples
 #' sfm <- sdbuildR("SIR")
@@ -719,6 +772,7 @@ head.simulate_sdbuildR <- function(x, n = 6L, ...) {
 #' @param ... Other arguments passed to [as.data.frame.simulate_sdbuildR()].
 #' @return A data.frame with the last rows of the simulation results.
 #' @export
+#' @concept simulate
 #' @importFrom utils tail
 #' @examples
 #' sfm <- sdbuildR("SIR")
@@ -729,6 +783,55 @@ tail.simulate_sdbuildR <- function(x, n = 6L, ...) {
 
   df <- as.data.frame(x, ...)
   tail(df, n)
+}
+
+
+#' Summarise simulation results
+#'
+#' Returns a data frame with per-variable summary statistics (min, mean, max,
+#' and final value) over the simulated time range.
+#'
+#' @param object A simulation result of class [`simulate_sdbuildR`][simulate.sdbuildR()]
+#' @param ... Additional arguments (unused)
+#'
+#' @returns A `data.frame` with columns `variable`, `min`, `mean`, `max`, `final`.
+#' @export
+#' @concept simulate
+#' @method summary simulate_sdbuildR
+#' @seealso [print.simulate_sdbuildR()], [simulate.sdbuildR()]
+#'
+#' @examples
+#' sfm <- sdbuildR("SIR")
+#' sim <- simulate(sfm)
+#' summary(sim)
+#'
+summary.simulate_sdbuildR <- function(object, ...) {
+  check_simulate_sdbuildR(object)
+
+  if (!object[["success"]]) {
+    cli::cli_abort(c(
+      "Cannot summarise a failed simulation.",
+      "i" = "Inspect the error message with: {.code x$error_message}"
+    ))
+  }
+
+  df <- object[["df"]]
+  vars <- unique(df[["variable"]])
+
+  result <- do.call(rbind, lapply(vars, function(v) {
+    vals <- df[df[["variable"]] == v, "value"]
+    data.frame(
+      variable = v,
+      min = min(vals),
+      mean = mean(vals),
+      max = max(vals),
+      final = vals[length(vals)],
+      stringsAsFactors = FALSE
+    )
+  }))
+
+  rownames(result) <- NULL
+  result
 }
 
 

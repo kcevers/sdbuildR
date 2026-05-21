@@ -35,7 +35,7 @@ on \href{https://docs.oasis-open.org/sdbuildR/sdbuildR/v1.0/os/sdbuildR-v1.0-os.
 \item{model}{Model variables, grouped under the variable types stock, flow, aux (auxiliaries), constant, gf (graphical functions), and func (custom functions). Each variable contains arguments as listed in \code{\link[=update]{update()}}.}
 }
 
-Use \code{\link[=summary]{summary()}} to summarize, \code{\link[=as.data.frame]{as.data.frame()}} to convert to a data.frame, \code{\link[=plot]{plot()}} to visualize.
+Use \code{\link[=summary]{summary()}} to run model diagnostics, \code{\link[=as.data.frame]{as.data.frame()}} to convert to a data.frame, \code{\link[=plot]{plot()}} to visualize.
 }
 \description{
 Initialize a stock-and-flow model of class \code{\link{sdbuildR}}. You can

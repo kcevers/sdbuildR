@@ -16,8 +16,8 @@ Invisibly returns \code{x}
 }
 \description{
 Prints a descriptive overview of the model structure, including stock-flow
-topology, variable names, and simulation settings. For computed properties
-such as variable dependencies and diagnostics, use \code{\link[=summary.sdbuildR]{summary()}}.
+topology, variable names, and simulation settings. For model diagnostics,
+use \code{\link[=summary.sdbuildR]{summary()}}.
 }
 \examples{
 sfm <- sdbuildR("SIR")
@@ -25,6 +25,6 @@ print(sfm)
 
 }
 \seealso{
-\code{\link[=summary.sdbuildR]{summary.sdbuildR()}}, \code{\link[=diagnose]{diagnose()}}
+\code{\link[=summary.sdbuildR]{summary.sdbuildR()}}, \code{\link[=dependencies]{dependencies()}}
 }
 \concept{build}

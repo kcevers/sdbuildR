@@ -870,6 +870,7 @@ auxiliary <- function(object, name,
 }
 
 #' @rdname auxiliary
+#' @concept build
 #' @export
 aux <- auxiliary
 
@@ -1153,7 +1154,7 @@ lookup <- function(object, name,
 #' @param ... Additional arguments (currently unused).
 #'
 #' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR]
-#' @seealso [sdbuildR()] to initialize a model, [`simulate()`][simulate.sdbuildR()] to simulate a model, and [diagnose()] to check for errors in a model. Variable-specific helper functions [stock()], [flow()], [constant()], [aux()], and [lookup()] are also available as wrappers around update() that set the "type" argument for convenience. Further helper functions for modifying models are [change_name()] to rename a variable, [change_type()] to change a variable's type, and [discard()] to remove a variable.
+#' @seealso [sdbuildR()] to initialize a model, [`simulate()`][simulate.sdbuildR()] to simulate a model, and [summary()] to run model diagnostics. Variable-specific helper functions [stock()], [flow()], [constant()], [aux()], and [lookup()] are also available as wrappers around update() that set the "type" argument for convenience. Further helper functions for modifying models are [change_name()] to rename a variable, [change_type()] to change a variable's type, and [discard()] to remove a variable.
 #' @concept build
 #' @importFrom rlang enexpr is_symbol is_call as_name call_name call_args expr_deparse
 #' @importFrom stats update
@@ -1230,8 +1231,8 @@ lookup <- function(object, name,
 #' )
 #' sfm <- update(sdbuildR(), df = df)
 #'
-#' # Check for errors in the model
-#' diagnose(sfm)
+#' # Run model diagnostics
+#' summary(sfm)
 #'
 #' # --- Programmatic usage ---
 #'
@@ -1794,6 +1795,7 @@ check_var_existence <- function(name, var_names) {
 #'
 #' @seealso [update()], [change_name()]
 #' @export
+#' @concept build
 #' @examples
 #' sfm <- sdbuildR() |>
 #'   update(x, stock)

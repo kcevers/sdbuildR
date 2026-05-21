@@ -254,3 +254,36 @@ test_that("order_equations() warns for circular dependencies in aux", {
   expect_false(result[["static"]][["issue"]])
   expect_true(result[["dynamic"]][["issue"]])
 })
+
+
+# ==============================================================================
+# dependencies() NSE support
+# ==============================================================================
+
+test_that("dependencies() accepts bare symbol for name", {
+  sfm <- sdbuildR("SIR")
+  deps <- dependencies(sfm, name = Susceptible)
+  expect_true("Susceptible" %in% names(deps))
+  expect_equal(length(deps), 1L)
+})
+
+test_that("dependencies() accepts c() of bare symbols for name", {
+  sfm <- sdbuildR("SIR")
+  deps <- dependencies(sfm, name = c(Susceptible, Infected))
+  expect_equal(length(deps), 2L)
+  expect_true(all(c("Susceptible", "Infected") %in% names(deps)))
+})
+
+test_that("dependencies() accepts bare symbol for type", {
+  sfm <- sdbuildR("SIR")
+  deps <- dependencies(sfm, type = stock)
+  stock_names <- as.data.frame(sfm, type = "stock")[["name"]]
+  expect_true(all(names(deps) %in% stock_names))
+})
+
+test_that("dependencies() backward compat: strings still work for name", {
+  sfm <- sdbuildR("SIR")
+  deps <- dependencies(sfm, name = "Susceptible")
+  expect_equal(length(deps), 1L)
+  expect_true("Susceptible" %in% names(deps))
+})

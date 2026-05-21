@@ -86,7 +86,7 @@ sim <- simulate(sfm)
 plot(sim)
 
 # Change the simulation method to "rk4"
-sfm <- sim_specs(sfm, method = rk4)
+sfm <- sim_specs(sfm, method = "rk4")
 
 # Change the time units to "years", such that one time unit is one year
 sfm <- sim_specs(sfm, time_units = "years")

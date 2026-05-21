@@ -336,10 +336,10 @@ str_wrap_ <- function(str, width) {
 ensure_length <- function(arg, target, arg_name = NULL, target_name = NULL) {
   if (length(arg) != 1 && length(arg) != length(target)) {
     if (is.null(arg_name)) {
-      arg_name <- deparse(substitute(arg))
+      arg_name <- rlang::caller_arg(arg)
     }
     if (is.null(target_name)) {
-      target_name <- deparse(substitute(target))
+      target_name <- rlang::caller_arg(target)
     }
     arg_val <- paste0(arg, collapse = ", ")
     target_val <- paste0(target, collapse = ", ")
@@ -439,9 +439,11 @@ clean_type <- function(type) {
 
 
 .julia_func_names <- function() {
-  c("is_function_or_interp", "itp", "make_ramp", "make_step", "make_pulse", "make_seasonal", "round_IM", "logit", "expit", "logistic", "nonnegative", "rbool", "rdist", "indexof", "contains_IM", "round_", "\u2295", 
-  # "convert_u", 
-  "saveat_func", "clean_df", "clean_constants", "clean_init", "transform_intermediaries", "generate_param_combinations", "ensemble_to_df", "ensemble_to_df_threaded", "ensemble_summ", "ensemble_summ_threaded")
+  c(
+    "is_function_or_interp", "itp", "make_ramp", "make_step", "make_pulse", "make_seasonal", "round_IM", "logit", "expit", "logistic", "nonnegative", "rbool", "rdist", "indexof", "contains_IM", "round_", "\u2295",
+    # "convert_u",
+    "saveat_func", "clean_df", "clean_constants", "clean_init", "transform_intermediaries", "generate_param_combinations", "ensemble_to_df", "ensemble_to_df_threaded", "ensemble_summ", "ensemble_summ_threaded"
+  )
 }
 
 
@@ -458,7 +460,7 @@ clean_type <- function(type) {
 #' @examples
 #' sfm <- sdbuildR("predator_prey")
 #' # As the variable name "predator" is already taken, clean_name() will create
-#' # an unique name
+#' # a unique name
 #' clean_name("predator", as.data.frame(sfm)[["name"]])
 #'
 clean_name <- function(new, protected = NULL) {
@@ -491,9 +493,9 @@ clean_name <- function(new, protected = NULL) {
       "state_name", "time_name", "change_state_name", "times_name",
       "timestep_name", "saveat_name", "ensemble_iter",
       "ode_func_name", "callback_func_name", "callback_name", "intermediaries",
-      "rootfun_name", "eventfun_name", 
+      "rootfun_name", "eventfun_name",
       #  "sdbuildR_units",
-      # "MyCustomUnits", 
+      # "MyCustomUnits",
       "init_sdbuildR"
     )])),
     as.character(stats::na.omit(protected))

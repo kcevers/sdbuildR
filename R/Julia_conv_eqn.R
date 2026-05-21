@@ -574,6 +574,8 @@ get_syntax_julia <- function() {
       "Conj", "conj", "syntax1", "", "", TRUE,
       # Custom functions
       "logistic", "logistic", "syntax1", "", "", TRUE,
+      "sigmoid", "logistic", "syntax1", "", "", TRUE,
+      "hill", "hill", "syntax1", "", "", TRUE,
       "logit", "logit", "syntax1", "", "", TRUE,
       "expit", "expit", "syntax1", "", "", TRUE,
       # step() is already an existing function in Julia, so we use make_step()

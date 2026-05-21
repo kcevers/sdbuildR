@@ -34,8 +34,4 @@ json <- insightmaker_to_json(
 file.remove(destfile)
 \dontshow{\}) # examplesIf}
 }
-\seealso{
-Other insightmaker: 
-\code{\link{url_to_IM}()}
-}
-\concept{insightmaker}
+\concept{importExport}

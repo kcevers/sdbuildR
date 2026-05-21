@@ -12,7 +12,7 @@
   if (should_auto_setup) {
     tryCatch(
       {
-        status <- is_julia_ready()
+        status <- is_julia_env_setup()
 
         if (!status) {
           install_julia_env()

@@ -46,10 +46,10 @@ plot(sim)
 ```
 
 ```{r}
-diagnose(sfm)
+summary(sfm)
 ```
 
-`diagnose()` is a useful checkpoint before testing because it catches common
+`summary()` is a useful checkpoint before testing because it catches common
 model definition issues early.
 
 ## Add simple unit tests
@@ -57,7 +57,7 @@ model definition issues early.
 `unit_test()` adds one test at a time. A test expression should evaluate to
 `TRUE` when the model behaves as expected.
 
-Below we add three basic checks:
+Below we add three basic summarys:
 
 1. Susceptible population never becomes negative.
 2. Recovered population should not decrease over time.
@@ -93,7 +93,7 @@ Run all active tests with `verify()`.
 verify(sfm)
 ```
 
-If a test fails, check whether the equation is wrong, the test is too strict,
+If a test fails, summary whether the equation is wrong, the test is too strict,
 or your model assumptions need to be revised. 
 
 ## Test behaviour under a condition

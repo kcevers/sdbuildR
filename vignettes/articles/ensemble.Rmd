@@ -127,13 +127,13 @@ By default, R ensemble simulations run sequentially. To run simulations in paral
 
 ```{r, eval=FALSE}
 if (requireNamespace("future", quietly = TRUE) &&
-    requireNamespace("future.apply", quietly = TRUE)) {
+  requireNamespace("future.apply", quietly = TRUE)) {
   # Set up parallel execution with 4 workers
   future::plan(future::multisession, workers = 4)
-  
+
   # Run ensemble simulations (now in parallel)
   sims <- ensemble(sfm, n = 100)
-  
+
   # Restore sequential execution
   future::plan(future::sequential)
 }

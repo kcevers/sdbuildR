@@ -306,3 +306,37 @@ test_that("sdbuildR() with no template still returns empty model", {
   expect_s3_class(sfm, "sdbuildR")
   expect_equal(nrow(sfm[["variables"]]), 0L)
 })
+
+
+# ==============================================================================
+# as.data.frame.sdbuildR() with NSE
+# ==============================================================================
+
+test_that("as.data.frame() accepts bare symbol for name", {
+  sfm <- sdbuildR("SIR")
+  df <- as.data.frame(sfm, name = Susceptible)
+  expect_equal(nrow(df), 1L)
+  expect_equal(df[["name"]], "Susceptible")
+})
+
+test_that("as.data.frame() accepts c() of bare symbols for name", {
+  sfm <- sdbuildR("SIR")
+  df <- as.data.frame(sfm, name = c(Susceptible, Infected))
+  expect_equal(nrow(df), 2L)
+  expect_true(all(c("Susceptible", "Infected") %in% df[["name"]]))
+})
+
+test_that("as.data.frame() accepts bare symbol for type", {
+  sfm <- sdbuildR("SIR")
+  df <- as.data.frame(sfm, type = stock)
+  expect_true(all(df[["type"]] == "stock"))
+  expect_true(nrow(df) > 0L)
+})
+
+test_that("as.data.frame() backward compat: strings still work for name and type", {
+  sfm <- sdbuildR("SIR")
+  df_name <- as.data.frame(sfm, name = "Susceptible")
+  expect_equal(nrow(df_name), 1L)
+  df_type <- as.data.frame(sfm, type = "stock")
+  expect_true(all(df_type[["type"]] == "stock"))
+})

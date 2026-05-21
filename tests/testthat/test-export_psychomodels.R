@@ -1,7 +1,10 @@
-test_that("sfm_to_psychomodels() returns single JSON object", {
+test_that("export_model(format='psychomodels') returns single JSON object", {
   sfm <- sdbuildR("SIR")
 
-  out <- sfm_to_psychomodels(sfm, publication_doi = "10.0000/example")
+  out <- export_model(sfm,
+    format = "psychomodels",
+    publication_doi = "10.0000/example"
+  )
   expect_type(out, "character")
 
   obj <- jsonlite::fromJSON(out, simplifyVector = FALSE)
@@ -29,14 +32,15 @@ test_that("sfm_to_psychomodels() returns single JSON object", {
 })
 
 
-test_that("sfm_to_psychomodels() writes json file and appends extension", {
+test_that("export_model(format='psychomodels') writes json file and appends extension", {
   sfm <- sdbuildR("SIR")
   path <- tempfile(pattern = "psychomodel")
 
-  out_path <- sfm_to_psychomodels(
+  out_path <- export_model(
     sfm,
+    format          = "psychomodels",
     publication_doi = "10.0000/example",
-    destfile = path
+    file            = path
   )
 
   expected_path <- paste0(path, ".json")
@@ -49,21 +53,22 @@ test_that("sfm_to_psychomodels() writes json file and appends extension", {
 })
 
 
-test_that("sfm_to_psychomodels() publication_doi is optional", {
+test_that("export_model(format='psychomodels') publication_doi is optional", {
   sfm <- sdbuildR("SIR")
 
-  out <- sfm_to_psychomodels(sfm)
+  out <- export_model(sfm, format = "psychomodels")
   obj <- jsonlite::fromJSON(out, simplifyVector = FALSE)
   expect_equal(obj[["publication_doi"]], "")
 })
 
 
-test_that("sfm_to_psychomodels() supports include_latex = FALSE", {
+test_that("export_model(format='psychomodels') supports include_latex = FALSE", {
   sfm <- sdbuildR("SIR")
 
-  out <- sfm_to_psychomodels(
+  out <- export_model(
     sfm,
-    explanation = "Base explanation",
+    format        = "psychomodels",
+    explanation   = "Base explanation",
     include_latex = FALSE
   )
 

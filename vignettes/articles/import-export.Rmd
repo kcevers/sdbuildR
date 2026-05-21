@@ -1,0 +1,256 @@
+---
+title: "Importing and Exporting Models"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Importing and Exporting Models}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(sdbuildR)
+```
+
+sdbuildR can exchange models with several external tools. This vignette covers
+three workflows:
+
+1. **Importing** from [Insight Maker](https://insightmaker.com/)
+2. **Importing** from [deSolve](https://cran.r-project.org/package=deSolve)
+3. **Exporting** to deSolve or [Psychomodels](https://www.psychomodels.org/)
+
+---
+
+## Importing from Insight Maker
+
+[Insight Maker](https://insightmaker.com/) is a free, browser-based system
+dynamics tool with a large library of public models. `import_insightmaker()`
+converts any public stock-and-flow model into an `sdbuildR` object.
+
+### From a URL
+
+Pass the URL of any public Insight Maker model:
+
+```{r eval=FALSE}
+sfm <- import_insightmaker(
+  URL = "https://insightmaker.com/insight/43tz1nvUgbIiIOGSGtzIzj/Romeo-Juliet"
+)
+```
+
+### From a downloaded file
+
+Models can be downloaded as `.InsightMaker` files (go to
+**Share → Export → Download Insight Maker file**) or as ModelJSON (`.json`)
+files:
+
+```{r eval=FALSE}
+sfm <- import_insightmaker(file = "my_model.InsightMaker")
+sfm <- import_insightmaker(file = "my_model.json")
+```
+
+After importing, use the model as usual:
+
+```{r eval=FALSE}
+summary(sfm)
+sim <- simulate(sfm)
+plot(sim)
+```
+
+---
+
+## Importing from deSolve
+
+[deSolve](https://cran.r-project.org/package=deSolve) is the standard R
+package for solving ODEs. If you have an existing deSolve model you can import
+it into sdbuildR to access features like ensemble simulations, stock-and-flow
+diagrams, and export to Psychomodels.
+
+### Supported pattern
+
+`import_desolve()` parses the canonical deSolve model convention:
+
+```r
+model <- function(t, state, parameters) {
+  with(as.list(c(state, parameters)), {
+    # intermediate calculations become auxiliary variables
+    aux_var <- <expression>
+    # d<VarName> assignments become net flows for stock VarName
+    dVarName <- <expression>
+    list(c(dVarName, ...))
+  })
+}
+```
+
+**Requirements:**
+
+- The function must have exactly the arguments `(t, state, parameters)`.
+- Variables must be accessed by name inside a `with(as.list(c(state, parameters)), {...})` block.
+- Derivatives must be written as `d<VarName> <- <expression>` where `VarName`
+  matches a name in `init`.
+- `times` must be evenly spaced — use `seq()`.
+
+### Example: SIR epidemic model
+
+```{r}
+sir_model <- function(t, state, parameters) {
+  with(as.list(c(state, parameters)), {
+    SI <- beta * S * I / N # intermediate calculation → aux variable
+    IR <- gamma * I
+    dS <- -SI
+    dI <- SI - IR
+    dR <- IR
+    list(c(dS, dI, dR))
+  })
+}
+
+sfm <- import_desolve(
+  model  = sir_model,
+  params = c(beta = 0.3, gamma = 0.1, N = 1000),
+  init   = c(S = 990, I = 10, R = 0),
+  times  = seq(0, 100, by = 0.1),
+  name   = "SIR epidemic"
+)
+
+summary(sfm)
+```
+
+```{r}
+sfm_plot <- sim_specs(sfm, save_at = 5)
+sim <- simulate(sfm_plot)
+plot(sim)
+```
+
+The imported model is a full `sdbuildR` object. You can modify it with
+`update()`, add unit tests with `unit_test()`, run ensembles, and export it to
+any supported format.
+
+---
+
+## Exporting models
+
+`export_model()` converts an `sdbuildR` object to another format. The `format`
+argument is case-insensitive, so `"deSolve"` and `"desolve"` are equivalent.
+
+```r
+export_model(sfm, format = "desolve")
+export_model(sfm, format = "psychomodels")
+```
+
+Use `file = "path"` to write directly to disk; omit `file` to return the
+result in memory.
+
+---
+
+### Export to deSolve
+
+`format = "desolve"` produces a ready-to-run deSolve model.
+
+```{r}
+sfm <- sdbuildR("SIR")
+ds <- export_model(sfm, format = "desolve")
+```
+
+When `file = NULL`, the return value is a named list:
+
+| Element  | Description                                  |
+|----------|----------------------------------------------|
+| `model`  | R function in deSolve `function(t, state, parameters)` format |
+| `params` | Named numeric vector of constants            |
+| `init`   | Named numeric vector of initial stock values |
+| `times`  | Numeric time sequence                        |
+| `method` | Integration method (character)               |
+
+```{r}
+str(ds[c("params", "init", "times", "method")])
+```
+
+You can run the exported model directly with deSolve:
+
+```{r}
+library(deSolve)
+out <- deSolve::ode(
+  y = ds$init, times = ds$times,
+  func = ds$model, parms = ds$params,
+  method = ds$method
+)
+head(out)
+```
+
+Or write the full script to a file for sharing (`.R` extension is appended
+automatically if not present):
+
+```{r eval=FALSE}
+export_model(sfm, format = "desolve", file = "sir_desolve.R")
+```
+
+#### Round-trip: deSolve → sdbuildR → deSolve
+
+Models can travel in both directions:
+
+```{r}
+sir_fn <- function(t, state, parameters) {
+  with(as.list(c(state, parameters)), {
+    dS <- -beta * S * I / N
+    dI <- beta * S * I / N - gamma * I
+    dR <- gamma * I
+    list(c(dS, dI, dR))
+  })
+}
+
+sfm2 <- import_desolve(
+  model  = sir_fn,
+  params = c(beta = 0.3, gamma = 0.1, N = 1000),
+  init   = c(S = 990, I = 10, R = 0),
+  times  = seq(0, 100, by = 0.1)
+)
+
+ds2 <- export_model(sfm2, format = "desolve")
+# ds2$model is ready for deSolve::ode()
+```
+
+---
+
+### Export to Psychomodels
+
+[Psychomodels](https://www.psychomodels.org/) is a repository of computational
+models in psychology. `format = "psychomodels"` generates the JSON record
+expected by the platform. When `file = NULL`, returns a JSON character string;
+when `file` is provided, writes a `.json` file (extension appended if absent).
+
+```{r eval=FALSE}
+json <- export_model(
+  sfm,
+  format          = "psychomodels",
+  publication_doi = "10.0000/my-paper",
+  include_latex   = TRUE # appends LaTeX equations to the explanation field
+)
+```
+
+Write directly to a `.json` file for upload:
+
+```{r eval=FALSE}
+export_model(sfm,
+  format = "psychomodels",
+  publication_doi = "10.0000/my-paper",
+  file = "sir_psychomodels.json"
+)
+```
+
+Key arguments (all optional):
+
+| Argument              | Description |
+|-----------------------|-------------|
+| `title`               | Model title (defaults to `sfm$meta$name`) |
+| `description`         | Short description |
+| `explanation`         | Long-form explanation |
+| `publication_doi`     | DOI of the linked publication |
+| `include_latex`       | Append LaTeX equations (`TRUE`/`FALSE`) |
+| `programming_language`| Programming language string |
+| `psychology_discipline`| Discipline id(s) as comma-separated string |
+| `file`                | File path; if `NULL`, returns JSON string |

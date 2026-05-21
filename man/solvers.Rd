@@ -21,3 +21,4 @@ A character scalar, a character vector of solver names, or a solver metadata lis
 \description{
 Check or translate between deSolve and Julia DifferentialEquations solvers
 }
+\concept{simulate}

@@ -17,3 +17,4 @@
 Run all active unit tests defined on a stock-and-flow model against an existing
 simulation result. Only tests whose \code{conditions} are empty or already match the current model parameter values are run; tests that require re-simulation are skipped with an informative message. Use \code{verify(object)} (the unsimulated model) to run all tests including those that require re-simulation.
 }
+\concept{unitTest}

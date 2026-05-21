@@ -21,7 +21,6 @@ test_that("sdbuildR() initializes empty data frames with columns", {
   expect_s3_class(sfm$variables, "data.frame")
   expect_equal(nrow(sfm$variables), 0)
   expect_true(all(c("name", "type", "eqn") %in% names(sfm$variables)))
-
 })
 
 

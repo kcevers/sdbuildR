@@ -1409,7 +1409,7 @@ conv_pulse <- function(func,
 
   if (w_pulse == "0") {
     w_pulse <- P[["timestep_name"]]
-  } 
+  }
   repeat_interval <- ifelse(is.na(arg[4]), repeat_interval, arg[4])
 
   # Function definition to put at beginning of script
@@ -1462,8 +1462,8 @@ conv_ramp <- function(func, arg, match_idx, name, # Default settings of Insight 
   func_def_str <- sprintf(
     "ramp(%s, start = %s, finish = %s, height = %s)",
     P[["times_name"]],
-    start_t_ramp, 
-    end_t_ramp, 
+    start_t_ramp,
+    end_t_ramp,
     h_ramp
   )
   # add_code <- list(aux = list(list(

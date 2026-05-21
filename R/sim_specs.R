@@ -26,7 +26,7 @@
 #'   Mutually exclusive with `save_at`. Defaults to `NULL` (save all).
 #' @param seed Seed number to ensure reproducibility across runs in case of
 #'   random elements. Must be an integer. Defaults to `NULL` (no seed).
-#' @param time_units Simulation time unit. Defaults to `"seconds"`. 
+#' @param time_units Simulation time unit. Defaults to `"seconds"`.
 #' @param language Coding language in which to simulate model. Either `"R"` or
 #'   `"Julia"`. Defaults to `"R"`.
 #' @param only_stocks If `TRUE`, only return stocks in output, discarding flows
@@ -52,7 +52,7 @@
 #' plot(sim)
 #'
 #' # Change the simulation method to "rk4"
-#' sfm <- sim_specs(sfm, method = rk4)
+#' sfm <- sim_specs(sfm, method = "rk4")
 #'
 #' # Change the time units to "years", such that one time unit is one year
 #' sfm <- sim_specs(sfm, time_units = "years")
@@ -89,9 +89,6 @@ sim_specs <- function(object,
   }
   check_sdbuildR(object)
 
-  # NSE: allow bare symbols, e.g. sim_specs(object, language = Julia, method = rk4)
-  if (!missing(method)) method <- .expr_to_char(rlang::enexpr(method))
-  if (!missing(language)) language <- .expr_to_char(rlang::enexpr(language))
 
   # --- Time argument validation ---
   user_time <- list()
@@ -160,7 +157,6 @@ sim_specs <- function(object,
 
     # Time units are merely the x-axis label; can be whatever the user specifies as long as it is a string
     time_units <- as.character(time_units)
-
   }
 
   # Validate method

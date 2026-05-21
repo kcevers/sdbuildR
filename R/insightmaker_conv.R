@@ -1,23 +1,23 @@
 #' Extract Insight Maker model from URL
 #'
-#' Create XML string from Insight Maker URL. For internal use; use `insightmaker_to_sfm()` to import an Insight Maker model.
+#' Create XML string from Insight Maker URL. For internal use; use `import_insightmaker()` to import an Insight Maker model.
 #'
 #' @param URL String with URL to an Insight Maker model
 #' @param file If specified, file path to save Insight Maker model to. If NULL, do not save model.
 #'
 #' @returns XML string with Insight Maker model
-#' @seealso [insightmaker_to_sfm()]
+#' @seealso [import_insightmaker()]
 #' @export
-#' @family insightmaker
+#' @concept importExport
 #' @examplesIf has_internet()
 #' URL <- "https://insightmaker.com/insight/43tz1nvUgbIiIOGSGtzIzj/Romeo-Juliet"
-#' xml <- url_to_IM(URL)
+#' xml <- url_to_insightmaker(URL)
 #'
 #' # Save model to file
 #' file <- tempfile(fileext = ".InsightMaker")
-#' xml <- url_to_IM(URL, file = file)
+#' xml <- url_to_insightmaker(URL, file = file)
 #' file.remove(file)
-url_to_IM <- function(URL, file = NULL) {
+url_to_insightmaker <- function(URL, file = NULL) {
   # Read URL
   url_data <- xml2::read_html(URL)
 
@@ -212,7 +212,7 @@ get_IM_model <- function(URL, file, fileext = c("InsightMaker", "json")) {
     ext <- "InsightMaker"
     tryCatch(
       {
-        read_file <- url_to_IM(URL, file)
+        read_file <- url_to_insightmaker(URL, file)
       },
       error = function(e) {
         cli::cli_abort(c(
@@ -343,7 +343,7 @@ validate_json_path <- function(path, add_fileext = TRUE) {
 #'
 #' @returns If destfile is not provided; object of class "json". If destfile provided, invisibly returns destfile (character string).
 #' @export
-#' @family insightmaker
+#' @concept importExport
 #'
 #' @examplesIf has_internet() && Sys.getenv("NOT_CRAN") == "true"
 #' # Convert a model from Insight Maker to json
@@ -428,7 +428,6 @@ insightmaker_to_json <- function(URL, file, destfile = NULL) {
         df <- data.frame(x = x[["xpts"]], y = x[["ypts"]])
         x[["behavior"]][["data"]] <- asplit(as.matrix(df), 1) # Split by row
       }
-
     }
 
     x[["type"]] <- toupper(x[["type"]])
@@ -1740,8 +1739,8 @@ strip_units_IM <- function(object) {
 
 
 #' Clean units contained in curly brackets
-#' 
-#' @noRd 
+#'
+#' @noRd
 strip_units_curly <- function(x, var_names) {
   old_x <- x
   default_return <- list(old_x = old_x, replacement = data.frame(match = character(0), replacement = character(0)), x = x)
@@ -1754,19 +1753,25 @@ strip_units_curly <- function(x, var_names) {
   # Get indices of curly brackets
   paired_idxs <- get_range_all_pairs(x, var_names, type = "curly", names_with_brackets = TRUE)
 
-  if (nrow(paired_idxs) == 0) return(default_return)
+  if (nrow(paired_idxs) == 0) {
+    return(default_return)
+  }
 
   # Keep only matches that contain at least one letter and no commas
   paired_idxs <- paired_idxs[
     stringr::str_detect(paired_idxs[["match"]], "[a-zA-Z]") &
-    !stringr::str_detect(paired_idxs[["match"]], ","), 
-    ]
+      !stringr::str_detect(paired_idxs[["match"]], ","),
+  ]
 
-  if (nrow(paired_idxs) == 0) return(default_return)
+  if (nrow(paired_idxs) == 0) {
+    return(default_return)
+  }
 
   # These matches contain units. Only retain the first numeric up until the first letter, and ignore the rest (units). This is a simplification, but Insight Maker's unit annotations can be complex and we want to preserve at least the numeric part. For example, {10 people/month} would be replaced with 10. Default to "" if no numeric literal is found, e.g., {people/month}.
 
-  if (nrow(paired_idxs) == 0) return(default_return)
+  if (nrow(paired_idxs) == 0) {
+    return(default_return)
+  }
 
   # Compute replacements
   paired_idxs[["without_braces"]] <- trimws(stringr::str_sub(x, paired_idxs[, "start"] + 1, paired_idxs[, "end"] - 1))
@@ -1780,23 +1785,22 @@ strip_units_curly <- function(x, var_names) {
 
   # Process in reverse order so replacements don't shift indices
   for (i in rev(seq.int(nrow(paired_idxs)))) {
-
     # Replace the entire curly bracket expression with the replacement
     stringr::str_sub(x, paired_idxs[i, "start"], paired_idxs[i, "end"]) <- paired_idxs[i, "replacement"]
-
   }
 
-  list(old_x = x, 
-      replacement = paired_idxs[, c("match", "replacement")],
-      x = x)
-  
+  list(
+    old_x = x,
+    replacement = paired_idxs[, c("match", "replacement")],
+    x = x
+  )
 }
 
 
 #' Check non-negative stocks and flows
 #'
 #' @inheritParams update.sdbuildR
-#' @inheritParams insightmaker_to_sfm
+#' @inheritParams import_insightmaker
 #'
 #' @returns Updated object
 #' @noRd

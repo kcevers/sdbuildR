@@ -5,9 +5,22 @@
 #'
 skip_if_julia_not_ready <- function() {
   testthat::skip_on_cran()
-  if (!is_julia_ready()) {
+
+  env_setup <- tryCatch(
+    {
+      suppressWarnings({
+        is_julia_env_setup()
+      })
+    },
+    error = function(e) {
+      return(FALSE)
+    }
+  )
+
+  if (!env_setup) {
     testthat::skip()
   }
+
   invisible()
 }
 
@@ -47,8 +60,8 @@ sir_model <- function() {
 #' Simulate the SIR model
 #'
 #' Creates and simulates the SIR model, allowing overrides such as only_stocks.
-sir_sim <- function(..., only_stocks = TRUE) {
-  simulate(sir_model(), only_stocks = only_stocks, ...)
+sir_sim <- function(..., only_stocks = TRUE, seed = 123) {
+  simulate(sir_model(), only_stocks = only_stocks, seed = seed, ...)
 }
 
 

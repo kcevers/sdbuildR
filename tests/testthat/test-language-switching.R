@@ -3,7 +3,7 @@ test_that("stocks change over time in Julia", {
   skip_if_julia_not_ready()
 
   # Import Romeo-Juliet model
-  sfm <- suppressWarnings(insightmaker_to_sfm(
+  sfm <- suppressWarnings(import_insightmaker(
     URL = "https://insightmaker.com/insight/43tz1nvUgbIiIOGSGtzIzj/Romeo-Juliet"
   ))
 
@@ -30,7 +30,7 @@ test_that("switching Julia -> R works", {
   skip_if_no_internet()
   skip_if_julia_not_ready()
 
-  sfm <- suppressWarnings(insightmaker_to_sfm(
+  sfm <- suppressWarnings(import_insightmaker(
     URL = "https://insightmaker.com/insight/43tz1nvUgbIiIOGSGtzIzj/Romeo-Juliet"
   ))
 

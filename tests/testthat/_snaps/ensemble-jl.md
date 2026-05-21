@@ -58,7 +58,7 @@
       print(sims)
     Message
       
-      -- Ensemble simulation: Demo model ---------------------------------------------
+      -- Stock-and-Flow Ensemble Simulation: Demo model ------------------------------
       i 3 total simulations • 1 condition • 3 per condition
       v Completed in 1.234 seconds
       i Individual simulations saved: no
@@ -70,7 +70,7 @@
       print(sims)
     Message
       
-      -- Ensemble simulation: Demo model ---------------------------------------------
+      -- Stock-and-Flow Ensemble Simulation: Demo model ------------------------------
       i 12 total simulations • 4 conditions • 3 per condition
       v Completed in 1.234 seconds
       i Parameters changed across conditions: Delay, Effective_Contact_Rate

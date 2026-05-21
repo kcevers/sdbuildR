@@ -175,16 +175,16 @@ test_that("sim_specs() rejects non-positive save_at", {
 # --- NSE support ---------------------------------------------------------------
 
 
-test_that("sim_specs() supports !! injection for NSE args", {
+test_that("sim_specs() method and language accept string variables directly", {
   sfm <- sdbuildR()
   lang <- "Julia"
   meth <- "rk4"
 
   expect_equal(
-    sim_specs(sfm, language = !!lang)[["sim_specs"]][["language"]], "Julia"
+    sim_specs(sfm, language = lang)[["sim_specs"]][["language"]], "Julia"
   )
   expect_equal(
-    sim_specs(sfm, method = !!meth)[["sim_specs"]][["method"]], "rk4"
+    sim_specs(sfm, method = meth)[["sim_specs"]][["method"]], "rk4"
   )
 })
 
