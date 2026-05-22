@@ -908,7 +908,7 @@ plot.simulate_sdbuildR <- function(x,
   dots <- list(...)
 
   # Extract optional parameters with defaults
-  time_unit <- x[["object"]][["sim_specs"]][["time_units"]]
+  time_unit <- x[["object"]][["sim_settings"]][["time_units"]]
   params <- extract_plot_params(dots, defaults = list(
     main = x[["object"]][["meta"]][["name"]],
     xlab = paste0("Time (", time_unit, ")"),
@@ -1120,7 +1120,7 @@ plot.ensemble_sdbuildR <- function(x,
   }
 
   # Extract optional parameters with defaults
-  time_unit <- x[["object"]][["sim_specs"]][["time_units"]]
+  time_unit <- x[["object"]][["sim_settings"]][["time_units"]]
   params <- extract_plot_params(dots, defaults = list(
     main = paste0("Ensemble of ", x[["object"]][["meta"]][["name"]]),
     xlab = paste0("Time (", time_unit, ")"),
@@ -1145,42 +1145,13 @@ plot.ensemble_sdbuildR <- function(x,
     ))
   }
 
-  # Check if j is a valid index
+  # Validate j index
   if ("j" %in% passed_arg) {
-    if (length(j) == 0) {
-      cli::cli_abort(c(
-        "Empty {.arg j} vector.",
-        ">" = "Provide at least one condition index."
-      ))
-    }
-
-    if (is.numeric(j)) {
-      if (any(j < 1 | j > x[["n_conditions"]])) {
-        if (x[["n_conditions"]] == 1) {
-          cli::cli_abort(c(
-            "Invalid {.arg j} index.",
-            "x" = "There is only one condition in the ensemble.",
-            ">" = "Set {.code j = 1}."
-          ))
-        } else {
-          cli::cli_abort(c(
-            "Invalid {.arg j} indices.",
-            "x" = "The {.arg j} argument must contain integers between {.val 1} and {.val {as.numeric(x[[\"n_conditions\"]])}}."
-          ))
-        }
-      }
-    } else {
-      cli::cli_abort(c(
-        "Invalid {.arg j} type.",
-        "x" = "The {.arg j} argument must be {.cls numeric}.",
-        "i" = "Received: {.cls {typeof(j)}}."
-      ))
-    }
+    .check_j_index(j, x[["n_conditions"]])
   }
 
   # Ensure there aren't more rows than j
   nrows <- min(nrows, length(j))
-  # ncols <- ceiling(length(j) / nrows)
 
   # Whether to create subplots or not
   create_subplots <- length(j) > 1
@@ -1190,38 +1161,9 @@ plot.ensemble_sdbuildR <- function(x,
     if (!is.null(x[["df"]])) {
       df <- x[["df"]]
 
-      # Check if i is a valid index
+      # Validate and apply i filter
       if ("i" %in% passed_arg) {
-        if (length(i) == 0) {
-          cli::cli_abort(c(
-            "Empty {.arg i} vector.",
-            "x" = "The {.arg i} argument must be a non-empty vector of indices.",
-            ">" = "Provide at least one simulation index."
-          ))
-        }
-
-        if (is.numeric(i)) {
-          if (any(i < 1 | i > x[["n"]])) {
-            if (x[["n"]] == 1) {
-              cli::cli_abort(c(
-                "Invalid {.arg i} index.",
-                "x" = "There is only one simulation in the ensemble.",
-                ">" = "Set {.code i = 1}."
-              ))
-            } else {
-              cli::cli_abort(c(
-                "Invalid {.arg i} indices.",
-                "x" = "The {.arg i} argument must contain integers between {.val 1} and {.val {as.numeric(x[[\"n\"]])}}."
-              ))
-            }
-          }
-        } else {
-          cli::cli_abort(c(
-            "Invalid {.arg i} type.",
-            "x" = "The {.arg i} argument must be {.cls numeric}.",
-            "i" = "Received: {.cls {typeof(i)}}."
-          ))
-        }
+        .check_i_index(i, x[["n"]])
       }
 
       # Filter condition
@@ -1703,4 +1645,244 @@ plot_ensemble_helper <- function(j_idx, j_name, j, j_labels,
   }
 
   pl
+}
+
+
+#' Plot verify results
+#'
+#' Visualize the simulation(s) used during [verify()]. Requires that `verify()`
+#' was called with `return_sims = TRUE`. Each condition `j` is displayed as a
+#' subplot; when `n > 1` (robustness testing), individual trajectories are
+#' overlaid within each subplot.
+#'
+#' @param x Output of [verify()] with `return_sims = TRUE`.
+#' @param nr Integer vector of test numbers to plot. Defaults to the first 9
+#'   available tests. Combines with `label` and `status` as AND intersection.
+#' @param i Integer vector. Trajectories to plot when `n > 1`. Defaults to the
+#'   first 10 runs.
+#' @param label Character vector of regex patterns for partial, case-insensitive
+#'   label matching. A test is included if its label matches any pattern.
+#' @param ignore_case Logical; whether `label` matching is case-insensitive.
+#'   Default `TRUE`.
+#' @param nrows Number of subplot rows. Defaults to `ceiling(sqrt(n_conditions))`.
+#' @param shareX Share the x-axis across subplots. Defaults to `TRUE`.
+#' @param shareY Share the y-axis across subplots. Defaults to `TRUE`.
+#' @param palette Colour palette (see `hcl.pals()`). Defaults to `"Dark 2"`.
+#' @param colors Vector of colours overriding `palette`. Defaults to `NULL`.
+#' @param font_family Font family. Defaults to `"Times New Roman"`.
+#' @param font_size Font size. Defaults to `16`.
+#' @param wrap_width Label wrap width. Defaults to `25`.
+#' @param showlegend Whether to show the legend. Defaults to `TRUE`.
+#' @param alpha Opacity for individual trajectories (when `n > 1`). Defaults
+#'   to `0.4`.
+#' @param ... Additional arguments passed to [plot.simulate_sdbuildR()].
+#' @inheritParams as.data.frame.verify_sdbuildR
+#'
+#' @returns A plotly object.
+#' @export
+#' @concept unitTest
+#' @method plot verify_sdbuildR
+#' @seealso [verify()], [plot.simulate_sdbuildR()], [plot.ensemble_sdbuildR()]
+#'
+#' @examples
+#' sfm <- sdbuildR("SIR") |>
+#'   unit_test(expr = all(Susceptible >= 0))
+#' res <- verify(sfm, return_sims = TRUE)
+#' plot(res)
+plot.verify_sdbuildR <- function(x,
+                                  nr = NULL,
+                                  i = NULL,
+                                  label = NULL,
+                                  ignore_case = TRUE,
+                                  status = c("pass", "fail", "error", "skip"),
+                                  nrows = NULL,
+                                  shareX = TRUE,
+                                  shareY = TRUE,
+                                  palette = "Dark 2",
+                                  colors = NULL,
+                                  font_family = "Times New Roman",
+                                  font_size = 16,
+                                  wrap_width = 25,
+                                  showlegend = TRUE,
+                                  alpha = 0.4,
+                                  ...) {
+  if (is.null(x[["sims"]])) {
+    cli::cli_abort(c(
+      "No simulation data available.",
+      ">" = "Re-run {.fn verify} with {.code return_sims = TRUE}."
+    ))
+  }
+
+  n_runs       <- x[["n"]]
+  available_nr <- if (is.null(x[["test_indices"]])) seq_along(x[["results"]]) else x[["test_indices"]]
+
+  # label filter (narrows available_nr)
+  if (!is.null(label)) {
+    if (!is.character(label) || length(label) == 0L || any(is.na(label)) || any(!nzchar(label)))
+      cli::cli_abort(c(
+        "Invalid {.arg label}.",
+        "x" = "{.arg label} must be a character vector of non-empty regex pattern(s)."
+      ))
+    result_labels <- vapply(x[["results"]], function(r) r[["label"]], character(1L))
+    hits <- Reduce("|", lapply(label, grepl, x = result_labels, ignore.case = ignore_case))
+    available_nr <- available_nr[hits]
+    if (length(available_nr) == 0)
+      cli::cli_warn(c(
+        "No tests matched pattern{?s} {.val {label}}.",
+        "i" = "Re-run without {.arg label} to see all tests."
+      ))
+  }
+
+  # status filter (narrows available_nr, after label)
+  if (!is.null(status)) {
+    status <- clean_status(status)
+    all_nrs      <- if (is.null(x[["test_indices"]])) seq_along(x[["results"]]) else x[["test_indices"]]
+    all_statuses <- vapply(x[["results"]], function(r) r[["status"]], character(1L))
+    status_nrs   <- all_nrs[all_statuses %in% status]
+    available_nr <- available_nr[available_nr %in% status_nrs]
+    if (length(available_nr) == 0)
+      cli::cli_warn("No tests with status {.val {status}} to plot.")
+  }
+
+  # Defaults (applied to filtered available_nr)
+  if (is.null(nr)) nr <- head(available_nr, 9L)
+  if (is.null(i))  i  <- seq_len(min(n_runs, 10L))
+
+  if (!all(nr %in% available_nr)) {
+    bad <- nr[!nr %in% available_nr]
+    cli::cli_abort(c(
+      "Test number{?s} not found: {.val {bad}}.",
+      "i" = "Available: {.val {available_nr}}."
+    ))
+  }
+  .check_i_index(i, n_runs)
+
+  # Map nr -> unique condition indices (deduplicates tests sharing the same simulation)
+  keep_pos     <- which(available_nr %in% nr)
+  cond_indices <- unique(unname(x[["j"]][keep_pos]))
+
+  validate_plot_params(
+    showlegend = showlegend, vars = NULL,
+    palette = palette, colors = colors,
+    font_family = font_family, font_size = font_size,
+    wrap_width = wrap_width
+  )
+
+  dots <- list(...)
+
+  time_unit <- x[["object"]][["sim_settings"]][["time_units"]]
+  params <- extract_plot_params(dots, defaults = list(
+    main = paste0("Unit Tests: ", x[["object"]][["meta"]][["name"]]),
+    xlab = paste0("Time (", time_unit, ")"),
+    ylab = ""
+  ))
+
+  if (is.null(nrows)) nrows <- ceiling(sqrt(length(cond_indices)))
+  nrows <- min(nrows, length(cond_indices))
+  create_subplots <- length(cond_indices) > 1L
+  mode <- "lines"
+
+  # Build one plotly per condition
+  pl_list <- lapply(seq_along(cond_indices), function(j_seq) {
+    ji <- cond_indices[[j_seq]]
+    this_showlegend <- showlegend && (j_seq == length(cond_indices))
+
+    # Combine selected runs into a single long-format df with i column
+    runs_ji <- x[["sims"]][[ji]]
+    df_combined <- do.call(rbind, lapply(seq_along(i), function(i_seq) {
+      ii <- i[[i_seq]]
+      sim <- runs_ji[[ii]]
+      if (!sim[["success"]]) return(NULL)
+      cbind(sim[["df"]], i = ii)
+    }))
+
+    if (is.null(df_combined) || nrow(df_combined) == 0) {
+      return(plotly::plot_ly())
+    }
+
+    out <- prep_plot(
+      x[["object"]], "sim", df_combined, constants = NULL,
+      add_constants = FALSE, vars = NULL,
+      palette = palette, colors = colors, wrap_width = wrap_width
+    )
+    df_highlight    <- out[["df_highlight"]]
+    df_nonhighlight <- out[["df_nonhighlight"]]
+    plot_colors     <- out[["colors"]]
+
+    pl <- plotly::plot_ly()
+
+    # Plot nonhighlight variables (flows/auxiliaries - hidden by default)
+    if (!is.null(df_nonhighlight) && nrow(df_nonhighlight) > 0) {
+      pl <- plotly::add_trace(pl,
+        data = df_nonhighlight,
+        x = ~time, y = ~value,
+        color = ~variable, legendgroup = ~variable,
+        type = "scatter", mode = mode,
+        opacity = alpha, colors = plot_colors,
+        split = ~interaction(variable, i),
+        showlegend = FALSE, visible = "legendonly"
+      )
+    }
+
+    # Plot highlight variables (stocks - visible by default)
+    if (!is.null(df_highlight) && nrow(df_highlight) > 0) {
+      pl <- plotly::add_trace(pl,
+        data = df_highlight,
+        x = ~time, y = ~value,
+        color = ~variable, legendgroup = ~variable,
+        type = "scatter", mode = mode,
+        opacity = alpha, colors = plot_colors,
+        split = ~interaction(variable, i),
+        showlegend = this_showlegend, visible = TRUE
+      )
+    }
+
+    theme <- plotly_theme(font_family = font_family, font_size = font_size)
+
+    # Build "nr = N (cond)" annotation text for this condition panel
+    test_nrs_ji <- available_nr[keep_pos[unname(x[["j"]][keep_pos]) == ji]]
+    nr_str      <- paste(test_nrs_ji, collapse = ", ")
+    r_idx       <- keep_pos[unname(x[["j"]][keep_pos]) == ji][[1L]]
+    conds       <- x[["results"]][[r_idx]][["conditions"]]
+    cond_str    <- if (length(conds) == 0) "" else
+      paste(names(conds), unlist(conds), sep = " = ", collapse = ", ")
+    annotation_text <- if (nzchar(cond_str))
+      paste0("nr = ", nr_str, " (", cond_str, ")")
+    else
+      paste0("nr = ", nr_str)
+
+    pl <- plotly::layout(pl,
+      annotations = list(list(
+        text      = annotation_text,
+        font      = list(family = font_family, size = ceiling(font_size * 0.75)),
+        bgcolor   = "white",
+        xref      = "paper", yref = "paper",
+        xanchor   = "center", yanchor = "top",
+        x = 0.5, y = 1,
+        showarrow = FALSE
+      )),
+      xaxis = list(title = params$xlab, font = list(size = font_size)),
+      yaxis = list(title = params$ylab, font = list(size = font_size)),
+      legend = theme$legend,
+      font = theme$font,
+      margin = theme$margin,
+      showlegend = this_showlegend
+    )
+
+    pl
+  })
+
+  if (!create_subplots) {
+    return(plotly::layout(pl_list[[1L]], title = params$main))
+  }
+
+  plotly::subplot(
+    pl_list,
+    nrows = nrows,
+    shareX = shareX,
+    shareY = shareY,
+    titleX = TRUE,
+    titleY = TRUE
+  ) |>
+    plotly::layout(title = params$main)
 }

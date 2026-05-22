@@ -4,10 +4,21 @@
 \alias{unit_tests}
 \title{Display unit tests defined on a stock-and-flow model}
 \usage{
-unit_tests(object)
+unit_tests(object, nr = NULL, label = NULL, ignore_case = TRUE)
 }
 \arguments{
 \item{object}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
+
+\item{nr}{Integer vector of test number(s) to display (1-based). Defaults to
+\code{NULL} (show all tests). Can be combined with \code{label} (intersection).}
+
+\item{label}{Character vector of regex patterns for partial, case-insensitive
+label matching. A test is included if its label matches \emph{any} pattern.
+E.g., \code{c("non-neg", "beta")} returns tests matching either fragment.
+Can be combined with \code{nr} (intersection).}
+
+\item{ignore_case}{Logical; whether \code{label} matching is case-insensitive.
+Default \code{TRUE}.}
 }
 \value{
 An object of class \code{unit_tests_sdbuildR}, printed automatically.
@@ -25,6 +36,8 @@ sfm <- sdbuildR("SIR") |>
   )
 
 unit_tests(sfm)
+unit_tests(sfm, nr = 1L)
+unit_tests(sfm, label = "increases")
 }
 \seealso{
 \code{\link[=unit_test]{unit_test()}}, \code{\link[=verify]{verify()}}

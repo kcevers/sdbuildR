@@ -1,4 +1,4 @@
-# Tests for meta and sim_specs manipulation
+# Tests for meta and sim_settings manipulation
 
 test_that("meta() modifies model name", {
   sfm <- sdbuildR() |>

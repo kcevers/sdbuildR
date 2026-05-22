@@ -998,9 +998,9 @@ file_to_sdbuildR <- function(read_file, ext) {
   ctx$meta <- meta
   ctx$macros_raw <- macros %||% ""
 
-  # Add sim_specs to object (ready immediately)
+  # Add sim_settings to object (ready immediately)
   if (!is.null(settings)) {
-    ctx$object <- sim_specs_IM(ctx$object,
+    ctx$object <- sim_settings_IM(ctx$object,
       method = settings[["method"]],
       time_units = settings[["time_units"]],
       start = settings[["start"]],
@@ -1179,7 +1179,7 @@ file_to_sdbuildR <- function(read_file, ext) {
 }
 
 
-sim_specs_IM <- function(object, method, time_units, start, length, dt) {
+sim_settings_IM <- function(object, method, time_units, start, length, dt) {
   # Not every simulation specification may be specified in an Insight Maker model
   args <- compact_(as.list(environment()))
   # print(args)
@@ -1234,7 +1234,7 @@ sim_specs_IM <- function(object, method, time_units, start, length, dt) {
     args[["length"]] <- NULL
   }
 
-  do.call(sim_specs, args)
+  do.call(sim_settings, args)
 }
 
 
@@ -1828,8 +1828,8 @@ check_nonnegativity <- function(object, keep_nonnegative_flow,
       ">" = "Switching ODE solver to {.fn lsoda} for consistency with {.pkg InsightMaker}.",
       "i" = "Disable this by setting {.arg keep_nonnegative_stock = FALSE}."
     ))
-    object[["sim_specs"]][["insightmaker_method"]] <- object[["sim_specs"]][["method"]]
-    object[["sim_specs"]][["method"]] <- "lsoda"
+    object[["sim_settings"]][["insightmaker_method"]] <- object[["sim_settings"]][["method"]]
+    object[["sim_settings"]][["method"]] <- "lsoda"
   }
 
   object

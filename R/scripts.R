@@ -67,8 +67,40 @@ attributes(%(sim_df_name)s)$valroot
 
     # -- compile_ode -----------------------------------------------------------
 
-    ode_r = "\n\n# Define ODE\n%(ode_func_name)s = function(%(time_name)s, %(state_name)s, %(parameter_name)s){\n\n  %(S_str)s\n\n# Compute change in stocks at current time %(time_name)s\n  with(c(%(state_name)s, %(parameter_name)s), {\n\n    # Update auxiliaries and flows\n    %(dynamic_eqn_str)s\n\n    # Collect inflows and outflows for each stock\n    %(stock_change_str)s\n\n    # Combine change in stocks\n    %(state_change_str)s\n\n    return(list(%(change_state_name)s%(save_var_str)s))\n  })\n}",
-    ode_julia = "\n\n# Define ODE\nfunction %(ode_func_name)s!(%(change_state_name)s, %(state_name)s, %(parameter_name)s, %(time_name)s)\n\n\t# Unpack state variables\n\t%(unpack_state_str)s%(unpack_pars_str)s\n\n\t# Update auxiliaries\n\t%(dynamic_eqn_str)s\n\n\t# Collect inflows and outflows for each stock\n\t%(stock_change_str)s\n\tnothing\nend\n",
+    ode_r = "\n\n# Define ODE\n%(ode_func_name)s = function(%(time_name)s, %(state_name)s, %(parameter_name)s){
+    
+    %(S_str)s
+    
+    # Compute change in stocks at current time %(time_name)s
+    with(c(%(state_name)s, %(parameter_name)s), {
+    
+        # Update auxiliaries and flows
+        %(dynamic_eqn_str)s
+        
+        # Collect inflows and outflows for each stock
+        %(stock_change_str)s
+        
+        # Combine change in stocks
+        %(state_change_str)s
+        
+        return(list(%(change_state_name)s%(save_var_str)s))
+      })
+      }",
+    ode_julia = "\n\n# Define ODE
+  function %(ode_func_name)s!(%(change_state_name)s, %(state_name)s, %(parameter_name)s, %(time_name)s)
+    
+    # Unpack state variables
+    %(unpack_state_str)s%(unpack_pars_str)s
+    
+    # Update auxiliaries
+    %(dynamic_eqn_str)s
+    
+    # Collect inflows and outflows for each stock
+    %(stock_change_str)s
+    
+    nothing
+    end
+    ",
     callback_julia = "\n\n# Define callback function\nfunction %(callback_func_name)s(%(state_name)s, %(time_name)s, integrator)\n\n\t# Unpack state variables\n\t%(unpack_state_str)s%(unpack_pars_integrator_str)s\n\n\t# Update auxiliaries\n\t%(dynamic_eqn_str)s\n\n\t# Return intermediary values and remove functions\n\treturn filter(x -> !is_function_or_interp(x), (%(intermediary_values)s))\n\n\nend\n\n# Callback setup\n%(callback_setup)s",
     callback_empty_julia = "\n\n# Define empty callback function\n%(intermediaries)s = nothing\n%(callback_name)s = nothing\n\n",
 

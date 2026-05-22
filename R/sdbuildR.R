@@ -5,7 +5,7 @@
 #' library.
 #'
 #' Do not edit the object manually; this will likely lead to errors downstream.
-#' Rather, use [meta()], [sim_specs()], [update()], and [custom_func()] for safe manipulation.
+#' Rather, use [meta()], [sim_settings()], [update()], and [custom_func()] for safe manipulation.
 #'
 #' @param template Name of the template to load. If `NULL`, an empty stock-and-flow
 #' model will be created with default simulation parameters and a default meta.
@@ -30,7 +30,7 @@
 #'  on [XML Interchange Language for System Dynamics (XMILE)](https://docs.oasis-open.org/sdbuildR/sdbuildR/v1.0/os/sdbuildR-v1.0-os.html). It is a nested list, containing:
 #' \describe{
 #'  \item{meta}{Meta-information about model. A list containing arguments listed in [meta()].}
-#'  \item{sim_specs}{Simulation specifications. A list containing arguments listed in [sim_specs()].}
+#'  \item{sim_settings}{Simulation specifications. A list containing arguments listed in [sim_settings()].}
 #'  \item{model}{Model variables, grouped under the variable types stock, flow, aux (auxiliaries), constant, gf (graphical functions), and func (custom functions). Each variable contains arguments as listed in [update()].}
 #'  }
 #'
@@ -38,13 +38,13 @@
 #'
 #' @export
 #' @concept build
-#' @seealso [update()], [meta()], [custom_func()], [sim_specs()]
+#' @seealso [update()], [meta()], [custom_func()], [sim_settings()]
 #'
 #' @examples sfm <- sdbuildR()
 #' summary(sfm)
 #'
 #' \dontshow{
-#' sfm <- sim_specs(sfm, save_at = 1)
+#' sfm <- sim_settings(sfm, save_at = 1)
 #' }
 #'
 #' # Load a template
@@ -212,8 +212,8 @@ new_meta <- function() {
   meta_defaults
 }
 
-new_sim_specs <- function() {
-  spec_defaults <- as.list(formals(sim_specs))
+new_sim_settings <- function() {
+  spec_defaults <- as.list(formals(sim_settings))
   spec_defaults <- spec_defaults[!names(spec_defaults) %in% c("object", "...")]
 
   # Flat save fields: save_type discriminates mode; save_at and save_n are NULL
@@ -235,7 +235,7 @@ empty_nonneg_stocks <- function() {
 #'
 new_sdbuildR <- function() {
   meta_defaults <- new_meta()
-  spec_defaults <- new_sim_specs()
+  spec_defaults <- new_sim_settings()
 
   # Create data frame for variables (all types in one data frame, including funcs)
   variables_df <- empty_variables()
@@ -243,7 +243,7 @@ new_sdbuildR <- function() {
   # Create list with fixed structure
   obj <- list(
     meta = meta_defaults,
-    sim_specs = spec_defaults,
+    sim_settings = spec_defaults,
     variables = variables_df,
     # Cache for pre-assembled simulation components
     assemble = empty_assemble(),
@@ -255,7 +255,20 @@ new_sdbuildR <- function() {
 
   object <- structure(obj, class = "sdbuildR")
   object <- sanitize_sdbuildR(object)
+  # Ensure deterministic ordering for presentation/storage: sort by type then name
+  if (nrow(object[["variables"]]) > 0) {
+    type_levels <- c("stock", "flow", "constant", "aux", "lookup", "func")
+    type_rank <- match(object[["variables"]][["type"]], type_levels)
+    type_rank[is.na(type_rank)] <- length(type_levels) + 1
+    name_lower <- tolower(object[["variables"]][["name"]])
+    ord <- order(type_rank, name_lower)
+    object[["variables"]] <- object[["variables"]][ord, , drop = FALSE]
+    rownames(object[["variables"]]) <- NULL
+  }
+
   object
+
+  return(object)
 }
 
 
@@ -446,6 +459,17 @@ sanitize_sdbuildR <- function(object) {
         }
       }
     }
+  }
+
+  # Ensure deterministic ordering for presentation/storage: sort by type then name
+  if (nrow(object[["variables"]]) > 0) {
+    type_levels <- c("stock", "flow", "constant", "aux", "lookup", "func")
+    type_rank <- match(object[["variables"]][["type"]], type_levels)
+    type_rank[is.na(type_rank)] <- length(type_levels) + 1
+    name_lower <- tolower(object[["variables"]][["name"]])
+    ord <- order(type_rank, name_lower)
+    object[["variables"]] <- object[["variables"]][ord, , drop = FALSE]
+    rownames(object[["variables"]]) <- NULL
   }
 
   object
@@ -857,7 +881,7 @@ print.sdbuildR <- function(x, ...) {
 
   # Simulation settings
   cli::cli_h2("Simulation Settings")
-  ss <- x[["sim_specs"]]
+  ss <- x[["sim_settings"]]
   time_unit <- ss[["time_units"]]
   cli::cli_text(
     "  Time: {ss$start} to {ss$stop} {time_unit} (dt = {ss$dt}) \u2022 {ss$method} \u2022 {ss$language}"

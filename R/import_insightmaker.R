@@ -23,7 +23,7 @@
 #' plot(sfm)
 #'
 #' \dontshow{
-#' sfm <- sim_specs(sfm, save_at = .5)
+#' sfm <- sim_settings(sfm, save_at = .5)
 #' }
 #'
 #' # Simulate the model
@@ -46,7 +46,7 @@ import_insightmaker <- function(URL,
 
   # Parse model into import context
   # file_to_sdbuildR() returns a context with:
-  # - ctx$object: object with sim_specs, meta, and variables added (no Julia conversion yet)
+  # - ctx$object: object with sim_settings, meta, and variables added (no Julia conversion yet)
   # - ctx$variables: original variable list (for reference)
   # - ctx$original_variables: data frame for import_metadata
   # - ctx$original_macros: data frame for import_metadata
@@ -173,7 +173,7 @@ import_insightmaker <- function(URL,
 
   object <- prep_equations_variables(object)
   object <- prep_stock_change(object)
-  object <- sim_specs(object, keep_nonnegative_flow = keep_nonnegative_flow, keep_nonnegative_stock = keep_nonnegative_stock)
+  object <- sim_settings(object, keep_nonnegative_flow = keep_nonnegative_flow, keep_nonnegative_stock = keep_nonnegative_stock)
 
   allowed_cols <- colnames(empty_variables())
   object[["variables"]] <- object[["variables"]][, colnames(object[["variables"]]) %in% allowed_cols]

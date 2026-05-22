@@ -70,7 +70,7 @@ decode_unicode <- function(text) {
 compile <- function(object, only_stocks = FALSE,
                     filepath_sim = NULL,
                     vars = NULL) {
-  language <- object[["sim_specs"]][["language"]]
+  language <- object[["sim_settings"]][["language"]]
 
   if (!is.null(vars)) {
     vars <- validate_sim_vars(object, vars)
@@ -119,7 +119,7 @@ compile <- function(object, only_stocks = FALSE,
   )
 
   # --- Build seed string -----------------------------------------------------
-  seed <- object[["sim_specs"]][["seed"]]
+  seed <- object[["sim_settings"]][["seed"]]
   seed_str <- if (is_defined(seed)) fmt_script("prep_seed", language, seed = seed) else ""
 
   # --- Assemble final script -------------------------------------------------
@@ -159,7 +159,7 @@ compile <- function(object, only_stocks = FALSE,
 #' @noRd
 #'
 compile_times <- function(object, language) {
-  ss <- object[["sim_specs"]]
+  ss <- object[["sim_settings"]]
 
   if (language == "R") {
     script <- fmt_script("times", "R", ss)
@@ -402,7 +402,7 @@ compile_static <- function(object, language,
 #' @returns List with necessary scripts for ensuring non-negative stocks
 #'
 compile_nonneg_stocks <- function(object, language) {
-  keep_nonnegative_stock <- object[["sim_specs"]][["keep_nonnegative_stock"]]
+  keep_nonnegative_stock <- object[["sim_settings"]][["keep_nonnegative_stock"]]
   nonneg_stocks <- empty_nonneg_stocks()
   scripts <- prep_script_template()
 
@@ -459,7 +459,7 @@ compile_run_ode <- function(
 
   if (language == "R") {
     script <- fmt_script("run_ode", language,
-      method = object[["sim_specs"]][["method"]],
+      method = object[["sim_settings"]][["method"]],
       root_arg = nonneg_stocks[["root_arg"]],
       check_root = nonneg_stocks[["check_root"]]
     )
@@ -470,7 +470,7 @@ compile_run_ode <- function(
     )
 
     script <- fmt_script("run_ode", language,
-      method = object[["sim_specs"]][["method"]],
+      method = object[["sim_settings"]][["method"]],
       callback_arg = callback_arg
     )
   }
@@ -484,7 +484,7 @@ compile_post <- function(object, filepath_sim = NULL, language, vars = NULL) {
   save_intermediaries <- length(intermediaries[["names"]]) > 0
 
   if (language == "R") {
-    ss <- object[["sim_specs"]]
+    ss <- object[["sim_settings"]]
     save_type <- ss[["save_type"]] %||% "all"
     save_at <- ss[["save_at"]]
     save_n <- ss[["save_n"]]
@@ -563,7 +563,7 @@ compile_post <- function(object, filepath_sim = NULL, language, vars = NULL) {
 #' @returns List with `script` (character) and `object` (updated model).
 #' @noRd
 compile_ensemble <- function(object, ensemble_pars, only_stocks = TRUE) {
-  language <- object[["sim_specs"]][["language"]]
+  language <- object[["sim_settings"]][["language"]]
 
   # Ensure base cache is populated — reuses update() cache if already done
   object <- pre_assemble_components(object)
@@ -592,7 +592,7 @@ compile_ensemble <- function(object, ensemble_pars, only_stocks = TRUE) {
   post <- compile_post_ensemble(object, ensemble_pars)
 
   # Seed string
-  seed <- object[["sim_specs"]][["seed"]]
+  seed <- object[["sim_settings"]][["seed"]]
   seed_str <- if (is_defined(seed)) fmt_script("prep_seed", language, seed = seed) else ""
 
   script <- paste0(c(
@@ -625,7 +625,7 @@ compile_ode <- function(object,
                         language,
                         is_ensemble = FALSE,
                         vars = NULL) {
-  keep_nonnegative_stock <- object[["sim_specs"]][["keep_nonnegative_stock"]]
+  keep_nonnegative_stock <- object[["sim_settings"]][["keep_nonnegative_stock"]]
 
   ordering <- object[["assemble"]][["ordering"]]
   static <- object[["assemble"]][["static"]]

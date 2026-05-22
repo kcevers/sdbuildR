@@ -208,21 +208,21 @@
   if (is.null(eqn)) {
     cli::cli_warn(c(
       "Empty {.arg eqn} argument.",
-      ">" = "Setting {.arg eqn} to {.val '0'}."
+      ">" = "Setting {.code eqn = '0'}."
     ))
     eqn <- "0"
   }
   if (any(is.na(eqn))) {
     cli::cli_warn(c(
       "NA values in {.arg eqn} argument.",
-      ">" = "Setting {.arg eqn} to {.val '0'}."
+      ">" = "Setting {.code eqn = '0'}."
     ))
     eqn[is.na(eqn)] <- "0"
   }
   if (any(!nzchar(eqn))) {
     cli::cli_warn(c(
       "Empty {.arg eqn} argument.",
-      ">" = "Setting {.arg eqn} to {.val '0'}."
+      ">" = "Setting {.code eqn = '0'}."
     ))
     eqn[!nzchar(eqn)] <- "0"
   }
@@ -656,7 +656,7 @@ update_variable_row <- function(object, type, name,
 #' Prepare model variables for assembly/simulation
 #'
 #' Updates prepared equation strings (eqn_str, sum_eqn, sum_name) based on
-#' the current language in sim_specs. Selectively invalidates assembly cache
+#' the current language in sim_settings. Selectively invalidates assembly cache
 #' components based on what changed.
 #'
 #' @param object Stock-and-flow model
@@ -1167,7 +1167,7 @@ lookup <- function(object, name,
 #' sfm <- sdbuildR()
 #' summary(sfm)
 #' \dontshow{
-#' sfm <- sim_specs(sfm, save_at = .5)
+#' sfm <- sim_settings(sfm, save_at = .5)
 #' }
 #'
 #' # Add two stocks. Specify their initial values in the "eqn" property
@@ -1820,14 +1820,14 @@ discard <- function(object, name, remove_references = c("to", "from", "source", 
 
   object <- .discard(object, name, remove_references = remove_references)
 
-  # Keep sim_specs(vars=...) consistent after variable removal
-  sim_vars <- object[["sim_specs"]][["vars"]]
+  # Keep sim_settings(vars=...) consistent after variable removal
+  sim_vars <- object[["sim_settings"]][["vars"]]
   if (!is.null(sim_vars)) {
     sim_vars <- sim_vars[!(sim_vars %in% name)]
     if (length(sim_vars) == 0L) {
       sim_vars <- NULL
     }
-    object[["sim_specs"]][["vars"]] <- sim_vars
+    object[["sim_settings"]][["vars"]] <- sim_vars
   }
 
   # Invalidate appropriate cache components

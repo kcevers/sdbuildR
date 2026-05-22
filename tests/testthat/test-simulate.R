@@ -3,7 +3,7 @@
 test_that("simulate() requires stocks for simulation", {
   sfm <- sdbuildR()
   sfm1 <- update(sfm, "aux1", type = "aux", eqn = "5")
-  sfm2 <- sim_specs(sfm1, language = "R")
+  sfm2 <- sim_settings(sfm1, language = "R")
 
   expect_error(
     simulate(sfm2),
@@ -17,7 +17,7 @@ test_that("simulate() with R language works on simple model", {
   sfm <- sdbuildR()
   sfm1 <- update(sfm, "Pop", type = "stock", eqn = "100")
   sfm2 <- update(sfm1, "Growth", type = "flow", from = "Pop", eqn = "Pop * 0.05")
-  sfm3 <- sim_specs(sfm2, language = "R", start = 0, stop = 10, dt = 1)
+  sfm3 <- sim_settings(sfm2, language = "R", start = 0, stop = 10, dt = 1)
 
   result <- simulate(sfm3)
 
@@ -30,7 +30,7 @@ test_that("simulate() result has correct structure", {
   sfm <- sdbuildR()
   sfm1 <- update(sfm, "Stock1", type = "stock", eqn = "10")
   sfm2 <- update(sfm1, "Flow1", type = "flow", from = "Stock1", eqn = "Stock1 * 0.1")
-  sfm3 <- sim_specs(sfm2, language = "R", start = 0, stop = 5, dt = 1)
+  sfm3 <- sim_settings(sfm2, language = "R", start = 0, stop = 5, dt = 1)
 
   result <- simulate(sfm3)
 
@@ -47,7 +47,7 @@ test_that("simulate() returns data frame with time column", {
   sfm <- sdbuildR()
   sfm1 <- update(sfm, "S", type = "stock", eqn = "100")
   sfm2 <- update(sfm1, "Flow", type = "flow", from = "S", eqn = "0")
-  sfm3 <- sim_specs(sfm2, language = "R", start = 0, stop = 10, dt = 1)
+  sfm3 <- sim_settings(sfm2, language = "R", start = 0, stop = 10, dt = 1)
 
   result <- simulate(sfm3)
   df <- result$df
@@ -61,7 +61,7 @@ test_that("simulate() respects save_at interval", {
   sfm <- sdbuildR()
   sfm1 <- update(sfm, "X", type = "stock", eqn = "1")
   sfm2 <- update(sfm1, "Flow", type = "flow", from = "X", eqn = "0")
-  sfm3 <- sim_specs(sfm2, language = "R", start = 0, stop = 10, dt = 0.1, save_at = 1)
+  sfm3 <- sim_settings(sfm2, language = "R", start = 0, stop = 10, dt = 0.1, save_at = 1)
 
   result <- simulate(sfm3, only_stocks = FALSE)
 
@@ -76,7 +76,7 @@ test_that("simulate() with constants", {
   sfm1 <- update(sfm, "rate", type = "constant", eqn = "0.05")
   sfm2 <- update(sfm1, "Stock", type = "stock", eqn = "100")
   sfm3 <- update(sfm2, "Flow", type = "flow", from = "Stock", eqn = "Stock * rate")
-  sfm4 <- sim_specs(sfm3, language = "R", start = 0, stop = 10, dt = 1)
+  sfm4 <- sim_settings(sfm3, language = "R", start = 0, stop = 10, dt = 1)
 
   result <- simulate(sfm4, only_stocks = FALSE)
 
@@ -90,7 +90,7 @@ test_that("simulate() with auxiliaries", {
   sfm1 <- update(sfm, "S", type = "stock", eqn = "100")
   sfm2 <- update(sfm1, "rate", type = "aux", eqn = "0.1")
   sfm3 <- update(sfm2, "Flow", type = "flow", from = "S", eqn = "S * rate")
-  sfm4 <- sim_specs(sfm3, language = "R", start = 0, stop = 5, dt = 1)
+  sfm4 <- sim_settings(sfm3, language = "R", start = 0, stop = 5, dt = 1)
 
   result <- simulate(sfm4, only_stocks = FALSE)
 
@@ -104,7 +104,7 @@ test_that("simulate() with multiple stocks", {
   sfm <- update(sfm, "S", type = "stock", eqn = "100")
   sfm <- update(sfm, "I", type = "stock", eqn = "10")
   sfm <- update(sfm, "infection", type = "flow", from = "S", to = "I", eqn = "0")
-  sfm <- sim_specs(sfm, language = "R", start = 0, stop = 5, dt = 1)
+  sfm <- sim_settings(sfm, language = "R", start = 0, stop = 5, dt = 1)
 
   sim <- expect_successful_simulation(sfm, only_stocks = FALSE)
 
@@ -116,7 +116,7 @@ test_that("simulate() returns constants in result", {
   sfm1 <- update(sfm, "const_val", type = "constant", eqn = "42")
   sfm2 <- update(sfm1, "Stock", type = "stock", eqn = "10")
   sfm3 <- update(sfm2, "Flow", type = "flow", from = "Stock", eqn = "0")
-  sfm4 <- sim_specs(sfm3, language = "R", start = 0, stop = 5, dt = 1)
+  sfm4 <- sim_settings(sfm3, language = "R", start = 0, stop = 5, dt = 1)
 
   result <- simulate(sfm4)
 
@@ -129,7 +129,7 @@ test_that("simulate() returns initial values", {
   sfm <- sdbuildR()
   sfm1 <- update(sfm, "Pop", type = "stock", eqn = "500")
   sfm2 <- update(sfm1, "Flow", type = "flow", from = "Pop", eqn = "0")
-  sfm3 <- sim_specs(sfm2, language = "R", start = 0, stop = 10, dt = 1)
+  sfm3 <- sim_settings(sfm2, language = "R", start = 0, stop = 10, dt = 1)
 
   result <- simulate(sfm3)
 
@@ -148,7 +148,7 @@ test_that("simulate() with graphical function dependency", {
   )
   sfm <- update(sfm, "Stock1", type = "stock", eqn = "50")
   sfm <- update(sfm, "Flow1", type = "flow", from = "Stock1", eqn = "gf1(Stock1)")
-  sfm <- sim_specs(sfm, language = "R", start = 0, stop = 10, dt = 1)
+  sfm <- sim_settings(sfm, language = "R", start = 0, stop = 10, dt = 1)
 
   expect_successful_simulation(sfm)
 
@@ -160,7 +160,7 @@ test_that("simulate() with graphical function dependency", {
 
 test_that("simulate() filters output to vars", {
   sfm <- sdbuildR("SIR") |>
-    sim_specs(language = "R", vars = c("Susceptible", "Infection_Rate"))
+    sim_settings(language = "R", vars = c("Susceptible", "Infection_Rate"))
 
   sim <- simulate(sfm)
   expect_true(sim$success)
@@ -169,7 +169,7 @@ test_that("simulate() filters output to vars", {
 
 test_that("simulate() vars overrides only_stocks", {
   sfm <- sdbuildR("SIR") |>
-    sim_specs(language = "R", only_stocks = TRUE, vars = c("Infection_Rate"))
+    sim_settings(language = "R", only_stocks = TRUE, vars = c("Infection_Rate"))
 
   sim <- simulate(sfm)
   expect_true(sim$success)
@@ -180,7 +180,7 @@ test_that("simulate() with Julia filters output to vars", {
   skip_if_julia_not_ready()
 
   sfm <- sdbuildR("SIR") |>
-    sim_specs(
+    sim_settings(
       language = "Julia",
       start = 0,
       stop = 5,
@@ -198,7 +198,7 @@ test_that("simulate() with Julia vars overrides only_stocks", {
   skip_if_julia_not_ready()
 
   sfm <- sdbuildR("SIR") |>
-    sim_specs(
+    sim_settings(
       language = "Julia",
       start = 0,
       stop = 5,

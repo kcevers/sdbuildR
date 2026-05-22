@@ -49,7 +49,7 @@
 #'   name   = "Logistic growth"
 #' )
 #' \dontshow{
-#' sfm <- sim_specs(sfm, save_at = 5)
+#' sfm <- sim_settings(sfm, save_at = 5)
 #' }
 #' sim <- simulate(sfm)
 #' plot(sim)
@@ -99,7 +99,7 @@ import_desolve <- function(model, params, init, times,
     sfm <- meta(sfm, name = name)
   }
 
-  sfm <- do.call(sim_specs, list(
+  sfm <- do.call(sim_settings, list(
     object = sfm,
     start  = times[[1L]],
     stop   = times[[length(times)]],

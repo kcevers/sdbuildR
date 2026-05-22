@@ -16,7 +16,7 @@ random elements. Must be an integer. Defaults to \code{NULL} (no seed).}
 
 \item{verbose}{If \code{TRUE}, print duration of simulation. Defaults to \code{FALSE}.}
 
-\item{...}{Optional arguments passed to \code{\link[=sim_specs]{sim_specs()}}; these can be used to override the simulation specifications set in the model object.}
+\item{...}{Optional arguments passed to \code{\link[=sim_settings]{sim_settings()}}; these can be used to override the simulation specifications set in the model object.}
 }
 \value{
 Object of class \code{\link[=simulate.sdbuildR]{simulate_sdbuildR}}, a list containing:
@@ -34,7 +34,7 @@ Object of class \code{\link[=simulate.sdbuildR]{simulate_sdbuildR}}, a list cont
 Use \link[=as.data.frame.simulate_sdbuildR]{as.data.frame()} to extract results, \link[=plot.simulate_sdbuildR]{plot()} to visualize.
 }
 \description{
-Simulate a stock-and-flow model with simulation specifications defined by \code{\link[=sim_specs]{sim_specs()}}. If \code{sim_specs(language = "julia")}, the Julia environment will first be set up with \code{\link[=use_julia]{use_julia()}}. If any problems are detected by \code{\link[=summary]{summary()}}, the model cannot be simulated.
+Simulate a stock-and-flow model with simulation specifications defined by \code{\link[=sim_settings]{sim_settings()}}. If \code{sim_settings(language = "julia")}, the Julia environment will first be set up with \code{\link[=use_julia]{use_julia()}}. If any problems are detected by \code{\link[=summary]{summary()}}, the model cannot be simulated.
 }
 \examples{
 sfm <- sdbuildR("SIR")
@@ -42,11 +42,11 @@ sim <- simulate(sfm)
 plot(sim)
 
 # Obtain all model variables
-sim <- simulate(sim_specs(sfm, only_stocks = FALSE))
+sim <- simulate(sim_settings(sfm, only_stocks = FALSE))
 plot(sim, add_constants = TRUE)
 
 }
 \seealso{
-\code{\link[=update]{update()}}, \code{\link[=sdbuildR]{sdbuildR()}}, \code{\link[=summary]{summary()}}, \code{\link[=sim_specs]{sim_specs()}}, \code{\link[=use_julia]{use_julia()}}
+\code{\link[=update]{update()}}, \code{\link[=sdbuildR]{sdbuildR()}}, \code{\link[=summary]{summary()}}, \code{\link[=sim_settings]{sim_settings()}}, \code{\link[=use_julia]{use_julia()}}
 }
 \concept{simulate}

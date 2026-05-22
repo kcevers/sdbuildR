@@ -220,7 +220,7 @@ test_that("translating .InsightMaker models works", {
 
     if (contains_stocks) {
       sim_IM <- expect_successful_simulation(
-        sim_specs(sfm_IM,
+        sim_settings(sfm_IM,
           seed = seed, dt = dt, save_at = save_at
         ),
         only_stocks = only_stocks
@@ -249,7 +249,7 @@ test_that("translating .InsightMaker models works", {
 
     if (contains_stocks) {
       sim_json <- expect_successful_simulation(
-        sim_specs(sfm_json,
+        sim_settings(sfm_json,
           seed = seed, dt = dt, save_at = save_at
         ),
         only_stocks = only_stocks

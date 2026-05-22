@@ -52,7 +52,7 @@ templates <- function(template) {
   if (template == "logistic_model") {
     object <- sdbuildR() |>
       meta(name = "Logistic model") |>
-      sim_specs(stop = 200) |>
+      sim_settings(stop = 200) |>
       update("X", "stock", eqn = ".01", label = "Population size") |>
       # update("flow", "flow", eqn = "r * X * (1 - X / K)", to = "X", label = "Net change") |>
       update("inflow", "flow", eqn = "r * X", to = "X", label = "Births") |>
@@ -66,7 +66,7 @@ templates <- function(template) {
 
     object <- sdbuildR() |>
       meta(name = "Susceptible-Infected-Recovered (SIR)") |>
-      sim_specs(start = 0, stop = 20, time_units = "weeks") |>
+      sim_settings(start = 0, stop = 20, time_units = "weeks") |>
       update("Susceptible", "stock", eqn = "99999") |>
       update("Infected", "stock", eqn = 1) |>
       update("Recovered", "stock", eqn = 0) |>
@@ -74,13 +74,13 @@ templates <- function(template) {
       update("Lambda", "aux", eqn = "Beta * Infected") |>
       update("Infection_Rate", "flow", eqn = "Susceptible * Lambda", from = "Susceptible", to = "Infected") |>
       update("Recovery_Rate", "flow", eqn = "Infected / Delay", from = "Infected", to = "Recovered") |>
-      update("Total_Population", "constant", eqn = "100000") |>
+      update("Total_Population", "constant", eqn = "Susceptible + Infected + Recovered") |>
       update("Effective_Contact_Rate", "constant", eqn = "2") |>
       update("Delay", "constant", eqn = "2")
   } else if (template == "predator_prey") {
     object <- sdbuildR() |>
       meta(name = "Predator-Prey Dynamics (Lotka-Volterra)") |>
-      sim_specs(method = "euler", stop = 500) |>
+      sim_settings(method = "euler", stop = 500) |>
       update("predator", "stock", eqn = 10, label = "Predator") |>
       update("prey", "stock", eqn = 50, label = "Prey") |>
       update("predator_births", "flow",
@@ -110,7 +110,7 @@ templates <- function(template) {
   } else if (template == "cusp") {
     object <- sdbuildR() |>
       meta(name = "Cusp Catastrophe") |>
-      sim_specs(method = "euler", stop = 500) |>
+      sim_settings(method = "euler", stop = 500) |>
       update("x", "stock", eqn = .1) |>
       update("dxdt", "flow",
         eqn = "a + b*x - x^3 + rnorm(1, dt)",
@@ -124,7 +124,7 @@ templates <- function(template) {
         name = "Eating Behaviour (Crielaard et al., 2022)",
         doi = "10.1037/met0000484"
       ) |>
-      sim_specs(time_units = "days", stop = 100) |>
+      sim_settings(time_units = "days", stop = 100) |>
       update("Food_intake", "stock",
         eqn = "runif(1)",
         label = "Food intake"
@@ -173,7 +173,7 @@ templates <- function(template) {
   } else if (template == "coffee_cup") {
     object <- sdbuildR() |>
       meta(name = "Coffee cup", caption = "Coffee cup cooling or heating from Meadows' Thinking in Systems (Chapter 1)") |>
-      sim_specs(stop = 100, dt = 1, time_units = "minute", language = "Julia") |>
+      sim_settings(stop = 100, dt = 1, time_units = "minute", language = "Julia") |>
       update("coffee_temperature", "stock", eqn = "100", label = "Coffee temperature") |>
       update("cooling", "flow", eqn = "discrepancy * .1", to = "coffee_temperature", label = "Cooling or heating") |>
       update("discrepancy", "aux", eqn = "room_temperature - coffee_temperature", label = "Discrepancy") |>
@@ -184,7 +184,7 @@ templates <- function(template) {
         name = "Bank account with interest",
         caption = "Bank account with compounding interest from Meadows' Thinking in Systems (Chapter 1)"
       ) |>
-      sim_specs(start = 0, stop = 12, dt = 1, time_units = "year", language = "Julia") |>
+      sim_settings(start = 0, stop = 12, dt = 1, time_units = "year", language = "Julia") |>
       update("money_in_bank_account", "stock",
         eqn = "100",
         label = "Money in bank account"
@@ -203,7 +203,7 @@ templates <- function(template) {
         name = "Lorenz Attractor",
         caption = "Lorenz Attractor system for chaotic dynamics"
       ) |>
-      sim_specs(stop = 50, time_units = "hours") |>
+      sim_settings(stop = 50, time_units = "hours") |>
       # Stocks
       update("x", "stock", eqn = "1") |>
       update("y", "stock", eqn = "1") |>
@@ -222,7 +222,7 @@ templates <- function(template) {
         name = "Rossler Attractor",
         caption = "Chaotic Rossler system in 3D"
       ) |>
-      sim_specs(stop = 100, time_units = "hours") |>
+      sim_settings(stop = 100, time_units = "hours") |>
       # Stocks
       update("x", "stock", eqn = "1") |>
       update("y", "stock", eqn = "1") |>
@@ -241,7 +241,7 @@ templates <- function(template) {
         name = "Van der Pol Oscillator",
         caption = "Nonlinear oscillator with limit cycle behavior"
       ) |>
-      sim_specs(stop = 50, time_units = "hours") |>
+      sim_settings(stop = 50, time_units = "hours") |>
       # Stocks
       update("x", "stock", eqn = "0.1", label = "Position") |>
       update("y", "stock", eqn = "0", label = "Velocity") |>
@@ -256,7 +256,7 @@ templates <- function(template) {
         name = "Duffing Oscillator",
         caption = "Nonlinear oscillator with forcing"
       ) |>
-      sim_specs(stop = 100, time_units = "hours") |>
+      sim_settings(stop = 100, time_units = "hours") |>
       # Stocks
       update("x", "stock", eqn = "0.1", label = "Position") |>
       update("y", "stock", eqn = "0", label = "Velocity") |>
@@ -278,7 +278,7 @@ templates <- function(template) {
   } else if (template == "Chua") {
     object <- sdbuildR() |>
       meta(name = "Chua's Circuit", caption = "Chaotic electronic circuit model") |>
-      sim_specs(stop = 50, time_units = "hours") |>
+      sim_settings(stop = 50, time_units = "hours") |>
       # Stocks
       update("x", "stock", eqn = "0.1", label = "Voltage 1") |>
       update("y", "stock", eqn = "0", label = "Voltage 2") |>
@@ -298,7 +298,7 @@ templates <- function(template) {
       update("m1", "constant", eqn = "-0.714", label = "Nonlinear slope m1")
   } else if (template == "JDR") {
     object <- sdbuildR() |>
-      sim_specs(method = "euler", start = "0.0", stop = "182.5", dt = "0.01", save_at = "0.1", seed = "123", time_units = "d", language = "R") |>
+      sim_settings(method = "euler", start = "0.0", stop = "182.5", dt = "0.01", save_at = "0.1", seed = "123", time_units = "d", language = "R") |>
       meta(
         name = "Job Resources and Demands Theory",
         caption = "JD-R Theory as formalized in Evers et al. (submitted)"

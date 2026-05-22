@@ -8,7 +8,7 @@
 #' data.frame with summary statistics and optionally individual simulations.
 #'
 #' To run large simulations, it is recommended to limit the output size by
-#' saving fewer values with `save_at` or `save_n` in [sim_specs()]. To create a reproducible ensemble simulation, set a seed using [sim_specs()].
+#' saving fewer values with `save_at` or `save_n` in [sim_settings()]. To create a reproducible ensemble simulation, set a seed using [sim_settings()].
 #'
 #' If you do not see any variation within a condition of the ensemble (i.e. the
 #' confidence bands are virtually non-existent), there are likely no random
@@ -21,8 +21,6 @@
 #' @param n Number of simulations to run in the ensemble. When conditions is
 #'   specified, n defines the number of simulations to run per condition. If
 #'   each condition only needs to be run once, set `n = 1`. Defaults to `n = 10`.
-#' @param return_sims If `TRUE`, return the individual simulations in the
-#'   ensemble, along with the summary statistics. Set to `FALSE` to save memory (default).
 #' @param conditions A named list specifying parameter values for ensemble
 #'   conditions. Names must correspond to existing stocks or constants
 #'   in the model. Each list element should be a numeric vector of values
@@ -42,7 +40,7 @@
 #' @param quantiles Quantiles to calculate in the summary, e.g. c(0.025,
 #'   0.975).
 #' @param verbose If `TRUE` (default), print details and duration of simulation.
-#' @param ... Optional arguments passed to [sim_specs()]; these can be used to override the simulation specifications set in the model object.
+#' @param ... Optional arguments passed to [sim_settings()]; these can be used to override the simulation specifications set in the model object.
 #'
 #' @returns Object of class [`ensemble_sdbuildR`][ensemble()], which is a list
 #'   containing:
@@ -74,7 +72,7 @@
 #'  }
 #' @export
 #' @concept ensemble
-#' @seealso [update()], [sdbuildR()], [sim_specs()], [use_julia()],
+#' @seealso [update()], [sdbuildR()], [sim_settings()], [use_julia()],
 #'   [future::plan()]
 #'
 #' @examples
@@ -89,7 +87,7 @@
 #'
 #' # For ensemble simulations, it is highly recommended to reduce the
 #' # returned output. For example, to save only 100 values per simulation:
-#' sfm <- sim_specs(sfm, save_n = 100)
+#' sfm <- sim_settings(sfm, save_n = 100)
 #'
 #' # Run ensemble simulation with 10 simulations
 #' sims <- ensemble(sfm, n = 10)
@@ -148,21 +146,23 @@
 #'
 ensemble <- function(object,
                      n = 10,
-                     return_sims = FALSE,
                      conditions = NULL,
                      cross = TRUE,
                      quantiles = c(0.025, 0.975),
                      verbose = TRUE, ...) {
   check_sdbuildR(object)
 
-  # Override sim_specs with any arguments passed via ...
+  # Override sim_settings with any arguments passed via ...
   varargs <- list(...)
   if (length(varargs) > 0) {
-    object <- do.call(sim_specs, c(list(object), varargs))
+    object <- do.call(sim_settings, c(list(object), varargs))
   }
-  language <- tolower(object[["sim_specs"]][["language"]])
-  only_stocks <- object[["sim_specs"]][["only_stocks"]]
-  vars <- object[["sim_specs"]][["vars"]]
+  language <- tolower(object[["sim_settings"]][["language"]])
+  only_stocks <- object[["sim_settings"]][["only_stocks"]]
+  vars <- object[["sim_settings"]][["vars"]]
+
+  # Persistent meta-setting: read return_sims from sim_settings AFTER applying varargs
+  return_sims <- isTRUE(object[["sim_settings"]][["return_sims"]])
 
   if (!is.null(vars)) {
     vars <- validate_sim_vars(object, vars)
@@ -179,7 +179,7 @@ ensemble <- function(object,
 
   if (n <= 0) {
     cli::cli_abort(c(
-      "x" = "The {.arg n} argument must be greater than {.val 0}."
+      "x" = "The {.arg n} argument must be greater than {.val {0}}."
     ))
   }
 
@@ -193,7 +193,7 @@ ensemble <- function(object,
 
   if (length(unique(quantiles)) < 2) {
     cli::cli_abort(c(
-      "x" = "The {.arg quantiles} argument must have at least {.val 2} unique values.",
+      "x" = "The {.arg quantiles} argument must have at least {.val {2}} unique values.",
       "i" = "Received {.val {length(unique(quantiles))}} unique value(s).",
       ">" = "Provide at least 2 quantiles, e.g., {.code quantiles = c(0.025, 0.975)}."
     ))
@@ -201,7 +201,7 @@ ensemble <- function(object,
 
   if (any(quantiles < 0 | quantiles > 1)) {
     cli::cli_abort(c(
-      "x" = "All values in {.arg quantiles} must be between {.val 0} and {.val 1}.",
+      "x" = "All values in {.arg quantiles} must be between {.val {0}} and {.val {1}}.",
       "i" = "Quantiles represent probabilities and must be proportions.",
       ">" = "Use values like {.code c(0.025, 0.5, 0.975)} for 2.5%, 50%, 97.5% quantiles."
     ))
@@ -215,12 +215,6 @@ ensemble <- function(object,
     ))
   }
 
-  if (!is.logical(return_sims)) {
-    cli::cli_abort(c(
-      "x" = "The {.arg return_sims} argument must be {.code TRUE} or {.code FALSE}.",
-      "i" = "Received: {.val {return_sims}}"
-    ))
-  }
 
   if (!is.null(conditions)) {
     if (!is.list(conditions)) {
@@ -348,7 +342,7 @@ ensemble <- function(object,
     cli::cli_abort(c(
       "Unsupported simulation language: {.val {language}}.",
       "i" = "Ensemble simulations support {.code 'R'} and {.code 'Julia'}.",
-      ">" = "Set via {.fn sim_specs}(object, language = {.code 'R'}) or {.code 'Julia'}."
+      ">" = "Set via {.fn sim_settings}(object, language = {.code 'R'}) or {.code 'Julia'}."
     ))
   }
 }
@@ -374,7 +368,7 @@ check_ensemble_sdbuildR <- function(x) {
     cli::cli_abort(c(
       "Invalid {.arg success} field.",
       "x" = "The {.arg success} field must be a single {.cls logical} value.",
-      "i" = "Expected {.val TRUE} or {.val FALSE}."
+      "i" = "Expected {.val {TRUE}} or {.val {FALSE}}."
     ))
   }
 
@@ -470,6 +464,8 @@ print.ensemble_sdbuildR <- function(x, ...) {
 as.data.frame.ensemble_sdbuildR <- function(x, row.names = NULL, optional = FALSE,
                                             type = c("summary", "sims"),
                                             direction = "long",
+                                            i = NULL,
+                                            j = NULL,
                                             ...) {
   check_ensemble_sdbuildR(x)
 
@@ -483,6 +479,11 @@ as.data.frame.ensemble_sdbuildR <- function(x, row.names = NULL, optional = FALS
     ))
   }
 
+  # Validate j
+  if (!is.null(j)) {
+    .check_j_index(j, x[["n_conditions"]])
+  }
+
   if (type == "sims") {
     if (is.null(x[["df"]])) {
       cli::cli_abort(c(
@@ -491,6 +492,18 @@ as.data.frame.ensemble_sdbuildR <- function(x, row.names = NULL, optional = FALS
       ))
     }
     df <- x[["df"]]
+
+    # Validate and apply i filter
+    if (!is.null(i)) {
+      .check_i_index(i, x[["n"]])
+      df <- df[df[["i"]] %in% i, , drop = FALSE]
+    }
+
+    # Apply j filter
+    if (!is.null(j)) {
+      df <- df[df[["j"]] %in% j, , drop = FALSE]
+    }
+
     if (direction == "wide") {
       df <- stats::reshape(df,
         timevar = "variable", idvar = c("j", "i", "time"),
@@ -500,12 +513,22 @@ as.data.frame.ensemble_sdbuildR <- function(x, row.names = NULL, optional = FALS
       rownames(df) <- NULL
     }
   } else if (type == "summary") {
+    if (!is.null(i)) {
+      cli::cli_inform(c(
+        "i" = "The {.arg i} argument is ignored for {.code type = 'summary'}.",
+        ">" = "Set {.code type = 'sims'} to filter by individual trajectory."
+      ))
+    }
     df <- x[["summary"]]
+
+    # Apply j filter
+    if (!is.null(j)) {
+      df <- df[df[["j"]] %in% j, , drop = FALSE]
+    }
+
     if (direction == "wide") {
-      varying_cols <- setdiff(names(df), c("j", "time", "variable"))
       df <- stats::reshape(df,
         timevar = "variable", idvar = c("j", "time"),
-        # varying = varying_cols,
         direction = "wide"
       )
       rownames(df) <- NULL

@@ -122,20 +122,20 @@ test_that("discard() removes variables", {
   expect_equal(nrow(as.data.frame(sfm_erased)), 0)
 })
 
-test_that("discard() removes discarded names from sim_specs vars", {
+test_that("discard() removes discarded names from sim_settings vars", {
   sfm <- sdbuildR("SIR") |>
-    sim_specs(vars = c("Susceptible", "Infection_Rate"))
+    sim_settings(vars = c("Susceptible", "Infection_Rate"))
 
   sfm2 <- discard(sfm, "Infection_Rate")
-  expect_equal(sfm2[["sim_specs"]][["vars"]], "Susceptible")
+  expect_equal(sfm2[["sim_settings"]][["vars"]], "Susceptible")
 })
 
-test_that("discard() clears sim_specs vars when all selected vars are removed", {
+test_that("discard() clears sim_settings vars when all selected vars are removed", {
   sfm <- sdbuildR("SIR") |>
-    sim_specs(vars = c("Infection_Rate"))
+    sim_settings(vars = c("Infection_Rate"))
 
   sfm2 <- discard(sfm, "Infection_Rate")
-  expect_null(sfm2[["sim_specs"]][["vars"]])
+  expect_null(sfm2[["sim_settings"]][["vars"]])
 })
 
 

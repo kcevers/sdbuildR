@@ -37,7 +37,7 @@ sfm <- sdbuildR() |>
   update("inflow", "flow", eqn = "input(t)", to = "a")
 
 \dontshow{
-sfm <- sim_specs(sfm, dt = .1)
+sfm <- sim_settings(sfm, dt = .1)
 }
 
 sim <- simulate(sfm, only_stocks = FALSE)

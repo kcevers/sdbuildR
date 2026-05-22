@@ -190,7 +190,7 @@ if (recreate_figs) {
   pl_list <- list()
 
   sfm <- sdbuildR() |>
-    sim_specs(only_stocks = FALSE, stop = 1, save_at = .01, dt = .01) |>
+    sim_settings(only_stocks = FALSE, stop = 1, save_at = .01, dt = .01) |>
     stock(Stock)
 
   sfm1 <- sfm |>
@@ -544,7 +544,7 @@ pl
 ```{r}
 sfm <- sdbuildR() |>
   meta(name = "Burnout") |>
-  sim_specs(stop = 16, time_units = "weeks", only_stocks = FALSE)
+  sim_settings(stop = 16, time_units = "weeks", only_stocks = FALSE)
 ```
 
 ```{r}
@@ -887,15 +887,15 @@ plot(sfm, show_constants = TRUE, show_aux = TRUE, show_dependencies = TRUE)
 sfm <- sdbuildR() |>
   meta(name = "Job Demands and Resources (JD-R) Theory") |>
   # Add a seed for reproducibility:
-  sim_specs(seed = 123) |>
-  sim_specs(
+  sim_settings(seed = 123) |>
+  sim_settings(
     time_units = "day",
     stop = 365 / 2,
     # stop = 90,
     only_stocks = FALSE
   ) |>
   # Make save_at larger to reduce image file size
-  sim_specs(save_at = .1, dt = .01)
+  sim_settings(save_at = .1, dt = .01)
 ```
 
 ```{r, fig.width = 1, fig.height=1}
@@ -1112,7 +1112,7 @@ if (recreate_figs) {
   # Simulate three models with different functional forms
   sfm0_rev <- sdbuildR() |>
     stock(Stock, eqn = 0.1) |>
-    sim_specs(only_stocks = FALSE, stop = 10)
+    sim_settings(only_stocks = FALSE, stop = 10)
   sfm1_rev <- sfm0_rev |> flow(Inflow, eqn = 1 * Stock * (1 - Stock / 0.5), to = Stock)
   sfm2_rev <- sfm0_rev |> flow(Inflow, eqn = pnorm(Stock, mean = 0.5, sd = 0.3), to = Stock)
   sfm3_rev <- sfm0_rev |> flow(Inflow, eqn = Stock^3 / (0.5^3 + Stock^3), to = Stock)
@@ -1832,7 +1832,7 @@ E -> P -> X -> R -> D [style=invis]
 We save this version of the stock-and-flow model as `sfm0` for later use:
 
 ```{r}
-sfm0 <- sfm |> sim_specs(save_at = .1)
+sfm0 <- sfm |> sim_settings(save_at = .1)
 ```
 
 Note that this is identical to the version stored in the model library, which can be loaded using `sdbuildR()`:
@@ -1840,7 +1840,7 @@ Note that this is identical to the version stored in the model library, which ca
 **uncomment
 
 ```{r}
-# sfm0 <- sdbuildR("JDR") |> sim_specs(save_at = .1)
+# sfm0 <- sdbuildR("JDR") |> sim_settings(save_at = .1)
 ```
 
 
@@ -1849,7 +1849,7 @@ To assess the dependence of the burnout phenomenon on the model's initial condit
 ```{r}
 sfm <- sfm0 |>
   update(c(demands, resources, energy, engagement), eqn = runif(1, 0.01, 2)) |>
-  sim_specs(only_stocks = FALSE)
+  sim_settings(only_stocks = FALSE)
 
 sim1 <- simulate(sfm, seed = 1)
 pl1 <- plot(sim1, vars = vars)
@@ -1867,9 +1867,9 @@ pl
 
 ```{r include=FALSE}
 if (recreate_figs) {
-  sfm_list[["B"]] <- sim_specs(sfm, seed = 1)
-  sfm_list[["C"]] <- sim_specs(sfm, seed = 2)
-  sfm_list[["D"]] <- sim_specs(sfm, seed = 6)
+  sfm_list[["B"]] <- sim_settings(sfm, seed = 1)
+  sfm_list[["C"]] <- sim_settings(sfm, seed = 2)
+  sfm_list[["D"]] <- sim_settings(sfm, seed = 6)
 }
 ```
 
@@ -1957,7 +1957,7 @@ if (recreate_figs) {
 
 
 ```{r}
-sfm <- sim_specs(sfm, seed = 123)
+sfm <- sim_settings(sfm, seed = 123)
 ```
 
 
@@ -2024,8 +2024,8 @@ Counterintuitively, when job demands are set to zero, energy rises, which leads 
 
 ```{r}
 v <- verify(sfm, return_sims = TRUE)
-v$sim_index
-plot(v$sims[[2]])
+v$j
+plot(v$sims[[2]][[1]])
 # sfm2 <- sfm0 |> update(c(demands, r_D, undermining_rate), eqn = 0)
 
 # sim <- simulate(sfm2, only_stocks = FALSE)
@@ -2379,7 +2379,7 @@ Set up model for ensemble simulation:
 
 ```{r, fig.height=4}
 # Simulation study
-sfm0 <- sfm0 |> sim_specs(
+sfm0 <- sfm0 |> sim_settings(
   save_n = 100,
   language = "julia",
   seed = 123
@@ -2483,7 +2483,7 @@ To compute the effectiveness of the intervention, we increase the simulation len
 
 ```{r}
 n <- 1000
-sfm <- sfm |> sim_specs(stop = 1000, save_at = 1000)
+sfm <- sfm |> sim_settings(stop = 1000, save_at = 1000)
 sims <- ensemble(sfm, n = n, return_sims = TRUE)
 df <- as.data.frame(sims, direction = "wide", type = "sims")
 tab <- table(round(df$engagement, 0)) |>
@@ -2518,7 +2518,7 @@ if (recreate_figs) {
   annot_ <- utils::modifyList(annot, list(font = list(size = font_size_subplot + 1, family = font_family)))
 
   # Ensemble (plain)
-  sfm <- sfm_ens_par |> sim_specs(save_at = dt)
+  sfm <- sfm_ens_par |> sim_settings(save_at = dt)
   sims <- ensemble(sfm, n = 1000)
 
   pl_ens <- plot(sims,
@@ -2562,7 +2562,7 @@ if (recreate_figs) {
   vars_ <- VARS[VARS %in% show_vars]
   colors_ <- COLORS[VARS %in% show_vars]
 
-  sfm <- sfm_int |> sim_specs(save_at = dt)
+  sfm <- sfm_int |> sim_settings(save_at = dt)
   sims <- ensemble(sfm, n = n_ens_par, only_stocks = FALSE, return_sims = TRUE)
 
   pl_int <- plot(sims,
@@ -2640,7 +2640,7 @@ if (recreate_figs) {
     width = 5.5, height = 5.5
   )
 
-  sfm <- sfm |> sim_specs(save_at = 1)
+  sfm <- sfm |> sim_settings(save_at = 1)
 }
 ```
 
@@ -2699,7 +2699,7 @@ sfm <- sfm0 |> update(df = df)
 #   update(undermining_rate, eqn = runif(1, 3, 7))
 
 sfm <- sfm |>
-  sim_specs(
+  sim_settings(
     save_at = 1,
     # save_at = c(20, 60, 100), stop = 100,
     # save_at = seq(0, 200, by = 1),
@@ -2725,7 +2725,7 @@ wave1 <- 20
 # x1 <- "energy"
 x1 <- "engagement"
 x2 <- "demands"
-lags <- seq(10, as.numeric(sfm$sim_specs$stop) - wave1, by = 1)
+lags <- seq(10, as.numeric(sfm$sim_settings$stop) - wave1, by = 1)
 
 df <- as.data.frame(sims, direction = "wide", type = "sims")
 dfX <- df[, c("i", "time", x1)]

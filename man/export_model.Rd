@@ -6,7 +6,7 @@
 \usage{
 export_model(
   object,
-  format = c("desolve", "psychomodels"),
+  format = "psychomodels",
   file = NULL,
   title = object[["meta"]][["name"]],
   description = object[["meta"]][["caption"]],
@@ -38,7 +38,7 @@ export_model(
 \arguments{
 \item{object}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
 
-\item{format}{Export format. One of \code{"desolve"} or \code{"psychomodels"} (case-insensitive).}
+\item{format}{Export format. Currently supported: \code{"psychomodels"}.}
 
 \item{file}{Output file path, or \code{NULL} to return the result directly.}
 
@@ -95,34 +95,14 @@ Defaults to \code{"Ordinary Differential Equations"}.}
 \item{pretty}{[psychomodels] If \code{TRUE}, pretty-print output JSON.}
 }
 \value{
-For \code{format = "desolve"} with \code{file = NULL}: a named list with elements
-\code{model} (function), \code{params}, \code{init}, \code{times}, \code{method}.
-For \code{format = "desolve"} with \code{file} specified: invisibly returns the file path.
-
 For \code{format = "psychomodels"} with \code{file = NULL}: a JSON character string.
 For \code{format = "psychomodels"} with \code{file} specified: invisibly returns the file path.
 }
 \description{
 Export a model of class \code{\link{sdbuildR}} to another format.
-Currently supported formats: \code{"desolve"} and \code{"psychomodels"}.
-The \code{format} argument is case-insensitive, so \code{"deSolve"} and \code{"Psychomodels"}
-are also accepted.
+Currently supported format: \code{"psychomodels"}.
 }
 \details{
-\subsection{deSolve format (\code{format = "desolve"})}{
-
-Generates a ready-to-run \href{https://cran.r-project.org/package=deSolve}{deSolve}
-model. Constants become \code{params}, stock initial values become \code{init}, and
-simulation time settings become \code{times}. Auxiliary variables appear as
-intermediate calculations inside the \code{with()} block, and flows appear as
-named intermediate variables summed into each stock's derivative.
-
-When \code{file = NULL}, returns a named list with elements \code{model} (an R
-function), \code{params}, \code{init}, \code{times}, and \code{method}.
-When \code{file} is provided, writes an \code{.R} script and returns the path invisibly.
-If \code{file} has no \code{.R} extension, one is appended.
-}
-
 \subsection{Psychomodels format (\code{format = "psychomodels"})}{
 
 Generates a JSON record for upload to
@@ -135,17 +115,3 @@ If \code{file} has no \code{.json} extension, one is appended.
 \examples{
 sfm <- sdbuildR("SIR")
 
-# Export to deSolve (returns list)
-ds <- export_model(sfm, format = "desolve")
-str(ds[c("params", "init", "times", "method")])
-
-# Export to Psychomodels JSON
-json <- export_model(sfm,
-  format = "psychomodels",
-  publication_doi = "10.0000/example"
-)
-}
-\seealso{
-\code{\link[=import_insightmaker]{import_insightmaker()}}, \code{\link[=import_desolve]{import_desolve()}}
-}
-\concept{importExport}

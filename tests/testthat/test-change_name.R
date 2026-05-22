@@ -2,7 +2,7 @@ test_that("change_name updates dependencies correctly", {
   sfm <- sdbuildR() |>
     update("a", "constant", eqn = 1) |>
     update("b", "aux", eqn = "a * 2") |>
-    sim_specs()
+    sim_settings()
 
   # Check initial dependencies
 
@@ -11,7 +11,7 @@ test_that("change_name updates dependencies correctly", {
 
   # Rename 'a' to 'alpha'
   sfm <- change_name(sfm, "a", "alpha")
-  sfm <- sim_specs(sfm) # Re-trigger pre-assembly
+  sfm <- sim_settings(sfm) # Re-trigger pre-assembly
 
   # Dependencies should now reference 'alpha' not 'a'
   deps <- sfm[["assemble"]][["ordering"]][["deps_by_name"]]
@@ -31,7 +31,7 @@ test_that("change_name clears and rebuilds cache", {
     update("x", "stock", eqn = 10) |>
     update("flow_in", "flow", eqn = "rate", to = "x") |>
     update("rate", "constant", eqn = 0.5) |>
-    sim_specs()
+    sim_settings()
 
   # Cache should be populated
   expect_false(is.null(sfm[["assemble"]][["ordering"]]))
@@ -42,8 +42,8 @@ test_that("change_name clears and rebuilds cache", {
   # Cache should be cleared after update
   expect_null(sfm[["assemble"]][["ordering"]])
 
-  # After sim_specs, cache should be repopulated with new name
-  sfm <- sim_specs(sfm)
+  # After sim_settings, cache should be repopulated with new name
+  sfm <- sim_settings(sfm)
   deps <- sfm[["assemble"]][["ordering"]][["deps_by_name"]]
   expect_true("growth_rate" %in% names(deps))
   expect_false("rate" %in% names(deps))
@@ -54,12 +54,12 @@ test_that("change_name updates flow to/from references in dependencies", {
     update("population", "stock", eqn = 100) |>
     update("births", "flow", eqn = "birth_rate * population", to = "population") |>
     update("birth_rate", "constant", eqn = 0.1) |>
-    sim_specs()
+    sim_settings()
 
   # Rename the stock
 
   sfm <- change_name(sfm, "population", "pop")
-  sfm <- sim_specs(sfm)
+  sfm <- sim_settings(sfm)
 
   # Flow should now reference 'pop' in its equation
   flow_row <- sfm[["variables"]][sfm[["variables"]][["name"]] == "births", ]
@@ -81,11 +81,11 @@ test_that("change_name updates graphical function source", {
       ypts = c(0, 0.5, 1),
       source = "input_var"
     ) |>
-    sim_specs()
+    sim_settings()
 
   # Rename the source variable
   sfm <- change_name(sfm, "input_var", "x_input")
-  sfm <- sim_specs(sfm)
+  sfm <- sim_settings(sfm)
 
   # Graphical function source should be updated
   gf_row <- sfm[["variables"]][sfm[["variables"]][["name"]] == "lookup1", ]

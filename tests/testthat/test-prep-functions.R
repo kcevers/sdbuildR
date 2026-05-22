@@ -34,7 +34,7 @@ test_that("prep_stock_change() creates list columns", {
     update(name = "S", type = "stock", eqn = "100") |>
     update(name = "inflow1", type = "flow", eqn = "5", to = "S") |>
     update(name = "outflow1", type = "flow", eqn = "3", from = "S") |>
-    sim_specs(language = "Julia")
+    sim_settings(language = "Julia")
 
   # Call Julia prep function
   sfm <- prep_stock_change(sfm)
@@ -83,21 +83,21 @@ test_that("list columns work across language switching", {
     update(name = "births", type = "flow", eqn = "0.1 * S", to = "S")
 
   # Start with R
-  sfm <- sim_specs(sfm, language = "R")
+  sfm <- sim_settings(sfm, language = "R")
   sfm_after_r <- prep_stock_change(sfm)
 
   expect_true(is.list(sfm_after_r$variables$inflow))
   expect_true(is.list(sfm_after_r$variables$outflow))
 
   # Switch to Julia
-  sfm <- sim_specs(sfm, language = "Julia")
+  sfm <- sim_settings(sfm, language = "Julia")
   sfm_after_j <- prep_stock_change(sfm)
 
   expect_true(is.list(sfm_after_j$variables$inflow))
   expect_true(is.list(sfm_after_j$variables$outflow))
 
   # Switch back to R
-  sfm <- sim_specs(sfm, language = "R")
+  sfm <- sim_settings(sfm, language = "R")
   sfm_after_r2 <- prep_stock_change(sfm)
 
   expect_true(is.list(sfm_after_r2$variables$inflow))
@@ -161,12 +161,12 @@ test_that("R and Julia prep produce equivalent list structures", {
 
   # R prep
   sfm_r <- sfm_base
-  sfm_r <- sim_specs(sfm_r, language = "R")
+  sfm_r <- sim_settings(sfm_r, language = "R")
   sfm_r <- prep_stock_change(sfm_r)
 
   # Julia prep
   sfm_j <- sfm_base
-  sfm_j <- sim_specs(sfm_j, language = "Julia")
+  sfm_j <- sim_settings(sfm_j, language = "Julia")
   sfm_j <- prep_stock_change(sfm_j)
 
   # Both should have list columns

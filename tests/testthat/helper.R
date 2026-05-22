@@ -39,7 +39,7 @@ expect_successful_simulation <- function(sfm, ...) {
   expect_true("time" %in% colnames(sim$df))
 
   # Time range should be correct
-  expect_equal(max(sim$df$time), as.numeric(sfm$sim_specs$stop))
+  expect_equal(max(sim$df$time), as.numeric(sfm$sim_settings$stop))
 
   invisible(sim)
 }
@@ -103,27 +103,27 @@ make_ensemble_error_sfm <- function() {
     update("S", type = "stock", eqn = "1") |>
     update("Flow1", type = "flow", eqn = "S", to = "S") |>
     update("k", type = "constant", eqn = "0.5") |>
-    sim_specs(language = "Julia")
+    sim_settings(language = "Julia")
 }
 
 
 # Helper: standard sfm for method tests
 make_jl_ensemble_sfm <- function() {
   sdbuildR("Crielaard2022") |>
-    sim_specs(start = 0, stop = 10, dt = 0.1, save_at = 1, language = "Julia")
+    sim_settings(start = 0, stop = 10, dt = 0.1, save_at = 1, language = "Julia")
 }
 
 
 # Helper: small model for R ensemble tests (no Julia required)
 make_r_ensemble_sfm <- function() {
   sdbuildR("SIR") |>
-    sim_specs(language = "R", start = 0, stop = 10, dt = 0.1, save_at = 1)
+    sim_settings(language = "R", start = 0, stop = 10, dt = 0.1, save_at = 1)
 }
 
 make_r_ensemble_random_sfm <- function() {
   sdbuildR("SIR") |>
     update("Susceptible", eqn = "runif(1, 900, 1100)") |>
-    sim_specs(language = "R", start = 0, stop = 10, dt = 0.1, save_at = 1)
+    sim_settings(language = "R", start = 0, stop = 10, dt = 0.1, save_at = 1)
 }
 
 
@@ -133,5 +133,5 @@ make_verifiable_sfm <- function() {
     update("S", type = "stock", eqn = "100") |>
     update("drain", type = "flow", eqn = "rate * S", from = "S") |>
     update("rate", type = "constant", eqn = "0.1") |>
-    sim_specs(stop = 10, dt = 0.1, save_at = 1)
+    sim_settings(stop = 10, dt = 0.1, save_at = 1)
 }

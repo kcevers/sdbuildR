@@ -88,7 +88,7 @@ test_that("unit_test() respects active = FALSE", {
   expect_false(sfm[["unit_tests"]][[1]][["active"]])
   v <- verify(sfm)
   expect_equal(length(v[["results"]]), 1L)
-  expect_equal(v[["results"]][[1]][["status"]], "skipped")
+  expect_equal(v[["results"]][[1]][["status"]], "skip")
 })
 
 test_that("unit_test() errors on bad conditions (unknown name)", {
@@ -351,18 +351,21 @@ test_that("verify() returns NULL sims by default (return_sims = FALSE)", {
   sfm <- make_verifiable_sfm() |> unit_test(expr = all(S >= 0))
   result <- silence(verify(sfm))
   expect_null(result[["sims"]])
-  expect_null(result[["sim_index"]])
+  # j is always populated even without sims
+  expect_false(is.null(result[["j"]]))
 })
 
-test_that("verify() returns sims as unnamed list and sim_index as named int vector", {
+test_that("verify() returns sims as nested list and j as named int vector", {
   sfm <- make_verifiable_sfm() |>
     unit_test(label = "S non-negative", expr = all(S >= 0))
   result <- silence(verify(sfm, return_sims = TRUE))
   expect_true(is.list(result[["sims"]]))
   expect_null(names(result[["sims"]]))
   expect_equal(length(result[["sims"]]), 1L)
-  expect_s3_class(result[["sims"]][[1]], "simulate_sdbuildR")
-  expect_equal(result[["sim_index"]], c("S non-negative" = 1L))
+  # sims[[j]][[i]] structure
+  expect_true(is.list(result[["sims"]][[1]]))
+  expect_s3_class(result[["sims"]][[1]][[1]], "simulate_sdbuildR")
+  expect_equal(result[["j"]], c("S non-negative" = 1L))
 })
 
 test_that("verify() deduplicates sims: two tests sharing conditions map to the same index", {
@@ -377,109 +380,72 @@ test_that("verify() deduplicates sims: two tests sharing conditions map to the s
   result <- silence(verify(sfm, return_sims = TRUE))
   # Two unique condition sets -> two sim objects
   expect_equal(length(result[["sims"]]), 2L)
-  # Three tests, each mapped to a sim index
-  expect_equal(length(result[["sim_index"]]), 3L)
+  # Three tests, each mapped to a condition index
+  expect_equal(length(result[["j"]]), 3L)
   expect_setequal(
-    names(result[["sim_index"]]),
+    names(result[["j"]]),
     c("S non-negative", "S ends positive", "S constant at zero rate")
   )
   # The two baseline tests share the same index
   expect_equal(
-    result[["sim_index"]][["S non-negative"]],
-    result[["sim_index"]][["S ends positive"]]
+    result[["j"]][["S non-negative"]],
+    result[["j"]][["S ends positive"]]
   )
   # The condition test has a different index
   expect_false(
-    result[["sim_index"]][["S non-negative"]] ==
-      result[["sim_index"]][["S constant at zero rate"]]
+    result[["j"]][["S non-negative"]] ==
+      result[["j"]][["S constant at zero rate"]]
   )
-  # All sims are proper simulate_sdbuildR objects
-  for (sim in result[["sims"]]) expect_s3_class(sim, "simulate_sdbuildR")
+  # All sims are nested simulate_sdbuildR objects
+  for (sim_list in result[["sims"]]) {
+    expect_true(is.list(sim_list))
+    expect_s3_class(sim_list[[1]], "simulate_sdbuildR")
+  }
+})
+
+test_that("verify() n > 1 returns pass_rate and counts in each result", {
+  sfm <- make_verifiable_sfm() |>
+    unit_test(label = "S non-negative", expr = all(S >= 0))
+  result <- silence(verify(sfm, n = 3L))
+  r <- result[["results"]][[1]]
+  expect_true(!is.null(r[["pass_rate"]]))
+  expect_true(!is.null(r[["n_pass"]]))
+  expect_true(!is.null(r[["n_fail"]]))
+  expect_true(!is.null(r[["n_error"]]))
+  expect_equal(r[["n_pass"]] + r[["n_fail"]] + r[["n_error"]], 3L)
 })
 
 
-# ==============================================================================
-# verify.simulate_sdbuildR()
-# ==============================================================================
-
-test_that("verify.simulate_sdbuildR() fails an incorrect test", {
+test_that("as.data.frame.verify_sdbuildR returns a data frame with expected columns", {
   sfm <- make_verifiable_sfm() |>
-    unit_test(label = "S always zero", expr = all(S == 0))
-
-  sim <- simulate(sfm)
-  result <- silence(verify(sim))
-
-  expect_equal(result[["results"]][[1]][["status"]], "fail")
+    unit_test(label = "S non-negative", expr = all(S >= 0))
+  result <- silence(verify(sfm))
+  df <- as.data.frame(result)
+  expect_s3_class(df, "data.frame")
+  expect_true(all(c("nr", "label", "status", "pass_rate", "n_pass", "n_fail", "n_error") %in% names(df)))
+  expect_equal(nrow(df), 1L)
 })
 
-test_that("verify.simulate_sdbuildR() skips tests with non-matching conditions", {
+test_that("as.data.frame.verify_sdbuildR j filter works", {
   sfm <- make_verifiable_sfm() |>
-    update(rate, eqn = 0.1) |>
+    unit_test(label = "S non-negative", expr = all(S >= 0)) |>
     unit_test(
-      label      = "rate=0 test",
-      expr       = all(diff(S) >= 0),
-      conditions = list(rate = 0) # rate is 0.1 in this model
+      label = "S constant at zero rate",
+      expr = all(diff(S) == 0),
+      conditions = list(rate = 0)
     )
-
-  sim <- simulate(sfm)
-  result <- silence(verify(sim))
-
-  # Should be skipped because the sim was run with rate = 0.1, not 0
-  expect_equal(result[["results"]][[1]][["status"]], "skipped")
-  expect_match(result[["results"]][[1]][["message"]], "re-simulation")
+  result <- silence(verify(sfm))
+  df_nr1 <- as.data.frame(result, nr = 1L)
+  expect_equal(nrow(df_nr1), 1L)
+  expect_equal(df_nr1[["label"]], "S non-negative")
 })
 
-test_that("verify.simulate_sdbuildR() runs tests whose conditions match current model", {
-  rate_value <- 0.1
+test_that("head.verify_sdbuildR and tail.verify_sdbuildR return data frames", {
   sfm <- make_verifiable_sfm() |>
-    update(rate, type = "constant", eqn = !!rate_value) |>
-    unit_test(
-      label      = "rate=0.1 test",
-      expr       = all(S >= 0),
-      conditions = list(rate = rate_value) # matches the model's actual rate
-    )
-
-  sim <- simulate(sfm)
-  result <- silence(verify(sim))
-
-  # Conditions match → test should run, not skip
-  expect_equal(result[["results"]][[1]][["status"]], "pass")
-})
-
-test_that("verify.simulate_sdbuildR() skips inactive tests", {
-  sfm <- make_verifiable_sfm() |>
-    unit_test(label = "inactive", expr = FALSE, active = FALSE)
-
-  sim <- simulate(sfm)
-  result <- silence(verify(sim))
-
-  expect_equal(result[["results"]][[1]][["status"]], "skipped")
-})
-
-test_that("verify result for skipped test includes expr_str, conditions, and outcome = NULL", {
-  sfm <- make_verifiable_sfm() |>
-    unit_test(label = "inactive test", expr = all(S >= 0), active = FALSE)
-
-  sim <- simulate(sfm)
-  result <- silence(verify(sim))
-  res_entry <- result[["results"]][[1]]
-
-  expect_equal(res_entry[["expr_str"]], "all(S >= 0)")
-  expect_equal(res_entry[["conditions"]], list())
-  expect_null(res_entry[["outcome"]])
-  expect_equal(res_entry[["status"]], "skipped")
-})
-
-test_that("verify result for skipped test includes error_type = NA", {
-  sfm <- make_verifiable_sfm() |>
-    unit_test(label = "inactive test", expr = all(S >= 0), active = FALSE)
-
-  sim <- simulate(sfm)
-  result <- silence(verify(sim))
-  res_entry <- result[["results"]][[1]]
-
-  expect_true(is.na(res_entry[["error_type"]]))
-  expect_equal(res_entry[["status"]], "skipped")
+    unit_test(label = "S non-negative", expr = all(S >= 0))
+  result <- silence(verify(sfm))
+  expect_s3_class(head(result), "data.frame")
+  expect_s3_class(tail(result), "data.frame")
 })
 
 test_that("verify result for passing test includes error_type = NA", {
@@ -558,6 +524,108 @@ test_that("error_type = 'expr_eval' when expression references undefined variabl
   expect_match(res_entry[["message"]], "not found|undefined")
 })
 
+test_that("verify() nr parameter runs only specified tests", {
+  sfm <- make_verifiable_sfm() |>
+    unit_test(label = "A", expr = all(S >= 0)) |>
+    unit_test(label = "B", expr = all(S == 0))
+  result <- silence(verify(sfm, nr = 1L))
+  expect_equal(length(result[["results"]]), 1L)
+  expect_equal(result[["test_indices"]], 1L)
+  df <- as.data.frame(result)
+  expect_equal(df$nr, 1L)
+})
+
+test_that("as.data.frame test_indices preserved correctly", {
+  sfm <- make_verifiable_sfm() |>
+    unit_test(label = "A", expr = all(S >= 0)) |>
+    unit_test(label = "B", expr = all(S > 0))
+  result <- silence(verify(sfm, nr = 2L))
+  df <- as.data.frame(result)
+  expect_equal(df$nr, 2L)
+})
+
+test_that("unit_tests() label partial match works", {
+  sfm <- make_verifiable_sfm() |>
+    unit_test(label = "S non-negative", expr = all(S >= 0)) |>
+    unit_test(label = "S constant",     expr = all(diff(S) == 0))
+  res <- unit_tests(sfm, label = "non-neg")
+  expect_equal(res$n, 1L)
+  expect_equal(res$indices, 1L)
+})
+
+test_that("unit_tests() label vector matches either (OR)", {
+  sfm <- make_verifiable_sfm() |>
+    unit_test(label = "S non-negative", expr = all(S >= 0)) |>
+    unit_test(label = "S constant",     expr = all(diff(S) == 0))
+  res <- unit_tests(sfm, label = c("non-neg", "constant"))
+  expect_equal(res$n, 2L)
+})
+
+test_that("unit_tests() label is case-insensitive by default", {
+  sfm <- make_verifiable_sfm() |>
+    unit_test(label = "S Non-Negative", expr = all(S >= 0))
+  res <- unit_tests(sfm, label = "non-negative")
+  expect_equal(res$n, 1L)
+})
+
+test_that("unit_tests() label ignore_case = FALSE respects case", {
+  sfm <- make_verifiable_sfm() |>
+    unit_test(label = "S Non-Negative", expr = all(S >= 0))
+  expect_warning(unit_tests(sfm, label = "non-negative", ignore_case = FALSE),
+                 regexp = "No tests matched")
+})
+
+test_that("unit_tests() label warns on no match", {
+  sfm <- make_verifiable_sfm() |>
+    unit_test(label = "S non-negative", expr = all(S >= 0))
+  expect_warning(unit_tests(sfm, label = "xyz_no_match"), regexp = "No tests matched")
+})
+
+test_that("unit_tests() nr and label combine as intersection", {
+  sfm <- make_verifiable_sfm() |>
+    unit_test(label = "S non-negative", expr = all(S >= 0)) |>
+    unit_test(label = "S constant",     expr = all(diff(S) == 0))
+  res <- unit_tests(sfm, nr = 1:2, label = "non-neg")
+  expect_equal(res$n, 1L)
+  expect_equal(res$indices, 1L)
+})
+
+test_that("as.data.frame label filter works", {
+  sfm <- make_verifiable_sfm() |>
+    unit_test(label = "S non-negative", expr = all(S >= 0)) |>
+    unit_test(label = "S constant",     expr = all(diff(S) == 0))
+  result <- silence(verify(sfm))
+  df <- as.data.frame(result, label = "non-neg")
+  expect_equal(nrow(df), 1L)
+  expect_equal(df$label, "S non-negative")
+})
+
+test_that("as.data.frame label vector matches either", {
+  sfm <- make_verifiable_sfm() |>
+    unit_test(label = "S non-negative", expr = all(S >= 0)) |>
+    unit_test(label = "S constant",     expr = all(diff(S) == 0))
+  result <- silence(verify(sfm))
+  df <- as.data.frame(result, label = c("non-neg", "constant"))
+  expect_equal(nrow(df), 2L)
+})
+
+test_that("as.data.frame nr and label combine (intersection)", {
+  sfm <- make_verifiable_sfm() |>
+    unit_test(label = "S non-negative", expr = all(S >= 0)) |>
+    unit_test(label = "S constant",     expr = all(diff(S) == 0))
+  result <- silence(verify(sfm))
+  df <- as.data.frame(result, nr = 1:2, label = "non-neg")
+  expect_equal(nrow(df), 1L)
+  expect_equal(df$nr, 1L)
+})
+
+test_that("as.data.frame label warns on no match", {
+  sfm <- make_verifiable_sfm() |>
+    unit_test(label = "S non-negative", expr = all(S >= 0))
+  result <- silence(verify(sfm))
+  expect_warning(as.data.frame(result, label = "xyz"), regexp = "No results matched")
+})
+
 
 test_that("verify().results always includes error_type field", {
   sfm <- make_verifiable_sfm() |>
@@ -572,19 +640,6 @@ test_that("verify().results always includes error_type field", {
       info = paste("Missing error_type in result:", res_entry[["label"]])
     )
   }
-})
-
-test_that("verify.simulate_sdbuildR() handles testthat expectations", {
-  sfm <- make_verifiable_sfm() |>
-    unit_test(label = "S starts at 100", expr = expect_equal(S[[1]], 100))
-
-  sim <- simulate(sfm)
-  result <- silence(verify(sim))
-  res_entry <- result[["results"]][[1]]
-
-  expect_equal(res_entry[["status"]], "pass")
-  expect_true(is.na(res_entry[["error_type"]]))
-  expect_true(isTRUE(res_entry[["outcome"]]))
 })
 
 

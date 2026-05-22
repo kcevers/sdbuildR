@@ -1,6 +1,6 @@
-test_that("R script components are pre-cached in sfm after sim_specs", {
+test_that("R script components are pre-cached in sfm after sim_settings", {
   sfm <- sdbuildR("SIR") |>
-    sim_specs(language = "R", start = 0, stop = 10, dt = 0.1)
+    sim_settings(language = "R", start = 0, stop = 10, dt = 0.1)
 
   # Check that all standard fields exist
   expect_equal(length(sfm$assemble), length(empty_assemble()))
@@ -19,7 +19,7 @@ test_that("R script components are pre-cached in sfm after sim_specs", {
 
 test_that("R script components persist through simulation", {
   sfm <- sdbuildR("SIR") |>
-    sim_specs(language = "R", start = 0, stop = 10, dt = 0.1)
+    sim_settings(language = "R", start = 0, stop = 10, dt = 0.1)
 
   # Capture field names before simulate
   fields_before <- names(sfm$assemble)
@@ -49,7 +49,7 @@ test_that("R funcs are pre-cached in assemble", {
     update("I", "stock", eqn = 1) |>
     update("contact_rate", "constant", eqn = 0.5) |>
     custom_func(name = "infection_rate", eqn = "contact_rate * S * I") |>
-    sim_specs(language = "R", start = 0, stop = 10, dt = 0.1)
+    sim_settings(language = "R", start = 0, stop = 10, dt = 0.1)
 
   # Check that funcs are cached BEFORE simulate
   expect_true(nzchar(sfm$assemble$funcs))
@@ -62,11 +62,11 @@ test_that("R funcs are pre-cached in assemble", {
 
 # Julia Script Assembly Tests ---------------------------------------------------
 
-test_that("Julia script components are pre-cached after sim_specs", {
+test_that("Julia script components are pre-cached after sim_settings", {
   skip_if_julia_not_ready()
 
   sfm <- sdbuildR("SIR") |>
-    sim_specs(language = "Julia", start = 0, stop = 10, dt = 0.1)
+    sim_settings(language = "Julia", start = 0, stop = 10, dt = 0.1)
 
   expect_true(!is.null(sfm$assemble$language))
   expect_equal(sfm$assemble$language, "Julia")
@@ -80,7 +80,7 @@ test_that("Julia script components persist through simulation", {
   skip_if_julia_not_ready()
 
   sfm <- sdbuildR("SIR") |>
-    sim_specs(language = "Julia", start = 0, stop = 10, dt = 0.1)
+    sim_settings(language = "Julia", start = 0, stop = 10, dt = 0.1)
 
   # Capture field names before simulate
   fields_before <- names(sfm$assemble)
@@ -107,10 +107,10 @@ test_that("Julia and R have identical assemble structure fields", {
   skip_if_julia_not_ready()
 
   sfm_r <- sdbuildR("SIR") |>
-    sim_specs(language = "R", start = 0, stop = 10, dt = 0.1)
+    sim_settings(language = "R", start = 0, stop = 10, dt = 0.1)
 
   sfm_julia <- sdbuildR("SIR") |>
-    sim_specs(language = "Julia", start = 0, stop = 10, dt = 0.1)
+    sim_settings(language = "Julia", start = 0, stop = 10, dt = 0.1)
 
   # Both should have identical field names
   expect_equal(sort(names(sfm_r$assemble)), sort(names(sfm_julia$assemble)))
@@ -123,10 +123,10 @@ test_that("Julia equations differ from R equations in cached components", {
   skip_if_julia_not_ready()
 
   sfm_r <- sdbuildR("SIR") |>
-    sim_specs(language = "R", start = 0, stop = 10, dt = 0.1)
+    sim_settings(language = "R", start = 0, stop = 10, dt = 0.1)
 
   sfm_julia <- sdbuildR("SIR") |>
-    sim_specs(language = "Julia", start = 0, stop = 10, dt = 0.1)
+    sim_settings(language = "Julia", start = 0, stop = 10, dt = 0.1)
 
   # Simulate both
   sim_r <- simulate(sfm_r, only_stocks = TRUE)
@@ -141,17 +141,17 @@ test_that("Julia equations differ from R equations in cached components", {
 })
 
 
-test_that("cache invalidates when sim_specs parameters change", {
+test_that("cache invalidates when sim_settings parameters change", {
   sfm <- sdbuildR() |>
     update(name = "S", type = "stock", eqn = "100") |>
     update(name = "births", type = "flow", eqn = "0.1 * S", to = "S")
 
-  # Initial sim_specs
-  sfm1 <- sim_specs(sfm, language = "R", start = 0, stop = 10, dt = 0.1)
+  # Initial sim_settings
+  sfm1 <- sim_settings(sfm, language = "R", start = 0, stop = 10, dt = 0.1)
   cache1 <- sfm1$assemble
 
   # Change dt
-  sfm2 <- sim_specs(sfm1, dt = 0.01)
+  sfm2 <- sim_settings(sfm1, dt = 0.01)
   cache2 <- sfm2$assemble
 
   # Cache should be regenerated (dt affects time sequence)

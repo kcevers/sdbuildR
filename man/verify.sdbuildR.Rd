@@ -4,29 +4,40 @@
 \alias{verify.sdbuildR}
 \title{Verify unit tests against simulation results}
 \usage{
-\method{verify}{sdbuildR}(object, verbose = TRUE, return_sims = FALSE, ...)
+\method{verify}{sdbuildR}(object, verbose = TRUE, n = 1L, nr = NULL, ...)
 }
 \arguments{
-\item{object}{An \code{\link{sdbuildR}} or \code{\link[=simulate.sdbuildR]{simulate_sdbuildR}} object.}
+\item{object}{An \code{\link{sdbuildR}} object.}
 
 \item{verbose}{If \code{TRUE} (default), print results to the console.}
 
-\item{return_sims}{If \code{TRUE}, return the simulations run during verification.
-Set to \code{FALSE} (default) to discard them.}
+\item{n}{Number of simulations to run per condition. Defaults to \code{1} (deterministic
+verification). Set to a larger value for robustness testing of stochastic models.}
+
+\item{nr}{Integer vector of test number(s) to run (1-based, as shown by \code{\link[=unit_tests]{unit_tests()}}).
+Defaults to \code{NULL} (run all tests).}
 
 \item{...}{Additional arguments passed to \code{\link[=simulate.sdbuildR]{simulate.sdbuildR()}}.}
 }
 \value{
 An object of class \code{verify_sdbuildR} with fields, returned invisibly:
 \describe{
-\item{results}{List of test result entries, each with \code{label}, \code{expr_str}, \code{conditions}, \code{status}, \code{message}, and \code{outcome}.}
+\item{results}{List of test result entries, each with \code{label}, \code{expr_str},
+\code{conditions}, \code{status}, \code{error_type}, \code{message}, \code{outcome}, \code{pass_rate},
+\code{n_pass}, \code{n_fail}, and \code{n_error}.}
 \item{object}{The \code{sdbuildR} model the tests were run against.}
-\item{sims}{Unnamed list of \code{simulate_sdbuildR} objects (one per unique condition
-set), or \code{NULL} if \code{return_sims = FALSE}.}
-\item{sim_index}{Named integer vector mapping each test label to its index in
-\code{sims}, or \code{NULL} if \code{return_sims = FALSE}. Use
-\code{result$sims[[result$sim_index[["my test label"]]]]} to retrieve the simulation
-used for a specific test.}
+\item{sims}{Nested list of \code{simulate_sdbuildR} objects structured as
+\code{sims[[j]][[i]]} (condition \code{j}, run \code{i}), or \code{NULL} if
+\code{return_sims = FALSE}.}
+\item{j}{Named integer vector mapping each test label to its condition
+index in \code{sims}. Always populated. Use
+\code{result$sims[[result$j[["my test label"]]]][[1]]} to retrieve the
+simulation used for a specific test.}
+\item{n}{Number of simulations run per condition.}
+\item{n_conditions}{Number of unique simulation conditions.}
+\item{test_indices}{Integer vector of the original 1-based test numbers that
+were run (as shown by \code{\link[=unit_tests]{unit_tests()}}). Equal to \code{seq_along(results)} when
+\code{nr = NULL} (all tests run).}
 }
 }
 \description{
@@ -34,14 +45,13 @@ Run all active unit tests defined on a stock-and-flow model. Use
 \code{\link[=unit_test]{unit_test()}} to define tests; use \code{\link[=unit_tests]{unit_tests()}} to display them.
 }
 \details{
-Calling \code{verify()} on a \code{sdbuildR} model (not yet simulated) will first
-simulate the model, then run all tests — including those that require
-re-simulation under alternative \link[=unit_test]{conditions}.
+Calling \code{verify()} on a \code{sdbuildR} model will first simulate the model, then
+run all tests — including those that require re-simulation under alternative
+\link[=unit_test]{conditions}.
 
-Calling \code{verify()} on a \code{simulate_sdbuildR} result runs only tests whose
-\code{conditions} are empty or already match the current model parameter values.
-Tests that require re-simulation are skipped with an informative message;
-use \code{verify(object)} (the unsimulated model) to run all tests.
+Setting \code{n > 1} runs an ensemble of \code{n} simulations per condition (robustness
+testing). Each test is evaluated against all \code{n} runs. The test passes only
+if all \code{n} runs pass.
 }
 \examples{
 sfm <- sdbuildR("SIR") |>
@@ -52,10 +62,6 @@ sfm <- sdbuildR("SIR") |>
   )
 
 verify(sfm)
-
-# Or verify against existing results
-sim <- simulate(sfm)
-verify(sim)
 }
 \seealso{
 \code{\link[=unit_test]{unit_test()}}, \code{\link[=unit_tests]{unit_tests()}}, \code{\link[=simulate.sdbuildR]{simulate.sdbuildR()}}

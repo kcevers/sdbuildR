@@ -352,7 +352,7 @@ compile_run_ode_ensemble <- function(object, ensemble_pars, static, only_stocks)
     warmup_str <- paste0(
       "# Warm-up: pre-compile solver to avoid GC crash during threaded JIT\n",
       "solve(", P[["prob_name"]], ", ",
-      object[["sim_specs"]][["method"]],
+      object[["sim_settings"]][["method"]],
       ", dt = ", P[["timestep_name"]],
       ", saveat = [", P[["times_name"]], "[2]]",
       ", tstops = ", P[["tstops_name"]],
@@ -368,7 +368,7 @@ compile_run_ode_ensemble <- function(object, ensemble_pars, static, only_stocks)
     static_str = static[["script_prob_func"]],
     intermediaries_callback = intermediaries_callback,
     intermediaries_remake = intermediaries_remake,
-    method = object[["sim_specs"]][["method"]],
+    method = object[["sim_settings"]][["method"]],
     threaded_str = ifelse(ensemble_pars[["threaded"]], ", EnsembleThreads()", ""),
     warmup_str = warmup_str
   )

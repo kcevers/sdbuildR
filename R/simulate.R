@@ -1,13 +1,13 @@
 #' Simulate stock-and-flow model
 #'
-#' Simulate a stock-and-flow model with simulation specifications defined by [sim_specs()]. If `sim_specs(language = "julia")`, the Julia environment will first be set up with [use_julia()]. If any problems are detected by [summary()], the model cannot be simulated.
+#' Simulate a stock-and-flow model with simulation specifications defined by [sim_settings()]. If `sim_settings(language = "julia")`, the Julia environment will first be set up with [use_julia()]. If any problems are detected by [summary()], the model cannot be simulated.
 #'
 #' @inheritParams import_insightmaker
 #' @inheritParams update.sdbuildR
-#' @inheritParams sim_specs
+#' @inheritParams sim_settings
 #' @param nsim Number of simulations to run (unused; see [ensemble()] for running multiple simulations).
 #' @param verbose If `TRUE`, print duration of simulation. Defaults to `FALSE`.
-#' @param ... Optional arguments passed to [sim_specs()]; these can be used to override the simulation specifications set in the model object.
+#' @param ... Optional arguments passed to [sim_settings()]; these can be used to override the simulation specifications set in the model object.
 #'
 #' @returns Object of class [`simulate_sdbuildR`][simulate.sdbuildR()], a list containing:
 #' \describe{
@@ -28,7 +28,7 @@
 #' @importFrom stats simulate
 #' @method simulate sdbuildR
 #' @concept simulate
-#' @seealso [update()], [sdbuildR()], [summary()], [sim_specs()], [use_julia()]
+#' @seealso [update()], [sdbuildR()], [summary()], [sim_settings()], [use_julia()]
 #'
 #' @examples
 #' sfm <- sdbuildR("SIR")
@@ -36,7 +36,7 @@
 #' plot(sim)
 #'
 #' # Obtain all model variables
-#' sim <- simulate(sim_specs(sfm, only_stocks = FALSE))
+#' sim <- simulate(sim_settings(sfm, only_stocks = FALSE))
 #' plot(sim, add_constants = TRUE)
 #'
 simulate.sdbuildR <- function(
@@ -63,18 +63,18 @@ simulate.sdbuildR <- function(
     ))
   }
 
-  # Override sim_specs with any arguments passed via ...
+  # Override sim_settings with any arguments passed via ...
   varargs <- list(...)
   # Add seed if seed was passed
   if (!missing(seed)) {
     varargs <- c(list(seed = seed), varargs)
   }
   if (length(varargs) > 0) {
-    object <- do.call(sim_specs, c(list(object), varargs))
+    object <- do.call(sim_settings, c(list(object), varargs))
   }
 
-  only_stocks <- object[["sim_specs"]][["only_stocks"]]
-  vars <- object[["sim_specs"]][["vars"]]
+  only_stocks <- object[["sim_settings"]][["only_stocks"]]
+  vars <- object[["sim_settings"]][["vars"]]
 
   if (!is.null(vars)) {
     vars <- validate_sim_vars(object, vars)
@@ -82,13 +82,13 @@ simulate.sdbuildR <- function(
     only_stocks <- all(vars %in% stock_names)
   }
 
-  if (tolower(object[["sim_specs"]][["language"]]) == "julia") {
+  if (tolower(object[["sim_settings"]][["language"]]) == "julia") {
     return(simulate_julia(object,
       only_stocks = only_stocks,
       vars = vars,
       verbose = verbose
     ))
-  } else if (tolower(object[["sim_specs"]][["language"]]) == "r") {
+  } else if (tolower(object[["sim_settings"]][["language"]]) == "r") {
     return(simulate_r(object,
       only_stocks = only_stocks,
       vars = vars,
@@ -145,7 +145,7 @@ check_simulate_sdbuildR <- function(x) {
     cli::cli_abort(c(
       "Invalid {.arg success} field.",
       "x" = "The {.arg success} field must be a single {.cls logical} value.",
-      "i" = "Expected {.val TRUE} or {.val FALSE}."
+      "i" = "Expected {.val {TRUE}} or {.val {FALSE}}."
     ))
   }
 
@@ -227,12 +227,15 @@ print.simulate_sdbuildR <- function(x, ...) {
 
   df <- x[["df"]]
   if (!is.null(df) && nrow(df) > 0) {
-    cli::cli_h2("Data (wide format, first rows)")
+    cli::cli_h2("Data (first rows)")
     print(head(as.data.frame(x, direction = "wide"), 5))
+    
+    # Print blank line
+    cli::cli_text("")
   }
 
   cli::cli_inform(c(
-    "i" = "Access data with {.fn as.data.frame}, {.fn head}, or {.fn tail} \u2022 Visualise with {.fn plot}"
+    "i" = "Access with {.fn as.data.frame} \u2022 Visualise with {.fn plot}"
   ))
 
   invisible(x)
@@ -340,7 +343,7 @@ model_properties <- function(object) {
 #'     \item{`removed`}{Variables present in `sfm1` but not `sfm2`.}
 #'     \item{`type_changed`}{Variables with different types.}
 #'     \item{`eqn_changed`}{Variables with different equations.}
-#'     \item{`sim_specs_diff`}{Simulation settings that differ.}
+#'     \item{`sim_settings_diff`}{Simulation settings that differ.}
 #'     \item{`properties`}{Per-model counts and nonlinearity scores.}
 #'   }
 #' @seealso [`simulate()`][simulate.sdbuildR()], [`summary()`][summary.sdbuildR()]
@@ -407,9 +410,9 @@ compare_models <- function(sfm1, sfm2) {
     "start", "stop", "dt", "save_at", "save_type", "save_n",
     "time_units", "method", "seed", "language", "only_stocks"
   )
-  s1 <- sfm1[["sim_specs"]]
-  s2 <- sfm2[["sim_specs"]]
-  sim_specs_diff <- Filter(
+  s1 <- sfm1[["sim_settings"]]
+  s2 <- sfm2[["sim_settings"]]
+  sim_settings_diff <- Filter(
     Negate(is.null),
     stats::setNames(
       lapply(spec_fields, function(f) {
@@ -436,7 +439,7 @@ compare_models <- function(sfm1, sfm2) {
     removed = removed,
     type_changed = type_changed,
     eqn_changed = eqn_changed,
-    sim_specs_diff = sim_specs_diff,
+    sim_settings_diff = sim_settings_diff,
     properties = list(
       sfm1 = model_properties(sfm1),
       sfm2 = model_properties(sfm2)
@@ -503,12 +506,12 @@ print.compare_sdbuildR <- function(x, ...) {
 
   # ── Simulation Settings ──────────────────────────────────────
   cli::cli_h2("Simulation Settings")
-  if (length(x[["sim_specs_diff"]]) == 0L) {
+  if (length(x[["sim_settings_diff"]]) == 0L) {
     cli::cli_alert_success("Identical")
   } else {
-    for (f in names(x[["sim_specs_diff"]])) {
-      v1 <- x[["sim_specs_diff"]][[f]][["sfm1"]]
-      v2 <- x[["sim_specs_diff"]][[f]][["sfm2"]]
+    for (f in names(x[["sim_settings_diff"]])) {
+      v1 <- x[["sim_settings_diff"]][[f]][["sfm1"]]
+      v2 <- x[["sim_settings_diff"]][[f]][["sfm2"]]
       cli::cli_alert_warning("{f}: {.val {v1}} \u2192 {.val {v2}}")
     }
   }
@@ -591,8 +594,8 @@ compare_sim <- function(sim1, sim2, tolerance = .00001) {
       nrow = nrow(sim[[P[["sim_df_name"]]]]),
       ncol = ncol(sim[[P[["sim_df_name"]]]]),
       n_pars = length(sim[[P[["parameter_name"]]]]),
-      language = sim[["object"]][["sim_specs"]][["language"]],
-      method = sim[["object"]][["sim_specs"]][["method"]]
+      language = sim[["object"]][["sim_settings"]][["language"]],
+      method = sim[["object"]][["sim_settings"]][["method"]]
     )
   }
 
@@ -853,12 +856,12 @@ get_build_code <- function(object) {
   check_sdbuildR(object)
 
   # Simulation specifications — filter out defaults
-  sim_specs_list <- object[["sim_specs"]]
-  ss_defaults <- formals(sim_specs)
+  sim_settings_list <- object[["sim_settings"]]
+  ss_defaults <- formals(sim_settings)
   ss_defaults <- ss_defaults[!names(ss_defaults) %in% c("object", "save_at", "save_n")]
 
-  sim_specs_list <- sim_specs_list[vapply(names(sim_specs_list), function(nm) {
-    val <- sim_specs_list[[nm]]
+  sim_settings_list <- sim_settings_list[vapply(names(sim_settings_list), function(nm) {
+    val <- sim_settings_list[[nm]]
     # Omit save_type = "all" (the default) and NULL save_at/save_n
     if (nm == "save_type") {
       return(!identical(val, "all"))
@@ -869,9 +872,9 @@ get_build_code <- function(object) {
     !nm %in% names(ss_defaults) || !identical(val, ss_defaults[[nm]])
   }, logical(1))]
 
-  sim_specs_list <- lapply(sim_specs_list, function(z) if (is.character(z)) paste0("\"", z, "\"") else z)
-  sim_specs_str <- if (length(sim_specs_list) > 0) {
-    paste0(" |>\n\tsim_specs(", paste0(names(sim_specs_list), " = ", unname(sim_specs_list), collapse = ", "), ")")
+  sim_settings_list <- lapply(sim_settings_list, function(z) if (is.character(z)) paste0("\"", z, "\"") else z)
+  sim_settings_str <- if (length(sim_settings_list) > 0) {
+    paste0(" |>\n\tsim_settings(", paste0(names(sim_settings_list), " = ", unname(sim_settings_list), collapse = ", "), ")")
   } else {
     ""
   }
@@ -1028,7 +1031,7 @@ get_build_code <- function(object) {
   }
 
   script <- sprintf(
-    "sfm <-\tsdbuildR()%s%s%s%s", sim_specs_str,
+    "sfm <-\tsdbuildR()%s%s%s%s", sim_settings_str,
     meta_str, var_str, func_str
   )
 

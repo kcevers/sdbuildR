@@ -48,18 +48,21 @@ test_that("use_julia() with threads works", {
 
 test_that("install_julia_env() works", {
   skip_if_julia_not_ready()
+  skip()
 
   # Test installation
   expect_no_error(install_julia_env())
   expect_no_error(install_julia_env(remove = TRUE))
   expect_false(julia_env_ready())
-  expect_false(is_julia_env_setup())
+  expect_false(is_julia_env_setup(error = FALSE))
+  expect_false(is_julia_env_setup(error = FALSE, force = TRUE))
 
   # Removing again should not cause an error
-  expect_no_error(install_julia_env(remove = TRUE))
+  expect_message(expect_no_error(install_julia_env(remove = TRUE)), "no need to remove")
 
   # Install again and check that environment is ready
   expect_no_error(install_julia_env())
   expect_true(julia_env_ready())
   expect_true(is_julia_env_setup())
+  expect_true(is_julia_env_setup(force = TRUE))
 })

@@ -7,7 +7,6 @@
 ensemble(
   object,
   n = 10,
-  return_sims = FALSE,
   conditions = NULL,
   cross = TRUE,
   quantiles = c(0.025, 0.975),
@@ -21,9 +20,6 @@ ensemble(
 \item{n}{Number of simulations to run in the ensemble. When conditions is
 specified, n defines the number of simulations to run per condition. If
 each condition only needs to be run once, set \code{n = 1}. Defaults to \code{n = 10}.}
-
-\item{return_sims}{If \code{TRUE}, return the individual simulations in the
-ensemble, along with the summary statistics. Set to \code{FALSE} to save memory (default).}
 
 \item{conditions}{A named list specifying parameter values for ensemble
 conditions. Names must correspond to existing stocks or constants
@@ -47,7 +43,10 @@ generate all possible combinations of parameters. Defaults to \code{TRUE}.}
 
 \item{verbose}{If \code{TRUE} (default), print details and duration of simulation.}
 
-\item{...}{Optional arguments passed to \code{\link[=sim_specs]{sim_specs()}}; these can be used to override the simulation specifications set in the model object.}
+\item{...}{Optional arguments passed to \code{\link[=sim_settings]{sim_settings()}}; these can be used to override the simulation specifications set in the model object.}
+
+\item{return_sims}{If \code{TRUE}, return the individual simulations in the
+ensemble, along with the summary statistics. Set to \code{FALSE} to save memory (default).}
 }
 \value{
 Object of class \code{\link[=ensemble]{ensemble_sdbuildR}}, which is a list
@@ -89,7 +88,7 @@ data.frame with summary statistics and optionally individual simulations.
 }
 \details{
 To run large simulations, it is recommended to limit the output size by
-saving fewer values with \code{save_at} or \code{save_n} in \code{\link[=sim_specs]{sim_specs()}}. To create a reproducible ensemble simulation, set a seed using \code{\link[=sim_specs]{sim_specs()}}.
+saving fewer values with \code{save_at} or \code{save_n} in \code{\link[=sim_settings]{sim_settings()}}. To create a reproducible ensemble simulation, set a seed using \code{\link[=sim_settings]{sim_settings()}}.
 
 If you do not see any variation within a condition of the ensemble (i.e. the
 confidence bands are virtually non-existent), there are likely no random
@@ -109,7 +108,7 @@ sfm <- update(sfm, c(predator, prey),
 
 # For ensemble simulations, it is highly recommended to reduce the
 # returned output. For example, to save only 100 values per simulation:
-sfm <- sim_specs(sfm, save_n = 100)
+sfm <- sim_settings(sfm, save_n = 100)
 
 # Run ensemble simulation with 10 simulations
 sims <- ensemble(sfm, n = 10)
@@ -168,7 +167,7 @@ if (requireNamespace("future", quietly = TRUE) &&
 \dontshow{\}) # examplesIf}
 }
 \seealso{
-\code{\link[=update]{update()}}, \code{\link[=sdbuildR]{sdbuildR()}}, \code{\link[=sim_specs]{sim_specs()}}, \code{\link[=use_julia]{use_julia()}},
+\code{\link[=update]{update()}}, \code{\link[=sdbuildR]{sdbuildR()}}, \code{\link[=sim_settings]{sim_settings()}}, \code{\link[=use_julia]{use_julia()}},
 \code{\link[future:plan]{future::plan()}}
 }
 \concept{ensemble}

@@ -31,7 +31,7 @@ A stock-and-flow model object of class \code{\link{sdbuildR}}. Its structure is 
 on \href{https://docs.oasis-open.org/sdbuildR/sdbuildR/v1.0/os/sdbuildR-v1.0-os.html}{XML Interchange Language for System Dynamics (XMILE)}. It is a nested list, containing:
 \describe{
 \item{meta}{Meta-information about model. A list containing arguments listed in \code{\link[=meta]{meta()}}.}
-\item{sim_specs}{Simulation specifications. A list containing arguments listed in \code{\link[=sim_specs]{sim_specs()}}.}
+\item{sim_settings}{Simulation specifications. A list containing arguments listed in \code{\link[=sim_settings]{sim_settings()}}.}
 \item{model}{Model variables, grouped under the variable types stock, flow, aux (auxiliaries), constant, gf (graphical functions), and func (custom functions). Each variable contains arguments as listed in \code{\link[=update]{update()}}.}
 }
 
@@ -44,14 +44,14 @@ library.
 }
 \details{
 Do not edit the object manually; this will likely lead to errors downstream.
-Rather, use \code{\link[=meta]{meta()}}, \code{\link[=sim_specs]{sim_specs()}}, \code{\link[=update]{update()}}, and \code{\link[=custom_func]{custom_func()}} for safe manipulation.
+Rather, use \code{\link[=meta]{meta()}}, \code{\link[=sim_settings]{sim_settings()}}, \code{\link[=update]{update()}}, and \code{\link[=custom_func]{custom_func()}} for safe manipulation.
 }
 \examples{
 sfm <- sdbuildR()
 summary(sfm)
 
 \dontshow{
-sfm <- sim_specs(sfm, save_at = 1)
+sfm <- sim_settings(sfm, save_at = 1)
 }
 
 # Load a template
@@ -60,6 +60,6 @@ sim <- simulate(sfm)
 plot(sim)
 }
 \seealso{
-\code{\link[=update]{update()}}, \code{\link[=meta]{meta()}}, \code{\link[=custom_func]{custom_func()}}, \code{\link[=sim_specs]{sim_specs()}}
+\code{\link[=update]{update()}}, \code{\link[=meta]{meta()}}, \code{\link[=custom_func]{custom_func()}}, \code{\link[=sim_settings]{sim_settings()}}
 }
 \concept{build}

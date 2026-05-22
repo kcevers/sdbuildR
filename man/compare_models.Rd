@@ -19,7 +19,7 @@ An object of class \code{compare_sdbuildR} (a list) containing:
 \item{\code{removed}}{Variables present in \code{sfm1} but not \code{sfm2}.}
 \item{\code{type_changed}}{Variables with different types.}
 \item{\code{eqn_changed}}{Variables with different equations.}
-\item{\code{sim_specs_diff}}{Simulation settings that differ.}
+\item{\code{sim_settings_diff}}{Simulation settings that differ.}
 \item{\code{properties}}{Per-model counts and nonlinearity scores.}
 }
 }

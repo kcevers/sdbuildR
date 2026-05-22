@@ -60,7 +60,7 @@ sfm <- import_desolve(
   name   = "Logistic growth"
 )
 \dontshow{
-sfm <- sim_specs(sfm, save_at = 5)
+sfm <- sim_settings(sfm, save_at = 5)
 }
 sim <- simulate(sfm)
 plot(sim)

@@ -291,6 +291,8 @@ is_julia_env_setup <- function(force = FALSE, error = TRUE) {
     return(invisible(TRUE))
   }
 
+  .sdbuildR_env[["jl"]][["env_checked"]] <- FALSE
+
   # Julia version needs to be correct
   is_julia_version_ok()
 

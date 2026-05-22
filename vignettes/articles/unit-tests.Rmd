@@ -27,11 +27,12 @@ knitr::opts_chunk$set(
 library(sdbuildR)
 ```
 
-Models are only as good as their assumptions and equations. Unit tests are an essential tool for verifying that your model behaves as expected under various conditions. As stock-and-flow models can easily become complex, unexpected behaviours can arise as the model is developed. In this vignette, we will demonstrate how to use `sdbuildR` to create and run unit tests for a simple SIR (Susceptible-Infected-Recovered) model.
+Stock-and-flow models can easily become complex, producing unexpected behaviours as the model is developed. To ensure a model behaves as intended, we may make use of unit tests, a concept from software engineering. A unit test compares the behaviour of a small aspect of the model (i.e., a unit) to an explicitly formulated expectation. By implementing an exhaustive test suite, we can systematically and routinely check the model. In this vignette, we will demonstrate how to use `sdbuildR` to create and run unit tests for a simple model.
+
 
 ## Load the model
 
-We start by loading the SIR model and plotting its structure.
+We will demonstrate unit tests on the SIR (Susceptible-Infected-Recovered) model, a classic model in epidemiology of infectious diseases.
 
 ```{r}
 sfm <- sdbuildR("SIR")
@@ -45,56 +46,39 @@ sim <- simulate(sfm)
 plot(sim)
 ```
 
-```{r}
-summary(sfm)
-```
-
-`summary()` is a useful checkpoint before testing because it catches common
-model definition issues early.
-
 ## Add simple unit tests
 
 `unit_test()` adds one test at a time. A test expression should evaluate to
-`TRUE` when the model behaves as expected.
-
-Below we add three basic summarys:
-
-1. Susceptible population never becomes negative.
-2. Recovered population should not decrease over time.
-3. Total population remains constant in this closed SIR model.
+`TRUE` when the model behaves as expected. For example, we may test that the susceptible population never becomes negative, as people cannot be less than zero:
 
 ```{r}
 sfm <- sfm |>
   unit_test(
-    expr = all(Susceptible >= 0),
-    label = "Susceptible is non-negative"
-  ) |>
-  unit_test(
-    expr = all(diff(Recovered) >= 0),
-    label = "Recovered does not decrease"
-  ) |>
-  unit_test(
-    expr = all(abs(Susceptible + Infected + Recovered - Total_Population) < 1e-8),
-    label = "Population is conserved"
-  )
+    expr = all(Susceptible >= 0)
+  ) 
 ```
 
-You can inspect all defined tests with `unit_tests()`.
-
-```{r}
-unit_tests(sfm)
-```
-
-## Verify model behavior
-
-Run all active tests with `verify()`.
+We assess our test with `verify()`, which simulates the model and assess the test on the output data:
 
 ```{r}
 verify(sfm)
 ```
 
-If a test fails, summary whether the equation is wrong, the test is too strict,
-or your model assumptions need to be revised. 
+The test passed, so we can be confident that the susceptible population does not become negative under the current model specification. As shown above, a test label has been automatically generated. A custom label can also be provided:
+
+```{r}
+sfm <- sfm |>
+  unit_test(
+    expr = all(abs(Susceptible + Infected + Recovered - Total_Population) < 1e-8),
+    label = "Population is conserved"
+  )
+
+verify(sfm)
+```
+
+Unit tests are most useful when kept small, readable, and tied to a specific
+model expectation.
+
 
 ## Test behaviour under a condition
 
@@ -114,41 +98,58 @@ verify(sfm)
 ```
 
 
-**explain == is usually fragile
 
-** show how to view simulations
+## View defined tests
 
-**show sim_index
-
-
-## Update or remove tests
-
-During model development, you may want to remove outdated tests. Use
-`discard_unit_test()` by label or by number.
+All defined tests can be viewed with `unit_tests()`.
 
 ```{r}
-sfm <- discard_unit_test(sfm, nr = 1)
 unit_tests(sfm)
 ```
 
-Unit tests are most useful when kept small, readable, and tied to a specific
-model expectation.
+As shown above, the tests are numbered and labeled. The `expr` column shows the test expression, and the `conditions` column shows any parameter conditions for the test. The `active` column indicates whether the test is currently active (i.e., will be run when calling `verify()`).
 
+Unit tests can be filtered by their number:
+
+```{r}
+unit_tests(sfm, nr = 1)
+```
+
+Or using a regular expression for their label:
+
+```{r}
+unit_tests(sfm, label = "population")
+```
+
+```{r}
+unit_tests(sfm, label = "susceptible")
+```
+
+```{r}
+unit_tests(sfm, label = "conserved")
+```
+
+By default, `ignore_case = TRUE`, so the regular expression is case-insensitive. Set `ignore_case = FALSE` for a case-sensitive search.
 
 ## Modify an existing test
 
-You can modify an existing test by its numeric position (`nr`) or by `label`.
+Existing tests can be modified by their numeric position (`nr`):
 
 ```{r}
 # Modify test number 1 to be less strict
 sfm <- unit_test(sfm, nr = 1, expr = all(Susceptible >= -1))
-unit_tests(sfm)
+
+unit_tests(sfm, nr = 1)
 ```
 
-Or modify by label:
+Or their label (exact match):
 
 ```{r}
-sfm <- unit_test(sfm, label = "Recovered increases", expr = all(diff(Recovered) > -1))
+sfm <- unit_test(sfm, 
+    expr = all(abs(Susceptible + Infected + Recovered - Total_Population) < 1e-5),
+    label = "Population is conserved")
+
+unit_tests(sfm, label = "Population is conserved")
 ```
 
 ## Deactivate / reactivate tests
@@ -161,67 +162,91 @@ verify(sfm)
 
 # Reactivate
 sfm <- unit_test(sfm, nr = 1, active = TRUE)
+verify(sfm)
 ```
 
-## Pass the test expression as a string
+## Remove tests
 
-You may provide `expr` as a character string; it will be validated and parsed.
+Tests can be removed by number or by their (exact)label.
 
 ```{r}
-sfm <- unit_test(sfm, expr = "all(Susceptible >= 0)", label = "Susceptible non-neg-string")
+sfm <- discard_unit_test(sfm, nr = 1)
+unit_tests(sfm)
+```
+
+
+## Specify simulation settings for tests
+
+By default, `verify()` runs a single simulation with the default settings. Different simulation settings (as in `sim_settings`) can be passed to `verify`:
+
+```{r}
+verify(sfm, seed = 123)
+```
+
+```{r}
+verify(sfm, dt = .1)
+```
+
+## Ensemble unit tests
+
+When there are stochastic elements in the model, it is useful to run unit tests multiple times. For example, the SIR model can be given random initial conditions:
+
+```{r}
+sfm <- sfm |>
+  update(Susceptible, eqn = runif(1, 500, 1000)) |>
+  update(Infected, eqn = runif(1, 0, 100)) |>
+  update(Recovered, eqn = runif(1, 0, 100))
+```
+
+Use `n > 1` to run multiple simulations per test:
+
+```{r}
+verify(sfm, n = 100)
 ```
 
 ## Inspecting `verify()` results and returned simulations
 
-`verify()` can return the simulations used when running tests. Use
-`return_sims = TRUE` to retrieve them and the `sim_index` mapping to find
-which simulation corresponds to each test label.
+`verify()` returns the simulations used when running tests if `return_sims = TRUE` is specified. These can be plotted or analyzed further.
 
 ```{r}
-res <- verify(sfm, return_sims = TRUE, verbose = FALSE)
-
-# View results summary
-res$results
-
-# Retrieve the simulation used for a specific test label
-lab <- res$results[[1]]$label
-sim_for_test <- res$sims[[res$sim_index[[lab]]]]
-plot(sim_for_test)
+sfm <- sim_settings(sfm, return_sims = TRUE)
 ```
 
-## Running `verify()` on existing simulation results
-
-If you already have a `simulate_sdbuildR` object, `verify(sim)` will run only
-those tests whose `conditions` are empty or already match the simulation's
-parameters; tests that require re-simulation are skipped with an informative
-message.
+Or specify `return_sims` directly in `verify()`:
 
 ```{r}
-sim <- simulate(sfm)
-verify(sim)
+res <- verify(sfm, return_sims = TRUE)
 ```
 
-### Failing test walkthrough
+```{r}
+plot(res)
+```
 
-If a test fails, `verify()` reports the failure and you can inspect the
-returned result to debug. Below we create a deliberately failing test and
-show how to inspect the simulation used for the failing test.
+Plot the simulation used for a specific test:
 
 ```{r}
-# Add a failing test
-sfm <- unit_test(sfm, expr = all(Susceptible < 0), label = "deliberate fail")
+plot(res, nr = 1L)
+```
 
-res <- verify(sfm, return_sims = TRUE, verbose = FALSE)
+View results as a data frame:
 
-# Find failing entries
-failures <- Filter(function(x) x$status != "success", res$results)
-failures
+```{r}
+as.data.frame(res)
+```
 
-# Inspect message for first failure
-failures[[1]]$message
+Retrieve results for a specific test by number:
 
-# Retrieve simulation for the failing test
-lab_fail <- failures[[1]]$label
-sim_fail <- res$sims[[res$sim_index[[lab_fail]]]]
-plot(sim_fail)
+```{r}
+as.data.frame(res, nr = 1)
+```
+
+## Inspect failed tests
+
+
+```{r}
+plot(res, status = "fail")
+```
+
+```{r}
+as.data.frame(res, status = "fail")
 ```

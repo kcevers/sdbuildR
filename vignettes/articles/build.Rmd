@@ -213,7 +213,7 @@ As a first step in creating this stock-and-flow model, let's start by setting up
 ```{r}
 sfm <- sdbuildR() |>
   meta(name = "Maya's Burnout") |>
-  sim_specs(stop = 12, time_units = "month")
+  sim_settings(stop = 12, time_units = "month")
 ```
 
 We add a stock for Maya's work, which is the number of hours she works per day. She starts from 4 hours per day, her part-time job. We add a flow that increases Maya's daily work hours as a function of the work she's doing and a multiplier. 
@@ -319,7 +319,7 @@ We've created oscillations in the system! Maya is now trapped in a cycle of over
 
 ```{r echo=FALSE}
 functions_table <- data.frame(
-  Function = c("`sdbuildR()`", "`insightmaker_to_sfm()`", "`build()`", "`simulate()`", "`plot()`", "`summary()`", "`as.data.frame()`", "`get_build_code()`", "`sim_specs()`", "`macro()`", "`meta()`"),
+  Function = c("`sdbuildR()`", "`insightmaker_to_sfm()`", "`build()`", "`simulate()`", "`plot()`", "`summary()`", "`as.data.frame()`", "`get_build_code()`", "`sim_settings()`", "`macro()`", "`meta()`"),
   Purpose = c("Create empty model or load template", "Import Insight Maker model", "Create, modify, or remove variable from the model", "Simulate model", "Plot model diagram or simulation", "Run model diagnostics", "Get model properties in a dataframe", "Get code to build model from scratch", "Modify simulation specifications", "Create, modify, or remove global variables", "Modify model meta")
 )
 
@@ -364,11 +364,11 @@ kableExtra::kbl(functions_table,
 
 ### Simulation specifications
 
-We may want to observe the system over a longer time period, or with a different time step. To change the simulation specifications, use `sim_specs()`. Below, we simulate from 0 to 250 days.  To decrease the size of the resulting dataframe, the simulation time step `dt` should *not* be lowered, as this can affect the accuracy of the simulation. Rather, we can save the simulation results only every 0.1 days, which preserves accuracy. We additionally don't save the first 100 days. The method is set to `"euler"`, which is the simplest numerical integration method. For more complex models or when higher accuracy is needed, consider other methods like `"rk4"`. See [`?solvers()`] for available methods.
+We may want to observe the system over a longer time period, or with a different time step. To change the simulation specifications, use `sim_settings()`. Below, we simulate from 0 to 250 days.  To decrease the size of the resulting dataframe, the simulation time step `dt` should *not* be lowered, as this can affect the accuracy of the simulation. Rather, we can save the simulation results only every 0.1 days, which preserves accuracy. We additionally don't save the first 100 days. The method is set to `"euler"`, which is the simplest numerical integration method. For more complex models or when higher accuracy is needed, consider other methods like `"rk4"`. See [`?solvers()`] for available methods.
 
 ```{r}
 sfm <- sdbuildR("predator_prey") |>
-  sim_specs(
+  sim_settings(
     time_units = "days",
     start = 0,
     stop = 250,
@@ -378,17 +378,17 @@ sfm <- sdbuildR("predator_prey") |>
   )
 ```
 
-In case the simulation contains stochastic elements, we may want to set a seed to ensure that the simulation is reproducible. For example, the initial value of the predator and prey stocks could be a random number. The seed needs to be an integer, and can also be set with `sim_specs()`.
+In case the simulation contains stochastic elements, we may want to set a seed to ensure that the simulation is reproducible. For example, the initial value of the predator and prey stocks could be a random number. The seed needs to be an integer, and can also be set with `sim_settings()`.
 
 ```{r}
 sfm <- stock(sfm, c(predator, prey), eqn = runif(1, 20, 50)) |>
-  sim_specs(seed = 1)
+  sim_settings(seed = 1)
 ```
 
 In case a seed was set, this will appear in `summary.sdbuildR_xmile()`. The seed can also be removed to ensure variation in the simulation. This can be useful to for example test the sensitivity of the model to changes in the initial condition. 
 
 ```{r}
-sfm <- sim_specs(sfm, seed = NULL)
+sfm <- sim_settings(sfm, seed = NULL)
 ```
 
 ### Documenting

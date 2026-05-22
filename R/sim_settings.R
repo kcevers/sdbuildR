@@ -39,6 +39,8 @@
 #'   of stocks. Defaults to `FALSE`.
 #' @param keep_nonnegative_flow If `TRUE`, keeps original non-negativity setting
 #'   of flows. Defaults to `TRUE`.
+#' @param return_sims If `TRUE`, simulations are retained in [verify()] and
+#'   [ensemble()] output. Defaults to `FALSE`.
 #'
 #' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR]
 #' @concept simulate
@@ -47,29 +49,29 @@
 #'
 #' @examples
 #' sfm <- sdbuildR("predator_prey") |>
-#'   sim_specs(start = 0, stop = 50, dt = 0.1)
+#'   sim_settings(start = 0, stop = 50, dt = 0.1)
 #' sim <- simulate(sfm)
 #' plot(sim)
 #'
 #' # Change the simulation method to "rk4"
-#' sfm <- sim_specs(sfm, method = "rk4")
+#' sfm <- sim_settings(sfm, method = "rk4")
 #'
 #' # Change the time units to "years", such that one time unit is one year
-#' sfm <- sim_specs(sfm, time_units = "years")
+#' sfm <- sim_settings(sfm, time_units = "years")
 #'
 #' # Save at an interval to reduce output size without affecting accuracy
-#' sfm <- sim_specs(sfm, save_at = 1)
+#' sfm <- sim_settings(sfm, save_at = 1)
 #' sim <- simulate(sfm)
 #' head(as.data.frame(sim))
 #'
 #' # Save exactly 11 evenly-spaced time points (t=0, 5, 10, ..., 50)
-#' sfm <- sim_specs(sfm, save_n = 11)
+#' sfm <- sim_settings(sfm, save_n = 11)
 #'
 #' # Add stochastic initial condition but specify seed to obtain same result
-#' sfm <- sim_specs(sfm, seed = 1) |>
+#' sfm <- sim_settings(sfm, seed = 1) |>
 #'   update(c(predator, prey), eqn = runif(1, 20, 50))
 #'
-sim_specs <- function(object,
+sim_settings <- function(object,
                       method = "euler",
                       start = 0,
                       stop = 100,
@@ -82,7 +84,8 @@ sim_specs <- function(object,
                       only_stocks = TRUE,
                       vars = NULL,
                       keep_nonnegative_stock = FALSE,
-                      keep_nonnegative_flow = TRUE) {
+                      keep_nonnegative_flow = TRUE,
+                      return_sims = FALSE) {
   # Basic check
   if (missing(object)) {
     missing_arg("object")
@@ -99,9 +102,9 @@ sim_specs <- function(object,
   if (length(user_time) > 0) {
     # Merge object defaults with user values, then validate the combined state
     eff_time <- list(
-      start = object[["sim_specs"]][["start"]],
-      stop  = object[["sim_specs"]][["stop"]],
-      dt    = object[["sim_specs"]][["dt"]]
+      start = object[["sim_settings"]][["start"]],
+      stop  = object[["sim_settings"]][["stop"]],
+      dt    = object[["sim_settings"]][["dt"]]
     )
     eff_time[names(user_time)] <- user_time
     time_vals <- .validate_sim_time_args(eff_time)
@@ -116,11 +119,11 @@ sim_specs <- function(object,
     !missing(save_n) && !.is_unset(save_n)) {
     cli::cli_abort(c(
       "Cannot specify both {.arg save_at} and {.arg save_n}.",
-      "i" = "Pass {.val NA} to one of them to unset it."
+      "i" = "Pass {.val {NA}} to one of them to unset it."
     ))
   }
 
-  # save argg: entries added here go into object$sim_specs
+  # save argg: entries added here go into object$sim_settings
   argg <- time_vals
 
   if (!missing(save_at)) {
@@ -175,10 +178,10 @@ sim_specs <- function(object,
   if (!missing(language)) {
     language <- clean_language(language)
 
-    old_language <- object[["sim_specs"]][["language"]]
+    old_language <- object[["sim_settings"]][["language"]]
     if (missing(method) && language != old_language) {
       # Method not specified: translate the current method to the new language
-      method <- solvers(object[["sim_specs"]][["method"]],
+      method <- solvers(object[["sim_settings"]][["method"]],
         from = old_language, to = language,
         show_info = TRUE
       )
@@ -195,7 +198,7 @@ sim_specs <- function(object,
     }
   } else if (!missing(method)) {
     # Language not changing: validate method against the current language
-    method <- solvers(method, from = object[["sim_specs"]][["language"]], show_info = TRUE)
+    method <- solvers(method, from = object[["sim_settings"]][["language"]], show_info = TRUE)
     method <- method[["name"]]
   }
 
@@ -243,11 +246,11 @@ sim_specs <- function(object,
 
   # Check if language is changing
   language_changed <- "language" %in% names(argg) &&
-    argg[["language"]] != object[["sim_specs"]][["language"]]
+    argg[["language"]] != object[["sim_settings"]][["language"]]
 
   # Overwrite simulation specifications (use list-subset assignment to preserve NULLs)
   for (nm in names(argg)) {
-    object[["sim_specs"]][nm] <- list(argg[[nm]])
+    object[["sim_settings"]][nm] <- list(argg[[nm]])
   }
 
   # If language changed, clear entire cache and regenerate equation strings
@@ -273,6 +276,19 @@ sim_specs <- function(object,
   }
 
   object <- sanitize_sdbuildR(object)
+
+  # --- return_sims handling (meta-setting, does NOT invalidate cache) ---
+  if (!missing(return_sims)) {
+    if (!is.logical(return_sims) || length(return_sims) != 1L || is.na(return_sims)) {
+      cli::cli_abort(c(
+        "Invalid {.arg return_sims} argument.",
+        "x" = "The {.arg return_sims} argument must be {.code TRUE} or {.code FALSE}.",
+        "i" = "Received: {.val {return_sims}}"
+      ))
+    }
+    object[["sim_settings"]][["return_sims"]] <- return_sims
+    # Intentionally do not call invalidate_assemble(): this is a meta-setting only
+  }
 
   # Pre-assemble script components so they're available for modification before simulate()
   object <- pre_assemble_components(object)
@@ -361,9 +377,9 @@ sim_specs <- function(object,
 #' @param time_vals Named list of validated time args (start/stop/dt), may be empty.
 #' @noRd
 .validate_save_at <- function(save_at, object, time_vals) {
-  eff_start <- as.numeric(time_vals[["start"]] %||% object[["sim_specs"]][["start"]])
-  eff_stop <- as.numeric(time_vals[["stop"]] %||% object[["sim_specs"]][["stop"]])
-  eff_dt <- as.numeric(time_vals[["dt"]] %||% object[["sim_specs"]][["dt"]])
+  eff_start <- as.numeric(time_vals[["start"]] %||% object[["sim_settings"]][["start"]])
+  eff_stop <- as.numeric(time_vals[["stop"]] %||% object[["sim_settings"]][["stop"]])
+  eff_dt <- as.numeric(time_vals[["dt"]] %||% object[["sim_settings"]][["dt"]])
 
   if (length(save_at) == 1) {
     val <- suppressWarnings(as.numeric(save_at))

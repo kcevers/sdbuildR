@@ -136,16 +136,16 @@ test_that("import_desolve() logistic growth: meta name is set", {
 })
 
 
-test_that("import_desolve() logistic growth: sim_specs are correct", {
+test_that("import_desolve() logistic growth: sim_settings are correct", {
   sfm <- import_desolve(
     model  = .logistic_model,
     params = c(r = 0.3, K = 100),
     init   = c(N = 10),
     times  = seq(0, 50, by = 0.1)
   )
-  expect_equal(as.numeric(sfm[["sim_specs"]][["start"]]), 0)
-  expect_equal(as.numeric(sfm[["sim_specs"]][["stop"]]), 50)
-  expect_equal(as.numeric(sfm[["sim_specs"]][["dt"]]), 0.1)
+  expect_equal(as.numeric(sfm[["sim_settings"]][["start"]]), 0)
+  expect_equal(as.numeric(sfm[["sim_settings"]][["stop"]]), 50)
+  expect_equal(as.numeric(sfm[["sim_settings"]][["dt"]]), 0.1)
 })
 
 
@@ -157,7 +157,7 @@ test_that("import_desolve() logistic growth: method is stored", {
     times  = seq(0, 50, by = 0.1),
     method = "rk4"
   )
-  expect_equal(sfm[["sim_specs"]][["method"]], "rk4")
+  expect_equal(sfm[["sim_settings"]][["method"]], "rk4")
 })
 
 
@@ -215,7 +215,7 @@ test_that("import_desolve() produces a simulatable model (logistic)", {
     init   = c(N = 10),
     times  = seq(0, 10, by = 0.1)
   )
-  sfm <- sim_specs(sfm, save_at = 1)
+  sfm <- sim_settings(sfm, save_at = 1)
   sim <- expect_no_error(simulate(sfm))
   expect_s3_class(sim, "simulate_sdbuildR")
 })
@@ -228,7 +228,7 @@ test_that("import_desolve() produces a simulatable model (SIR)", {
     init   = c(S = 990, I = 10, R = 0),
     times  = seq(0, 50, by = 0.1)
   )
-  sfm <- sim_specs(sfm, save_at = 5)
+  sfm <- sim_settings(sfm, save_at = 5)
   sim <- expect_no_error(simulate(sfm))
   expect_s3_class(sim, "simulate_sdbuildR")
 })

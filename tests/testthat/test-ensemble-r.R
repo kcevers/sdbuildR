@@ -30,7 +30,7 @@ test_that("ensemble() R returns correct structure", {
 
 test_that("ensemble() R handles models with no constants", {
   sfm <- make_basic_sfm() |>
-    sim_specs(language = "R", start = 0, stop = 10, dt = 0.1, save_at = 1)
+    sim_settings(language = "R", start = 0, stop = 10, dt = 0.1, save_at = 1)
 
   sims <- silence(ensemble(sfm, n = 3, return_sims = TRUE, verbose = FALSE))
 
@@ -78,7 +78,7 @@ test_that("ensemble() R returns all variables with only_stocks = FALSE", {
 
 test_that("ensemble() R filters outputs to vars", {
   sfm <- make_r_ensemble_random_sfm() |>
-    sim_specs(vars = c("Susceptible", "Infection_Rate"))
+    sim_settings(vars = c("Susceptible", "Infection_Rate"))
 
   sims <- silence(ensemble(sfm,
     n = 3,
@@ -291,7 +291,7 @@ test_that("ensemble() R uses parallel path when future plan has multiple workers
 
   sfm <- sdbuildR("SIR") |>
     update("Susceptible", eqn = "runif(1, 900, 1100)") |>
-    sim_specs(language = "R", start = 0, stop = 10, dt = 0.1, save_at = 1)
+    sim_settings(language = "R", start = 0, stop = 10, dt = 0.1, save_at = 1)
 
   sims <- silence(ensemble(sfm, n = 4, verbose = FALSE))
 

@@ -19,11 +19,11 @@ library(sdbuildR)
 ```
 
 sdbuildR can exchange models with several external tools. This vignette covers
-three workflows:
+two workflows:
 
 1. **Importing** from [Insight Maker](https://insightmaker.com/)
 2. **Importing** from [deSolve](https://cran.r-project.org/package=deSolve)
-3. **Exporting** to deSolve or [Psychomodels](https://www.psychomodels.org/)
+3. **Exporting** to [Psychomodels](https://www.psychomodels.org/)
 
 ---
 
@@ -121,7 +121,7 @@ summary(sfm)
 ```
 
 ```{r}
-sfm_plot <- sim_specs(sfm, save_at = 5)
+sfm_plot <- sim_settings(sfm, save_at = 5)
 sim <- simulate(sfm_plot)
 plot(sim)
 ```
@@ -134,85 +134,11 @@ any supported format.
 
 ## Exporting models
 
-`export_model()` converts an `sdbuildR` object to another format. The `format`
-argument is case-insensitive, so `"deSolve"` and `"desolve"` are equivalent.
-
-```r
-export_model(sfm, format = "desolve")
-export_model(sfm, format = "psychomodels")
-```
+`export_model()` converts an `sdbuildR` object to another format. The currently
+supported export format is `psychomodels`.
 
 Use `file = "path"` to write directly to disk; omit `file` to return the
 result in memory.
-
----
-
-### Export to deSolve
-
-`format = "desolve"` produces a ready-to-run deSolve model.
-
-```{r}
-sfm <- sdbuildR("SIR")
-ds <- export_model(sfm, format = "desolve")
-```
-
-When `file = NULL`, the return value is a named list:
-
-| Element  | Description                                  |
-|----------|----------------------------------------------|
-| `model`  | R function in deSolve `function(t, state, parameters)` format |
-| `params` | Named numeric vector of constants            |
-| `init`   | Named numeric vector of initial stock values |
-| `times`  | Numeric time sequence                        |
-| `method` | Integration method (character)               |
-
-```{r}
-str(ds[c("params", "init", "times", "method")])
-```
-
-You can run the exported model directly with deSolve:
-
-```{r}
-library(deSolve)
-out <- deSolve::ode(
-  y = ds$init, times = ds$times,
-  func = ds$model, parms = ds$params,
-  method = ds$method
-)
-head(out)
-```
-
-Or write the full script to a file for sharing (`.R` extension is appended
-automatically if not present):
-
-```{r eval=FALSE}
-export_model(sfm, format = "desolve", file = "sir_desolve.R")
-```
-
-#### Round-trip: deSolve → sdbuildR → deSolve
-
-Models can travel in both directions:
-
-```{r}
-sir_fn <- function(t, state, parameters) {
-  with(as.list(c(state, parameters)), {
-    dS <- -beta * S * I / N
-    dI <- beta * S * I / N - gamma * I
-    dR <- gamma * I
-    list(c(dS, dI, dR))
-  })
-}
-
-sfm2 <- import_desolve(
-  model  = sir_fn,
-  params = c(beta = 0.3, gamma = 0.1, N = 1000),
-  init   = c(S = 990, I = 10, R = 0),
-  times  = seq(0, 100, by = 0.1)
-)
-
-ds2 <- export_model(sfm2, format = "desolve")
-# ds2$model is ready for deSolve::ode()
-```
 
 ---
 

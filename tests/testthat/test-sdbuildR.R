@@ -10,7 +10,7 @@ test_that("sdbuildR() creates an empty model", {
 test_that("sdbuildR() has required top-level components", {
   sfm <- sdbuildR()
   expect_true("meta" %in% names(sfm))
-  expect_true("sim_specs" %in% names(sfm))
+  expect_true("sim_settings" %in% names(sfm))
   expect_true("variables" %in% names(sfm))
 })
 
@@ -24,15 +24,15 @@ test_that("sdbuildR() initializes empty data frames with columns", {
 })
 
 
-test_that("sdbuildR() creates default meta and sim_specs", {
+test_that("sdbuildR() creates default meta and sim_settings", {
   sfm <- sdbuildR()
 
   expect_type(sfm$meta, "list")
   expect_true(all(c("name", "author", "created", "version") %in% names(sfm$meta)))
 
-  expect_type(sfm$sim_specs, "list")
-  expect_true(all(c("start", "stop", "dt", "time_units") %in% names(sfm$sim_specs)))
-  expect_true(sfm$sim_specs$start < sfm$sim_specs$stop)
+  expect_type(sfm$sim_settings, "list")
+  expect_true(all(c("start", "stop", "dt", "time_units") %in% names(sfm$sim_settings)))
+  expect_true(sfm$sim_settings$start < sfm$sim_settings$stop)
 })
 
 

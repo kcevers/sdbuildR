@@ -35,13 +35,13 @@
       
       -- Stock-Flow Structure --
       
-      Susceptible: - Infection_Rate
       Infected: + Infection_Rate - Recovery_Rate
       Recovered: + Recovery_Rate
+      Susceptible: - Infection_Rate
       
       -- Other Variables --
       
-      Constants: `Beta`, `Total_Population`, `Effective_Contact_Rate`, and `Delay`
+      Constants: `Beta`, `Delay`, `Effective_Contact_Rate`, and `Total_Population`
       Auxiliaries: `Lambda`
       
       -- Simulation Settings --

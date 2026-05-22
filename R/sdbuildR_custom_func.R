@@ -197,7 +197,7 @@ contains_IM <- function(haystack, needle) {
 #'   update("inflow", "flow", eqn = "input(t)", to = "a")
 #'
 #' \dontshow{
-#' sfm <- sim_specs(sfm, save_at = 1, dt = .1)
+#' sfm <- sim_settings(sfm, save_at = 1, dt = .1)
 #' }
 #'
 #' sim <- simulate(sfm, only_stocks = FALSE)
@@ -300,7 +300,7 @@ ramp <- function(times, start, finish, height = 1) {
 #'   update("inflow", "flow", eqn = "input(t)", to = "a")
 #'
 #' \dontshow{
-#' sfm <- sim_specs(sfm, dt = .1)
+#' sfm <- sim_settings(sfm, dt = .1)
 #' }
 #'
 #' sim <- simulate(sfm, only_stocks = FALSE)
@@ -316,7 +316,7 @@ pulse <- function(times, start, height = 1, width = 1, repeat_interval = NULL) {
   if (width <= 0) {
     cli::cli_abort(c(
       "Invalid {.arg width} parameter.",
-      "x" = "The {.arg width} parameter cannot be equal to or less than {.val 0}.",
+      "x" = "The {.arg width} parameter cannot be equal to or less than {.val {0}}.",
       "i" = "To create an instantaneous pulse, use the simulation step size {.code {P[[\"timestep_name\"]]}}.",
       ">" = "Set {.arg width} to a positive value."
     ))
@@ -416,7 +416,7 @@ pulse <- function(times, start, height = 1, width = 1, repeat_interval = NULL) {
 #'   update("inflow", "flow", eqn = "input(t)", to = "a")
 #'
 #' \dontshow{
-#' sfm <- sim_specs(sfm, dt = .1)
+#' sfm <- sim_settings(sfm, dt = .1)
 #' }
 #'
 #' sim <- simulate(sfm, only_stocks = FALSE)
@@ -497,7 +497,7 @@ seasonal <- function(times, period = 1, shift = 0) {
   if (period <= 0) {
     cli::cli_abort(c(
       "Invalid {.arg period} parameter.",
-      "x" = "The {.arg period} must be greater than {.val 0}.",
+      "x" = "The {.arg period} must be greater than {.val {0}}.",
       ">" = "Set {.arg period} to a positive value."
     ))
   }
@@ -734,8 +734,8 @@ hill <- function(x, slope = 1, midpoint = 0.5, upper = 1) {
 #' @concept internal
 #' @export
 #' @examples
-#' # Recommended: Use save_at in sim_specs() to downsample simulations
-#' sfm <- sdbuildR("SIR") |> sim_specs(dt = 0.01, save_at = 1)
+#' # Recommended: Use save_at in sim_settings() to downsample simulations
+#' sfm <- sdbuildR("SIR") |> sim_settings(dt = 0.01, save_at = 1)
 #' sim <- simulate(sfm)
 #' df <- as.data.frame(sim)
 #' nrow(df) # Returns only times at intervals of 1
@@ -743,7 +743,7 @@ hill <- function(x, slope = 1, midpoint = 0.5, upper = 1) {
 #'
 #' # The saveat_func() is the underlying function used by simulate()
 #' # Direct use is not recommended, but shown here for completeness:
-#' sfm <- sfm |> sim_specs(save_at = 0.01)
+#' sfm <- sfm |> sim_settings(save_at = 0.01)
 #' sim <- simulate(sfm)
 #' df <- as.data.frame(sim)
 #' nrow(df) # Many more rows

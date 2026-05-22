@@ -129,9 +129,9 @@ get_dynamic_equations <- function(object) {
 #' @noRd
 #'
 prep_equations_variables <- function(object, modified_names = NULL) {
-  language <- object[["sim_specs"]][["language"]]
+  language <- object[["sim_settings"]][["language"]]
   lang <- lang_adapter(language)
-  keep_nonnegative_flow <- object[["sim_specs"]][["keep_nonnegative_flow"]]
+  keep_nonnegative_flow <- object[["sim_settings"]][["keep_nonnegative_flow"]]
   names_df <- get_names(object)
 
   # Determine which rows to process
@@ -266,7 +266,7 @@ prep_equations_variables <- function(object, modified_names = NULL) {
 #' @noRd
 #'
 prep_stock_change <- function(object, modified_names = NULL) {
-  language <- object[["sim_specs"]][["language"]]
+  language <- object[["sim_settings"]][["language"]]
   lang <- lang_adapter(language)
 
   stock_idx <- object[["variables"]][["type"]] == "stock"
@@ -529,7 +529,7 @@ pre_assemble_components <- function(object) {
     return(object)
   }
 
-  language <- object[["sim_specs"]][["language"]]
+  language <- object[["sim_settings"]][["language"]]
 
   # --- Julia-specific validation ---------------------------------------------
   if (language == "Julia") {

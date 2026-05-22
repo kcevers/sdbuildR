@@ -53,7 +53,7 @@ plot(sim)
 
 ### Build a model from scratch
 
-Lastly, a stock-and-flow model can be created from scratch. We first initialize an empty stock and flow model with `sdbuildR()`, and then use `build()` to create a logistic model of population growth. The simulation specifications, such as the start time, stop time, simulation time step (`dt`), and time units, are set with `sim_specs()`. Below, we make use of the convenient pipe operator `|>`, which simply passes the result of an expression to the next expression as a first argument. 
+Lastly, a stock-and-flow model can be created from scratch. We first initialize an empty stock and flow model with `sdbuildR()`, and then use `build()` to create a logistic model of population growth. The simulation specifications, such as the start time, stop time, simulation time step (`dt`), and time units, are set with `sim_settings()`. Below, we make use of the convenient pipe operator `|>`, which simply passes the result of an expression to the next expression as a first argument. 
 
 ```{r}
 sfm <- sdbuildR() |>
@@ -65,7 +65,7 @@ sfm <- sdbuildR() |>
   ) |>
   constant(r, eqn = 5, label = "Growth rate") |>
   constant(K, eqn = 10000, label = "Carrying capacity") |>
-  sim_specs(stop = 10000, time_units = "days")
+  sim_settings(stop = 10000, time_units = "days")
 ```
 
 ```{r}

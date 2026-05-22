@@ -2,7 +2,7 @@
 
 # Input validation ----------------------------
 
-test_that("ensemble() passes additional arguments (language) to sim_specs", {
+test_that("ensemble() passes additional arguments (language) to sim_settings", {
   sfm <- make_basic_sfm()
   expect_error(
     ensemble(sfm, language = "unsupported"),
@@ -122,7 +122,7 @@ test_that("ensemble() returns correct structure", {
 test_that("ensemble() handles models with no constants", {
   skip_if_julia_not_ready()
   sfm <- make_basic_sfm() |>
-    sim_specs(language = "jl", start = 0, stop = 10, dt = 0.1, save_at = 1)
+    sim_settings(language = "jl", start = 0, stop = 10, dt = 0.1, save_at = 1)
 
   sims <- silence(ensemble(sfm, n = 3, return_sims = TRUE, verbose = FALSE))
 
@@ -145,7 +145,7 @@ test_that("ensemble() of model with only stocks", {
   sfm <- sdbuildR() |>
     stock("Stock1", eqn = 100) |>
     stock("Stock2", eqn = 50) |>
-    sim_specs(language = "Julia", start = 0, stop = 10, dt = 0.1, save_at = 1)
+    sim_settings(language = "Julia", start = 0, stop = 10, dt = 0.1, save_at = 1)
 
   sims <- silence(ensemble(sfm, n = 3, only_stocks = TRUE, return_sims = TRUE, verbose = FALSE))
   expect_true(sims[["success"]])
@@ -194,7 +194,7 @@ test_that("ensemble() with Julia filters outputs to vars", {
   skip_if_julia_not_ready()
 
   sfm <- make_jl_ensemble_sfm() |>
-    sim_specs(vars = c("Food_intake", "Hunger"))
+    sim_settings(vars = c("Food_intake", "Hunger"))
 
   sims <- silence(ensemble(sfm, n = 3, return_sims = TRUE))
 
@@ -207,7 +207,7 @@ test_that("ensemble() with Julia vars overrides only_stocks", {
   skip_if_julia_not_ready()
 
   sfm <- make_jl_ensemble_sfm() |>
-    sim_specs(only_stocks = TRUE, vars = c("Satiety"))
+    sim_settings(only_stocks = TRUE, vars = c("Satiety"))
 
   sims <- silence(ensemble(sfm, n = 3, return_sims = TRUE))
 
@@ -438,8 +438,8 @@ test_that("ensemble() conditions parameters are alphabetically sorted", {
 
   # Regression test: in an earlier version, conditions parameter order was not preserved
   sfm <- sdbuildR() |>
-    sim_specs(language = "Julia") |>
-    sim_specs(stop = 12, dt = 0.1, save_at = 1, time_units = "month") |>
+    sim_settings(language = "Julia") |>
+    sim_settings(stop = 12, dt = 0.1, save_at = 1, time_units = "month") |>
     meta(name = "Maya's Burnout") |>
     update("workload", "stock", eqn = 4) |>
     update("new_tasks", "flow",
@@ -478,7 +478,7 @@ test_that("ensemble() with mixed stock and constant in conditions", {
 
   sfm <- sdbuildR("predator_prey") |>
     update(c("predator", "prey"), eqn = "runif(1, 30, 50)") |>
-    sim_specs(
+    sim_settings(
       language = "Julia",
       dt = 0.1, save_at = 10,
       start = 0, stop = 200
@@ -513,7 +513,7 @@ test_that("ensemble() is reproducible with seed", {
   skip_if_julia_not_ready()
 
   sfm <- sdbuildR("predator_prey") |>
-    sim_specs(
+    sim_settings(
       language = "Julia",
       start = 0, stop = 10, dt = 0.1,
       seed = 123
@@ -534,7 +534,7 @@ test_that("ensemble() works with single time point", {
   skip_if_julia_not_ready()
 
   sfm <- sdbuildR("predator_prey") |>
-    sim_specs(
+    sim_settings(
       language = "Julia",
       start = 0, stop = 5, dt = 0.1,
       save_n = 1
@@ -557,7 +557,7 @@ test_that("ensemble() works with interpolation function", {
   skip_if_julia_not_ready()
 
   sfm <- sdbuildR("logistic_model") |>
-    sim_specs(
+    sim_settings(
       language = "Julia",
       start = 0, stop = 50, dt = 0.1,
       save_n = 1
@@ -666,7 +666,7 @@ test_that("plot.ensemble_sdbuildR() validates j index with multiple conditions",
 
   expect_error(
     plot(sims, j = nr_cond + 1),
-    "must.*contain integers between"
+    "be integers between"
   )
 })
 
@@ -814,7 +814,7 @@ cli::test_that_cli(configs = "plain", "ensemble setup rejects malformed equation
       meta(name = "Demo model") |>
       update("S", type = "stock", eqn = "1 // 2") |>
       update("F1", type = "flow", eqn = "S", to = "S") |>
-      sim_specs(language = "R"),
+      sim_settings(language = "R"),
     "Could not parse the equation for .*S",
     ignore.case = TRUE
   )

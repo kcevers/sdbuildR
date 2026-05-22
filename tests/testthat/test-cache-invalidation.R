@@ -97,7 +97,7 @@ test_that("changing constant value preserves ode and ordering", {
   old_ordering <- sfm[["assemble"]][["ordering"]]
 
   # Change constant value (same dependencies, i.e., none)
-  sfm <- update(sfm, "Total_Population", eqn = "100")
+  sfm <- update(sfm, Recovered, eqn = 200)
 
   # ODE and ordering should be preserved
   expect_equal(sfm[["assemble"]][["ode"]], old_ode)
@@ -143,24 +143,24 @@ test_that("changing aux equation preserves ordering and static", {
 })
 
 
-# --- sim_specs selective invalidation ------------------------------------------
+# --- sim_settings selective invalidation ------------------------------------------
 
-test_that("sim_specs time change preserves variable components", {
-  sfm <- sdbuildR("SIR") |> sim_specs(stop = 10)
+test_that("sim_settings time change preserves variable components", {
+  sfm <- sdbuildR("SIR") |> sim_settings(stop = 10)
 
   old_times <- sfm[["assemble"]][["times"]]
   old_ode <- sfm[["assemble"]][["ode"]]
   old_static <- sfm[["assemble"]][["static"]]
   old_ordering <- sfm[["assemble"]][["ordering"]]
 
-  sfm <- sim_specs(sfm, stop = 200)
+  sfm <- sim_settings(sfm, stop = 200)
 
   # Variable-related components should be preserved
   expect_equal(sfm[["assemble"]][["ode"]], old_ode)
   expect_equal(sfm[["assemble"]][["static"]], old_static)
   expect_equal(sfm[["assemble"]][["ordering"]], old_ordering)
 
-  # Times should be cleared (sim_specs changed)
+  # Times should be cleared (sim_settings changed)
   expect_true(old_times != sfm[["assemble"]][["times"]])
 })
 
@@ -169,7 +169,7 @@ test_that("sim_specs time change preserves variable components", {
 
 test_that("targeted invalidation produces same simulation as full invalidation", {
   sfm <- sdbuildR("SIR")
-  sfm <- sim_specs(sfm, stop = 50)
+  sfm <- sim_settings(sfm, stop = 50)
 
   # Simulate to populate cache
   sim1 <- simulate(sfm)

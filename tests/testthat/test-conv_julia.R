@@ -195,7 +195,7 @@ test_that("custom function definitons work", {
 
   # Is the function usable in R?
   sfm <- sfm |>
-    sim_specs(language = "R", stop = 1, dt = .1) |>
+    sim_settings(language = "R", stop = 1, dt = .1) |>
     update("a", "stock", eqn = "myfunc(1, 2)")
   sim <- expect_no_error(simulate(sfm))
   expect_equal(sim$df[sim$df$variable == "a", "value"][1], 1 + 2)
@@ -222,7 +222,7 @@ test_that("custom function definitons work", {
 
   sfm <- sdbuildR() |>
     custom_func("myfunc", "function(x, y = 1, z = 2) x + y") |>
-    sim_specs(language = "Julia", stop = 1, dt = .1) |>
+    sim_settings(language = "Julia", stop = 1, dt = .1) |>
     update("a", "stock", eqn = "myfunc(1, 2)")
   sim <- expect_no_error(simulate(sfm))
   expect_equal(sim$df[1, "value"], 1 + 2)

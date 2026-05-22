@@ -8,7 +8,7 @@ test_that("stocks change over time in Julia", {
   ))
 
   # Switch to Julia
-  sfm <- sim_specs(sfm, language = "Julia", stop = 10)
+  sfm <- sim_settings(sfm, language = "Julia", stop = 10)
 
   # Check sum_eqn is NOT "0.0"
   stocks <- sfm$variables[sfm$variables$type == "stock", ]
@@ -35,13 +35,13 @@ test_that("switching Julia -> R works", {
   ))
 
   # Start with Julia
-  sfm <- sim_specs(sfm, language = "Julia", stop = 10)
+  sfm <- sim_settings(sfm, language = "Julia", stop = 10)
   sim1 <- simulate(sfm)
   expect_s3_class(sim1, "simulate_sdbuildR")
 
   # Switch to R - should NOT crash
   expect_no_error({
-    sfm <- sim_specs(sfm, language = "R")
+    sfm <- sim_settings(sfm, language = "R")
     sim2 <- simulate(sfm)
   })
 
@@ -59,14 +59,14 @@ test_that("multiple language switches maintain integrity", {
     update(name = "S", type = "stock", eqn = "100") |>
     update(name = "births", type = "flow", eqn = "0.1 * S", to = "S") |>
     update(name = "deaths", type = "flow", eqn = "0.05 * S", from = "S") |>
-    sim_specs(stop = 5)
+    sim_settings(stop = 5)
 
   # Switch R → Julia → R → Julia (3 rounds)
   for (i in 1:3) {
-    sfm <- sim_specs(sfm, language = "Julia")
+    sfm <- sim_settings(sfm, language = "Julia")
     sim_j <- simulate(sfm)
 
-    sfm <- sim_specs(sfm, language = "R")
+    sfm <- sim_settings(sfm, language = "R")
     sim_r <- simulate(sfm)
 
     # Both should complete successfully
@@ -89,14 +89,14 @@ test_that("R and Julia produce consistent results", {
     update(name = "Population", type = "stock", eqn = "100") |>
     update(name = "births", type = "flow", eqn = "0.05 * Population", to = "Population") |>
     update(name = "deaths", type = "flow", eqn = "0.03 * Population", from = "Population") |>
-    sim_specs(stop = 10, dt = 0.1, save_at = 0.5)
+    sim_settings(stop = 10, dt = 0.1, save_at = 0.5)
 
   # Simulate with R
-  sfm_r <- sim_specs(sfm, language = "R")
+  sfm_r <- sim_settings(sfm, language = "R")
   sim_r <- simulate(sfm_r)
 
   # Simulate with Julia
-  sfm_j <- sim_specs(sfm, language = "Julia")
+  sfm_j <- sim_settings(sfm, language = "Julia")
   sim_j <- simulate(sfm_j)
 
   # Extract Population values
@@ -119,11 +119,11 @@ test_that("switching languages preserves variable structure", {
   initial_vars <- nrow(sfm$variables)
 
   # Switch R → Julia
-  sfm <- sim_specs(sfm, language = "Julia")
+  sfm <- sim_settings(sfm, language = "Julia")
   expect_equal(nrow(sfm$variables), initial_vars)
 
   # Switch Julia → R
-  sfm <- sim_specs(sfm, language = "R")
+  sfm <- sim_settings(sfm, language = "R")
   expect_equal(nrow(sfm$variables), initial_vars)
 
   # All variables should still exist
@@ -143,14 +143,14 @@ test_that("language switching works with multiple stocks and flows", {
     update(name = "gamma", type = "aux", eqn = "0.1") |>
     update(name = "infection", type = "flow", eqn = "beta * S * I / 1000", from = "S", to = "I") |>
     update(name = "recovery", type = "flow", eqn = "gamma * I", from = "I", to = "R") |>
-    sim_specs(stop = 50, dt = 0.1)
+    sim_settings(stop = 50, dt = 0.1)
 
   # R simulation
-  sfm_r <- sim_specs(sfm, language = "R")
+  sfm_r <- sim_settings(sfm, language = "R")
   sim_r <- simulate(sfm_r)
 
   # Julia simulation
-  sfm_j <- sim_specs(sfm, language = "Julia")
+  sfm_j <- sim_settings(sfm, language = "Julia")
   sim_j <- simulate(sfm_j)
 
   # Both should complete
@@ -175,11 +175,11 @@ test_that("language switching works with isolated stocks", {
     update(name = "IsolatedStock", type = "stock", eqn = "42")
 
   # R simulation
-  sfm_r <- sim_specs(sfm, language = "R", stop = 5)
+  sfm_r <- sim_settings(sfm, language = "R", stop = 5)
   sim_r <- simulate(sfm_r)
 
   # Julia simulation
-  sfm_j <- sim_specs(sfm, language = "Julia", stop = 5)
+  sfm_j <- sim_settings(sfm, language = "Julia", stop = 5)
   sim_j <- simulate(sfm_j)
 
   # Both should keep stock constant at 42
