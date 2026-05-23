@@ -17,22 +17,23 @@ verification). Set to a larger value for robustness testing of stochastic models
 \item{nr}{Integer vector of test number(s) to run (1-based, as shown by \code{\link[=unit_tests]{unit_tests()}}).
 Defaults to \code{NULL} (run all tests).}
 
-\item{...}{Additional arguments passed to \code{\link[=simulate.sdbuildR]{simulate.sdbuildR()}}.}
+\item{...}{Additional arguments passed to \code{\link[=sim_settings]{sim_settings()}} (e.g., \code{return_sims},
+\code{seed}, \code{dt}) and then to \code{\link[=simulate.sdbuildR]{simulate.sdbuildR()}}.}
 }
 \value{
-An object of class \code{verify_sdbuildR} with fields, returned invisibly:
+An object of class \code{verify_sdbuildR}, returned invisibly. Use
+\code{\link[=as.data.frame]{as.data.frame()}} to extract results as a data frame and \code{\link[=plot]{plot()}} to
+visualize the simulations used. The object contains:
 \describe{
-\item{results}{List of test result entries, each with \code{label}, \code{expr_str},
-\code{conditions}, \code{status}, \code{error_type}, \code{message}, \code{outcome}, \code{pass_rate},
-\code{n_pass}, \code{n_fail}, and \code{n_error}.}
+\item{results}{List of test result entries, one per test (including inactive
+tests, which appear with \code{status = "skip"}). Each entry has \code{label},
+\code{expr_str}, \code{conditions}, \code{status}, \code{error_type}, \code{message}, \code{outcome},
+\code{pass_rate}, \code{n_pass}, \code{n_fail}, and \code{n_error}.}
 \item{object}{The \code{sdbuildR} model the tests were run against.}
-\item{sims}{Nested list of \code{simulate_sdbuildR} objects structured as
-\code{sims[[j]][[i]]} (condition \code{j}, run \code{i}), or \code{NULL} if
-\code{return_sims = FALSE}.}
-\item{j}{Named integer vector mapping each test label to its condition
-index in \code{sims}. Always populated. Use
-\code{result$sims[[result$j[["my test label"]]]][[1]]} to retrieve the
-simulation used for a specific test.}
+\item{sims}{Nested list of \code{simulate_sdbuildR} objects used internally by
+\code{\link[=plot.verify_sdbuildR]{plot.verify_sdbuildR()}}, or \code{NULL} if \code{return_sims = FALSE}.}
+\item{j}{Named integer vector mapping each test label to its condition index.
+Used internally by \code{\link[=plot.verify_sdbuildR]{plot.verify_sdbuildR()}}.}
 \item{n}{Number of simulations run per condition.}
 \item{n_conditions}{Number of unique simulation conditions.}
 \item{test_indices}{Integer vector of the original 1-based test numbers that
@@ -55,15 +56,16 @@ if all \code{n} runs pass.
 }
 \examples{
 sfm <- sdbuildR("SIR") |>
-  unit_test(expr = all(Susceptible >= 0)) |>
+  unit_test(expr = all(susceptible >= 0)) |>
   unit_test(
-    label = "Recovered increases over time",
-    expr = all(diff(Recovered) >= 0)
+    label = "recovered increases over time",
+    expr = all(diff(recovered) >= 0)
   )
 
 verify(sfm)
 }
 \seealso{
-\code{\link[=unit_test]{unit_test()}}, \code{\link[=unit_tests]{unit_tests()}}, \code{\link[=simulate.sdbuildR]{simulate.sdbuildR()}}
+\code{\link[=unit_test]{unit_test()}}, \code{\link[=unit_tests]{unit_tests()}}, \code{\link[=simulate.sdbuildR]{simulate.sdbuildR()}},
+\code{\link[=as.data.frame.verify_sdbuildR]{as.data.frame.verify_sdbuildR()}}, \code{\link[=plot.verify_sdbuildR]{plot.verify_sdbuildR()}}
 }
 \concept{unitTest}

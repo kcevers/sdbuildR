@@ -10,7 +10,7 @@
   i = NULL,
   label = NULL,
   ignore_case = TRUE,
-  status = NULL,
+  status = c("pass", "fail", "error", "skip"),
   nrows = NULL,
   shareX = TRUE,
   shareY = TRUE,
@@ -20,7 +20,7 @@
   font_size = 16,
   wrap_width = 25,
   showlegend = TRUE,
-  alpha = 0.4,
+  alpha = 1/x[["n"]],
   ...
 )
 }
@@ -39,8 +39,7 @@ label matching. A test is included if its label matches any pattern.}
 \item{ignore_case}{Logical; whether \code{label} matching is case-insensitive.
 Default \code{TRUE}.}
 
-\item{status}{Character vector of statuses to include. One or more of
-\code{"pass"}, \code{"fail"}, \code{"error"}, \code{"skipped"}. \code{NULL} (default) shows all.}
+\item{status}{Optional character vector of test statuses to include (e.g., \code{c("fail", "error")}). Defaults to \code{c("pass", "fail", "error", "skip")} (include all).}
 
 \item{nrows}{Number of subplot rows. Defaults to \code{ceiling(sqrt(n_conditions))}.}
 
@@ -76,7 +75,7 @@ overlaid within each subplot.
 }
 \examples{
 sfm <- sdbuildR("SIR") |>
-  unit_test(expr = all(Susceptible >= 0))
+  unit_test(expr = all(susceptible >= 0))
 res <- verify(sfm, return_sims = TRUE)
 plot(res)
 }

@@ -40,7 +40,7 @@
 
 \item{from}{Source of flow. Accepts a bare symbol or string. Must be a stock in the model. Defaults to \code{NULL} to indicate no source.}
 
-\item{non_negative}{If TRUE, variable is enforced to be non-negative (i.e. strictly 0 or positive). Defaults to \code{FALSE}.}
+\item{non_negative}{If TRUE, variable is enforced to be non-negative (i.e., strictly 0 or positive). Defaults to \code{FALSE}.}
 
 \item{xpts}{Only for graphical functions: vector of x-domain points. Must be of the same length as ypts.}
 
@@ -111,15 +111,15 @@ support non-standard evaluation. This means you can pass bare symbols and
 expressions instead of quoted strings:
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{# These are equivalent:
-update(sfm, "population", "stock", eqn = "birth_rate * 0.1")
-update(sfm, population, stock, eqn = birth_rate * 0.1)
+stock(sfm, "population", eqn = "birth_rate * 0.1")
+stock(sfm, population, eqn = birth_rate * 0.1)
 }\if{html}{\out{</div>}}
 
 To inject the value of a variable (rather than its name), use the
 \verb{!!} (bang-bang) operator from rlang:
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{my_name <- "population"
-update(sfm, !!my_name, stock, eqn = 100)
+stock(sfm, !!my_name, eqn = 100)
 }\if{html}{\out{</div>}}
 
 The \code{label}, \code{doc},  \code{non_negative}, \code{xpts}, \code{ypts},
@@ -131,33 +131,33 @@ and are evaluated normally.
 
 # First initialize an empty model
 sfm <- sdbuildR()
-summary(sfm)
+print(sfm)
 \dontshow{
 sfm <- sim_settings(sfm, save_at = .5)
 }
 
 # Add two stocks. Specify their initial values in the "eqn" property
 # and their plotting label.
-sfm <- update(sfm, predator, stock, eqn = 10, label = "Predator") |>
-  update(prey, stock, eqn = 50, label = "Prey")
+sfm <- stock(sfm, predator, eqn = 10, label = "Predator") |>
+  stock(prey, eqn = 50, label = "Prey")
 
 
 # Add four flows: the births and deaths of both the predators and prey. The
 # "eqn" property of flows represents the rate of the flow. In addition, we
 # specify which stock the flow is coming from ("from") or flowing to ("to").
-sfm <- update(sfm, predator_births, flow,
+sfm <- flow(sfm, predator_births,
   eqn = delta * prey * predator,
   label = "Predator Births", to = predator
 ) |>
-  update(predator_deaths, flow,
+  flow(predator_deaths,
     eqn = gamma * predator,
     label = "Predator Deaths", from = predator
   ) |>
-  update(prey_births, flow,
+  flow(prey_births,
     eqn = alpha * prey,
     label = "Prey Births", to = prey
   ) |>
-  update(prey_deaths, flow,
+  flow(prey_deaths,
     eqn = beta * prey * predator,
     label = "Prey Deaths", from = prey
   )
@@ -165,7 +165,7 @@ plot(sfm)
 
 # The flows make use of four other variables: "delta", "gamma", "alpha", and
 # "beta". Define these as constants in a vectorized manner for efficiency.
-sfm <- update(sfm, c(delta, gamma, alpha, beta), constant,
+sfm <- constant(sfm, c(delta, gamma, alpha, beta),
   eqn = c(.025, .5, .5, .05),
   label = c("Delta", "Gamma", "Alpha", "Beta"),
   doc = c(
@@ -204,10 +204,10 @@ summary(sfm)
 
 # To inject the value of an R variable, use !! (bang-bang)
 my_name <- "growth"
-sfm <- update(sfm, !!my_name, constant, eqn = 0.1)
+sfm <- constant(sfm, !!my_name, eqn = 0.1)
 
-# Strings still work for backward compatibility
-sfm <- update(sfm, "growth", eqn = 0.2)
+# Strings also work
+sfm <- constant(sfm, "growth", eqn = 0.2)
 
 }
 \seealso{

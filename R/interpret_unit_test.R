@@ -26,20 +26,6 @@ interpret <- function(e, parent_op = NULL) {
   fn <- as.character(e[[1]])
   args <- as.list(e[-1])
 
-  # --- Parentheses: handled via precedence now ---
-  # R's parser inserts explicit `(` calls in the AST when the user
-  # wrote parentheses. We pass the inner expression through but
-  # mark that the user explicitly grouped it.
-  #   if (fn == "(") {
-  #     inner <- interpret(args[[1]], parent_op = parent_op)
-  #     # If the inner expression is a logical connective that differs
-  #     # from the parent, wrap in parens to preserve grouping
-  #     inner_fn <- if (is.call(args[[1]])) as.character(args[[1]][[1]]) else NULL
-  #     if (needs_parens(inner_fn, parent_op)) {
-  #       return(paste0("(", inner, ")"))
-  #     }
-  #     return(inner)
-  #   }
   if (fn == "(") {
     return(interpret(args[[1]], parent_op = parent_op))
   }
@@ -225,11 +211,11 @@ interpret <- function(e, parent_op = NULL) {
   # --- head / tail ---
   if (fn == "head") {
     n_val <- if (length(args) >= 2) interpret(args[[2]], parent_op = fn) else "6"
-    return(paste0("the first ", n_val, " values of ", interpret(args[[1]], parent_op = fn)))
+    return(paste0("the first ", n_val, " value", if (n_val != "1") "s" else "", " of ", interpret(args[[1]], parent_op = fn)))
   }
   if (fn == "tail") {
     n_val <- if (length(args) >= 2) interpret(args[[2]], parent_op = fn) else "6"
-    return(paste0("the last ", n_val, " values of ", interpret(args[[1]], parent_op = fn)))
+    return(paste0("the last ", n_val, " value", if (n_val != "1") "s" else "", " of ", interpret(args[[1]], parent_op = fn)))
   }
 
   # --- Indexing with [ ---

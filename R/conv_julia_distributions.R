@@ -8,7 +8,7 @@
 #'
 #' @inheritParams sort_args
 #' @param julia_func String with Julia function
-#' @param R_func String with R function, e.g. "runif", "rnorm"
+#' @param R_func String with R function, e.g., "runif", "rnorm"
 #' @param distribution String with Julia distribution call
 #' @param arg Character vector with parsed arguments
 #'
@@ -102,7 +102,7 @@ conv_distribution_julia <- function(arg, R_func, julia_func, distribution) {
 #' Convert sequence in R to Julia
 #'
 #' @param arg Named list with parsed arguments
-#' @param R_func String with R function, e.g. "seq", "seq_along"
+#' @param R_func String with R function, e.g., "seq", "seq_along"
 #' @param julia_func String with Julia function
 #'
 #' @returns String with Julia code

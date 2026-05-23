@@ -29,10 +29,10 @@ has a \code{print()} method.
 }
 \examples{
 sfm <- sdbuildR("SIR") |>
-  unit_test(expr = all(Susceptible >= 0)) |>
+  unit_test(expr = all(susceptible >= 0)) |>
   unit_test(
-    label = "Recovered increases over time",
-    expr = all(diff(Recovered) >= 0)
+    label = "recovered increases over time",
+    expr = all(diff(recovered) >= 0)
   )
 
 unit_tests(sfm)

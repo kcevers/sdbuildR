@@ -73,7 +73,7 @@
       -- Stock-and-Flow Ensemble Simulation: Demo model ------------------------------
       i 12 total simulations • 4 conditions • 3 per condition
       v Completed in 1.234 seconds
-      i Parameters changed across conditions: Delay, Effective_Contact_Rate
+      i Parameters changed across conditions: contact_rate, infection_rate
       i Individual simulations saved: yes
       i Time points saved per simulation: 11
 

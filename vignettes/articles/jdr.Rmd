@@ -23,9 +23,8 @@ knitr::opts_chunk$set(
 )
 ```
 
-This is the online supplemental material accompanying the paper *Formalizing Psychological Theories with stockflow: A Stock-and-Flow Modelling Tutorial in R* by Evers et al. (submitted). It contains the complete code to build, test, and simulate a formal model of Job Demands-Resources (JD-R) theory. To reproduce the figures in the paper, please see the corresponding .Rmd file.
+This is online supplemental material B accompanying the paper *Formalizing Psychological Theory with stockflow: A Stock-and-Flow Modelling Tutorial in R* by Evers et al. (under review). It contains the complete code to build, test, and simulate a formal model of Job Demands-Resources (JD-R) theory. To reproduce the figures in the paper, please see the corresponding .Rmd file.
 
-To follow the entire tutorial, it is necessary to install Julia as well as set up the Julia environment. See [this vignette](https://kcevers.github.io/sdbuildR/articles/julia-setup.html) for guidance.
 
 ```{r libraries, results='hide', message=FALSE}
 library(sdbuildR)
@@ -46,18 +45,12 @@ sprintf_arg <- function(template, values) {
   return(template)
 }
 font_family <- "Times New Roman"
-# font_family <- "Lato"
-# font_family <- "TeX Gyre Termes"
-# # Download TeX Gyre Termes
-# tmp <- tempdir()
-# url <- "https://www.gust.org.pl/projects/e-foundry/tex-gyre/termes/qhv2.004otf.zip"
-# download.file(url, file.path(tmp, "termes.zip"))
-# unzip(file.path(tmp, "termes.zip"), exdir = file.path(tmp, "termes"))
 
 if (recreate_figs) {
   # Plotting parameters
-  filepath_base <- dirname(rstudioapi::getActiveDocumentContext()$path)
-  filepath_figs <- file.path(filepath_base, "figs_jdr")
+  # filepath_base <- dirname(rstudioapi::getActiveDocumentContext()$path)
+  filepath_base <- dirname(here::here())
+  filepath_figs <- file.path(filepath_base, "figs_tutorial2026")
 
   dir.create(filepath_figs)
 
@@ -130,230 +123,51 @@ if (recreate_figs) {
 
 
 
-```{r include=FALSE}
-# if (recreate_figs) {
-#   sfm <- sdbuildR() |>
-#     stock(Stock, label = "Stock", eqn = 1) |>
-#     constant(pulse_func1, eqn = pulse(times, start = 20, height = .1, width = 5)) |>
-#     constant(pulse_func2, eqn = pulse(times, start = 40, height = .1, width = 5)) |>
-#     constant(pulse_func3, eqn = pulse(times, start = 60, height = -.1, width = 5)) |>
-#     constant(pulse_func4, eqn = pulse(times, start = 80, height = -.1, width = 5)) |>
-#     flow(Inflow, to = Stock, eqn = 1 + pulse_func1(t) + pulse_func3(t)) |>
-#     flow(Outflow, from = Stock, eqn = 1 + pulse_func2(t) + pulse_func4(t))
+# Overview of System Dynamics Modelling
 
-#   pl <- plot(sfm,
-#     wrap_width = 9.5,
-#     font_size = 20, minlen = 1.5,
-#     stock_col = stock_col,
-#     flow_col = flow_col,
-#     font_family = font_family,
-#     show_constants = FALSE, show_aux = FALSE, show_dependencies = FALSE
-#   )
-#   pl
-
-#   export_plot(pl, file.path(filepath_figs, "sfm.pdf"))
-
-#   # Simulation
-#   sim <- simulate(sfm, save_at = .01, only_stocks = FALSE)
-#   pl_sim <- plot(sim,
-#     vars = rev(c("Stock", "Inflow", "Outflow")),
-#     xlab = "", main = "",
-#     colors = rev(c(stock_col, inflow_col, outflow_col)),
-#     font_family = font_family,
-#     font_size = font_size_subplot,
-#     showlegend = TRUE
-#   ) |>
-#     plotly::layout(
-#       font = annot_font,
-#       legend = utils::modifyList(annot_legend, list(y = -0.2))
-#     ) |>
-#     plotly::layout(
-#       annotations = list(
-#         utils::modifyList(annot_xlab, list(x = 0.5))
-#       )
-#     ) |> rm_grid()
-#   pl_sim
-
-#   export_plot(pl_sim, file.path(filepath_figs, "sfm_sim_old.pdf"),
-#     width = 4, height = 3
-#   )
-
-# }
-```
-
+To develop an understanding of the system, system dynamics modelling follows a structured process. 
 
 ```{r}
-if (recreate_figs) {
-  vars <- c("Stock", "Inflow", "Outflow")
-  colors <- c(stock_col, inflow_col, outflow_col)
-  sfm_list <- list()
-  pl_list <- list()
-
-  sfm <- sdbuildR() |>
-    sim_settings(only_stocks = FALSE, stop = 1, save_at = .01, dt = .01) |>
-    stock(Stock)
-
-  sfm1 <- sfm |>
-    flow(Inflow, eqn = 1, to = Stock)
-  sfm_list[["A"]] <- sfm1
-
-  sfm2 <- sfm |>
-    flow(Outflow, eqn = 1, from = Stock)
-  sfm_list[["B"]] <- sfm2
-
-  sfm3 <- sfm |>
-    flow(Inflow, eqn = 1, to = Stock) |>
-    flow(Outflow, eqn = 5 * Stock, from = Stock)
-  sfm_list[["C"]] <- sfm3
-
-  sfm_big <- sdbuildR() |>
-    stock(stockA, label = "Stock") |>
-    flow(inflowA, label = "Inflow", to = stockA) |>
-    stock(stockB, label = "Stock") |>
-    flow(outflowB, label = "Outflow", from = stockB) |>
-    stock(stockC, label = "Stock") |>
-    flow(inflowC, label = "Inflow", to = stockC) |>
-    flow(outflowC, label = "Outflow", from = stockC)
-
-  # copy (cat(viz_str))
-  {
-    viz_str <- "
-    digraph sfm {
-
-      graph [layout = dot, rankdir = LR, center=true, outputorder='edgesfirst', pad=.1, nodesep= .8]
-
-      # Rank groupings
-      {rank=same; stockA; stockB; stockC}
-
-      # Invisible edge to fix order
-      stockA -> stockB -> stockC [style=invis]
-
-      # Define stock nodes
-      'stockA' [id='stockA',label='Stock',tooltip = 'eqn = 0',shape=box,style=filled,fillcolor='#09B0ACBF',fontsize=20,fontname='Times New Roman']
-      'stockB' [id='stockB',label='Stock',tooltip = 'eqn = 0',shape=box,style=filled,fillcolor='#09B0ACBF',fontsize=20,fontname='Times New Roman']
-      'stockC' [id='stockC',label='Stock',tooltip = 'eqn = 0',shape=box,style=filled,fillcolor='#09B0ACBF',fontsize=20,fontname='Times New Roman']
-
-      # Define flow nodes (intermediate nodes for flows)
-      'inflowA' [id='inflowA',label='Inflow', tooltip = 'eqn = 0', shape = plaintext, fontsize=18, fontname='Times New Roman', width=0.6, height=0.3]
-      'outflowB' [id='outflowB',label='Outflow', tooltip = 'eqn = 0', shape = plaintext, fontsize=18, fontname='Times New Roman', width=0.6, height=0.3]
-      'inflowC' [id='inflowC',label='Inflow', tooltip = 'eqn = 0', shape = plaintext, fontsize=18, fontname='Times New Roman', width=0.6, height=0.3]
-      'outflowC' [id='outflowC',label='Outflow', tooltip = 'eqn = 0', shape = plaintext, fontsize=18, fontname='Times New Roman', width=0.6, height=0.3]
-
-      # Define external cloud nodes
-      'Cloud1' [label='', tooltip = 'Unspecified source',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
-      'Cloud2' [label='', tooltip = 'Unspecified source',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
-      'Cloud3' [label='', tooltip = 'Unspecified sink',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
-      'Cloud4' [label='', tooltip = 'Unspecified sink',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
-
-      # Define flow edges (stock -> flow_node -> stock)
-      'Cloud3' -> 'inflowA' [arrowhead='none', color='black:%(inflow_col)s:black', penwidth=1.1, minlen=1.5, splines=false]
-      'inflowA' -> 'stockA' [arrowhead='normal', color='black:%(inflow_col)s:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
-      'stockB' -> 'outflowB' [arrowhead='none', color='black:%(outflow_col)s:black', penwidth=1.1, minlen=1.5, splines=false]
-      'outflowB' -> 'Cloud1' [arrowhead='normal', color='black:%(outflow_col)s:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
-      'Cloud4' -> 'inflowC' [arrowhead='none', color='black:%(inflow_col)s:black', penwidth=1.1, minlen=1.5, splines=false]
-      'inflowC' -> 'stockC' [arrowhead='normal', color='black:%(inflow_col)s:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
-      'stockC' -> 'outflowC' [arrowhead='none', color='black:%(outflow_col)s:black', penwidth=1.1, minlen=1.5, splines=false]
-      'outflowC' -> 'Cloud2' [arrowhead='normal', color='black:%(outflow_col)s:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
-
-      # Define dependency edges
-
-
-      # Define auxiliary nodes
-
-
-      # Define constant nodes
-
-    }
-
-"
-
-
-    viz_str <- sprintf_arg(
-      viz_str,
-      list(
-        inflow_col = inflow_col,
-        outflow_col = outflow_col
-      )
-    )
-
-    pl <- DiagrammeR::grViz(viz_str)
-    pl
-    export_plot(pl, file.path(filepath_figs, "sfm.pdf"))
-  }
-
-
-  for (i in names(sfm_list)) {
-    # pl_sfm <- plot(sfm_list[[i]],
-    #   wrap_width = 9.5,
-    #   font_size = 20, minlen = 1.5,
-    #   stock_col = stock_col,
-    #   flow_col = flow_col,
-    #   font_family = font_family,
-    #   show_constants = FALSE, show_aux = FALSE,
-    #   show_dependencies = FALSE
-    # )
-    # pl_sfm
-
-    # export_plot(pl_sfm, file.path(filepath_figs, sprintf("sfm_%s.pdf", i)))
-
-    if (i == "A") {
-      idx <- c(1, 2)
-    } else if (i == "B") {
-      idx <- c(1, 3)
-    } else {
-      idx <- 1:3
-    }
-    idx <- rev(idx)
-
-    sim <- simulate(sfm_list[[i]])
-    pl_list[[i]] <- plot(sim,
-      vars = vars[idx],
-      xlab = "", main = "",
-      colors = colors[idx],
-      font_family = font_family,
-      font_size = font_size_subplot,
-      showlegend = (i == "C")
-    ) |> rm_grid()
-  }
-
-  # Simulation
-  #   pl1 <- plot(simulate(sfm1), vars = vars[1:2],
-  # showlegend = FALSE, main = "")
-  # pl2 <- plot(simulate(sfm2), vars = vars[c(1, 3)],
-  # showlegend = FALSE, main = "")
-  # pl3 <- plot(simulate(sfm3), vars = vars,
-  # showlegend = TRUE, main = "")
-
-  # pl <- plotly::subplot(pl1, pl2, pl3, nrows = 3, shareX = TRUE, margin = .05)
-  # pl
-  # sim <- simulate(sfm, save_at = .01, only_stocks = FALSE)
-  pl_sim <- plotly::subplot(pl_list,
-    nrows = 3,
-    shareX = FALSE, shareY = FALSE,
-    margin = 0.05, heights = c(.25, .3, .25)
-  ) |>
-    plotly::layout(
-      # margin = 0.05,
-      font = annot_font,
-      legend = utils::modifyList(annot_legend, list(y = -0.02))
-    ) |>
-    plotly::layout(
-      yaxis = list(range = c(0, 1.1)),
-      yaxis3 = list(range = c(0, 1.1)),
-      annotations = list(
-        utils::modifyList(annot_xlab, list(x = 0.5, y = 0.05))
-      )
-    )
-  pl_sim
-
-  export_plot(pl_sim, file.path(filepath_figs, "sfm_sim.pdf"),
-    width = 3.25, height = 5.5
+sd_modelling_table <- data.frame(
+  Number = c(
+    "<b>1</b>", "1(a)", "1(b)", "1(c)",
+    "<b>2</b>",
+    "<b>3</b>", "3(a)", "3(b)", "3(c)",
+    "<b>4</b>",
+    "<b>5</b>"
+  ),
+  Step = c(
+    "<b>Problem articulation</b>", "Target phenomenon", "Key variables", "Time horizon and time unit",
+    "<b>Dynamic hypothesis</b>",
+    "<b>Formalization</b>", "Formalizing variables", "Stock-and-flow diagram", "Stock-and-flow model",
+    "<b>Testing</b>",
+    "<b>Application</b>"
+  ),
+  Description = c(
+    "",
+    "Express the phenomenon to be explained as a pattern over time, which forms the reference mode throughout the modelling process.",
+    "Select the most important variables needed to define and explain the target phenomenon.",
+    "Specify the time frame across which the simulation takes place and the time resolution with which variables change.",
+    "Formulate a provisional account explaining how the target phenomenon arises endogenously from the system structure.",
+    "",
+    "Formulate variables such that they can be represented as continuous quantities.",
+    "Categorize variables as constants, stocks, flows, or auxiliaries, and draw connections between variables.",
+    "Iteratively build and refine the stock-and-flow model to reproduce the target phenomenon.",
+    "Perform verification and validity tests to expose errors, misspecifications, and implausibilities in the model.",
+    "Design and evaluate interventions to identify effective leverage points."
   )
-}
+)
+
+kableExtra::kbl(sd_modelling_table,
+  format = "html",
+  escape = FALSE,
+  col.names = c("", "Step", "Description"),
+  caption = "Overview of the Modelling Process in System Dynamics"
+) |>
+  kableExtra::kable_styling()
 ```
 
-
-# Step 1b. Key Variables
+In Step 1b, we define the key variables of JD-R theory:
 
 ```{r}
 def_table <- data.frame(
@@ -389,154 +203,6 @@ kableExtra::kbl(def_table,
 % We can immediately see that engagement only has an inflow that can increase engagement, namely motivation.
 
 
-```{r}
-{
-  viz_str <- "
-digraph flowchart {
-
-  graph [layout = dot,
-         rankdir = TB,
-         bgcolor = white,
-         nodesep = 0.45,
-         ranksep = 0.5,
-         splines = ortho,
-         fontname = '%(font_family)s',
-         pad = '0.2']
-
-  node [fontsize = 9.5,
-        fontname = '%(font_family)s',
-        fontcolor = 'white',
-        penwidth = 0]
-
-  edge [fontname = '%(font_family)s',
-        fontsize = 8.5,
-        fontcolor = '#555555',
-        color = '#666666',
-        penwidth = 1.3,
-        arrowsize = 0.6]
-
-  # --- DECISION NODES (rounded boxes with border) ---
-  q1 [label = 'Can the variable be represented\\nas a continuous quantity that\\nbe lower or higher?',
-      shape = box, style = 'filled,rounded',
-      fillcolor = '#e8f4f3', fontcolor = '#0f5c5a',
-      color = '#0f5c5a',
-      penwidth = 2, margin = '0.15,0.1']
-
-  q2 [label = 'Does the variable change within\\nthe chosen time horizon?',
-      shape = box, style = 'filled,rounded',
-      fillcolor = '#e8f4f3', fontcolor = '#0f5c5a',
-      color = '#0f5c5a',
-      penwidth = 2, margin = '0.15,0.1']
-
-  q3 [label = 'Is the variable a behaviour, action,\\nor process that takes place over time?',
-      shape = box, style = 'filled,rounded',
-      fillcolor = '#e8f4f3', fontcolor = '#0f5c5a',
-      color = '#0f5c5a',
-      penwidth = 2, margin = '0.15,0.1']
-
-  q4 [label = 'Does the variable accumulate\\nthe effects of flows?',
-      shape = box, style = 'filled,rounded',
-      fillcolor = '#e8f4f3', fontcolor = '#0f5c5a',
-      color = '#0f5c5a',
-      penwidth = 2, margin = '0.15,0.1']
-
-  q5 [label = 'Does the variable\\'s effect\\naccumulate in a stock?', # Does it directly increase or decrease a stock?
-      shape = box, style = 'filled,rounded',
-      fillcolor = '#e8f4f3', fontcolor = '#0f5c5a',
-      color = '#0f5c5a',
-      penwidth = 2, margin = '0.15,0.1']
-
-  q6 [label = 'Should it?',
-      shape = box, style = 'filled,rounded',
-      fillcolor = '#e8f4f3', fontcolor = '#0f5c5a',
-      color = '#0f5c5a',
-      penwidth = 2, margin = '0.12,0.08']
-
-  # --- TERMINAL NODES (no border, darker fill) ---
-  constant [label = 'Constant',
-            shape = box, style = 'filled,rounded',
-            fillcolor = '#0f5c5a', color = 'none',
-            fontsize = 10, margin = '0.15,0.08']
-
-  stock [label = 'Stock',
-         shape = box, style = 'filled,rounded',
-         fillcolor = '#0f5c5a', color = 'none',
-         fontsize = 10, margin = '0.15,0.08']
-
-  flow [label = 'Flow',
-        shape = box, style = 'filled,rounded',
-        fillcolor = '#0f5c5a', color = 'none',
-        fontsize = 10, margin = '0.15,0.08']
-
-  auxiliary [label = 'Auxiliary',
-             shape = box, style = 'filled,rounded',
-             fillcolor = '#0f5c5a', color = 'none',
-             fontsize = 10, margin = '0.15,0.08']
-
-  # --- ACTION NODES ---
-  reformulate [label = 'Reformulate variable',
-               shape = box, style = 'dashed,rounded,filled',
-            fillcolor = '#e8f4f3', fontcolor = '#0f5c5a',
-            fontsize = 8, penwidth = 1.2, color = '#17807c',
-            margin = '0.1,0.06']
-
-  add_flow [label = 'Add missing\\nflows',
-            shape = box, style = 'dashed,rounded,filled',
-            fillcolor = '#e8f4f3', fontcolor = '#0f5c5a',
-            fontsize = 8, penwidth = 1.2, color = '#17807c',
-            margin = '0.1,0.06']
-
-  add_stock [label = 'Add missing\\nstock',
-             shape = box, style = 'dashed,rounded,filled',
-             fillcolor = '#e8f4f3', fontcolor = '#0f5c5a',
-             fontsize = 8, penwidth = 1.2, color = '#17807c',
-             margin = '0.1,0.06']
-
-  # --- EDGES ---
-  q1 -> reformulate [xlabel = 'No', minlen = 2]
-  reformulate -> q1 [minlen = 2, style = dashed, penwidth = 1]
-  q1 -> q2          [xlabel = 'Yes']
-
-  q2 -> constant [xlabel = 'No', minlen = 2]
-  q2 -> q3       [xlabel = 'Yes']
-
-  q3 -> q4 [xlabel = <<font>No, it can be captured<br/>at a single moment in time</font>>]
-  q3 -> q5 [xlabel = '  Yes']
-
-  q4 -> stock [xlabel = 'Yes']
-  q4 -> q6    [xlabel = 'No']
-
-  q5 -> flow  [xlabel = 'Yes']
-  q5 -> q6    [xlabel = 'No']
-
-  q6 -> auxiliary [xlabel = 'No']
-  q6 -> add_flow  [xlabel = 'Yes', style = dashed, color = '#2a9d8f', penwidth = 1]
-  q6 -> add_stock [xlabel = 'Yes', style = dashed, color = '#2a9d8f', penwidth = 1]
-  add_flow  -> stock [style = dashed, color = '#2a9d8f', penwidth = 1]
-  add_stock -> flow  [style = dashed, color = '#2a9d8f', penwidth = 1]
-
-  # --- RANK CONSTRAINTS ---
-  { rank = same; q1; reformulate }
-  { rank = same; q2; constant }
-  { rank = same; q4; q5 }
-  { rank = same; stock; q6; flow }
-  { rank = same; add_flow; auxiliary; add_stock }
-}
-"
-}
-
-viz_str <- sprintf_arg(
-  viz_str,
-  list(
-    font_family = font_family
-  )
-)
-
-pl <- DiagrammeR::grViz(viz_str)
-pl
-```
-
-
 ## Stock-and-Flow Models
 
 ### Single stock example
@@ -566,7 +232,7 @@ if (recreate_figs) {
 
 
 ```{r}
-summary(sfm)
+print(sfm)
 ```
 
 
@@ -2359,16 +2025,31 @@ if (recreate_figs) {
 
 ### Parallelization
 
+To speed up large-scale ensemble simulations, sdbuildR supports using Julia as a backend. To make use of this feature, Julia needs to be installed, and the Julia environment for sdbuildR needs to be set up. See [this vignette](https://kcevers.github.io/sdbuildR/articles/julia-setup.html) for guidance.
+
 If resources allow, set up threaded simulation:
 
 ```{r, eval = FALSE}
 use_julia(nthreads = parallelly::availableCores() - 1)
 ```
 
-or: 
+To revert to single-threaded simulation, stop and restart the Julia session:
 
 ```{r}
-# future::plan(future::multisession, workers = parallelly::availableCores() - 1)
+use_julia(stop = TRUE)
+use_julia()
+```
+
+Alternatively, set up multi-session parallel simulation in R with the `future` package: 
+
+```{r, eval = FALSE}
+future::plan(future::multisession, workers = parallelly::availableCores() - 1)
+```
+
+To revert to sequential simulation:
+
+```{r}
+future::plan(future::sequential)
 ```
 
 If not possible, regular simulation can still be used for the analyses below, albeit with longer runtimes.
@@ -2412,7 +2093,7 @@ sims <- ensemble(sfm0,
 )
 
 plot(sims,
-  type = "sims", i = 1:n, alpha = .25,
+  which = "sims", i = 1:n, alpha = .25,
   nrows = 3,
   central_tendency = FALSE,
   vars = c("engagement", "demands")
@@ -2465,7 +2146,7 @@ plot(sim)
 n <- 100
 sims <- ensemble(sfm, n = n, return_sims = TRUE)
 plot(sims,
-  type = "sims", i = 1:n, alpha = .25, central_tendency = FALSE,
+  which = "sims", i = 1:n, alpha = .25, central_tendency = FALSE,
   vars = c("engagement", "demands", "motivation_rate")
 )
 ```
@@ -2485,7 +2166,7 @@ To compute the effectiveness of the intervention, we increase the simulation len
 n <- 1000
 sfm <- sfm |> sim_settings(stop = 1000, save_at = 1000)
 sims <- ensemble(sfm, n = n, return_sims = TRUE)
-df <- as.data.frame(sims, direction = "wide", type = "sims")
+df <- as.data.frame(sims, direction = "wide", which = "sims")
 tab <- table(round(df$engagement, 0)) |>
   prop.table() |>
   as.data.frame()
@@ -2498,7 +2179,7 @@ A shorter intervention is not effective.
 ```{r}
 sfm2 <- update(sfm, duration, eqn = 7)
 sims2 <- ensemble(sfm2, n = n, return_sims = TRUE)
-df2 <- as.data.frame(sims2, direction = "wide", type = "sims")
+df2 <- as.data.frame(sims2, direction = "wide", which = "sims")
 tab2 <- table(round(df2$engagement, 0)) |>
   prop.table() |>
   as.data.frame()
@@ -2535,7 +2216,7 @@ if (recreate_figs) {
   )
 
   pl_par <- plot(sims,
-    type = "sims", i = 1:n_ens_par, ylim = ylim,
+    which = "sims", i = 1:n_ens_par, ylim = ylim,
     vars = vars_, colors = colors_, alpha = alpha,
     main = "", sub = "", shareY = TRUE,
     nrows = 3, central_tendency = FALSE, margin = margin,
@@ -2566,9 +2247,9 @@ if (recreate_figs) {
   sims <- ensemble(sfm, n = n_ens_par, only_stocks = FALSE, return_sims = TRUE)
 
   pl_int <- plot(sims,
-    type = "sims", i = 1:n_ens_par,
+    which = "sims", i = 1:n_ens_par,
     alpha = alpha, central_tendency = FALSE,
-    # type = "summary",
+    # which = "summary",
     showlegend = TRUE,
     vars = vars_, colors = colors_, ylim = ylim,
     main = "", sub = "",
@@ -2714,8 +2395,8 @@ sfm <- sfm |>
 n <- 10000
 
 sims <- ensemble(sfm, n = n, return_sims = TRUE)
-plot(sims, vars = vars0, type = "summary")
-plot(sims, vars = vars0, type = "sims", i = 1:100)
+plot(sims, vars = vars0, which = "summary")
+plot(sims, vars = vars0, which = "sims", i = 1:100)
 ```
 
 
@@ -2727,7 +2408,7 @@ x1 <- "engagement"
 x2 <- "demands"
 lags <- seq(10, as.numeric(sfm$sim_settings$stop) - wave1, by = 1)
 
-df <- as.data.frame(sims, direction = "wide", type = "sims")
+df <- as.data.frame(sims, direction = "wide", which = "sims")
 dfX <- df[, c("i", "time", x1)]
 dfD <- df[, c("i", "time", x2)]
 dfX_wave1 <- dfX[dfX$time == wave1, setdiff(names(dfX), "time")]

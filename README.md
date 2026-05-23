@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# sdbuildR: Easily Build, Simulate, and Visualise Stock-and-Flow Models in R
+# sdbuildR: Easily Build, Simulate, and Explore Stock-and-Flow Models in R
 
 <!-- badges: start -->
 
@@ -12,39 +12,44 @@ coverage](https://codecov.io/gh/KCEvers/sdbuildR/graph/badge.svg)](https://app.c
 status](https://www.r-pkg.org/badges/version/sdbuildR)](https://CRAN.R-project.org/package=sdbuildR)
 <!-- badges: end -->
 
-Model systems as stock-and-flow models in R. Stock-and-flow models are
-foundational to system dynamics, and help to understand systems
-complicated by nonlinearities, delays, and feedback loops. sdbuildR aims
-to make stock-and-flow modeling accessible and effortless, enabling you
-to dedicate your expertise to what matters most: building insightful,
-high-quality models. Get started at
-<https://kcevers.github.io/sdbuildR/>\!
+Stock-and-flow models are a powerful tool for understanding complex
+systems. Originating in the field of system dynamics, they represent
+processes as quantities (stocks) that accumulate or deplete over time
+and the processes (inflows and outflows) that change them. sdbuildR is
+an R package for building, simulating, and exploring stock-and-flow
+models. Get started at <https://kcevers.github.io/sdbuildR/>\!
 
 ## Features
 
-  - **Accessibility**: Get started with stock-and-flow models with
+  - **Accessibility**: Get started with stock-and-flow modelling with
     limited knowledge.
-  - **Flexibility**: Modify your models easily and robustly.
-  - **Insight Maker integration**: Import models from [Insight
-    Maker](https://insightmaker.com/).
-  - **Julia backend**: Use Julia for high-performance simulations,
-    without any knowledge of Julia.
+  - **Flexibility**: Easily modify models and use either R or Julia as a
+    simulation backend.
+  - **Rigour**: Use unit tests to verify that models behave as intended,
+    and run ensemble simulations to explore model behaviour across
+    parameter ranges and initial conditions.
 
 All package capabilities are described in the vignettes:
 
   - [Build](https://kcevers.github.io/sdbuildR/articles/build.html):
-    Learn how to build, modify, and debug stock-and-flow models.
+    Build, modify, and simulate stock-and-flow
+    models.
+  - [Ensemble](https://kcevers.github.io/sdbuildR/articles/ensemble.html):
+    Explore a model’s behaviour across parameter ranges and initial
+    conditions.
+  - [Unit
+    tests](https://kcevers.github.io/sdbuildR/articles/unit-tests.html):
+    Verify models behave as intended with unit tests.
+  - [Job Demands-Resources
+    Theory](https://kcevers.github.io/sdbuildR/articles/jdr.html): An
+    example of formalizing psychological theory with sdbuildR.
   - [Julia
     setup](https://kcevers.github.io/sdbuildR/articles/julia-setup.html):
-    Install and set up the Julia environment for threaded Julia
-    execution.
-  - [Ensemble](https://kcevers.github.io/sdbuildR/articles/ensemble.html):
-    Learn how to assess a model’s sensitivity, uncertainty and
-    robustness with ensemble simulations.
-  - [Unit
-    testing](https://kcevers.github.io/sdbuildR/articles/unit-testing.html):
-    Learn how to use unit testing to verify that your model behaves as
-    expected.
+    Speed up simulations with
+    Julia.
+  - [Import/Export](https://kcevers.github.io/sdbuildR/articles/import-export.html):
+    Import models from deSolve or Insight Maker, and export to other
+    formats.
 
 ## Installation
 
@@ -60,13 +65,6 @@ The development version can be installed from GitHub:
 if (!require("remotes")) install.packages("remotes")
 remotes::install_github("KCEvers/sdbuildR")
 ```
-
-sdbuildR offers two simulation engines: R and Julia (supported by
-[JuliaConnectoR](https://github.com/stefan-m-lenz/JuliaConnectoR/)). If
-you would like to use the Julia backend, you will need to install and
-set up the Julia environment. See [this
-vignette](https://kcevers.github.io/sdbuildR/articles/julia-setup.html)
-for guidance.
 
 ## Citation
 

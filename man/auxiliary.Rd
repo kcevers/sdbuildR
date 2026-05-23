@@ -20,7 +20,7 @@ aux(object, name, eqn = 0, label = name, doc = "", non_negative = FALSE)
 
 \item{doc}{Description of variable. Defaults to \code{""} (no description).}
 
-\item{non_negative}{If TRUE, variable is enforced to be non-negative (i.e. strictly 0 or positive). Defaults to \code{FALSE}.}
+\item{non_negative}{If TRUE, variable is enforced to be non-negative (i.e., strictly 0 or positive). Defaults to \code{FALSE}.}
 }
 \value{
 A stock-and-flow model object of class \code{\link{sdbuildR}}

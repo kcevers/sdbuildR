@@ -160,20 +160,20 @@ test_that("simulate() with graphical function dependency", {
 
 test_that("simulate() filters output to vars", {
   sfm <- sdbuildR("SIR") |>
-    sim_settings(language = "R", vars = c("Susceptible", "Infection_Rate"))
+    sim_settings(language = "R", vars = c("susceptible", "new_infections"))
 
   sim <- simulate(sfm)
   expect_true(sim$success)
-  expect_equal(sort(unique(sim$df$variable)), c("Infection_Rate", "Susceptible"))
+  expect_equal(sort(unique(sim$df$variable)), c("new_infections", "susceptible"))
 })
 
 test_that("simulate() vars overrides only_stocks", {
   sfm <- sdbuildR("SIR") |>
-    sim_settings(language = "R", only_stocks = TRUE, vars = c("Infection_Rate"))
+    sim_settings(language = "R", only_stocks = TRUE, vars = c("new_infections"))
 
   sim <- simulate(sfm)
   expect_true(sim$success)
-  expect_equal(unique(sim$df$variable), "Infection_Rate")
+  expect_equal(unique(sim$df$variable), "new_infections")
 })
 
 test_that("simulate() with Julia filters output to vars", {
@@ -186,12 +186,12 @@ test_that("simulate() with Julia filters output to vars", {
       stop = 5,
       dt = 0.1,
       save_at = 1,
-      vars = c("Susceptible", "Infection_Rate")
+      vars = c("susceptible", "new_infections")
     )
 
   sim <- simulate(sfm)
   expect_true(sim$success)
-  expect_equal(sort(unique(sim$df$variable)), c("Infection_Rate", "Susceptible"))
+  expect_equal(sort(unique(sim$df$variable)), c("new_infections", "susceptible"))
 })
 
 test_that("simulate() with Julia vars overrides only_stocks", {
@@ -205,10 +205,10 @@ test_that("simulate() with Julia vars overrides only_stocks", {
       dt = 0.1,
       save_at = 1,
       only_stocks = TRUE,
-      vars = c("Infection_Rate")
+      vars = c("new_recoveries")
     )
 
   sim <- simulate(sfm)
   expect_true(sim$success)
-  expect_equal(unique(sim$df$variable), "Infection_Rate")
+  expect_equal(unique(sim$df$variable), "new_recoveries")
 })

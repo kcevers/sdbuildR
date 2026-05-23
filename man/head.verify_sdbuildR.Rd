@@ -22,7 +22,7 @@ Wrapper around \code{\link[=head]{head()}} that first converts the results to a 
 }
 \examples{
 sfm <- sdbuildR("SIR") |>
-  unit_test(expr = all(Susceptible >= 0))
+  unit_test(expr = all(susceptible >= 0))
 res <- verify(sfm)
 head(res)
 }

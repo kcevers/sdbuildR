@@ -38,30 +38,45 @@ test_that("plot() validates variable existence in simulation", {
   sim <- sir_sim()
 
   expect_error(
-    plot(sim, vars = c("Susceptible", "NonExistent")),
+    plot(sim, vars = c("susceptible", "NonExistent")),
     "NonExistent.*not.*variable"
   )
 })
 
 test_that("plot() warns and continues when some vars are missing from data", {
-  sim <- sir_sim() # default only_stocks = TRUE
+  sim <- sir_sim(only_stocks = TRUE)
 
   expect_warning(
-    pl <- plot(sim, vars = c("Susceptible", "Infection_Rate")),
+    pl <- plot(sim, vars = c("susceptible", "new_infections")),
     "not available in the simulated data"
   )
   expect_plotly(pl)
 })
 
-test_that("plot() errors when all requested vars are missing from data", {
-  sim <- sir_sim() # default only_stocks = TRUE
 
-  expect_warning(
-    expect_error(
-      plot(sim, vars = c("Infection_Rate", "Recovery_Rate")),
-      "No requested variables are available"
-    ),
+test_that("plot() errors when all requested vars are missing from data", {
+  sim <- sir_sim(only_stocks = TRUE)
+
+  expect_error(
+    plot(sim, vars = c("new_recoveries", "new_infections")),
     "not available in the simulated data"
+  )
+})
+
+
+test_that("plot() does not error when all requested vars are constants", {
+  sim <- sir_sim(only_stocks = TRUE)
+
+  expect_no_error(
+    plot(sim, vars = c("infection_rate", "recovery_rate"))
+  )
+})
+
+test_that("plot() does not error when some requested vars are constants", {
+  sim <- sir_sim(only_stocks = TRUE)
+
+  expect_no_error(
+    plot(sim, vars = c("susceptible", "recovery_rate"))
   )
 })
 
@@ -156,12 +171,12 @@ test_that("plot() respects vars argument", {
 
   vdiffr::expect_doppelganger(
     "sim-single-variable",
-    plot(sim, vars = "Susceptible")
+    plot(sim, vars = "susceptible")
   )
 
   vdiffr::expect_doppelganger(
     "sim-filtered-vars",
-    plot(sim, vars = c("Susceptible", "Infected"))
+    plot(sim, vars = c("susceptible", "infected"))
   )
 })
 
@@ -295,7 +310,7 @@ test_that("plot() works with both stocks and flow variables", {
   skip_on_os("mac")
   skip_if_not_installed("vdiffr")
 
-  # SIR has Susceptible (stock), Infected (stock), Recovered (stock)
+  # SIR has susceptible (stock), infected (stock), recovered (stock)
   sim <- sir_sim(only_stocks = FALSE)
 
   vdiffr::expect_doppelganger(

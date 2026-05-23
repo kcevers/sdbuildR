@@ -24,8 +24,8 @@
 #' @param params Named numeric vector of model parameters (constants).
 #' @param init Named numeric vector of initial state values (stocks).
 #' @param times Numeric vector of time points. Must be evenly spaced
-#'   (e.g. from `seq(start, stop, by = dt)`).
-#' @param method Integration method. Defaults to `"lsoda"`. See [solvers()].
+#'   (e.g., from `seq(start, stop, by = dt)`).
+#' @param method Integration method. Defaults to `"lsoda"`. See [sim_methods()].
 #' @param name Optional model name. Character scalar.
 #'
 #' @returns A stock-and-flow model of class [`sdbuildR`][sdbuildR].

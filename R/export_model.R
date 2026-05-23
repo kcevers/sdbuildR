@@ -1,6 +1,21 @@
 #' Export a stock-and-flow model
 #'
 #' Export a model of class [`sdbuildR`][sdbuildR] to another format.
+#'
+#' ## sdbuildR format (`format = "sdbuildR"`)
+#' Returns R code that reconstructs the model using sdbuildR functions.
+#' When `file = NULL`, returns a character string.
+#' When `file` is provided, writes an `.R` file and returns the path invisibly.
+#' If `file` has no `.R` extension, one is appended.
+#'
+#' ## deSolve format (`format = "deSolve"`)
+#' Returns a standalone R script using [deSolve::ode()] directly — no sdbuildR
+#' dependency required to run the output.
+#' When `file = NULL`, returns a character string.
+#' When `file` is provided, writes an `.R` file and returns the path invisibly.
+#' If `file` has no `.R` extension, one is appended.
+#' Requires `sim_settings(language = "R")` (the default).
+#'
 #' ## Psychomodels format (`format = "psychomodels"`)
 #' Generates a JSON record for upload to
 #' [Psychomodels](https://www.psychomodels.org/models/).
@@ -9,7 +24,8 @@
 #' If `file` has no `.json` extension, one is appended.
 #'
 #' @inheritParams update.sdbuildR
-#' @param format Export format. Currently `"psychomodels"`.
+#' @param format Export format. One of `"sdbuildR"`, `"deSolve"`, or
+#'   `"psychomodels"`.
 #' @param file Output file path, or `NULL` to return the result directly.
 #' @param title \[psychomodels\] Model title. Defaults to `object[["meta"]][["name"]]`.
 #' @param description \[psychomodels\] Model description.
@@ -39,22 +55,30 @@
 #' @param include_latex \[psychomodels\] If `TRUE`, append LaTeX equations to explanation.
 #' @param pretty \[psychomodels\] If `TRUE`, pretty-print output JSON.
 #'
-#' @returns For `format = "psychomodels"` with `file = NULL`: a JSON character string.
-#' For `format = "psychomodels"` with `file` specified: invisibly returns the file path.
+#' @returns For `file = NULL`: a character string containing the exported content.
+#' For `file` specified: invisibly returns the file path.
 #' @export
 #' @concept importExport
-#' @seealso [import_insightmaker()]
+#' @seealso [import_insightmaker()], [import_desolve()]
 #'
 #' @examples
 #' sfm <- sdbuildR("SIR")
 #'
+#' # Get sdbuildR reconstruction code
+#' cat(export_model(sfm, format = "sdbuildR"))
+#'
+#' # Get standalone deSolve script
+#' cat(export_model(sfm, format = "deSolve"))
+#'
 #' # Export to Psychomodels JSON
+#' \dontrun{
 #' json <- export_model(sfm,
 #'   format = "psychomodels",
 #'   publication_doi = "10.0000/example"
 #' )
+#' }
 export_model <- function(object,
-                         format = c("psychomodels"),
+                         format = c("sdbuildR", "deSolve", "psychomodels"),
                          file = NULL,
                          # psychomodels-specific params
                          title = object[["meta"]][["name"]],
@@ -87,9 +111,23 @@ export_model <- function(object,
   }
   check_sdbuildR(object)
 
-  format <- match.arg(tolower(format), c("psychomodels"))
+  format <- match.arg(format, c("sdbuildR", "deSolve", "psychomodels"))
 
   switch(format,
+    sdbuildR = {
+      code <- build_sdbuildR_code_(object)
+      if (is.null(file)) return(code)
+      file <- .validate_r_path(file)
+      writeLines(code, file)
+      invisible(file)
+    },
+    deSolve = {
+      code <- export_desolve_(object)
+      if (is.null(file)) return(code)
+      file <- .validate_r_path(file)
+      writeLines(code, file)
+      invisible(file)
+    },
     psychomodels = export_psychomodels(
       object                            = object,
       include_latex                     = include_latex,
@@ -122,6 +160,45 @@ export_model <- function(object,
   )
 }
 
+
+export_desolve_ <- function(object) {
+  if (tolower(object[["sim_settings"]][["language"]]) != "r") {
+    cli::cli_abort(c(
+      "x" = '{.code format = "deSolve"} requires {.code language = "R"}.',
+      "i" = 'Set {.code sim_settings(object, language = "R")} first.'
+    ))
+  }
+
+  only_stocks <- isTRUE(object[["sim_settings"]][["only_stocks"]])
+
+  # Pre-assemble all static components (times, funcs, static, nonneg, ordering)
+  object <- pre_assemble_components(object)
+
+  # Always compile ODE fresh to respect only_stocks
+  object[["assemble"]][["ode"]] <- compile_ode(
+    object,
+    only_stocks = only_stocks,
+    language    = "R",
+    is_ensemble = FALSE
+  )
+
+  run_ode <- compile_run_ode(object, only_stocks = only_stocks, language = "R")
+
+  seed <- object[["sim_settings"]][["seed"]]
+  seed_str <- if (is_defined(seed)) fmt_script("prep_seed", "R", seed = seed) else ""
+
+  paste0(c(
+    "library(deSolve)",
+    seed_str,
+    object[["assemble"]][["times"]],
+    object[["assemble"]][["funcs"]],
+    object[["assemble"]][["nonneg_stocks"]][["func_def"]],
+    object[["assemble"]][["ode"]],
+    object[["assemble"]][["static"]][["script"]],
+    run_ode
+  ), collapse = "\n")
+}
+
 .fmt_num <- function(x) {
   x <- as.numeric(x)
   if (x == round(x)) as.character(as.integer(x)) else as.character(x)
@@ -131,4 +208,192 @@ export_model <- function(object,
 .validate_r_path <- function(path) {
   if (!grepl("\\.R$", path, ignore.case = TRUE)) path <- paste0(path, ".R")
   path
+}
+
+
+
+build_sdbuildR_code_ <- function(object) {
+  check_sdbuildR(object)
+
+  # Simulation specifications — filter out defaults
+  sim_settings_list <- object[["sim_settings"]]
+  ss_defaults <- formals(sim_settings)
+  ss_defaults <- ss_defaults[!names(ss_defaults) %in% c("object", "save_at", "save_n")]
+
+  sim_settings_list <- sim_settings_list[vapply(names(sim_settings_list), function(nm) {
+    val <- sim_settings_list[[nm]]
+    # Omit save_type = "all" (the default) and NULL save_at/save_n
+    if (nm == "save_type") {
+      return(!identical(val, "all"))
+    }
+    if (nm %in% c("save_at", "save_n")) {
+      return(!is.null(val))
+    }
+    !nm %in% names(ss_defaults) || !identical(val, ss_defaults[[nm]])
+  }, logical(1))]
+
+  sim_settings_list <- lapply(sim_settings_list, function(z) if (is.character(z)) paste0("\"", z, "\"") else z)
+  sim_settings_str <- if (length(sim_settings_list) > 0) {
+    paste0(" |>\n\tsim_settings(", paste0(names(sim_settings_list), " = ", unname(sim_settings_list), collapse = ", "), ")")
+  } else {
+    ""
+  }
+
+  # Funcs (custom functions) — name is NSE (bare symbol, no quotes)
+  func_df <- get_funcs(object)
+  if (nrow(func_df) > 0) {
+    func_cols <- intersect(c("name", "eqn", "doc"), names(func_df))
+    func_df <- func_df[, func_cols, drop = FALSE]
+
+    cf_defaults <- formals(custom_func)
+    cf_defaults <- cf_defaults[!names(cf_defaults) %in% c("object", "name", "label")]
+
+    func_str <- vapply(seq_len(nrow(func_df)), function(i) {
+      row <- as.list(func_df[i, , drop = FALSE])
+      func_name <- row[["name"]] # bare symbol, no quotes
+      row[["name"]] <- NULL
+
+      # Filter out defaults
+      row <- row[vapply(names(row), function(nm) {
+        !nm %in% names(cf_defaults) || !identical(row[[nm]], cf_defaults[[nm]])
+      }, logical(1))]
+
+      args_str <- vapply(names(row), function(nm) {
+        val <- row[[nm]]
+        # eqn is NSE in custom_func() — emit unquoted
+        if (nm == "eqn" || !is.character(val)) {
+          paste0(nm, " = ", val)
+        } else {
+          paste0(nm, " = \"", val, "\"")
+        }
+      }, character(1))
+
+      paste0("custom_func(", paste(c(func_name, args_str), collapse = ", "), ")")
+    }, character(1)) |>
+      paste0(collapse = " |>\n\t")
+
+    func_str <- paste0(" |>\n\t", func_str)
+  } else {
+    func_str <- ""
+  }
+
+  # Meta-information string
+  h <- object[["meta"]]
+  defaults_meta <- formals(meta)
+  defaults_meta <- defaults_meta[!names(defaults_meta) %in%
+    c("object", "created", "...")]
+
+  # Find which elements in h are identical to those in defaults_meta
+  h <- h[vapply(names(h), function(name) {
+    !name %in% names(defaults_meta) || !identical(
+      h[[name]],
+      defaults_meta[[name]]
+    )
+  }, logical(1))]
+
+  h <- lapply(h, function(z) {
+    if (is.character(z) |
+      inherits(z, "POSIXt")) {
+      paste0("\"", z, "\"")
+    } else {
+      z
+    }
+  })
+
+  meta_str <- paste0(
+    " |>\n\tmeta(",
+    paste0(names(h), " = ", unname(h), collapse = ", "), ")"
+  )
+
+  # Variables — use type-specific helpers; name/to/from/source are NSE (bare symbols)
+  # func-type variables are handled above via custom_func(), so exclude them here
+  vars_df <- object[["variables"]]
+  vars_df <- vars_df[vars_df[["type"]] != "func", , drop = FALSE]
+
+  if (nrow(vars_df) > 0) {
+    type_to_func <- c(
+      stock = "stock", flow = "flow", constant = "constant",
+      aux = "aux", lookup = "lookup"
+    )
+
+    # Args emitted unquoted — NSE in the target functions
+    # nse_skip: also skip when empty/NA (variable cross-references)
+    nse_skip <- c("to", "from", "source")
+    # nse_expr: unquoted but filtered by defaults normally (expressions)
+    nse_expr <- c("eqn")
+    # Args stored as list columns containing numeric vectors
+    vec_args <- c("xpts", "ypts")
+
+    # Pre-compute defaults for each helper (exclude object, name, label, vec args)
+    helper_defaults_list <- lapply(type_to_func, function(fn) {
+      d <- formals(get(fn))
+      d[!names(d) %in% c("object", "name", "label", vec_args, "...")]
+    })
+
+    keep_prop <- get_building_block_prop()
+
+    var_str <- split(vars_df, seq_len(nrow(vars_df))) |>
+      lapply(function(y) {
+        z <- as.list(y)
+        var_name <- z[["name"]]
+        var_type <- z[["type"]]
+        func_name <- type_to_func[[var_type]]
+        helper_defaults <- helper_defaults_list[[var_type]]
+
+        # Keep only relevant properties for this type, excluding name/type/_julia cols
+        type_props <- setdiff(keep_prop[[var_type]], c("name", "type"))
+        type_props <- type_props[!grepl("_julia", type_props)]
+        z <- z[intersect(type_props, names(z))]
+
+        # Skip label if it equals the variable name (default is label = name)
+        if (!is.null(z[["label"]]) && identical(z[["label"]], var_name)) {
+          z[["label"]] <- NULL
+        }
+
+        # Filter out defaults; skip empty/NA cross-references (nse_skip)
+        z <- z[vapply(names(z), function(nm) {
+          val <- z[[nm]]
+          if (nm %in% vec_args) {
+            if (is.list(val)) val <- val[[1]]
+            return(length(val) > 0 && !all(is.na(val)))
+          }
+          if (nm %in% nse_skip) {
+            return(!is.null(val) && !identical(val, "") && !is.na(val))
+          }
+          !nm %in% names(helper_defaults) || !identical(val, helper_defaults[[nm]])
+        }, logical(1))]
+
+        # Format each argument value
+        args_str <- vapply(names(z), function(nm) {
+          val <- z[[nm]]
+          if (nm %in% vec_args) {
+            if (is.list(val)) val <- val[[1]]
+            formatted <- if (length(val) == 1) {
+              as.character(val)
+            } else {
+              paste0("c(", paste(val, collapse = ", "), ")")
+            }
+            paste0(nm, " = ", formatted)
+          } else if (nm %in% c(nse_skip, nse_expr)) {
+            paste0(nm, " = ", val) # bare expression, no quotes
+          } else if (is.character(val)) {
+            paste0(nm, " = \"", val, "\"")
+          } else {
+            paste0(nm, " = ", val)
+          }
+        }, character(1))
+
+        paste0(func_name, "(", paste(c(var_name, args_str), collapse = ", "), ")")
+      })
+    var_str <- paste0(" |>\n\t", paste0(unlist(var_str), collapse = " |>\n\t"))
+  } else {
+    var_str <- ""
+  }
+
+  script <- sprintf(
+    "sfm <-\tsdbuildR()%s%s%s%s", sim_settings_str,
+    meta_str, var_str, func_str
+  )
+
+  paste0(script, "\n")
 }

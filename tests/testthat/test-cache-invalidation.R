@@ -97,7 +97,7 @@ test_that("changing constant value preserves ode and ordering", {
   old_ordering <- sfm[["assemble"]][["ordering"]]
 
   # Change constant value (same dependencies, i.e., none)
-  sfm <- update(sfm, Recovered, eqn = 200)
+  sfm <- update(sfm, recovered, eqn = 200)
 
   # ODE and ordering should be preserved
   expect_equal(sfm[["assemble"]][["ode"]], old_ode)
@@ -176,11 +176,11 @@ test_that("targeted invalidation produces same simulation as full invalidation",
   sfm_cached <- sim1$object
 
   # Path 1: Targeted invalidation (default behavior)
-  sfm2 <- update(sfm_cached, "Delay", eqn = "2")
+  sfm2 <- update(sfm_cached, "contact_rate", eqn = "20")
   sim2 <- simulate(sfm2)
 
   # Path 2: Force full invalidation
-  sfm3 <- update(sfm_cached, "Delay", eqn = "2")
+  sfm3 <- update(sfm_cached, "contact_rate", eqn = "20")
   sfm3 <- invalidate_assemble(sfm3, "all")
   sim3 <- simulate(sfm3)
 

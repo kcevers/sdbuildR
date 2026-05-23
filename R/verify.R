@@ -32,21 +32,22 @@ verify <- function(object, ...) {
 #'   verification). Set to a larger value for robustness testing of stochastic models.
 #' @param nr Integer vector of test number(s) to run (1-based, as shown by [unit_tests()]).
 #'   Defaults to `NULL` (run all tests).
-#' @param ... Additional arguments passed to [simulate.sdbuildR()].
+#' @param ... Additional arguments passed to [sim_settings()] (e.g., `return_sims`,
+#'   `seed`, `dt`) and then to [simulate.sdbuildR()].
 #'
-#' @returns An object of class `verify_sdbuildR` with fields, returned invisibly:
+#' @returns An object of class `verify_sdbuildR`, returned invisibly. Use
+#'   [as.data.frame()] to extract results as a data frame and [plot()] to
+#'   visualize the simulations used. The object contains:
 #'   \describe{
-#'     \item{results}{List of test result entries, each with `label`, `expr_str`,
-#'       `conditions`, `status`, `error_type`, `message`, `outcome`, `pass_rate`,
-#'       `n_pass`, `n_fail`, and `n_error`.}
+#'     \item{results}{List of test result entries, one per test (including inactive
+#'       tests, which appear with `status = "skip"`). Each entry has `label`,
+#'       `expr_str`, `conditions`, `status`, `error_type`, `message`, `outcome`,
+#'       `pass_rate`, `n_pass`, `n_fail`, and `n_error`.}
 #'     \item{object}{The `sdbuildR` model the tests were run against.}
-#'     \item{sims}{Nested list of `simulate_sdbuildR` objects structured as
-#'       `sims[[j]][[i]]` (condition `j`, run `i`), or `NULL` if
-#'       `return_sims = FALSE`.}
-#'     \item{j}{Named integer vector mapping each test label to its condition
-#'       index in `sims`. Always populated. Use
-#'       `result$sims[[result$j[["my test label"]]]][[1]]` to retrieve the
-#'       simulation used for a specific test.}
+#'     \item{sims}{Nested list of `simulate_sdbuildR` objects used internally by
+#'       [plot.verify_sdbuildR()], or `NULL` if `return_sims = FALSE`.}
+#'     \item{j}{Named integer vector mapping each test label to its condition index.
+#'       Used internally by [plot.verify_sdbuildR()].}
 #'     \item{n}{Number of simulations run per condition.}
 #'     \item{n_conditions}{Number of unique simulation conditions.}
 #'     \item{test_indices}{Integer vector of the original 1-based test numbers that
@@ -57,14 +58,15 @@ verify <- function(object, ...) {
 #' @export
 #' @concept unitTest
 #' @method verify sdbuildR
-#' @seealso [unit_test()], [unit_tests()], [simulate.sdbuildR()]
+#' @seealso [unit_test()], [unit_tests()], [simulate.sdbuildR()],
+#'   [as.data.frame.verify_sdbuildR()], [plot.verify_sdbuildR()]
 #'
 #' @examples
 #' sfm <- sdbuildR("SIR") |>
-#'   unit_test(expr = all(Susceptible >= 0)) |>
+#'   unit_test(expr = all(susceptible >= 0)) |>
 #'   unit_test(
-#'     label = "Recovered increases over time",
-#'     expr = all(diff(Recovered) >= 0)
+#'     label = "recovered increases over time",
+#'     expr = all(diff(recovered) >= 0)
 #'   )
 #'
 #' verify(sfm)
@@ -263,23 +265,23 @@ verify.sdbuildR <- function(object, verbose = TRUE, n = 1L, nr = NULL, ...) {
 #'
 #' @examples
 #' sfm <- sdbuildR("SIR") |>
-#'   unit_test(expr = all(Susceptible >= 0))
+#'   unit_test(expr = all(susceptible >= 0))
 #'
 #' # Run unit tests
 #' verify(sfm)
 #'
 #' # Add test with label
 #' sfm <- unit_test(sfm,
-#'   label = "Recovered increases",
-#'   expr = all(diff(Recovered) >= 0)
+#'   label = "recovered increases",
+#'   expr = all(diff(recovered) >= 0)
 #' )
 #' verify(sfm)
 #'
 #' # Add test with conditions
 #' sfm <- unit_test(sfm,
-#'   expr = all(Infected == Infected[1]),
-#'   label = "When Beta is zero, no one gets infected",
-#'   conditions = list(Beta = 0)
+#'   expr = all(infected == infected[1]),
+#'   label = "When infection_rate is zero, no one gets infected",
+#'   conditions = list(infection_rate = 0)
 #' )
 #' verify(sfm)
 #'
@@ -292,8 +294,8 @@ verify.sdbuildR <- function(object, verbose = TRUE, n = 1L, nr = NULL, ...) {
 #'
 #' # Modify test by label, e.g., to change the expression
 #' sfm <- unit_test(sfm,
-#'   label = "Recovered increases over time",
-#'   expr = all(diff(Recovered) > -1)
+#'   label = "recovered increases over time",
+#'   expr = all(diff(recovered) > -1)
 #' )
 #' verify(sfm)
 #'
@@ -625,14 +627,14 @@ unit_test <- function(object, nr, expr, label, conditions = list(), active = TRU
 #'
 #' @examples
 #' sfm <- sdbuildR("SIR") |>
-#'   unit_test(label = "Susceptible is non-negative", expr = all(Susceptible >= 0)) |>
-#'   unit_test(label = "Recovered increases", expr = all(diff(Recovered) >= 0))
+#'   unit_test(label = "susceptible is non-negative", expr = all(susceptible >= 0)) |>
+#'   unit_test(label = "recovered increases", expr = all(diff(recovered) >= 0))
 #'
 #' # Remove by nr
 #' sfm <- discard_unit_test(sfm, nr = 1)
 #'
 #' # Remove by label
-#' sfm <- discard_unit_test(sfm, label = "Recovered increases")
+#' sfm <- discard_unit_test(sfm, label = "recovered increases")
 discard_unit_test <- function(object, label, nr) {
   check_sdbuildR(object)
 
@@ -726,10 +728,10 @@ discard_unit_test <- function(object, label, nr) {
 #'
 #' @examples
 #' sfm <- sdbuildR("SIR") |>
-#'   unit_test(expr = all(Susceptible >= 0)) |>
+#'   unit_test(expr = all(susceptible >= 0)) |>
 #'   unit_test(
-#'     label = "Recovered increases over time",
-#'     expr = all(diff(Recovered) >= 0)
+#'     label = "recovered increases over time",
+#'     expr = all(diff(recovered) >= 0)
 #'   )
 #'
 #' unit_tests(sfm)
@@ -792,14 +794,14 @@ print.unit_tests_sdbuildR <- function(x, ...) {
   for (i in seq_along(x$tests)) {
     t <- x$tests[[i]]
     original_nr <- if (is.null(x[["indices"]])) i else x[["indices"]][[i]]
-    icon <- if (isTRUE(t[["active"]])) cli::col_green(cli::symbol$bullet) else cli::symbol$line
-    cli::cli_bullets(c(" " = "{original_nr}. {icon} {t[['label']]}"))
-    cli::cli_text("  {.code {t$expr_str}}")
+    icon <- if (isTRUE(t[["active"]])) cli::col_green(cli::symbol$bullet) else cli::symbol$circle_dotted
+    cli::cli_text("{icon} {original_nr}. {t[['label']]}")
+    cli::cli_bullets(c(" " = "{.code {t$expr_str}}"))
     if (length(t[["conditions"]]) > 0) {
       cond_str <- paste(names(t[["conditions"]]), unlist(t[["conditions"]]),
         sep = " = ", collapse = ", "
       )
-      cli::cli_text("  Conditions: {cond_str}")
+      cli::cli_bullets(c(" " = "Conditions: {cond_str}"))
     }
   }
 
@@ -923,7 +925,7 @@ print.verify_sdbuildR <- function(x, ...) {
   cli::cli_h1("Stock-and-Flow Unit Test Results")
 
   if (n_sims > 1L) {
-    cli::cli_text("{n_pass}/{n_run} test{?s} passed ({n_sims} runs per condition).")
+    cli::cli_text("{n_pass}/{n_run} test{?s} passed ({n_sims} simulations).")
   } else if (n_skip > 0 && n_run == 0) {
     cli::cli_text("{n_skip}/{n_total} test{?s} skipped.")
   } else {
@@ -941,31 +943,31 @@ print.verify_sdbuildR <- function(x, ...) {
       n_fail_r  <- if (is.null(r[["n_fail"]]))  0L else r[["n_fail"]]
       n_error_r <- if (is.null(r[["n_error"]])) 0L else r[["n_error"]]
       n_r <- n_pass_r + n_fail_r + n_error_r
-      paste0("(", n_pass_r, "/", n_r, ") ")
+      paste0("(", formatC(n_pass_r, width = nchar(as.character(n_r))), "/", n_r, ") ")
     } else {
       ""
     }
 
     switch(r[["status"]],
       pass = {
-        cli::cli_bullets(c(" " = "{original_nr}. {cli::col_green(cli::symbol$tick)} {run_prefix}{r[['label']]}"))
+        cli::cli_inform(c("v" = "{original_nr}. {run_prefix}{r[['label']]}"))
       },
       fail = {
-        cli::cli_bullets(c(" " = "{original_nr}. {cli::col_red(cli::symbol$cross)} {run_prefix}{r[['label']]}"))
+        cli::cli_inform(c("x" = "{original_nr}. {run_prefix}{r[['label']]}"))
         if (!is.null(r[["message"]]) && nzchar(r[["message"]])) {
-          cli::cli_text("  {r$message}")
+          cli::cli_bullets(c(" " = "{r$message}"))
         }
       },
       error = {
-        cli::cli_bullets(c(" " = "{original_nr}. {cli::col_yellow('!')} {run_prefix}{r[['label']]}"))
+        cli::cli_inform(c("!" = "{original_nr}. {run_prefix}{r[['label']]}"))
         if (!is.null(r[["message"]]) && nzchar(r[["message"]])) {
-          cli::cli_text("  {r$message}")
+          cli::cli_bullets(c(" " = "{r$message}"))
         }
       },
       skip = {
-        cli::cli_bullets(c(" " = "{original_nr}. {cli::symbol$line} {r[['label']]}"))
+        cli::cli_inform(c("i" = "{original_nr}. {run_prefix}{r[['label']]}"))
         if (!is.null(r[["message"]]) && nzchar(r[["message"]])) {
-          cli::cli_text("  {.emph {r$message}}")
+          cli::cli_bullets(c(" " = "{.emph {r$message}}"))
         }
       }
     )
@@ -999,7 +1001,7 @@ print.verify_sdbuildR <- function(x, ...) {
 #'
 #' @examples
 #' sfm <- sdbuildR("SIR") |>
-#'   unit_test(expr = all(Susceptible >= 0))
+#'   unit_test(expr = all(susceptible >= 0))
 #' res <- verify(sfm)
 #' as.data.frame(res)
 as.data.frame.verify_sdbuildR <- function(x, row.names = NULL, optional = FALSE,
@@ -1120,7 +1122,7 @@ as.data.frame.verify_sdbuildR <- function(x, row.names = NULL, optional = FALSE,
 #'
 #' @examples
 #' sfm <- sdbuildR("SIR") |>
-#'   unit_test(expr = all(Susceptible >= 0))
+#'   unit_test(expr = all(susceptible >= 0))
 #' res <- verify(sfm)
 #' head(res)
 head.verify_sdbuildR <- function(x, n = 6L, ...) {
@@ -1146,7 +1148,7 @@ head.verify_sdbuildR <- function(x, n = 6L, ...) {
 #'
 #' @examples
 #' sfm <- sdbuildR("SIR") |>
-#'   unit_test(expr = all(Susceptible >= 0))
+#'   unit_test(expr = all(susceptible >= 0))
 #' res <- verify(sfm)
 #' tail(res)
 tail.verify_sdbuildR <- function(x, n = 6L, ...) {
@@ -1248,16 +1250,42 @@ tail.verify_sdbuildR <- function(x, n = 6L, ...) {
     {
       val <- eval(expr_parsed, envir = env)
 
-      if (!is.logical(val) || length(val) != 1L || is.na(val)) {
+      if (is.logical(val) && length(val) == 1L && is.na(val)) {
+        if (is_assertion_call) {
+          return(list(label = label, expr_str = expr_str, conditions = conditions, status = "pass", error_type = NA, message = "", outcome = TRUE))
+        }
+        return(list(
+          label = label, expr_str = expr_str, conditions = conditions,
+          status = "fail", error_type = NA, outcome = FALSE,
+          message = "Expression returned NA. The simulation likely contains NaN values (e.g., from division by zero). Check conditions for potential singularities, or use `isTRUE(all(...))` to treat NA as FALSE."
+        ))
+      }
+
+      if (is.numeric(val) && length(val) == 1L && (is.infinite(val) || is.nan(val))) {
+        if (is_assertion_call) {
+          return(list(label = label, expr_str = expr_str, conditions = conditions, status = "pass", error_type = NA, message = "", outcome = TRUE))
+        }
+        return(list(
+          label = label, expr_str = expr_str, conditions = conditions,
+          status = "fail", error_type = NA, outcome = FALSE,
+          message = sprintf(
+            "Expression returned %s. The simulation likely contains Inf or NaN values. Check for division by zero or overflow in the model equations.",
+            val
+          )
+        ))
+      }
+
+      if (!is.logical(val) || length(val) != 1L) {
         if (is_assertion_call) {
           return(list(label = label, expr_str = expr_str, conditions = conditions, status = "pass", error_type = NA, message = "", outcome = TRUE))
         }
         val_class <- paste(class(val), collapse = "/")
         val_len <- length(val)
+        hint <- if (is.logical(val)) " Did you mean `all(...)` or `any(...)`?" else ""
         cond <- simpleError(
           sprintf(
-            "Expression must return a non-missing logical scalar, got %s of length %d.",
-            val_class, val_len
+            "Expression must return a non-missing logical scalar, got %s of length %d.%s",
+            val_class, val_len, hint
           )
         )
         class(cond) <- c("expr_type_error", class(cond))
@@ -1292,7 +1320,7 @@ tail.verify_sdbuildR <- function(x, n = 6L, ...) {
 #' - `unknown`:    symbols that appear in `expr_str` AND are neither model
 #'                 variables nor objects exported by base R
 #'
-#' Uses `all.vars()` so function names (e.g. `all`, `diff`, `expect_equal`)
+#' Uses `all.vars()` so function names (e.g., `all`, `diff`, `expect_equal`)
 #' are never included — only value-position symbols are checked.
 #'
 #' @param expr_str    Deparsed expression string (as stored in `unit_tests`)

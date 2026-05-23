@@ -122,7 +122,7 @@ make_r_ensemble_sfm <- function() {
 
 make_r_ensemble_random_sfm <- function() {
   sdbuildR("SIR") |>
-    update("Susceptible", eqn = "runif(1, 900, 1100)") |>
+    update("susceptible", eqn = "runif(1, 900, 1100)") |>
     sim_settings(language = "R", start = 0, stop = 10, dt = 0.1, save_at = 1)
 }
 
@@ -130,8 +130,47 @@ make_r_ensemble_random_sfm <- function() {
 # Helper: a small model with a stock, flow, and constant
 make_verifiable_sfm <- function() {
   sdbuildR() |>
-    update("S", type = "stock", eqn = "100") |>
+    update("S", type = "stock", eqn = runif(1, 1, 100)) |>
     update("drain", type = "flow", eqn = "rate * S", from = "S") |>
     update("rate", type = "constant", eqn = "0.1") |>
-    sim_settings(stop = 10, dt = 0.1, save_at = 1)
+    sim_settings(stop = 10, dt = 0.1, save_at = 1, language = "R", seed = 123)
 }
+
+
+# Helper: same model as make_verifiable_sfm() but with Julia backend
+make_verifiable_jl_sfm <- function() {
+  make_verifiable_sfm() |>
+    sim_settings(language = "Julia")
+}
+
+
+make_verify_1cond <- function(n = 1L) {
+  silence(
+    make_verifiable_sfm() |>
+      unit_test(label = "S non-negative", expr = all(S >= 0)) |>
+      verify(return_sims = TRUE, n = n)
+  )
+}
+
+make_verify_2cond <- function() {
+  silence(
+    make_verifiable_sfm() |>
+      unit_test(label = "S non-negative", expr = all(S >= 0)) |>
+      unit_test(
+        label = "S constant at zero rate",
+        expr = all(diff(S) == 0),
+        conditions = list(rate = 0)
+      ) |>
+      verify(return_sims = TRUE)
+  )
+}
+
+make_verify_with_fail <- function() {
+  silence(
+    make_verifiable_sfm() |>
+      unit_test(label = "S non-negative", expr = all(S >= 0)) |>
+      unit_test(label = "S always zero",  expr = all(S == 0)) |>
+      verify(return_sims = TRUE)
+  )
+}
+

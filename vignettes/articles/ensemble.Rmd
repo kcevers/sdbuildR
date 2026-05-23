@@ -29,15 +29,21 @@ knitr::opts_chunk$set(
 library(sdbuildR)
 ```
 
+```{r, echo = FALSE}
+if (!julia_env_ready()){
+  install_julia_env()
+}
+```
+
 After having built a stock-and-flow model, you may want to explore how different parameter values affect the model's behaviour. Running multiple simulations with varying parameters is also called an ensemble, which provides insight into the range of possible outcomes and uncertainty associated with your model. In this vignette, we will explore how to set up and run ensemble simulations using the sdbuildR package. 
 
 ## Setting up the model
 
-For this example, we will use Crielaard et al.'s (2022) model of eating behaviour, including the stocks hunger, eating, and compensatory behaviour (i.e. disordered eating behaviour such as purging and overexercising). For more details, see Crielaard et al. (2022). We can load this example from the model library and look what is inside:
+For this example, we will use Crielaard et al.'s (2022) model of eating behaviour, including the stocks hunger, eating, and compensatory behaviour (i.e., disordered eating behaviour such as purging and overexercising). For more details, see Crielaard et al. (2022). We can load this example from the model library and look what is inside:
 
 ```{r}
 sfm <- sdbuildR("Crielaard2022")
-summary(sfm)
+print(sfm)
 ```
 
 Simulations run in R by default. If you want to use Julia for faster execution or additional parallelization options, you can activate the Julia environment for sdbuildR and change the simulation language to Julia (see below). For guidance on installing and setting up the Julia environment, see [this vignette](https://kcevers.github.io/sdbuildR/articles/julia-setup.html).
@@ -73,8 +79,8 @@ To explore this more systematically, we can run an ensemble simulation using the
 Ensemble simulations create multiple runs of the model, which only makes sense if the model either has some random elements or if parameters are being varied. Our model already has random initial conditions, but if it had not, we could create these:
 
 ```{r}
-sfm <- build(sfm, c("Food_intake", "Hunger", "Compensatory_behaviour"),
-  eqn = "runif(1)"
+sfm <- update(sfm, c(Food_intake, Hunger, Compensatory_behaviour),
+              eqn = runif(1)
 )
 ```
 
@@ -102,13 +108,13 @@ sims <- ensemble(sfm, n = 30, return_sims = TRUE)
 
 
 ```{r message=FALSE, warning=FALSE}
-plot(sims, type = "sims")
+plot(sims, which = "sims")
 ```
 
 This automatically only plots the first ten simulations, as plotting a large number of simulations can be quite slow. We can change which simulations we plot by specifying the `i` argument:
 
 ```{r }
-plot(sims, type = "sims", i = 15:30)
+plot(sims, which = "sims", i = 15:30)
 ```
 
 By default, only the stocks are saved. To save all variables, set `only_stocks = FALSE`:
@@ -164,10 +170,11 @@ We can also enable parallel execution in Julia by setting the number of threads:
 use_julia(nthreads = 4)
 ```
 
-To stop using parallel simulations, run:
+To stop using threaded simulations, run:
 
 ```{r, eval=FALSE}
-use_julia(nthreads = 1)
+use_julia(stop = TRUE)
+use_julia()
 ```
 
 ## Specifying ranges
@@ -177,7 +184,7 @@ Instead of generating an ensemble with random initial conditions, we can also sp
 ```{r}
 sims <- ensemble(sfm,
   n = 100,
-  conditions = list("a2" = c(0.2, 0.4, 0.6, 0.8))
+  conditions = list(a2 = c(0.2, 0.4, 0.6, 0.8))
 )
 ```
 
@@ -191,8 +198,8 @@ We can also vary multiple parameters at once. For example, we can vary both $a_2
 ```{r}
 sims <- ensemble(sfm,
   conditions = list(
-    "a2" = c(0.2, 0.8),
-    "a1" = c(1.3, 1.5)
+    a2 = c(0.2, 0.8),
+    a1 = c(1.3, 1.5)
   ),
   n = 100
 )
@@ -213,8 +220,8 @@ To generate a non-crossed designed, set `cross = FALSE`. In this case, the lengt
 ```{r}
 sims <- ensemble(sfm,
   conditions = list(
-    "a2" = c(0.4, 0.5, 0.6),
-    "a1" = c(1.3, 1.4, 1.5)
+    a2 = c(0.4, 0.5, 0.6),
+    a1 = c(1.3, 1.4, 1.5)
   ),
   n = 100, cross = FALSE, return_sims = TRUE
 )
@@ -227,7 +234,7 @@ plot(sims, nrows = 1)
 We can select specific conditions to compare, where here we plot the first fifteen simulations of the first two conditions:
 
 ```{r}
-plot(sims, i = 1:15, j = 1:2, type = "sims", nrows = 1)
+plot(sims, i = 1:15, j = 1:2, which = "sims", nrows = 1)
 ```
 
 ### Accessing simulation results
@@ -242,35 +249,33 @@ The results of the ensemble simulation are stored in the `sims` object, which is
 You can access the summary statistics per condition $j$ and per time point, such as the mean and confidence intervals, using:
 
 ```{r}
-head(sims$summary)
+head(sims)
+# or
+df <- as.data.frame(sims)
+head(df)
 ```
 
-If you have set have set `return_sims = TRUE`, you can find the individual simulation runs in `sims$df`. These are in long format, containing the value of each variable for each time point in each simulation $i$ per condition $j$. 
+By default, simulations are returned in long format, but can also be shaped in wide format as well: 
 
 ```{r}
-head(sims$df)
+head(sims, direction = "wide")
 ```
 
-To view the initial values of each simulation $i$ per condition $j$, run:
+If you have set `return_sims = TRUE`, you can access the individual simulation runs as well. The dataframe contains the value of each variable, for each time point, for each simulation $i$, per condition $j$. 
 
 ```{r}
-head(sims$init$df)
+head(sims, which = "sims", direction = "long")
+```
+
+
+Finally, to access the parameters (i.e., constants) of each simulation $i$ per condition $j$, run:
+
+```{r}
+head(sims, which = "sims", type = "constant")
 ```
 
 To view their summary statistics, run:
 
 ```{r}
-head(sims$init$summary)
-```
-
-Finally, to access the parameters (i.e. constants) of each simulation $i$ per condition $j$, run:
-
-```{r}
-head(sims$constants$df)
-```
-
-To view their summary statistics, run:
-
-```{r}
-head(sims$constants$summary)
+head(sims, which = "summary", type = "constant")
 ```

@@ -550,7 +550,7 @@ test_that("ensemble() works with single time point", {
   sims <- silence(ensemble(sfm, n = 3, return_sims = TRUE))
   expect_true(sims[["success"]])
   expect_silent(plot(sims))
-  expect_silent(plot(sims, type = "sims"))
+  expect_silent(plot(sims, which = "sims"))
 })
 
 test_that("ensemble() works with interpolation function", {
@@ -620,7 +620,7 @@ test_that("plot.ensemble_sdbuildR() rejects invalid ...", {
 
   sims <- silence(ensemble(sfm, n = 3))
 
-  expect_error(plot(sims, type = "NA"), "must be.*summary.*sims")
+  expect_error(plot(sims, which = "NA"), "ust be.*summary.*sims")
 
   expect_no_error(plot(sims, central_tendency = "median"))
   expect_error(
@@ -636,7 +636,7 @@ test_that("plot.ensemble_sdbuildR() rejects invalid ...", {
 })
 
 
-test_that("plot.ensemble_sdbuildR() informs when i used with summary type", {
+test_that("plot.ensemble_sdbuildR() informs when i used with summary", {
   skip_if_julia_not_ready()
 
   sfm <- make_jl_ensemble_sfm()
@@ -670,7 +670,7 @@ test_that("plot.ensemble_sdbuildR() validates j index with multiple conditions",
   )
 })
 
-test_that("plot.ensemble_sdbuildR() requires return_sims for type = 'sims'", {
+test_that("plot.ensemble_sdbuildR() requires return_sims for which = 'sims'", {
   skip_if_julia_not_ready()
 
   sfm <- make_jl_ensemble_sfm()
@@ -678,7 +678,7 @@ test_that("plot.ensemble_sdbuildR() requires return_sims for type = 'sims'", {
   sims <- silence(ensemble(sfm, n = 3, return_sims = FALSE))
 
   expect_error(
-    plot(sims, type = "sims"),
+    plot(sims, which = "sims"),
     "Individual simulation data is required"
   )
 })
@@ -691,8 +691,8 @@ test_that("plot.ensemble_sdbuildR() renders sims plot", {
   nr_sims <- 3
   sims <- silence(ensemble(sfm, n = nr_sims, return_sims = TRUE))
 
-  expect_no_error(plot(sims, type = "sims", i = nr_sims - 1))
-  expect_no_error(plot(sims, type = "sims"))
+  expect_no_error(plot(sims, which = "sims", i = nr_sims - 1))
+  expect_no_error(plot(sims, which = "sims"))
 })
 
 test_that("plot.ensemble_sdbuildR() renders with specific j and i", {
@@ -710,9 +710,9 @@ test_that("plot.ensemble_sdbuildR() renders with specific j and i", {
 
   expect_no_error(expect_no_message(plot(sims)))
   expect_no_error(plot(sims, j = c(3, 5, 8), nrows = 4))
-  expect_no_error(plot(sims, i = 1:3, j = 3:8, type = "summary"))
-  expect_no_error(expect_no_message(plot(sims, i = 1:2, type = "sims")))
-  expect_no_error(plot(sims, j = 1:3, type = "sims"))
+  expect_no_error(plot(sims, i = 1:3, j = 3:8, which = "summary"))
+  expect_no_error(expect_no_message(plot(sims, i = 1:2, which = "sims")))
+  expect_no_error(plot(sims, j = 1:3, which = "sims"))
 })
 
 
@@ -799,8 +799,8 @@ cli::test_that_cli(configs = "plain", "print() success with conditions lists cha
     n = 3,
     return_sims = TRUE,
     conditions = list(
-      Effective_Contact_Rate = c(1.5, 2.5),
-      Delay = c(1, 3)
+      contact_rate = c(1.5, 2.5),
+      infection_rate = c(1, 3)
     ),
     verbose = FALSE
   ))
@@ -862,25 +862,25 @@ test_that("as.data.frame() default returns summary df", {
   expect_s3_class(df, "data.frame")
 })
 
-test_that("as.data.frame() type = 'summary' returns summary df", {
+test_that("as.data.frame() which = 'summary' returns summary df", {
   skip_if_julia_not_ready()
   sims <- silence(ensemble(make_jl_ensemble_sfm(), n = 3))
-  df <- as.data.frame(sims, type = "summary")
+  df <- as.data.frame(sims, which = "summary")
   expect_identical(df, sims[["summary"]])
 })
 
-test_that("as.data.frame() type = 'sims' returns individual sims df", {
+test_that("as.data.frame() which = 'sims' returns individual sims df", {
   skip_if_julia_not_ready()
   sims <- silence(ensemble(make_jl_ensemble_sfm(), n = 3, return_sims = TRUE))
-  df <- as.data.frame(sims, type = "sims")
+  df <- as.data.frame(sims, which = "sims")
   expect_identical(df, sims[["df"]])
   expect_s3_class(df, "data.frame")
 })
 
-test_that("as.data.frame() type = 'sims' errors when return_sims = FALSE", {
+test_that("as.data.frame() which = 'sims' errors when return_sims = FALSE", {
   skip_if_julia_not_ready()
   sims <- silence(ensemble(make_jl_ensemble_sfm(), n = 3, return_sims = FALSE))
-  expect_error(as.data.frame(sims, type = "sims"), "return_sims")
+  expect_error(as.data.frame(sims, which = "sims"), "return_sims")
 })
 
 test_that("as.data.frame() summary has expected columns", {
@@ -895,7 +895,7 @@ test_that("as.data.frame() summary has expected columns", {
 test_that("as.data.frame() individual sims df has expected columns", {
   skip_if_julia_not_ready()
   sims <- silence(ensemble(make_jl_ensemble_sfm(), n = 3, return_sims = TRUE))
-  df <- as.data.frame(sims, type = "sims")
+  df <- as.data.frame(sims, which = "sims")
   expect_true(all(c("i", "j", "variable", "time", "value") %in% names(df)))
 })
 
@@ -916,8 +916,8 @@ test_that("as.data.frame() direction = 'wide' widens summary", {
 test_that("as.data.frame() direction = 'wide' widens individual sims", {
   skip_if_julia_not_ready()
   sims <- silence(ensemble(make_jl_ensemble_sfm(), n = 3, return_sims = TRUE))
-  df_long <- as.data.frame(sims, type = "sims", direction = "long")
-  df_wide <- as.data.frame(sims, type = "sims", direction = "wide")
+  df_long <- as.data.frame(sims, which = "sims", direction = "long")
+  df_wide <- as.data.frame(sims, which = "sims", direction = "wide")
   expect_lt(nrow(df_wide), nrow(df_long))
   expect_false("variable" %in% names(df_wide))
   expect_true(all(c("i", "j", "time") %in% names(df_wide)))
@@ -981,13 +981,13 @@ test_that("head() and tail() return a data.frame with correct number of rows fro
 })
 
 
-test_that("head() and tail() pass type = 'sims' through to individual sims", {
+test_that("head() and tail() pass which = 'sims' through to individual sims", {
   skip_if_julia_not_ready()
   sims <- silence(ensemble(make_jl_ensemble_sfm(), n = 3, return_sims = TRUE))
-  h <- head(sims, n = 3L, type = "sims")
+  h <- head(sims, n = 3L, which = "sims")
   expect_equal(h, head(sims[["df"]], 3L))
 
-  t <- tail(sims, n = 3L, type = "sims")
+  t <- tail(sims, n = 3L, which = "sims")
   expect_equal(
     unname(as.matrix(t)),
     unname(as.matrix(tail(sims[["df"]], 3L)))

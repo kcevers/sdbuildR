@@ -403,7 +403,7 @@ insightmaker_to_json <- function(URL, file, destfile = NULL) {
     }
 
     if (x[["type"]] == "flow") {
-      # from and to should be NA (i.e. null in JSON) if empty
+      # from and to should be NA (i.e., null in JSON) if empty
       if (!is_defined(x[["from"]])) {
         x[["from"]] <- NA
       }
@@ -2228,7 +2228,7 @@ convert_equations_IM_wrapper <- function(object) {
 
   # Add accumulated auxiliary and graphical function variables to the model
   if (nrow(accumulated_add_vars)) {
-    # Some Insight Maker columns may be missing, e.g. eqn_insightmaker
+    # Some Insight Maker columns may be missing, e.g., eqn_insightmaker
     missing_cols <- setdiff(colnames(object[["variables"]]), colnames(accumulated_add_vars))
     for (col in missing_cols) {
       accumulated_add_vars[[col]] <- NA

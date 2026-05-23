@@ -41,7 +41,7 @@ test_that("plot() checks vars argument", {
     "Empty"
   )
   expect_error(
-    plot(sfm, vars = c("Susceptible", "NonExistentVar")),
+    plot(sfm, vars = c("susceptible", "NonExistentVar")),
     "NonExistentVar.*not.*variable"
   )
 })
@@ -153,12 +153,12 @@ test_that("plot() filters variables correctly", {
 
   vdiffr::expect_doppelganger(
     "sdbuildR-filtered-variables",
-    plot(sfm, vars = c("Susceptible", "Infected"))
+    plot(sfm, vars = c("susceptible", "infected"))
   )
 
   vdiffr::expect_doppelganger(
     "sdbuildR-single-variable-filter",
-    plot(sfm, vars = "Susceptible")
+    plot(sfm, vars = "susceptible")
   )
 })
 

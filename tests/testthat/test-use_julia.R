@@ -31,24 +31,45 @@ test_that("use_julia() works", {
 
 test_that("use_julia() with threads works", {
   skip_if_julia_not_ready()
+  old_threads <- Sys.getenv("JULIA_NUM_THREADS")
+  get_threads <- function() as.integer(JuliaConnectoR::juliaEval("string(Threads.nthreads())"))
 
   # Set to 2 threads
-  expect_no_error(use_julia(nthreads = 2))
-  expect_equal(Sys.getenv("JULIA_NUM_THREADS"), "2")
-  actual_threads <- as.integer(JuliaConnectoR::juliaEval("string(Threads.nthreads())"))
-  expect_equal(actual_threads, 2)
+  nthreads <- 2
+  expect_no_error(use_julia(nthreads = nthreads))
+
+  # Should not change global environment variable
+  expect_equal(Sys.getenv("JULIA_NUM_THREADS"), old_threads)
+  actual_threads <- get_threads()
+  expect_equal(actual_threads, nthreads)
+  expect_true(.sdbuildR_env[["jl"]][["use_threads"]])
 
   # If Julia was already running, it should restart and change the number of threads
-  expect_no_error(use_julia(nthreads = 4))
-  expect_equal(Sys.getenv("JULIA_NUM_THREADS"), "4")
-  actual_threads <- as.integer(JuliaConnectoR::juliaEval("string(Threads.nthreads())"))
-  expect_equal(actual_threads, 4)
+  nthreads <- 4
+  expect_no_error(use_julia(nthreads = nthreads))
+  expect_equal(Sys.getenv("JULIA_NUM_THREADS"), old_threads)
+  actual_threads <- get_threads()
+  expect_equal(actual_threads, nthreads)
+  expect_true(.sdbuildR_env[["jl"]][["use_threads"]])
+
+  # Stopping Julia should reset the number of threads
+  expect_no_error(use_julia(stop = TRUE))
+  expect_equal(Sys.getenv("JULIA_NUM_THREADS"), old_threads)
+  expect_false(.sdbuildR_env[["jl"]][["use_threads"]])
+
+  # This will start Julia again, but should not use threads
+  actual_threads <- get_threads()
+  if (is.na(old_threads) || old_threads == "") {
+    expect_equal(actual_threads, 1)
+  } else {
+    expect_equal(actual_threads, as.numeric(old_threads))
+  }
+
 })
 
 
 test_that("install_julia_env() works", {
   skip_if_julia_not_ready()
-  skip()
 
   # Test installation
   expect_no_error(install_julia_env())

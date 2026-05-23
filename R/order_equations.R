@@ -158,7 +158,6 @@ find_newly_defined_var <- function(eqn) {
 #'
 dependencies <- function(object, name = NULL, type = NULL, reverse = FALSE) {
   name <- .expr_to_char(rlang::enexpr(name))
-  type <- .expr_to_char(rlang::enexpr(type))
   check_sdbuildR(object)
 
   # Check for mutually exclusive parameters

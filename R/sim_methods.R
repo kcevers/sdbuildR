@@ -1,57 +1,15 @@
-#' Check or translate between deSolve and Julia DifferentialEquations solvers
+#' Check or translate between deSolve and Julia DifferentialEquations sim_methods
 #'
 #' @param method Solver name to validate or translate.
 #' @param from Source solver family, either `"R"` or `"Julia"`.
 #' @param to Target solver family when translating, either `"R"` or `"Julia"`.
-#' @param show_info If `TRUE`, return the full solver metadata instead of only the name.
 #'
-#' @return A character scalar, a character vector of solver names, or a solver metadata list when `show_info = TRUE`.
+#' @return A character scalar (validated or translated solver name), a character vector of solver
+#'   names when `method` is omitted, or a named list of solver names for both languages when called
+#'   with no arguments.
 #' @export
 #' @concept simulate
-solvers <- function(method, from = NULL, to = NULL, show_info = FALSE) {
-  valid_source <- c("R", "Julia")
-
-  valid_scalar <- function(x) is.character(x) && length(x) == 1
-  missing_input <- function(x) is.null(x) || (length(x) == 1 && is.na(x))
-
-  if (nargs() == 0) {
-    stop("Missing required arguments")
-  }
-
-  if (missing(method) || missing_input(method)) {
-    if (missing(method) || is.null(method) || (length(method) == 1 && is.na(method))) {
-      if (missing(from) && missing(to)) {
-        stop("Missing required arguments")
-      }
-    }
-  } else if (!valid_scalar(method)) {
-    stop("Invalid `method` argument")
-  }
-
-  if (missing(from) || missing_input(from)) {
-    if (!missing(from) && is.null(from)) {
-      stop("Missing required arguments")
-    }
-  } else if (!valid_scalar(from)) {
-    stop("Invalid `from` argument")
-  } else if (!from %in% valid_source) {
-    stop("Invalid `from` argument")
-  }
-
-  if (!missing(to)) {
-    if (missing_input(to)) {
-      stop("Missing required arguments")
-    }
-    if (!valid_scalar(to)) {
-      stop("Invalid `to` argument")
-    }
-    if (!to %in% valid_source) {
-      stop("Invalid `to` argument")
-    }
-  }
-
-  translate <- !missing(to) && !is.null(to)
-
+sim_methods <- function(method, from = NULL, to = NULL) {
   solver_dict <- list(
     r_to_julia = list(
       euler = list(translation = "Euler()", alternatives = NULL, approximate = FALSE),
@@ -128,85 +86,64 @@ solvers <- function(method, from = NULL, to = NULL, show_info = FALSE) {
     NULL
   }
 
+  if (missing(method) && is.null(from)) {
+    return(list(R = names(solver_dict$r_to_julia), Julia = names(solver_dict$julia_to_r)))
+  }
+
+  if (!is.null(from)) from <- clean_language(from)
+  if (!is.null(to)) to <- clean_language(to)
+
   if (missing(method)) {
-    if (missing(from) || is.null(from)) {
-      stop("Missing required arguments")
-    }
-    if (from == "R") {
-      return(names(solver_dict$r_to_julia))
-    }
-    if (from == "Julia") {
-      return(names(solver_dict$julia_to_r))
-    }
-    stop("Invalid `from` argument")
+    if (from == "R") return(names(solver_dict$r_to_julia))
+    return(names(solver_dict$julia_to_r))
   }
 
-  if (!translate) {
-    if (from == "R") {
-      if (!method %in% names(solver_dict$r_to_julia)) {
-        if (method %in% deSolve_methods) {
-          stop("Unsupported solver method")
-        }
-        stop("Unknown solver method")
-      }
-      solver_info <- solver_dict$r_to_julia[[method]]
-      solver_info$name <- method
-      if (show_info) {
-        return(solver_info)
-      }
-      return(solver_info$name)
-    }
-
-    if (from == "Julia") {
-      method_clean <- normalize_julia_name(method)
-      if (is.null(method_clean)) {
-        stop("Unknown Julia solver method.")
-      }
-      solver_info <- solver_dict$julia_to_r[[method_clean]]
-      solver_info$name <- method_clean
-      if (show_info) {
-        return(solver_info)
-      }
-      return(solver_info$name)
-    }
-
-    stop("Invalid `from` argument")
+  if (is.null(from)) {
+    cli::cli_abort(c(
+      "x" = "{.arg from} is required when {.arg method} is provided.",
+      "i" = 'Specify {.val "R"} or {.val "Julia"}.'
+    ))
   }
 
-  if (from == "R" && to == "Julia") {
+  translate <- !is.null(to)
+
+  if (from == "R") {
     if (!method %in% names(solver_dict$r_to_julia)) {
       if (method %in% deSolve_methods) {
-        stop("Unsupported solver method")
+        cli::cli_abort(c(
+          "x" = "{.val {method}} is a valid deSolve method but is not supported for translation.",
+          "i" = "Use {.code sim_methods(from = 'R')} to see supported R methods."
+        ))
       }
-      stop("Unknown solver method")
+      cli::cli_abort(c(
+        "x" = "Unknown R solver method {.val {method}}.",
+        "i" = "Use {.code sim_methods(from = 'R')} to see supported R methods."
+      ))
     }
     solver_info <- solver_dict$r_to_julia[[method]]
+    if (!translate) return(method)
     if (isTRUE(solver_info$approximate)) {
       cli::cli_warn(c(
         "!" = "No exact Julia equivalent for {.val {method}}.",
         "i" = "Using {.val {solver_info$translation}} as the closest supported Julia solver."
       ))
     }
-    if (show_info) {
-      return(solver_info)
-    }
     return(solver_info$translation)
   }
 
-  if (from == "Julia" && to == "R") {
-    method_clean <- normalize_julia_name(method)
-    if (is.null(method_clean)) {
-      stop("Solver not found.")
-    }
-    solver_info <- solver_dict$julia_to_r[[method_clean]]
-    if (show_info) {
-      return(solver_info)
-    }
-    if (!is.null(solver_info$translation)) {
-      return(solver_info$translation)
-    }
-    return(method_clean)
+  method_clean <- normalize_julia_name(method)
+  if (is.null(method_clean)) {
+    cli::cli_abort(c(
+      "x" = "Unknown Julia solver {.val {method}}.",
+      "i" = "Use {.code sim_methods(from = 'Julia')} to see supported Julia methods."
+    ))
   }
-
-  stop("Unsupported translation request")
+  solver_info <- solver_dict$julia_to_r[[method_clean]]
+  if (!translate) return(method_clean)
+  if (!is.null(solver_info$translation)) return(solver_info$translation)
+  cli::cli_warn(c(
+    "!" = "No exact R equivalent for {.val {method_clean}}.",
+    "i" = "Using {.val {solver_info$alternatives[[1]]}} as the closest supported R solver."
+  ))
+  return(solver_info$alternatives[[1]])
 }

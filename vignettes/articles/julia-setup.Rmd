@@ -58,7 +58,7 @@ Note that this may take 10-25 minutes the first time as Julia downloads and comp
 
 Start a Julia session and activate the Julia environment for sdbuildR: 
 
-```{r}
+```{r, error=TRUE}
 use_julia()
 ```
 
@@ -66,7 +66,7 @@ This needs to be done in *each* new R session.
 
 To close the Julia session:
 
-```{r}
+```{r, error=TRUE}
 use_julia(stop = TRUE)
 ```
 
@@ -75,7 +75,7 @@ use_julia(stop = TRUE)
 
 ### Julia not found 
 
-If JuliaConnectoR cannot find Julia, i.e. this evaluates to `FALSE`:
+If JuliaConnectoR cannot find Julia, i.e., this evaluates to `FALSE`:
 
 ```{r}
 juliaSetupOk()

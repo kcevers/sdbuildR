@@ -62,8 +62,17 @@ attributes(%(sim_df_name)s)$valroot
 
     # -- compile_static ----------------------------------------------------
 
-    static_r = "\n\n# Define parameters, initial conditions, and functions in correct order\n%(static_str)s%(constants_def)s%(init_def)s",
-    static_julia = "\n\n# Define parameters, initial conditions, and functions in correct order\n%(model_setup_name)s = let\n%(ensemble_iter_code)s%(intermediary_names_str)s%(static_str)s%(pars_def)s%(init_def)s%(init_names_str)s%(init_idx)s%(intermediary_names_correct)s\n\t(%(parameter_name)s = %(parameter_name)s, %(initial_value_name)s = %(initial_value_name)s, %(initial_value_names)s = %(initial_value_names)s, %(intermediary_names)s = %(intermediary_names)s)\nend\n",
+    static_r = "\n\n# Define parameters, initial conditions, and functions in correct order
+    
+%(static_str)s%(constants_def)s%(init_def)s",
+    static_julia = "\n\n# Define parameters, initial conditions, and functions in correct order
+
+%(model_setup_name)s = let
+%(ensemble_iter_code)s%(intermediary_names_str)s%(static_str)s%(pars_def)s%(init_def)s%(init_names_str)s%(init_idx)s%(intermediary_names_correct)s
+  (%(parameter_name)s = %(parameter_name)s, %(initial_value_name)s = %(initial_value_name)s, %(initial_value_names)s = %(initial_value_names)s, %(intermediary_names)s = %(intermediary_names)s)
+
+end
+",
 
     # -- compile_ode -----------------------------------------------------------
 
@@ -120,9 +129,26 @@ attributes(%(sim_df_name)s)$valroot
 
     # -- compile_static: Julia ensemble definition --------------------------
 
-    ensemble_def_conditions_julia = "\n\n# Generate ensemble design\n%(ensemble_n)s = %(n_value)s\n%(ensemble_conditions)s = (\n%(conditions_items)s,\n)\n%(ensemble_pars)s, %(ensemble_total_n)s = generate_param_combinations(\n%(ensemble_conditions)s; crossed=%(crossed)s, n_replicates = %(ensemble_n)s)\n%(ensemble_iter)s = 1\n",
-    ensemble_def_noconditions_julia = "%(ensemble_n)s = %(n_value)s\n%(ensemble_total_n)s = %(n_value)s\n%(ensemble_iter)s = 1\n",
-    ensemble_iter_julia = "\n\t# Assign ensemble parameters\n\t%(conditions_names)s, = %(ensemble_pars)s[div(%(ensemble_iter)s-1, %(ensemble_n)s) + 1]\n\n",
+    ensemble_def_conditions_julia = "
+    
+# Generate ensemble design
+%(ensemble_n)s = %(n_value)s
+%(ensemble_conditions)s = (
+%(conditions_items)s,
+)
+%(ensemble_pars)s, %(ensemble_total_n)s = generate_param_combinations(
+%(ensemble_conditions)s; crossed=%(crossed)s, n_replicates = %(ensemble_n)s)
+%(ensemble_iter)s = 1
+",
+    ensemble_def_noconditions_julia = "%(ensemble_n)s = %(n_value)s
+%(ensemble_total_n)s = %(n_value)s
+%(ensemble_iter)s = 1
+",
+    ensemble_iter_julia = "
+  # Assign ensemble parameters
+  %(conditions_names)s, = %(ensemble_pars)s[div(%(ensemble_iter)s-1, %(ensemble_n)s) + 1]
+  
+",
 
     # -- compile_run_ode: Julia ensemble problem --------------------------------
 
@@ -135,30 +161,62 @@ attributes(%(sim_df_name)s)$valroot
 
 # Define ensemble problem
 function %(ensemble_func_name)s(prob, %(ensemble_ctx)s)
-\t%(ensemble_iter)s = %(ensemble_ctx)s.sim_id
-%(static_str)s%(intermediaries_callback)s
-\tremake(prob, u0 = %(model_setup_name)s.%(initial_value_name)s, p = %(model_setup_name)s.%(parameter_name)s%(intermediaries_remake)s)
+  %(ensemble_iter)s = %(ensemble_ctx)s.sim_id
+  %(static_str)s%(intermediaries_callback)s
+  remake(prob, u0 = %(model_setup_name)s.%(initial_value_name)s, p = %(model_setup_name)s.%(parameter_name)s%(intermediaries_remake)s)
 end
 
+# Define ensemble output function to save parameters, initial conditions, and intermediaries along with solution
 function %(ensemble_output_func)s(sol, %(ensemble_ctx)s)
-\t# Save both solution and parameters
-\treturn (t = sol.t, u = sol.u, p = sol.prob.p, u0 = sol.prob.u0), false
+  # Save both solution and parameters
+  return (t = sol.t, u = sol.u, p = sol.prob.p, u0 = sol.prob.u0), false
 end
+
 %(ensemble_prob_name)s = EnsembleProblem(%(prob_name)s, prob_func = %(ensemble_func_name)s, output_func = %(ensemble_output_func)s)
 %(warmup_str)s%(solution_name)s = solve(%(ensemble_prob_name)s, %(method)s%(threaded_str)s, dt = %(timestep_name)s, saveat = %(saveat_name)s, tstops = %(tstops_name)s, adaptive = false, trajectories = %(ensemble_total_n)s);
     ",
 
     # -- compile_run_ode: Julia ensemble save dataframe -------------------------
 
-    ensemble_save_julia = "\n# Save timeseries dataframe\n%(sim_df_name)s, %(parameter_name)s, %(initial_value_name)s%(ensemble_to_df_func)s%(solution_name)s, %(model_setup_name)s.%(initial_value_names)s, %(intermediaries)s, %(model_setup_name)s.%(intermediary_names)s, %(ensemble_n)s)\n",
+    ensemble_save_julia = "\n# Save timeseries dataframe
+%(sim_df_name)s, %(parameter_name)s, %(initial_value_name)s%(ensemble_to_df_func)s%(solution_name)s, %(model_setup_name)s.%(initial_value_names)s, %(intermediaries)s, %(model_setup_name)s.%(intermediary_names)s, %(ensemble_n)s)
+",
 
     # -- compile_run_ode: Julia ensemble save CSVs ------------------------------
 
-    ensemble_csv_julia = "CSV.write(\"%(filepath_df)s\", %(sim_df_name)s)\nCSV.write(\"%(filepath_constants)s\", %(parameter_name)s)\nCSV.write(\"%(filepath_init)s\", %(initial_value_name)s)\n",
+    ensemble_csv_julia = "
+CSV.write(\"%(filepath_df)s\", %(sim_df_name)s)
+CSV.write(\"%(filepath_constants)s\", %(parameter_name)s)
+CSV.write(\"%(filepath_init)s\", %(initial_value_name)s)
+",
 
     # -- compile_run_ode: Julia ensemble summary stats --------------------------
 
-    ensemble_summary_julia = "\n# Compute summary statistics\n%(summary_df_name)s%(ensemble_summ_func)s%(sim_df_name)s, [%(quantiles)s])\n\n%(parameter_name)s[!, :time] .= 0.0\n%(summary_df_constants_name)s%(ensemble_summ_func)s%(parameter_name)s, [%(quantiles)s])\nselect!(%(summary_df_constants_name)s, Not(:time))\n\n%(initial_value_name)s[!, :time] .= 0.0\n%(summary_df_init_name)s%(ensemble_summ_func)s%(initial_value_name)s, [%(quantiles)s])\nselect!(%(summary_df_init_name)s, Not(:time))\n\n\n# Save to CSV\nCSV.write(\"%(filepath_summary_df)s\", %(summary_df_name)s)\n\nCSV.write(\"%(filepath_summary_constants)s\", %(summary_df_constants_name)s)\n\nCSV.write(\"%(filepath_summary_init)s\", %(summary_df_init_name)s)\n\n# Delete variables\n%(sim_df_name)s = Nothing\n%(parameter_name)s = Nothing\n%(initial_value_name)s = Nothing\n%(summary_df_name)s = Nothing\n%(summary_df_constants_name)s = Nothing\n%(summary_df_init_name)s = Nothing\n%(solution_name)s = Nothing\n%(intermediaries)s = Nothing\n"
+    ensemble_summary_julia = "
+# Compute summary statistics
+%(summary_df_name)s%(ensemble_summ_func)s%(sim_df_name)s, [%(quantiles)s])
+
+%(parameter_name)s[!, :time] .= 0.0
+%(summary_df_constants_name)s%(ensemble_summ_func)s%(parameter_name)s, [%(quantiles)s])
+select!(%(summary_df_constants_name)s, Not(:time))\n\n%(initial_value_name)s[!, :time] .= 0.0
+%(summary_df_init_name)s%(ensemble_summ_func)s%(initial_value_name)s, [%(quantiles)s])
+select!(%(summary_df_init_name)s, Not(:time))
+
+# Save to CSV
+CSV.write(\"%(filepath_summary_df)s\", %(summary_df_name)s)
+CSV.write(\"%(filepath_summary_constants)s\", %(summary_df_constants_name)s)
+CSV.write(\"%(filepath_summary_init)s\", %(summary_df_init_name)s)
+
+# Delete variables
+%(sim_df_name)s = Nothing
+%(parameter_name)s = Nothing
+%(initial_value_name)s = Nothing
+%(summary_df_name)s = Nothing
+%(summary_df_constants_name)s = Nothing
+%(summary_df_init_name)s = Nothing
+%(solution_name)s = Nothing
+%(intermediaries)s = Nothing
+"
   )
 }
 
@@ -212,7 +270,7 @@ prep_script_template <- function() {
 
 #' Get a filled-in script template
 #'
-#' @param type Template type, e.g. `"times"`, `"prep"`, `"nonneg_stocks"`.
+#' @param type Template type, e.g., `"times"`, `"prep"`, `"nonneg_stocks"`.
 #' @param language `"R"` or `"Julia"`.
 #' @param ... Named values to substitute into the template
 #'

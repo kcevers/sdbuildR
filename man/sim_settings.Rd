@@ -63,7 +63,6 @@ and auxiliaries. If \code{FALSE}, flows and auxiliaries are saved, which slows
 down the simulation. Defaults to \code{TRUE}.}
 
 \item{vars}{Character vector of variable names to save in simulation output.
-Can include only time-varying variables (\code{stock}, \code{flow}, \code{aux}).
 If specified, this overrides \code{only_stocks}.}
 
 \item{keep_nonnegative_stock}{If \code{TRUE}, keeps original non-negativity setting
@@ -80,7 +79,7 @@ A stock-and-flow model object of class \code{\link{sdbuildR}}
 }
 \description{
 Simulation specifications are the settings that determine how the model is
-simulated, such as the integration method (i.e. solver), start and stop time,
+simulated, such as the integration method (i.e., solver), start and stop time,
 and timestep. Modify these specifications for an existing stock-and-flow model.
 }
 \examples{
@@ -109,6 +108,6 @@ sfm <- sim_settings(sfm, seed = 1) |>
 
 }
 \seealso{
-\code{\link[=solvers]{solvers()}}
+\code{\link[=sim_methods]{sim_methods()}}
 }
 \concept{simulate}

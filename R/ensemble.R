@@ -1,16 +1,24 @@
 #' Run ensemble simulations
 #'
-#' Run an ensemble simulation of a stock-and-flow model, varying initial
-#' conditions and/or parameters in the conditions specified in `conditions`.
-#' For Julia models, the ensemble can be run in parallel using multiple threads
-#' by first setting `nthreads` in [use_julia()]. For R models, use
-#' [future::plan()] to control parallel execution. The results are returned as a
-#' data.frame with summary statistics and optionally individual simulations.
+#' Run large-scale (i.e., ensemble) simulations of stock-and-flow models, varying initial
+#' conditions and/or constants specified in `conditions`.
+#' 
+#' It is strongly recommended to reduce the size of the simulation output by
+#' saving fewer values with `save_at` or `save_n` in [sim_settings()]. 
+#' 
+#' By default, only summary statistics across simulations are returned.
+#' To return individual simulations, set `return_sims = TRUE` in [sim_settings()] or
+#' pass `return_sims = TRUE` via `...` in [ensemble()]. 
+#' Note that returning individual simulations can consume a lot of memory for large ensembles.
+#' 
+#' For simulations in Julia, the ensemble can be run in parallel using multiple threads
+#' by setting `nthreads` in [use_julia()]. For simulations in R, use
+#' [future::plan()] to control parallel execution.
+#' 
+#' To create a reproducible ensemble simulation, set a seed using [sim_settings()].
+#' Currently, reproducibility for threaded simulations is not supported.
 #'
-#' To run large simulations, it is recommended to limit the output size by
-#' saving fewer values with `save_at` or `save_n` in [sim_settings()]. To create a reproducible ensemble simulation, set a seed using [sim_settings()].
-#'
-#' If you do not see any variation within a condition of the ensemble (i.e. the
+#' If you do not see any variation within a condition of the ensemble (i.e., the
 #' confidence bands are virtually non-existent), there are likely no random
 #' elements in your model. Without these, there can be no variability in the
 #' model. Try specifying a random initial condition or adding randomness to
@@ -21,24 +29,24 @@
 #' @param n Number of simulations to run in the ensemble. When conditions is
 #'   specified, n defines the number of simulations to run per condition. If
 #'   each condition only needs to be run once, set `n = 1`. Defaults to `n = 10`.
-#' @param conditions A named list specifying parameter values for ensemble
-#'   conditions. Names must correspond to existing stocks or constants
+#' @param conditions A named list specifying **fixed** values for ensemble
+#'   conditions. Names must correspond to stocks or constants
 #'   in the model. Each list element should be a numeric vector of values
 #'   to test.
 #'
 #'   If cross = `TRUE` (default), all combinations of values are generated. For
-#'   example, list(param1 = c(1, 2), param2 = c(10, 20)) creates 4 conditions:
-#'   (1,10), (1,20), (2,10), (2,20).
+#'   example, `list(param1 = c(1, 2), param2 = c(10, 20))` creates 4 conditions:
+#'   `(1,10), (1,20), (2,10), (2,20)`.
 #'
 #'   If cross = `FALSE`, values are paired element-wise, requiring all vectors to
-#'   have equal length. For example, list(param1 = c(1, 2, 3), param2 =
-#'   c(10, 20, 30)) creates 3 conditions: (1,10), (2,20), (3,30).
+#'   have equal length. For example, `list(param1 = c(1, 2, 3), param2 =
+#'   c(10, 20, 30))` creates 3 conditions: `(1,10), (2,20), (3,30)`.
 #'   Defaults to `NULL` (no parameter variation).
 #'
 #' @param cross If `TRUE`, cross the parameters in the conditions list to
 #'   generate all possible combinations of parameters. Defaults to `TRUE`.
-#' @param quantiles Quantiles to calculate in the summary, e.g. c(0.025,
-#'   0.975).
+#' @param quantiles Quantiles to calculate in the summary, e.g., `c(0.025,
+#'   0.975)`.
 #' @param verbose If `TRUE` (default), print details and duration of simulation.
 #' @param ... Optional arguments passed to [sim_settings()]; these can be used to override the simulation specifications set in the model object.
 #'
@@ -96,13 +104,13 @@
 #' # To plot individual trajectories, rerun the ensemble with return_sims = TRUE.
 #' # Note that this can consume a lot of memory for large simulations.
 #' sims <- ensemble(sfm, n = 10, return_sims = TRUE)
-#' plot(sims, type = "sims")
+#' plot(sims, which = "sims")
 #'
 #' # Specify which trajectories to plot
-#' plot(sims, type = "sims", i = 1)
+#' plot(sims, which = "sims", i = 1)
 #'
 #' # Plot the median with lighter individual trajectories
-#' plot(sims, central_tendency = "median", type = "sims", alpha = 0.1)
+#' plot(sims, central_tendency = "median", which = "sims", alpha = 0.1)
 #'
 #' @examplesIf Sys.getenv("NOT_CRAN") == "true" && julia_env_ready()
 #' # For larger ensembles, we can use parallelization with future
@@ -461,15 +469,16 @@ print.ensemble_sdbuildR <- function(x, ...) {
 #' @export
 #' @concept ensemble
 #' @method as.data.frame ensemble_sdbuildR
-as.data.frame.ensemble_sdbuildR <- function(x, row.names = NULL, optional = FALSE,
-                                            type = c("summary", "sims"),
+as.data.frame.ensemble_sdbuildR <- function(x, row.names = NULL,
+optional = FALSE,
+                                            which = c("summary", "sims")[1],
                                             direction = "long",
                                             i = NULL,
                                             j = NULL,
                                             ...) {
   check_ensemble_sdbuildR(x)
 
-  type <- match.arg(type)
+  which <- .clean_which(which)
 
   direction <- trimws(tolower(direction))
   if (!direction %in% c("long", "wide")) {
@@ -484,7 +493,7 @@ as.data.frame.ensemble_sdbuildR <- function(x, row.names = NULL, optional = FALS
     .check_j_index(j, x[["n_conditions"]])
   }
 
-  if (type == "sims") {
+  if (which == "sims") {
     if (is.null(x[["df"]])) {
       cli::cli_abort(c(
         "No individual simulation data available.",
@@ -512,11 +521,11 @@ as.data.frame.ensemble_sdbuildR <- function(x, row.names = NULL, optional = FALS
       names(df) <- sub("^value\\.", "", names(df))
       rownames(df) <- NULL
     }
-  } else if (type == "summary") {
+  } else if (which == "summary") {
     if (!is.null(i)) {
       cli::cli_inform(c(
-        "i" = "The {.arg i} argument is ignored for {.code type = 'summary'}.",
-        ">" = "Set {.code type = 'sims'} to filter by individual trajectory."
+        "i" = "The {.arg i} argument is ignored for {.code which = 'summary'}.",
+        ">" = "Set {.code which = 'sims'} to filter by individual trajectory."
       ))
     }
     df <- x[["summary"]]
@@ -538,8 +547,8 @@ as.data.frame.ensemble_sdbuildR <- function(x, row.names = NULL, optional = FALS
   if (!is.null(row.names)) {
     if (length(row.names) != nrow(df)) {
       cli::cli_abort(c(
-        "Length mismatch in {.arg row.names}.",
-        "x" = "Got {length(row.names)} name{?s} but {nrow(df)} row{?s}."
+        "x" = "Length mismatch in {.arg row.names}.",
+        "i" = "Got {length(row.names)} name{?s} but {nrow(df)} row{?s}."
       ))
     }
     rownames(df) <- row.names

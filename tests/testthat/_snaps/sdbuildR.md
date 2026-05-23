@@ -31,18 +31,18 @@
     Message
       
       -- Stock-and-Flow Model: Susceptible-Infected-Recovered (SIR) ------------------
-      3 stocks • 2 flows • 4 constants • 1 auxiliary
+      3 stocks • 2 flows • 4 constants
       
       -- Stock-Flow Structure --
       
-      Infected: + Infection_Rate - Recovery_Rate
-      Recovered: + Recovery_Rate
-      Susceptible: - Infection_Rate
+      infected: + new_infections - new_recoveries
+      recovered: + new_recoveries
+      susceptible: - new_infections
       
       -- Other Variables --
       
-      Constants: `Beta`, `Delay`, `Effective_Contact_Rate`, and `Total_Population`
-      Auxiliaries: `Lambda`
+      Constants: `contact_rate`, `infection_rate`, `recovery_rate`, and
+      `total_population`
       
       -- Simulation Settings --
       

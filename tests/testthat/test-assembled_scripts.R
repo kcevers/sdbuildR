@@ -133,8 +133,8 @@ test_that("Julia equations differ from R equations in cached components", {
   sim_julia <- simulate(sfm_julia, only_stocks = TRUE)
 
   # Check that variables have different eqn_str for R vs Julia
-  susceptible_r <- sfm_r$variables[sfm_r$variables$name == "Susceptible", "eqn_str"]
-  susceptible_julia <- sfm_julia$variables[sfm_julia$variables$name == "Susceptible", "eqn_str"]
+  susceptible_r <- sfm_r$variables[sfm_r$variables$name == "susceptible", "eqn_str"]
+  susceptible_julia <- sfm_julia$variables[sfm_julia$variables$name == "susceptible", "eqn_str"]
 
   # R and Julia should produce different equation strings
   expect_false(identical(susceptible_r, susceptible_julia))

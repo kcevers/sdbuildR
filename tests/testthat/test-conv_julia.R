@@ -83,7 +83,7 @@ test_that("converting functions to Julia with named arguments", {
   name <- var_names[1]
   type <- "aux"
 
-  # Check that functions without named arguments (e.g. min) have their names stripped
+  # Check that functions without named arguments (e.g., min) have their names stripped
   result <- convert_equations_julia(
     type, name, "min(x = predator_births)", var_names
   )

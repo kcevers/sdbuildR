@@ -138,7 +138,7 @@ test_that("summary() does not flag func argument names with defaults as undefine
 
 test_that("summary() is clean for model with valid unit tests", {
   sfm <- sdbuildR("SIR") |>
-    unit_test(label = "S non-neg", expr = all(Susceptible >= 0))
+    unit_test(label = "S non-neg", expr = all(susceptible >= 0))
 
   result <- summary(sfm)
   expect_equal(result[["unit_test_refs"]][["problem"]], "none")

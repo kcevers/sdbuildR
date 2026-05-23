@@ -115,7 +115,7 @@ test_that("unit_test() errors when expr references undefined variable", {
   )
 })
 
-test_that("unit_test() allows base-R symbols in expr (e.g. Inf, pi)", {
+test_that("unit_test() allows base-R symbols in expr (e.g., Inf, pi)", {
   sfm <- make_verifiable_sfm()
   expect_no_error(unit_test(sfm, label = "x", expr = all(S < Inf)))
 })
@@ -426,7 +426,7 @@ test_that("as.data.frame.verify_sdbuildR returns a data frame with expected colu
   expect_equal(nrow(df), 1L)
 })
 
-test_that("as.data.frame.verify_sdbuildR j filter works", {
+test_that("as.data.frame.verify_sdbuildR nr filter works", {
   sfm <- make_verifiable_sfm() |>
     unit_test(label = "S non-negative", expr = all(S >= 0)) |>
     unit_test(
@@ -507,6 +507,42 @@ test_that("error_type = 'expr_result' when expression returns logical vector ins
   expect_equal(res_entry[["error_type"]], "expr_result")
   expect_equal(res_entry[["status"]], "error")
   expect_match(res_entry[["message"]], "logical scalar")
+})
+
+test_that("status = 'fail' with informative message when expression returns NA", {
+  sfm <- make_verifiable_sfm() |>
+    unit_test(label = "na output", expr = NA)
+
+  result <- silence(verify(sfm))
+  res_entry <- result[["results"]][[1]]
+
+  expect_equal(res_entry[["status"]], "fail")
+  expect_true(is.na(res_entry[["error_type"]]))
+  expect_match(res_entry[["message"]], "returned NA")
+})
+
+test_that("status = 'fail' with informative message when expression returns Inf", {
+  sfm <- make_verifiable_sfm() |>
+    unit_test(label = "inf output", expr = Inf)
+
+  result <- silence(verify(sfm))
+  res_entry <- result[["results"]][[1]]
+
+  expect_equal(res_entry[["status"]], "fail")
+  expect_true(is.na(res_entry[["error_type"]]))
+  expect_match(res_entry[["message"]], "Inf|NaN")
+})
+
+test_that("status = 'fail' with informative message when expression returns NaN", {
+  sfm <- make_verifiable_sfm() |>
+    unit_test(label = "nan output", expr = NaN)
+
+  result <- silence(verify(sfm))
+  res_entry <- result[["results"]][[1]]
+
+  expect_equal(res_entry[["status"]], "fail")
+  expect_true(is.na(res_entry[["error_type"]]))
+  expect_match(res_entry[["message"]], "Inf|NaN")
 })
 
 test_that("error_type = 'expr_eval' when expression references undefined variable", {
@@ -648,7 +684,7 @@ test_that("verify().results always includes error_type field", {
 # ==============================================================================
 
 test_that("print.verify_sdbuildR() snapshot for passing tests", {
-  sfm <- make_verifiable_sfm() |>
+  sfm <- make_verifiable_sfm() |> update(S, eqn = 100) |>
     unit_test(label = "S is non-negative", expr = all(S >= 0)) |>
     unit_test(label = "S starts at 100", expr = expect_equal(S[[1]], 100))
 
@@ -869,4 +905,354 @@ test_that("verify.sdbuildR() passes mixed stock and non-stock tests", {
   result <- silence(verify(sfm))
   statuses <- vapply(result[["results"]], function(r) r[["status"]], character(1))
   expect_equal(statuses, c("pass", "pass"))
+})
+
+
+# ==============================================================================
+# verify() — R backend, n > 1 (aggregate path)
+# ==============================================================================
+
+test_that("verify() n > 1 all-pass: status = 'pass', pass_rate = 1", {
+  sfm <- make_verifiable_sfm() |>
+    unit_test(label = "S non-negative", expr = all(S >= 0))
+  result <- silence(verify(sfm, n = 3L))
+  r <- result[["results"]][[1]]
+  expect_equal(r[["status"]], "pass")
+  expect_equal(r[["pass_rate"]], 1)
+  expect_equal(r[["n_pass"]], 3L)
+  expect_equal(r[["n_fail"]], 0L)
+  expect_equal(r[["n_error"]], 0L)
+})
+
+test_that("verify() n > 1 all-fail: status = 'fail', pass_rate = 0", {
+  sfm <- make_verifiable_sfm() |>
+    unit_test(label = "S always zero", expr = all(S == 0))
+  result <- silence(verify(sfm, n = 3L))
+  r <- result[["results"]][[1]]
+  expect_equal(r[["status"]], "fail")
+  expect_equal(r[["pass_rate"]], 0)
+  expect_equal(r[["n_pass"]], 0L)
+  expect_equal(r[["n_fail"]], 3L)
+  expect_equal(r[["n_error"]], 0L)
+})
+
+test_that("verify() n > 1 all-error: status = 'error'", {
+  sfm <- make_verifiable_sfm() |>
+    unit_test(label = "numeric result", expr = mean(S > 0.2))
+  result <- silence(verify(sfm, n = 3L))
+  r <- result[["results"]][[1]]
+  expect_equal(r[["status"]], "error")
+  expect_equal(r[["n_error"]], 3L)
+  expect_equal(r[["n_pass"]], 0L)
+  expect_equal(r[["n_fail"]], 0L)
+})
+
+test_that("verify() n > 1 with conditions all-pass: counts sum to n for each test", {
+  sfm <- make_verifiable_sfm() |>
+    unit_test(label = "S non-negative", expr = all(S >= 0)) |>
+    unit_test(
+      label = "S constant at zero rate",
+      expr = all(diff(S) == 0),
+      conditions = list(rate = 0)
+    )
+  result <- silence(verify(sfm, n = 3L))
+  r1 <- result[["results"]][[1]]
+  r2 <- result[["results"]][[2]]
+  expect_equal(r1[["n_pass"]] + r1[["n_fail"]] + r1[["n_error"]], 3L)
+  expect_equal(r2[["n_pass"]] + r2[["n_fail"]] + r2[["n_error"]], 3L)
+  expect_equal(r1[["status"]], "pass")
+  expect_equal(r2[["status"]], "pass")
+})
+
+test_that("verify() n > 1 with conditions all-fail: status = 'fail', n_fail = n", {
+  # rate = 0 keeps S at 100; asserting S < 50 fails on every run
+  sfm <- make_verifiable_sfm() |> update(S, eqn = 100) |>
+    unit_test(
+      label = "S low when rate is zero",
+      expr = all(S < 50),
+      conditions = list(rate = 0)
+    )
+  result <- silence(verify(sfm, n = 3L))
+  r <- result[["results"]][[1]]
+  expect_equal(r[["status"]], "fail")
+  expect_equal(r[["n_fail"]], 3L)
+  expect_equal(r[["n_pass"]], 0L)
+  expect_equal(r[["pass_rate"]], 0)
+})
+
+test_that("verify() n > 1 with conditions all-error: status = 'error', n_error = n", {
+  sfm <- make_verifiable_sfm() |>
+    unit_test(
+      label = "numeric result under condition",
+      expr = mean(S > 0.2),
+      conditions = list(rate = 0)
+    )
+  result <- silence(verify(sfm, n = 3L))
+  r <- result[["results"]][[1]]
+  expect_equal(r[["status"]], "error")
+  expect_equal(r[["n_error"]], 3L)
+  expect_equal(r[["n_pass"]], 0L)
+})
+
+# --- Conditions are actually applied to the simulation ---
+
+test_that("verify(): constant-only condition is present in sim (n = 1)", {
+  sfm <- make_verifiable_sfm() |>
+    unit_test(label = "x", expr = all(S >= 0), conditions = list(rate = 0))
+  result <- silence(verify(sfm, return_sims = TRUE))
+  j_idx <- result[["j"]][[1]]
+  sim   <- result[["sims"]][[j_idx]][[1]]
+  expect_equal(sim[["constants"]][["rate"]], 0)
+})
+
+test_that("verify(): stock initial-value condition is present in sim (n = 1)", {
+  sfm <- make_verifiable_sfm() |>
+    unit_test(label = "x", expr = all(S >= 0), conditions = list(S = 50))
+  result <- silence(verify(sfm, return_sims = TRUE))
+  j_idx <- result[["j"]][[1]]
+  sim   <- result[["sims"]][[j_idx]][[1]]
+  expect_equal(sim[["init"]][["S"]], 50)
+})
+
+test_that("verify(): mixed conditions are both present in sim (n = 1)", {
+  sfm <- make_verifiable_sfm() |>
+    unit_test(label = "x", expr = all(S >= 0), conditions = list(S = 50, rate = 0))
+  result <- silence(verify(sfm, return_sims = TRUE))
+  j_idx <- result[["j"]][[1]]
+  sim   <- result[["sims"]][[j_idx]][[1]]
+  expect_equal(sim[["constants"]][["rate"]], 0)
+  expect_equal(sim[["init"]][["S"]], 50)
+})
+
+test_that("verify(): constant-only condition is present in all n sims (n > 1)", {
+  sfm <- make_verifiable_sfm() |>
+    unit_test(label = "x", expr = all(S >= 0), conditions = list(rate = 0))
+  result <- silence(verify(sfm, n = 3L, return_sims = TRUE))
+  j_idx <- result[["j"]][[1]]
+  for (sim in result[["sims"]][[j_idx]]) {
+    expect_equal(sim[["constants"]][["rate"]], 0)
+  }
+})
+
+test_that("verify(): stock initial-value condition is present in all n sims (n > 1)", {
+  sfm <- make_verifiable_sfm() |>
+    unit_test(label = "x", expr = all(S >= 0), conditions = list(S = 50))
+  result <- silence(verify(sfm, n = 3L, return_sims = TRUE))
+  j_idx <- result[["j"]][[1]]
+  for (sim in result[["sims"]][[j_idx]]) {
+    expect_equal(sim[["init"]][["S"]], 50)
+  }
+})
+
+test_that("verify(): mixed conditions are both present in all n sims (n > 1)", {
+  sfm <- make_verifiable_sfm() |>
+    unit_test(label = "x", expr = all(S >= 0), conditions = list(S = 50, rate = 0))
+  result <- silence(verify(sfm, n = 3L, return_sims = TRUE))
+  j_idx <- result[["j"]][[1]]
+  for (sim in result[["sims"]][[j_idx]]) {
+    expect_equal(sim[["constants"]][["rate"]], 0)
+    expect_equal(sim[["init"]][["S"]], 50)
+  }
+})
+
+test_that("as.data.frame() on n > 1 verify result has expected columns", {
+  sfm <- make_verifiable_sfm() |>
+    unit_test(label = "S non-negative", expr = all(S >= 0))
+  result <- silence(verify(sfm, n = 3L))
+  df <- as.data.frame(result)
+  expect_s3_class(df, "data.frame")
+  expect_true(all(c("nr", "label", "status", "pass_rate", "n_pass", "n_fail", "n_error") %in% names(df)))
+})
+
+test_that("verify() n > 1 with return_sims = TRUE: each condition holds n sims", {
+  sfm <- make_verifiable_sfm() |>
+    unit_test(label = "S non-negative", expr = all(S >= 0))
+  result <- silence(verify(sfm, n = 3L, return_sims = TRUE))
+  expect_false(is.null(result[["sims"]]))
+  for (sim_list in result[["sims"]]) {
+    expect_true(is.list(sim_list))
+    expect_equal(length(sim_list), 3L)
+    expect_s3_class(sim_list[[1]], "simulate_sdbuildR")
+  }
+})
+
+
+# ==============================================================================
+# verify() — Julia backend (n = 1 and n > 1)
+# ==============================================================================
+
+test_that("verify() with Julia backend returns verify_sdbuildR class (n = 1)", {
+  skip_if_julia_not_ready()
+  sfm <- make_verifiable_jl_sfm() |>
+    unit_test(label = "S non-negative", expr = all(S >= 0))
+  result <- silence(verify(sfm))
+  expect_s3_class(result, "verify_sdbuildR")
+})
+
+test_that("verify() with Julia backend passes correct test (n = 1)", {
+  skip_if_julia_not_ready()
+  sfm <- make_verifiable_jl_sfm() |>
+    unit_test(label = "S non-negative", expr = all(S >= 0))
+  result <- silence(verify(sfm))
+  expect_equal(result[["results"]][[1]][["status"]], "pass")
+})
+
+test_that("verify() with Julia backend fails incorrect test (n = 1)", {
+  skip_if_julia_not_ready()
+  sfm <- make_verifiable_jl_sfm() |>
+    unit_test(label = "S always zero", expr = all(S == 0))
+  result <- silence(verify(sfm))
+  expect_equal(result[["results"]][[1]][["status"]], "fail")
+})
+
+test_that("verify() with Julia backend errors on non-logical expression (n = 1)", {
+  skip_if_julia_not_ready()
+  sfm <- make_verifiable_jl_sfm() |>
+    unit_test(label = "numeric output", expr = mean(S > 0.2))
+  result <- silence(verify(sfm))
+  expect_equal(result[["results"]][[1]][["status"]], "error")
+})
+
+test_that("verify() with Julia backend n > 1 all-pass: status = 'pass', pass_rate = 1", {
+  skip_if_julia_not_ready()
+  sfm <- make_verifiable_jl_sfm() |>
+    unit_test(label = "S non-negative", expr = all(S >= 0))
+  result <- silence(verify(sfm, n = 3L))
+  r <- result[["results"]][[1]]
+  expect_equal(r[["status"]], "pass")
+  expect_equal(r[["pass_rate"]], 1)
+  expect_equal(r[["n_pass"]], 3L)
+})
+
+test_that("verify() with Julia backend n > 1 all-fail: status = 'fail', pass_rate = 0", {
+  skip_if_julia_not_ready()
+  sfm <- make_verifiable_jl_sfm() |>
+    unit_test(label = "S always zero", expr = all(S == 0))
+  result <- silence(verify(sfm, n = 3L))
+  r <- result[["results"]][[1]]
+  expect_equal(r[["status"]], "fail")
+  expect_equal(r[["pass_rate"]], 0)
+  expect_equal(r[["n_pass"]], 0L)
+})
+
+test_that("verify() with Julia backend passes conditioned test (n = 1)", {
+  skip_if_julia_not_ready()
+  sfm <- make_verifiable_jl_sfm() |>
+    unit_test(
+      label = "S constant at zero rate",
+      expr = all(diff(S) == 0),
+      conditions = list(rate = 0)
+    )
+  result <- silence(verify(sfm))
+  expect_equal(result[["results"]][[1]][["status"]], "pass")
+})
+
+test_that("verify() with Julia backend fails conditioned test (n = 1)", {
+  skip_if_julia_not_ready()
+  # rate = 0 keeps S at 100; asserting S < 50 fails
+  sfm <- make_verifiable_jl_sfm() |>
+    unit_test(
+      label = "S low when rate is zero",
+      expr = all(S < 50),
+      conditions = list(rate = 0)
+    )
+  result <- silence(verify(sfm))
+  expect_equal(result[["results"]][[1]][["status"]], "fail")
+})
+
+test_that("verify() with Julia backend n > 1 with conditions all-pass", {
+  skip_if_julia_not_ready()
+  sfm <- make_verifiable_jl_sfm() |>
+    unit_test(
+      label = "S constant at zero rate",
+      expr = all(diff(S) == 0),
+      conditions = list(rate = 0)
+    )
+  result <- silence(verify(sfm, n = 3L))
+  r <- result[["results"]][[1]]
+  expect_equal(r[["status"]], "pass")
+  expect_equal(r[["n_pass"]], 3L)
+  expect_equal(r[["n_fail"]], 0L)
+})
+
+test_that("verify() with Julia backend n > 1 with conditions all-fail", {
+  skip_if_julia_not_ready()
+  sfm <- make_verifiable_jl_sfm() |>
+    unit_test(
+      label = "S low when rate is zero",
+      expr = all(S < 50),
+      conditions = list(rate = 0)
+    )
+  result <- silence(verify(sfm, n = 3L))
+  r <- result[["results"]][[1]]
+  expect_equal(r[["status"]], "fail")
+  expect_equal(r[["n_fail"]], 3L)
+  expect_equal(r[["n_pass"]], 0L)
+})
+
+# --- Conditions are actually applied to the Julia simulation ---
+
+test_that("verify(): constant-only condition is present in Julia sim (n = 1)", {
+  skip_if_julia_not_ready()
+  sfm <- make_verifiable_jl_sfm() |>
+    unit_test(label = "x", expr = all(S >= 0), conditions = list(rate = 0))
+  result <- silence(verify(sfm, return_sims = TRUE))
+  j_idx <- result[["j"]][[1]]
+  sim   <- result[["sims"]][[j_idx]][[1]]
+  expect_equal(sim[["constants"]][["rate"]], 0)
+})
+
+test_that("verify(): stock initial-value condition is present in Julia sim (n = 1)", {
+  skip_if_julia_not_ready()
+  sfm <- make_verifiable_jl_sfm() |>
+    unit_test(label = "x", expr = all(S >= 0), conditions = list(S = 50))
+  result <- silence(verify(sfm, return_sims = TRUE))
+  j_idx <- result[["j"]][[1]]
+  sim   <- result[["sims"]][[j_idx]][[1]]
+  expect_equal(sim[["init"]][["S"]], 50)
+})
+
+test_that("verify(): mixed conditions are both present in Julia sim (n = 1)", {
+  skip_if_julia_not_ready()
+  sfm <- make_verifiable_jl_sfm() |>
+    unit_test(label = "x", expr = all(S >= 0), conditions = list(S = 50, rate = 0))
+  result <- silence(verify(sfm, return_sims = TRUE))
+  j_idx <- result[["j"]][[1]]
+  sim   <- result[["sims"]][[j_idx]][[1]]
+  expect_equal(sim[["constants"]][["rate"]], 0)
+  expect_equal(sim[["init"]][["S"]], 50)
+})
+
+test_that("verify(): constant-only condition is present in all Julia runs (n > 1)", {
+  skip_if_julia_not_ready()
+  sfm <- make_verifiable_jl_sfm() |>
+    unit_test(label = "x", expr = all(S >= 0), conditions = list(rate = 0))
+  result <- silence(verify(sfm, n = 3L, return_sims = TRUE))
+  j_idx <- result[["j"]][[1]]
+  for (sim in result[["sims"]][[j_idx]]) {
+    expect_equal(sim[["constants"]][["rate"]], 0)
+  }
+})
+
+test_that("verify(): stock initial-value condition is present in all Julia runs (n > 1)", {
+  skip_if_julia_not_ready()
+  sfm <- make_verifiable_jl_sfm() |>
+    unit_test(label = "x", expr = all(S >= 0), conditions = list(S = 50))
+  result <- silence(verify(sfm, n = 3L, return_sims = TRUE))
+  j_idx <- result[["j"]][[1]]
+  for (sim in result[["sims"]][[j_idx]]) {
+    expect_equal(sim[["init"]][["S"]], 50)
+  }
+})
+
+test_that("verify(): mixed conditions are both present in all Julia runs (n > 1)", {
+  skip_if_julia_not_ready()
+  sfm <- make_verifiable_jl_sfm() |>
+    unit_test(label = "x", expr = all(S >= 0), conditions = list(S = 50, rate = 0))
+  result <- silence(verify(sfm, n = 3L, return_sims = TRUE))
+  j_idx <- result[["j"]][[1]]
+  for (sim in result[["sims"]][[j_idx]]) {
+    expect_equal(sim[["constants"]][["rate"]], 0)
+    expect_equal(sim[["init"]][["S"]], 50)
+  }
 })

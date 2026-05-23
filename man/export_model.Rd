@@ -6,7 +6,7 @@
 \usage{
 export_model(
   object,
-  format = "psychomodels",
+  format = c("sdbuildR", "deSolve", "psychomodels"),
   file = NULL,
   title = object[["meta"]][["name"]],
   description = object[["meta"]][["caption"]],
@@ -38,7 +38,8 @@ export_model(
 \arguments{
 \item{object}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
 
-\item{format}{Export format. Currently supported: \code{"psychomodels"}.}
+\item{format}{Export format. One of \code{"sdbuildR"}, \code{"deSolve"}, or
+\code{"psychomodels"}.}
 
 \item{file}{Output file path, or \code{NULL} to return the result directly.}
 
@@ -95,14 +96,31 @@ Defaults to \code{"Ordinary Differential Equations"}.}
 \item{pretty}{[psychomodels] If \code{TRUE}, pretty-print output JSON.}
 }
 \value{
-For \code{format = "psychomodels"} with \code{file = NULL}: a JSON character string.
-For \code{format = "psychomodels"} with \code{file} specified: invisibly returns the file path.
+For \code{file = NULL}: a character string containing the exported content.
+For \code{file} specified: invisibly returns the file path.
 }
 \description{
 Export a model of class \code{\link{sdbuildR}} to another format.
-Currently supported format: \code{"psychomodels"}.
 }
 \details{
+\subsection{sdbuildR format (\code{format = "sdbuildR"})}{
+
+Returns R code that reconstructs the model using sdbuildR functions.
+When \code{file = NULL}, returns a character string.
+When \code{file} is provided, writes an \code{.R} file and returns the path invisibly.
+If \code{file} has no \code{.R} extension, one is appended.
+}
+
+\subsection{deSolve format (\code{format = "deSolve"})}{
+
+Returns a standalone R script using \code{\link[deSolve:ode]{deSolve::ode()}} directly — no sdbuildR
+dependency required to run the output.
+When \code{file = NULL}, returns a character string.
+When \code{file} is provided, writes an \code{.R} file and returns the path invisibly.
+If \code{file} has no \code{.R} extension, one is appended.
+Requires \code{sim_settings(language = "R")} (the default).
+}
+
 \subsection{Psychomodels format (\code{format = "psychomodels"})}{
 
 Generates a JSON record for upload to
@@ -115,3 +133,21 @@ If \code{file} has no \code{.json} extension, one is appended.
 \examples{
 sfm <- sdbuildR("SIR")
 
+# Get sdbuildR reconstruction code
+cat(export_model(sfm, format = "sdbuildR"))
+
+# Get standalone deSolve script
+cat(export_model(sfm, format = "deSolve"))
+
+# Export to Psychomodels JSON
+\dontrun{
+json <- export_model(sfm,
+  format = "psychomodels",
+  publication_doi = "10.0000/example"
+)
+}
+}
+\seealso{
+\code{\link[=import_insightmaker]{import_insightmaker()}}, \code{\link[=import_desolve]{import_desolve()}}
+}
+\concept{importExport}

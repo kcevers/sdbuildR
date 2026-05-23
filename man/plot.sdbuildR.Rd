@@ -64,7 +64,7 @@ plot(sfm)
 plot(sfm, show_constants = FALSE, show_aux = FALSE)
 
 # Only show specific variables
-plot(sfm, vars = "Susceptible")
+plot(sfm, vars = "susceptible")
 
 }
 \seealso{

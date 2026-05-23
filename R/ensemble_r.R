@@ -226,7 +226,7 @@ ensemble_r <- function(object, n, return_sims, conditions, cross,
 #'
 #' Lightweight alternative to run_single_sim_r() that skips compilation
 #' entirely. The script is evaluated in a fresh environment; stochastic
-#' equations (e.g. `runif()`) produce different results on each call.
+#' equations (e.g., `runif()`) produce different results on each call.
 #'
 #' @param parsed_expr Parsed R expression for a compiled simulation script.
 #' @param j Integer; condition index.

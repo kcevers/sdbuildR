@@ -29,7 +29,7 @@ Compares the structure, equations, and simulation settings of two
 }
 \examples{
 sfm1 <- sdbuildR("SIR")
-sfm2 <- stock(sfm1, "Susceptible", eqn = 0.5)
+sfm2 <- stock(sfm1, "susceptible", eqn = 0.5)
 compare_models(sfm1, sfm2)
 
 }

@@ -1,5 +1,5 @@
 Package: sdbuildR
-Title: Easily Build, Simulate, and Visualise Stock-and-Flow Models
+Title: Easily Build, Simulate, and Explore Stock-and-Flow Models
 Version: 1.0.8.9000
 Date: 2025-10-23
 Authors@R: 
@@ -12,7 +12,7 @@ Description: Stock-and-flow models are a computational method from the
     for constructing stock-and-flow models without requiring extensive
     domain knowledge. Models can quickly be simulated and revised,
     supporting iterative development.  'sdbuildR' simulates models in 'R'
-    and 'Julia', where 'Julia' supports computationally intensive
+    and 'Julia', and supports computationally intensive
     ensemble simulations. Additionally, 'sdbuildR' can import models
     created in 'Insight Maker' (<https://insightmaker.com/>).
 License: GPL (>= 3)

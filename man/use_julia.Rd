@@ -11,7 +11,7 @@ use_julia(stop = FALSE, force = FALSE, nthreads = NULL)
 
 \item{force}{If \code{TRUE}, force Julia setup to execute again.}
 
-\item{nthreads}{If not \code{NULL}, set the number of threads for Julia to use. This will set the environment variable \code{JULIA_NUM_THREADS} and restart Julia if it is already running to apply the new thread setting. See \href{https://docs.julialang.org/en/v1/manual/parallel-computing/#man-parallel-computing}{this page} for more details on threading in Julia.}
+\item{nthreads}{If not \code{NULL}, set the number of threads for Julia to use. This will temporarily set the environment variable \code{JULIA_NUM_THREADS} and restart Julia if it is already running to apply the new thread setting. See \href{https://docs.julialang.org/en/v1/manual/parallel-computing/#man-parallel-computing}{this page} for more details on threading in Julia.}
 }
 \value{
 Returns \code{NULL} invisibly, used for side effects
@@ -27,7 +27,7 @@ In every R session, \code{\link[=use_julia]{use_julia()}} needs to be run once (
 # Start a Julia session and activate the Julia environment for sdbuildR
 use_julia()
 
-# Start Julia with 4 threads (if your Julia installation supports threading)
+# Start Julia with 4 threads (only works if threading is supported)
 use_julia(nthreads = 4)
 
 # Stop Julia session

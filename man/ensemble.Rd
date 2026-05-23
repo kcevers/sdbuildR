@@ -21,32 +21,27 @@ ensemble(
 specified, n defines the number of simulations to run per condition. If
 each condition only needs to be run once, set \code{n = 1}. Defaults to \code{n = 10}.}
 
-\item{conditions}{A named list specifying parameter values for ensemble
-conditions. Names must correspond to existing stocks or constants
+\item{conditions}{A named list specifying \strong{fixed} values for ensemble
+conditions. Names must correspond to stocks or constants
 in the model. Each list element should be a numeric vector of values
 to test.
 
 If cross = \code{TRUE} (default), all combinations of values are generated. For
-example, list(param1 = c(1, 2), param2 = c(10, 20)) creates 4 conditions:
-(1,10), (1,20), (2,10), (2,20).
+example, \code{list(param1 = c(1, 2), param2 = c(10, 20))} creates 4 conditions:
+\verb{(1,10), (1,20), (2,10), (2,20)}.
 
 If cross = \code{FALSE}, values are paired element-wise, requiring all vectors to
-have equal length. For example, list(param1 = c(1, 2, 3), param2 =
-c(10, 20, 30)) creates 3 conditions: (1,10), (2,20), (3,30).
+have equal length. For example, \code{list(param1 = c(1, 2, 3), param2 = c(10, 20, 30))} creates 3 conditions: \verb{(1,10), (2,20), (3,30)}.
 Defaults to \code{NULL} (no parameter variation).}
 
 \item{cross}{If \code{TRUE}, cross the parameters in the conditions list to
 generate all possible combinations of parameters. Defaults to \code{TRUE}.}
 
-\item{quantiles}{Quantiles to calculate in the summary, e.g. c(0.025,
-0.975).}
+\item{quantiles}{Quantiles to calculate in the summary, e.g., \code{c(0.025, 0.975)}.}
 
 \item{verbose}{If \code{TRUE} (default), print details and duration of simulation.}
 
 \item{...}{Optional arguments passed to \code{\link[=sim_settings]{sim_settings()}}; these can be used to override the simulation specifications set in the model object.}
-
-\item{return_sims}{If \code{TRUE}, return the individual simulations in the
-ensemble, along with the summary statistics. Set to \code{FALSE} to save memory (default).}
 }
 \value{
 Object of class \code{\link[=ensemble]{ensemble_sdbuildR}}, which is a list
@@ -79,18 +74,26 @@ containing data.frame with the constant parameters used in the ensemble.}
 }
 }
 \description{
-Run an ensemble simulation of a stock-and-flow model, varying initial
-conditions and/or parameters in the conditions specified in \code{conditions}.
-For Julia models, the ensemble can be run in parallel using multiple threads
-by first setting \code{nthreads} in \code{\link[=use_julia]{use_julia()}}. For R models, use
-\code{\link[future:plan]{future::plan()}} to control parallel execution. The results are returned as a
-data.frame with summary statistics and optionally individual simulations.
+Run large-scale (i.e., ensemble) simulations of stock-and-flow models, varying initial
+conditions and/or constants specified in \code{conditions}.
 }
 \details{
-To run large simulations, it is recommended to limit the output size by
-saving fewer values with \code{save_at} or \code{save_n} in \code{\link[=sim_settings]{sim_settings()}}. To create a reproducible ensemble simulation, set a seed using \code{\link[=sim_settings]{sim_settings()}}.
+It is strongly recommended to reduce the size of the simulation output by
+saving fewer values with \code{save_at} or \code{save_n} in \code{\link[=sim_settings]{sim_settings()}}.
 
-If you do not see any variation within a condition of the ensemble (i.e. the
+By default, only summary statistics across simulations are returned.
+To return individual simulations, set \code{return_sims = TRUE} in \code{\link[=sim_settings]{sim_settings()}} or
+pass \code{return_sims = TRUE} via \code{...} in \code{\link[=ensemble]{ensemble()}}.
+Note that returning individual simulations can consume a lot of memory for large ensembles.
+
+For simulations in Julia, the ensemble can be run in parallel using multiple threads
+by setting \code{nthreads} in \code{\link[=use_julia]{use_julia()}}. For simulations in R, use
+\code{\link[future:plan]{future::plan()}} to control parallel execution.
+
+To create a reproducible ensemble simulation, set a seed using \code{\link[=sim_settings]{sim_settings()}}.
+Currently, reproducibility for threaded simulations is not supported.
+
+If you do not see any variation within a condition of the ensemble (i.e., the
 confidence bands are virtually non-existent), there are likely no random
 elements in your model. Without these, there can be no variability in the
 model. Try specifying a random initial condition or adding randomness to
@@ -117,13 +120,13 @@ plot(sims)
 # To plot individual trajectories, rerun the ensemble with return_sims = TRUE.
 # Note that this can consume a lot of memory for large simulations.
 sims <- ensemble(sfm, n = 10, return_sims = TRUE)
-plot(sims, type = "sims")
+plot(sims, which = "sims")
 
 # Specify which trajectories to plot
-plot(sims, type = "sims", i = 1)
+plot(sims, which = "sims", i = 1)
 
 # Plot the median with lighter individual trajectories
-plot(sims, central_tendency = "median", type = "sims", alpha = 0.1)
+plot(sims, central_tendency = "median", which = "sims", alpha = 0.1)
 
 \dontshow{if (Sys.getenv("NOT_CRAN") == "true" && julia_env_ready()) withAutoprint(\{ # examplesIf}
 # For larger ensembles, we can use parallelization with future

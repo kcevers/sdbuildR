@@ -326,7 +326,7 @@ export_plotly <- function(pl, file, format, width, height) {
 #' plot(sfm, show_constants = FALSE, show_aux = FALSE)
 #'
 #' # Only show specific variables
-#' plot(sfm, vars = "Susceptible")
+#' plot(sfm, vars = "susceptible")
 #'
 plot.sdbuildR <- function(x,
                           vars = NULL,
@@ -384,19 +384,6 @@ plot.sdbuildR <- function(x,
 
     # Check whether specified variables are in the model
     validate_vars_in_model(vars, df, context = "model")
-
-    # # Add dependencies of vars
-    # vars <- c(vars, unname(unlist(dep[vars])))
-    #
-    # # For all stocks in vars, also include their inflows and outflows,
-    # # and the stocks that those inflows and outflows are connected to.
-    # stock_vars <- vars[vars %in% df[df[["type"]] == "stock", "name"]]
-    # if (length(stock_vars) > 0){
-    #   idx <- flow_df[["to"]] %in% stock_vars | flow_df[["from"]] %in% stock_vars
-    #   if (any(idx)){
-    #     vars <- unique(c(vars, unname(unlist(flow_df[idx, ])) ))
-    #   }
-    # }
 
     # Only keep these variables in flow_df, dep, and df
     df <- df[df[["name"]] %in% vars, , drop = FALSE]
@@ -987,8 +974,8 @@ plot.simulate_sdbuildR <- function(x,
 #' Visualize ensemble simulation results of a stock-and-flow model. Either summary statistics or individual trajectories can be plotted. When multiple conditions j are specified, a grid of subplots is plotted. See [ensemble()] for examples.
 #'
 #' @param x Output of [ensemble()].
-#' @param type Type of plot. Either "summary" for a summary plot with mean or median lines and confidence intervals, or "sims" for individual simulation trajectories with mean or median lines. Defaults to "summary".
-#' @param i Indices of the individual trajectories to plot if type = "sims". Defaults to 1:10. Including a high number of trajectories will slow down plotting considerably.
+#' @param which Type of plot. Either "summary" for a summary plot with mean or median lines and confidence intervals, or "sims" for individual simulation trajectories with mean or median lines. Defaults to "summary".
+#' @param i Indices of the individual trajectories to plot if which = "sims". Defaults to 1:10. Including a high number of trajectories will slow down plotting considerably.
 #' @param j Indices of the condition to plot. Defaults to 1:9. If only one condition is specified, the plot will not be a grid of subplots.
 #' @param nrows Number of rows in the plot grid. Defaults to ceiling(sqrt(n_conditions)).
 #' @param margin Margin between subplots. Either a single numeric or a vector of length four(left, right, top, bottom). See `?plotly::subplot()` for more details. Defaults to 0.05.
@@ -1013,7 +1000,7 @@ plot.simulate_sdbuildR <- function(x,
 #' @method plot ensemble_sdbuildR
 #'
 plot.ensemble_sdbuildR <- function(x,
-                                   type = c("summary", "sims")[1],
+                                   which = c("summary", "sims")[1],
                                    i = seq(1, min(c(x[["n"]], 10))),
                                    j = seq(1, min(c(x[["n_conditions"]], 9))),
                                    vars = NULL,
@@ -1073,15 +1060,7 @@ plot.ensemble_sdbuildR <- function(x,
     ))
   }
 
-  # Check type
-  type <- trimws(tolower(type))
-  type <- ifelse(type == "sim", "sims", type)
-  if (!type %in% c("summary", "sims")) {
-    cli::cli_abort(c(
-      "Invalid {.arg type} value.",
-      "x" = "The {.arg type} argument must be {.code 'summary'} or {.code 'sims'}."
-    ))
-  }
+  which <- .clean_which(which)
 
   # Check central tendency
   if (!isFALSE(central_tendency)) {
@@ -1100,7 +1079,7 @@ plot.ensemble_sdbuildR <- function(x,
   dots <- list(...)
 
   # Build default subtitle based on plot type and central tendency
-  default_sub <- if (type == "summary") {
+  default_sub <- if (which == "summary") {
     paste0(
       ifelse(isFALSE(central_tendency), "",
         stringr::str_to_title(central_tendency)
@@ -1109,7 +1088,7 @@ plot.ensemble_sdbuildR <- function(x,
       "] confidence interval of ", x[["n"]], " simulation",
       ifelse(x[["n"]] == 1, "", "s")
     )
-  } else if (type == "sims") {
+  } else if (which == "sims") {
     paste0(
       ifelse(isFALSE(central_tendency), "",
         stringr::str_to_title(central_tendency)
@@ -1157,7 +1136,7 @@ plot.ensemble_sdbuildR <- function(x,
   create_subplots <- length(j) > 1
 
   # To plot individual simulation trajectories, extract df
-  if (type == "sims") {
+  if (which == "sims") {
     if (!is.null(x[["df"]])) {
       df <- x[["df"]]
 
@@ -1171,15 +1150,15 @@ plot.ensemble_sdbuildR <- function(x,
     } else {
       cli::cli_abort(c(
         "No simulation data available.",
-        "x" = "Individual simulation data is required for {.code type = 'sims'}.",
+        "x" = "Individual simulation data is required for {.code which = 'sims'}.",
         ">" = "Run {.fn ensemble} with {.code return_sims = TRUE}."
       ))
     }
-  } else if (type == "summary") {
+  } else if (which == "summary") {
     if ("i" %in% passed_arg) {
       cli::cli_inform(c(
-        "i" = "The {.arg i} argument is ignored when {.code type = 'summary'}.",
-        ">" = "Set {.code type = 'sims'} to plot individual trajectories."
+        "i" = "The {.arg i} argument is ignored when {.code which = 'summary'}.",
+        ">" = "Set {.code which = 'sims'} to plot individual trajectories."
       ))
     }
 
@@ -1197,7 +1176,7 @@ plot.ensemble_sdbuildR <- function(x,
   summary_df_nonhighlight <- out[["df_nonhighlight"]]
   colors <- out[["colors"]]
 
-  if (type == "sims") {
+  if (which == "sims") {
     out <- prep_plot(x[["object"]], "ensemble", df,
       constants = x[["constants"]][["df"]], add_constants = add_constants,
       vars = vars, palette = palette, colors = colors, wrap_width = wrap_width
@@ -1225,7 +1204,7 @@ plot.ensemble_sdbuildR <- function(x,
     pl <- plot_ensemble_helper(
       j_idx = j_idx,
       j_name = j_name, j = j, j_labels = j_labels,
-      type = type,
+      which = which,
       create_subplots = create_subplots,
       summary_df_highlight = summary_df_highlight,
       summary_df_nonhighlight = summary_df_nonhighlight,
@@ -1253,8 +1232,9 @@ plot.ensemble_sdbuildR <- function(x,
 
       pl_list[[j_idx]] <- plot_ensemble_helper(
         j_idx = j_idx,
-        j_name = j_name, j = j, j_labels = j_labels,
-        type = type,
+        j_name = j_name, j = j, 
+        j_labels = j_labels,
+        which = which,
         create_subplots = create_subplots,
         summary_df_highlight = summary_df_highlight[summary_df_highlight[["j"]] == j_name, , drop = FALSE],
         summary_df_nonhighlight = summary_df_nonhighlight[summary_df_nonhighlight[["j"]] == j_name, , drop = FALSE],
@@ -1334,12 +1314,12 @@ plot.ensemble_sdbuildR <- function(x,
 #' @param j_idx Index of the condition to plot.
 #' @param j_name Name of the condition to plot.
 #' @param j Index of the condition to plot. Used to determine whether to show the legend.
-#' @param type Type of plot. Must be one of "summary" or "sims". Defaults to "summary". If "summary", the plot will show the mean and confidence intervals of the simulation results. If "sims", the plot will show all individual simulation runs in i.
+#' @param which Type of plot. Must be one of "summary" or "sims". Defaults to "summary". If "summary", the plot will show the mean and confidence intervals of the simulation results. If "sims", the plot will show all individual simulation runs in i.
 #' @param create_subplots If TRUE, create subplots for each condition. If FALSE, plot all conditions in one plot.
 #' @param summary_df_highlight data.frame with summary statistics of the ensemble simulation results (stocks). Must contain columns "j", "variable", "mean", and confidence interval columns (e.g., "q0.025", "q0.975").
 #' @param summary_df_nonhighlight data.frame with summary statistics of the ensemble simulation results (non-stocks). Must contain columns "j", "variable", "mean", and confidence interval columns (e.g., "q0.025", "q0.975").
-#' @param df_highlight data.frame with individual simulation results (stocks). Must contain columns "i", "j", "variable", and "value". Only used if type = "sims".
-#' @param df_nonhighlight data.frame with individual simulation results (non-stocks). Must contain columns "i", "j", "variable", and "value". Only used if type = "sims".
+#' @param df_highlight data.frame with individual simulation results (stocks). Must contain columns "i", "j", "variable", and "value". Only used if which = "sims".
+#' @param df_nonhighlight data.frame with individual simulation results (non-stocks). Must contain columns "i", "j", "variable", and "value". Only used if which = "sims".
 #' @param q_low Column name for the lower bound of the confidence interval (e.g., "q0.025").
 #' @param q_high Column name for the upper bound of the confidence interval (e.g., "q0.975").
 #' @param mode Plotting mode. Either "lines" if there are multiple time points or "markers" for a single time point.
@@ -1354,7 +1334,7 @@ plot.ensemble_sdbuildR <- function(x,
 #' @returns Plotly object
 #' @noRd
 plot_ensemble_helper <- function(j_idx, j_name, j, j_labels,
-                                 type, create_subplots,
+                                 which, create_subplots,
                                  summary_df_highlight,
                                  summary_df_nonhighlight,
                                  df_highlight,
@@ -1377,7 +1357,7 @@ plot_ensemble_helper <- function(j_idx, j_name, j, j_labels,
   # Initialize plotly object
   pl <- plotly::plot_ly()
 
-  if (type == "summary") {
+  if (which == "summary") {
     if (mode == "lines") {
       if (plot_nonhighlight) {
         pl <- plotly::add_ribbons(pl,
@@ -1418,7 +1398,7 @@ plot_ensemble_helper <- function(j_idx, j_name, j, j_labels,
         )
       }
     }
-  } else if (type == "sims") {
+  } else if (which == "sims") {
     # Add traces for non-stock variables (visible = "legendonly")
     if (plot_nonhighlight) {
       pl <- plotly::add_trace(pl,
@@ -1507,7 +1487,7 @@ plot_ensemble_helper <- function(j_idx, j_name, j, j_labels,
         visible = TRUE
       )
     }
-  } else if (mode == "markers" && type == "summary") {
+  } else if (mode == "markers" && which == "summary") {
     if (plot_nonhighlight) {
       pl <- plotly::add_trace(pl,
         data = summary_df_nonhighlight,
@@ -1551,7 +1531,7 @@ plot_ensemble_helper <- function(j_idx, j_name, j, j_labels,
         visible = TRUE
       )
     }
-  } else if (mode == "markers" && type == "sims") {
+  } else if (mode == "markers" && which == "sims") {
     if (plot_nonhighlight) {
       pl <- plotly::add_trace(pl,
         data = summary_df_nonhighlight,
@@ -1686,7 +1666,7 @@ plot_ensemble_helper <- function(j_idx, j_name, j, j_labels,
 #'
 #' @examples
 #' sfm <- sdbuildR("SIR") |>
-#'   unit_test(expr = all(Susceptible >= 0))
+#'   unit_test(expr = all(susceptible >= 0))
 #' res <- verify(sfm, return_sims = TRUE)
 #' plot(res)
 plot.verify_sdbuildR <- function(x,
@@ -1704,7 +1684,7 @@ plot.verify_sdbuildR <- function(x,
                                   font_size = 16,
                                   wrap_width = 25,
                                   showlegend = TRUE,
-                                  alpha = 0.4,
+                                  alpha = 1 / x[["n"]], 
                                   ...) {
   if (is.null(x[["sims"]])) {
     cli::cli_abort(c(
@@ -1833,6 +1813,18 @@ plot.verify_sdbuildR <- function(x,
         type = "scatter", mode = mode,
         opacity = alpha, colors = plot_colors,
         split = ~interaction(variable, i),
+        showlegend = FALSE, visible = TRUE
+      )
+      # One row per variable at min time: with mode="lines" a single point draws
+      # nothing visible but still registers a legend entry (same trick as ensemble)
+      legend_df <- df_highlight[df_highlight[["time"]] == min(df_highlight[["time"]]), ]
+      legend_df <- legend_df[!duplicated(legend_df[["variable"]]), ]
+      pl <- plotly::add_trace(pl,
+        data = legend_df,
+        x = ~time, y = ~value,
+        color = ~variable, legendgroup = ~variable,
+        type = "scatter", mode = mode,
+        colors = plot_colors,
         showlegend = this_showlegend, visible = TRUE
       )
     }

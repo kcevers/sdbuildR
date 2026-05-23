@@ -6,7 +6,7 @@
 \usage{
 \method{plot}{ensemble_sdbuildR}(
   x,
-  type = c("summary", "sims")[1],
+  which = c("summary", "sims")[1],
   i = seq(1, min(c(x[["n"]], 10))),
   j = seq(1, min(c(x[["n_conditions"]], 9))),
   vars = NULL,
@@ -30,9 +30,9 @@
 \arguments{
 \item{x}{Output of \code{\link[=ensemble]{ensemble()}}.}
 
-\item{type}{Type of plot. Either "summary" for a summary plot with mean or median lines and confidence intervals, or "sims" for individual simulation trajectories with mean or median lines. Defaults to "summary".}
+\item{which}{Type of plot. Either "summary" for a summary plot with mean or median lines and confidence intervals, or "sims" for individual simulation trajectories with mean or median lines. Defaults to "summary".}
 
-\item{i}{Indices of the individual trajectories to plot if type = "sims". Defaults to 1:10. Including a high number of trajectories will slow down plotting considerably.}
+\item{i}{Indices of the individual trajectories to plot if which = "sims". Defaults to 1:10. Including a high number of trajectories will slow down plotting considerably.}
 
 \item{j}{Indices of the condition to plot. Defaults to 1:9. If only one condition is specified, the plot will not be a grid of subplots.}
 

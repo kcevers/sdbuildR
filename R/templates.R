@@ -55,28 +55,26 @@ templates <- function(template) {
       sim_settings(stop = 200) |>
       update("X", "stock", eqn = ".01", label = "Population size") |>
       # update("flow", "flow", eqn = "r * X * (1 - X / K)", to = "X", label = "Net change") |>
-      update("inflow", "flow", eqn = "r * X", to = "X", label = "Births") |>
-      update("outflow", "flow", eqn = "r * X^2 / K", from = "X", label = "Deaths") |>
+      update("births", "flow", eqn = "r * X", to = "X", label = "Births") |>
+      update("deaths", "flow", eqn = "r * X^2 / K", from = "X", label = "Deaths") |>
       update("r", "constant", eqn = "0.1", label = "Growth rate") |>
       update("K", "constant", eqn = "1", label = "Carrying capacity")
+      
   } else if (template == "SIR") {
-    # Chapter 5 Duggan: SIR Aggregate.R & Chapter 7. Screening.R
-    # https://github.com/JimDuggan/SDMR/blob/master/models/05%20Chapter/R/01%20SIR%20Aggregate.R
-    # https://github.com/JimDuggan/SDMR/blob/master/models/07%20Chapter/R/02%20Screening.R
 
     object <- sdbuildR() |>
       meta(name = "Susceptible-Infected-Recovered (SIR)") |>
       sim_settings(start = 0, stop = 20, time_units = "weeks") |>
-      update("Susceptible", "stock", eqn = "99999") |>
-      update("Infected", "stock", eqn = 1) |>
-      update("Recovered", "stock", eqn = 0) |>
-      update("Beta", "constant", eqn = "Effective_Contact_Rate / Total_Population") |>
-      update("Lambda", "aux", eqn = "Beta * Infected") |>
-      update("Infection_Rate", "flow", eqn = "Susceptible * Lambda", from = "Susceptible", to = "Infected") |>
-      update("Recovery_Rate", "flow", eqn = "Infected / Delay", from = "Infected", to = "Recovered") |>
-      update("Total_Population", "constant", eqn = "Susceptible + Infected + Recovered") |>
-      update("Effective_Contact_Rate", "constant", eqn = "2") |>
-      update("Delay", "constant", eqn = "2")
+      update("susceptible", "stock", eqn = "99999", label = "Susceptible") |>
+      update("infected", "stock", eqn = 1, label = "Infected") |>
+      update("recovered", "stock", eqn = 0, label = "Recovered") |>
+      update("contact_rate", "constant", eqn = 2, label = "Contact rate") |> 
+      update("recovery_rate", "constant", eqn = 0.1, label = "Recovery rate") |> 
+      update("infection_rate", "constant", eqn = "contact_rate / total_population", label = "Infection rate") |>
+      update("new_infections", "flow", eqn = "infection_rate * susceptible * infected", from = "susceptible", to = "infected", label = "New infections") |>
+      update("new_recoveries", "flow", eqn = "recovery_rate * infected", from = "infected", to = "recovered", label = "New recoveries") |>
+      update("total_population", "constant", eqn = "susceptible + infected + recovered", label = "Total population")
+
   } else if (template == "predator_prey") {
     object <- sdbuildR() |>
       meta(name = "Predator-Prey Dynamics (Lotka-Volterra)") |>

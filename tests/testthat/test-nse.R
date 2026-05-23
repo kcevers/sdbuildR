@@ -61,16 +61,16 @@ test_that("update() accepts bare symbol for name", {
   expect_equal(vars[["name"]], "population")
 })
 
-test_that("update() accepts bare symbol for type", {
+test_that("update() accepts string for type", {
   sfm <- sdbuildR()
-  sfm <- update(sfm, x, type = stock)
+  sfm <- update(sfm, x, type = "stock")
   vars <- as.data.frame(sfm)
   expect_equal(vars[["type"]], "stock")
 })
 
-test_that("update() accepts bare symbols for name and type", {
+test_that("update() accepts bare symbol for name and string for type", {
   sfm <- sdbuildR()
-  sfm <- update(sfm, x, stock)
+  sfm <- update(sfm, x, "stock")
   vars <- as.data.frame(sfm)
   expect_equal(vars[["name"]], "x")
   expect_equal(vars[["type"]], "stock")
@@ -78,8 +78,8 @@ test_that("update() accepts bare symbols for name and type", {
 
 test_that("update() accepts bare expression for eqn", {
   sfm <- sdbuildR()
-  sfm <- update(sfm, x, stock, eqn = 100)
-  sfm <- update(sfm, y, aux, eqn = x * 0.1 + 2)
+  sfm <- update(sfm, x, "stock", eqn = 100)
+  sfm <- update(sfm, y, "aux", eqn = x * 0.1 + 2)
   vars <- as.data.frame(sfm)
   expect_equal(vars[vars[["name"]] == "x", "eqn"], "100")
   expect_equal(vars[vars[["name"]] == "y", "eqn"], "x * 0.1 + 2")
@@ -87,15 +87,15 @@ test_that("update() accepts bare expression for eqn", {
 
 test_that("update() accepts bare symbols for to/from", {
   sfm <- sdbuildR()
-  sfm <- update(sfm, pop, stock, eqn = 100)
-  sfm <- update(sfm, births, flow, eqn = pop * 0.1, to = pop)
+  sfm <- update(sfm, pop, "stock", eqn = 100)
+  sfm <- update(sfm, births, "flow", eqn = pop * 0.1, to = pop)
   vars <- as.data.frame(sfm)
   expect_equal(vars[vars[["name"]] == "births", "to"], "pop")
 })
 
 test_that("update() accepts bare symbol for source", {
   sfm <- sdbuildR()
-  sfm <- update(sfm, my_lookup, lookup,
+  sfm <- update(sfm, my_lookup, "lookup",
     xpts = c(0, 5, 10), ypts = c(0, 10, 15), source = t
   )
   vars <- as.data.frame(sfm)
@@ -104,7 +104,7 @@ test_that("update() accepts bare symbol for source", {
 
 test_that("update() vectorized with bare symbols in c()", {
   sfm <- sdbuildR()
-  sfm <- update(sfm, c(a, b), stock, eqn = c(1, 2))
+  sfm <- update(sfm, c(a, b), "stock", eqn = c(1, 2))
   vars <- as.data.frame(sfm)
   expect_equal(sort(vars[["name"]]), c("a", "b"))
   expect_equal(vars[vars[["name"]] == "a", "eqn"], "1")
@@ -131,7 +131,7 @@ test_that("update() backward compat: do.call still works", {
 test_that("update() with !! injection for name", {
   sfm <- sdbuildR()
   my_name <- "population"
-  sfm <- update(sfm, !!my_name, stock, eqn = 100)
+  sfm <- update(sfm, !!my_name, "stock", eqn = 100)
   vars <- as.data.frame(sfm)
   expect_equal(vars[["name"]], "population")
 })
@@ -139,14 +139,14 @@ test_that("update() with !! injection for name", {
 test_that("update() with !! injection for eqn", {
   sfm <- sdbuildR()
   my_eqn <- "a * b + 1"
-  sfm <- update(sfm, x, aux, eqn = !!my_eqn)
+  sfm <- update(sfm, x, "aux", eqn = !!my_eqn)
   vars <- as.data.frame(sfm)
   expect_equal(vars[["eqn"]], "a * b + 1")
 })
 
 test_that("update() modifying existing variable with NSE name", {
   sfm <- sdbuildR()
-  sfm <- update(sfm, x, stock, eqn = 10)
+  sfm <- update(sfm, x, "stock", eqn = 10)
   sfm <- update(sfm, x, eqn = 20)
   vars <- as.data.frame(sfm)
   expect_equal(vars[["eqn"]], "20")
@@ -314,28 +314,28 @@ test_that("sdbuildR() with no template still returns empty model", {
 
 test_that("as.data.frame() accepts bare symbol for name", {
   sfm <- sdbuildR("SIR")
-  df <- as.data.frame(sfm, name = Susceptible)
+  df <- as.data.frame(sfm, name = susceptible)
   expect_equal(nrow(df), 1L)
-  expect_equal(df[["name"]], "Susceptible")
+  expect_equal(df[["name"]], "susceptible")
 })
 
 test_that("as.data.frame() accepts c() of bare symbols for name", {
   sfm <- sdbuildR("SIR")
-  df <- as.data.frame(sfm, name = c(Susceptible, Infected))
+  df <- as.data.frame(sfm, name = c(susceptible, infected))
   expect_equal(nrow(df), 2L)
-  expect_true(all(c("Susceptible", "Infected") %in% df[["name"]]))
+  expect_true(all(c("susceptible", "infected") %in% df[["name"]]))
 })
 
-test_that("as.data.frame() accepts bare symbol for type", {
+test_that("as.data.frame() accepts string for type", {
   sfm <- sdbuildR("SIR")
-  df <- as.data.frame(sfm, type = stock)
+  df <- as.data.frame(sfm, type = "stock")
   expect_true(all(df[["type"]] == "stock"))
   expect_true(nrow(df) > 0L)
 })
 
 test_that("as.data.frame() backward compat: strings still work for name and type", {
   sfm <- sdbuildR("SIR")
-  df_name <- as.data.frame(sfm, name = "Susceptible")
+  df_name <- as.data.frame(sfm, name = "susceptible")
   expect_equal(nrow(df_name), 1L)
   df_type <- as.data.frame(sfm, type = "stock")
   expect_true(all(df_type[["type"]] == "stock"))

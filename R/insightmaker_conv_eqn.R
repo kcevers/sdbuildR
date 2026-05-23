@@ -53,7 +53,7 @@ convert_equations_IM <- function(type,
       # convert_addition_of_strings(var_names) |>
       # Replace logical operators (true, false, = (but not if in function()))
       replace_op_IM(var_names) |>
-      # Replace range, e.g. 0:2:10; replace other colons : with =
+      # Replace range, e.g., 0:2:10; replace other colons : with =
       replace_colon(var_names)
 
     # Step 5. Replace built-in functions
@@ -210,7 +210,7 @@ replace_colon <- function(eqn, var_names) {
 #'
 curly_to_vector_brackets <- function(eqn, var_names) {
   # Curly brackets can be:
-  # - Indexers, e.g. "b{1}.length()"
+  # - Indexers, e.g., "b{1}.length()"
   # if it is adjacent to [a-zA-Z0-9] or {}, it's indexing
   # - Vectors
   # - Nested lists
@@ -455,7 +455,7 @@ convert_statement <- function(line, var_names) {
     stringr::regex("(?:^|(?<=\\W))then(?=(?:\\W|$))", ignore_case = TRUE), ""
   )
 
-  # To find statements (e.g. for, if), extract first and second word
+  # To find statements (e.g., for, if), extract first and second word
   words <- get_words(equation)
   first_word_orig <- ifelse(nrow(words) > 0, words[1, "word"], "")
   second_word_orig <- ifelse(nrow(words) > 1, words[2, "word"], "")
@@ -467,11 +467,11 @@ convert_statement <- function(line, var_names) {
   closing_statement <- ""
 
   if (first_word == "function") {
-    # A function declaration starts with function without brackets, e.g. Function Square(x).
+    # A function declaration starts with function without brackets, e.g., Function Square(x).
     # In R, the variable name needs to come BEFORE function, so switch statement and first word of equation
     statement <- second_word_orig
 
-    # When there is no second word, i.e. function(), don't change the equation
+    # When there is no second word, i.e., function(), don't change the equation
     if (nzchar(second_word_orig)) {
       equation <- stringr::str_replace(equation, sprintf("%s ", first_word_orig), "") |>
         stringr::str_replace(second_word_orig, " <- function") # Remove statement # Add equals sign
@@ -967,7 +967,7 @@ convert_builtin_functions_IM <- function(type, name, eqn, var_names) {
         bind_rows_(idx_df)
       )
 
-      # Double matches in case of functions that don't need brackets, e.g. Days() -> select one with longest end, as we want to match Days() over Days
+      # Double matches in case of functions that don't need brackets, e.g., Days() -> select one with longest end, as we want to match Days() over Days
       idx_df <- idx_df[order(idx_df[["insightmaker"]], idx_df[["start"]], -idx_df[["end"]]), ]
       idx_df <- idx_df[!duplicated(idx_df[, c("insightmaker", "start")]), ]
       rownames(idx_df) <- NULL
@@ -1156,7 +1156,7 @@ convert_builtin_functions_IM <- function(type, name, eqn, var_names) {
           if (nrow(add_var)) {
             add_vars <- rbind(add_vars, add_var)
 
-            # Add newly created variables to names_df so that they are safe from replacement, e.g. if a variable contains the word "Time"
+            # Add newly created variables to names_df so that they are safe from replacement, e.g., if a variable contains the word "Time"
             # add_names <- vapply(add_code, names, character(1), USE.NAMES = FALSE)
             var_names <- c(var_names, add_var[["name"]])
           }
@@ -1256,7 +1256,7 @@ extract_prefunc_args <- function(eqn, var_names, start_func, names_with_brackets
       prefunc_brackets[["end"]]
     )
   } else {
-    # If there are no brackets around the argument preceding . (e.g. .length()), extract string before
+    # If there are no brackets around the argument preceding . (e.g., .length()), extract string before
     idx_prefunc_arg <- stringr::str_locate(
       stringr::str_sub(eqn, 1, start_func - 1),
       "[\\w\\.\\[\\]]+$" # Don't match square brackets as we don't only want to extract indexers
@@ -1347,7 +1347,7 @@ conv_step <- function(func, arg, match_idx, name, # Default settings of Insight 
     as.character(match_idx)
   )
   replacement <- sprintf("[%s](%s)", func_name_str, P[["time_name"]])
-  # Step(Start, Height=1), e.g. Step({2 Years}, 100)
+  # Step(Start, Height=1), e.g., Step({2 Years}, 100)
 
   # Clean start time by converting to simulation time units
   start_t_step <- arg[1]
@@ -1375,7 +1375,7 @@ conv_step <- function(func, arg, match_idx, name, # Default settings of Insight 
 #' Convert Insight Maker's Pulse() function to R
 #'
 #' @param h_pulse Height of pulse, defaults to 1
-#' @param w_pulse Width of pulse in duration (i.e. time), defaults to 0 to indicate an instantaneous pulse
+#' @param w_pulse Width of pulse in duration ( time), defaults to 0 to indicate an instantaneous pulse
 #' @param repeat_interval Interval at which to repeat pulse, defaults to "NULL" to indicate no repetition
 #'
 #' @returns List with transformed eqn and list with additional R code needed to make the eqn function
@@ -1398,7 +1398,7 @@ conv_pulse <- function(func,
   )
   replacement <- sprintf("[%s](%s)", func_name_str, P[["time_name"]])
 
-  # Pulse(Time, Height, Width=0, Repeat=-1), e.g. Pulse({5 Years}, 10, 1, {10 Years})
+  # Pulse(Time, Height, Width=0, Repeat=-1), e.g., Pulse({5 Years}, 10, 1, {10 Years})
 
   # Start time
   start_t_pulse <- arg[1]
@@ -1449,7 +1449,7 @@ conv_ramp <- function(func, arg, match_idx, name, # Default settings of Insight 
   )
   replacement <- sprintf("[%s](%s)", func_name_str, P[["time_name"]])
 
-  # Ramp(Start, Finish, Height=1), e.g. Ramp({3 Years}, {8 Years}, -50)
+  # Ramp(Start, Finish, Height=1), e.g., Ramp({3 Years}, {8 Years}, -50)
 
   # Start and end time
   start_t_ramp <- arg[1]

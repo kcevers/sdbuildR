@@ -248,7 +248,7 @@ compile_funcs <- function(object, language) {
 }
 
 
-#' Compile script for static variables, i.e. initial conditions, functions, and parameters
+#' Compile script for static variables, i.e., initial conditions, functions, and parameters
 #'
 #' @inheritParams compile
 #' @inheritParams order_equations

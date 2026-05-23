@@ -17,7 +17,7 @@ stock(object, name, eqn = 0, label = name, doc = "", non_negative = FALSE)
 
 \item{doc}{Description of variable. Defaults to \code{""} (no description).}
 
-\item{non_negative}{If TRUE, variable is enforced to be non-negative (i.e. strictly 0 or positive). Defaults to \code{FALSE}.}
+\item{non_negative}{If TRUE, variable is enforced to be non-negative (i.e., strictly 0 or positive). Defaults to \code{FALSE}.}
 }
 \value{
 A stock-and-flow model object of class \code{\link{sdbuildR}}
@@ -36,9 +36,9 @@ sfm <- sdbuildR() |>
 
 # Multiple stocks
 sfm <- sdbuildR() |>
-  stock(susceptible, eqn = 999, label = "Susceptible") |>
-  stock(infected, eqn = 1, label = "Infected") |>
-  stock(recovered, eqn = 0, label = "Recovered")
+  stock(susceptible, eqn = 999, label = "susceptible") |>
+  stock(infected, eqn = 1, label = "infected") |>
+  stock(recovered, eqn = 0, label = "recovered")
 
 }
 \seealso{

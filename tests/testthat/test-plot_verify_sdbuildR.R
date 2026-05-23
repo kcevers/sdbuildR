@@ -1,36 +1,3 @@
-# Local helpers
-
-make_verify_1cond <- function(n = 1L) {
-  silence(
-    make_verifiable_sfm() |>
-      unit_test(label = "S non-negative", expr = all(S >= 0)) |>
-      verify(return_sims = TRUE, n = n)
-  )
-}
-
-make_verify_2cond <- function() {
-  silence(
-    make_verifiable_sfm() |>
-      unit_test(label = "S non-negative", expr = all(S >= 0)) |>
-      unit_test(
-        label = "S constant at zero rate",
-        expr = all(diff(S) == 0),
-        conditions = list(rate = 0)
-      ) |>
-      verify(return_sims = TRUE)
-  )
-}
-
-make_verify_with_fail <- function() {
-  silence(
-    make_verifiable_sfm() |>
-      unit_test(label = "S non-negative", expr = all(S >= 0)) |>
-      unit_test(label = "S always zero",  expr = all(S == 0)) |>
-      verify(return_sims = TRUE)
-  )
-}
-
-
 # ============================================================================
 # METHOD EXISTENCE + GUARD TESTS
 # ============================================================================

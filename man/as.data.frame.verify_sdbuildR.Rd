@@ -11,7 +11,7 @@
   nr = NULL,
   label = NULL,
   ignore_case = TRUE,
-  status = NULL,
+  status = c("pass", "fail", "error", "skip"),
   ...
 )
 }
@@ -33,6 +33,8 @@ Can be combined with \code{nr} (intersection).}
 \item{ignore_case}{Logical; whether \code{label} matching is case-insensitive.
 Default \code{TRUE}.}
 
+\item{status}{Optional character vector of test statuses to include (e.g., \code{c("fail", "error")}). Defaults to \code{c("pass", "fail", "error", "skip")} (include all).}
+
 \item{...}{Additional arguments (unused).}
 }
 \value{
@@ -45,7 +47,7 @@ Returns one row per unit test with columns \code{nr}, \code{label}, \code{status
 }
 \examples{
 sfm <- sdbuildR("SIR") |>
-  unit_test(expr = all(Susceptible >= 0))
+  unit_test(expr = all(susceptible >= 0))
 res <- verify(sfm)
 as.data.frame(res)
 }

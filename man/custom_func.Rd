@@ -30,19 +30,19 @@ throughout a stock-and-flow model. \code{\link[=custom_func]{custom_func()}} add
 # Simple function
 sfm <- sdbuildR() |>
   custom_func(double, eqn = "function(x) x * 2") |>
-  update(a, constant, eqn = double(2))
+  constant(a, eqn = double(2))
 
 # Function with defaults
 sfm <- sdbuildR() |>
   custom_func(scale, eqn = "function(x, factor = 10) x * factor") |>
-  update(b, constant, eqn = scale(2))
+  constant(b, eqn = scale(2))
 
 # If the logistic() function did not exist, you could create it yourself:
 sfm <- sdbuildR() |>
   custom_func(my_logistic, eqn = "function(x, slope = 1, midpoint = .5){
    1 / (1 + exp(-slope*(x-midpoint)))
  }") |>
-  update(c_, constant, eqn = my_logistic(2, slope = 50))
+  constant(c_, eqn = my_logistic(2, slope = 50))
 
 }
 \seealso{

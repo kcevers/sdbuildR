@@ -117,7 +117,7 @@ sfm <- import_desolve(
   name   = "SIR epidemic"
 )
 
-summary(sfm)
+print(sfm)
 ```
 
 ```{r}
@@ -135,12 +135,31 @@ any supported format.
 ## Exporting models
 
 `export_model()` converts an `sdbuildR` object to another format. The currently
-supported export format is `psychomodels`.
+supported export formats are 'sdbuildR` to generate the build code of the model, `deSolve` to return a complete script for simulating a model with `deSolve`, and `psychomodels`.
 
 Use `file = "path"` to write directly to disk; omit `file` to return the
 result in memory.
 
 ---
+
+### Deconstructing a model
+
+To understand how a model was built, use `export_model()`. This will return the R code used to build the model, omitting default specifications.
+
+```{r}
+export_model(sfm, format = "sdbuildR")
+```
+
+
+### deSolve script
+
+To generate a complete script for simulating a model with `deSolve`, use `format = "deSolve"`. This will return a character string containing the R code for the model function, parameter and initial value definitions, and simulation code.
+
+```{r}
+script <- export_model(sfm, format = "deSolve")
+```
+
+
 
 ### Export to Psychomodels
 

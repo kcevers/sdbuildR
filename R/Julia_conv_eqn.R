@@ -39,7 +39,7 @@ convert_equations_julia_wrapper <- function(object) {
 
   # # Add accumulated auxiliary and graphical function variables to the model
   if (nrow(accumulated_add_vars)) {
-    # Some Insight Maker columns may be missing, e.g. eqn_insightmaker
+    # Some Insight Maker columns may be missing, e.g., eqn_insightmaker
     missing_cols <- setdiff(colnames(object[["variables"]]), colnames(accumulated_add_vars))
     for (col in missing_cols) {
       accumulated_add_vars[[col]] <- NA
@@ -165,13 +165,13 @@ convert_equations_julia <- function(type, name, eqn, var_names) {
 
     # Step 2. Syntax (bracket types, destructuring assignment, time units {1 Month})
     eqn <- eqn |>
-      # Translate vector brackets, i.e. c() -> []
+      # Translate vector brackets, i.e.,c() -> []
       vector_to_square_brackets(var_names) |>
       # Ensure integers are floats
-      # Julia can throw InexactError errors in case e.g. an initial condition is defined as an integer
+      # Julia can throw InexactError errors in case e.g., an initial condition is defined as an integer
       replace_digits_with_floats(var_names)
 
-    # # Destructuring assignment, e.g. x, y <- {a, b}
+    # # Destructuring assignment, e.g., x, y <- {a, b}
     # **to do
     # conv_destructuring_assignment()
 
@@ -184,7 +184,7 @@ convert_equations_julia <- function(type, name, eqn, var_names) {
       # conv_addition_of_strings(var_names) |>
       # # Replace logical operators (true, false, = (but not if in function()))
       replace_op_julia(var_names) #|>
-    # # Replace range, e.g. range(0, 10, 2) -> 0:2:10
+    # # Replace range, e.g., range(0, 10, 2) -> 0:2:10
     # replace_range_julia(var_names)
 
     # Step 5. Replace R functions to Julia functions
@@ -908,7 +908,7 @@ convert_builtin_functions_julia <- function(type, name, eqn, var_names) {
 #'
 #' @inheritParams sort_args
 #' @param julia_func String with Julia function
-#' @param R_func String with R function, e.g. "rnorm()".
+#' @param R_func String with R function, e.g., "rnorm()".
 #' @param distribution String with Julia distribution call
 #'
 #' @returns String with Julia code
@@ -923,7 +923,7 @@ conv_distribution <- function(arg, R_func, julia_func, distribution) {
 #' Convert sequence in R to Julia
 #'
 #' @inheritParams sort_args
-#' @param R_func String with R function, e.g. "seq", "seq_along"
+#' @param R_func String with R function, e.g., "seq", "seq_along"
 #' @param julia_func String with Julia function
 #'
 #' @returns String with Julia code

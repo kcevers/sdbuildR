@@ -79,23 +79,23 @@ an error is thrown if an identical \code{expr} already exists on another test.
 
 \examples{
 sfm <- sdbuildR("SIR") |>
-  unit_test(expr = all(Susceptible >= 0))
+  unit_test(expr = all(susceptible >= 0))
 
 # Run unit tests
 verify(sfm)
 
 # Add test with label
 sfm <- unit_test(sfm,
-  label = "Recovered increases",
-  expr = all(diff(Recovered) >= 0)
+  label = "recovered increases",
+  expr = all(diff(recovered) >= 0)
 )
 verify(sfm)
 
 # Add test with conditions
 sfm <- unit_test(sfm,
-  expr = all(Infected == Infected[1]),
-  label = "When Beta is zero, no one gets infected",
-  conditions = list(Beta = 0)
+  expr = all(infected == infected[1]),
+  label = "When infection_rate is zero, no one gets infected",
+  conditions = list(infection_rate = 0)
 )
 verify(sfm)
 
@@ -108,8 +108,8 @@ verify(sfm)
 
 # Modify test by label, e.g., to change the expression
 sfm <- unit_test(sfm,
-  label = "Recovered increases over time",
-  expr = all(diff(Recovered) > -1)
+  label = "recovered increases over time",
+  expr = all(diff(recovered) > -1)
 )
 verify(sfm)
 

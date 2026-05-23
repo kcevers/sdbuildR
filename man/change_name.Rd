@@ -21,10 +21,10 @@ Change the name of a variable throughout the model. This updates the data frame 
 }
 \examples{
 sfm <- sdbuildR("SIR")
-sfm <- change_name(sfm, c(Susceptible, Infected, Recovered),
+sfm <- change_name(sfm, c(susceptible, infected, recovered),
   new_name = c(S, I, R)
 )
-summary(sfm)
+print(sfm)
 
 # References to old names are updated
 as.data.frame(sfm, type = "flow", properties = c("name", "eqn", "to", "from"))

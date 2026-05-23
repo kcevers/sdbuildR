@@ -24,12 +24,13 @@ A stock-and-flow model object of class \code{\link[=sdbuildR]{sdbuildR}}
 Remove variable(s) from a stock-and-flow model. All references in flow connections and graphical function sources are also removed. A warning will be thrown if any lingering references to the removed name remain in the model.
 }
 \examples{
-sfm <- sdbuildR() |>
-  update(x, stock)
-as.data.frame(sfm)
+# Add stock
+sfm <- sdbuildR() |> stock(x)
+print(sfm)
 
+# Remove stock
 sfm <- discard(sfm, x)
-as.data.frame(sfm)
+print(sfm)
 }
 \seealso{
 \code{\link[=update]{update()}}, \code{\link[=change_name]{change_name()}}

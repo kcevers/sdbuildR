@@ -11,7 +11,7 @@
 #' recursively processes each element. For other calls, deparses to string.
 #'
 #' Use `!!` (bang-bang injection) to pass the value of a variable instead of
-#' its name: `update(sfm, !!my_var, stock)`.
+#' its name: `update(sfm, !!my_var)`.
 #'
 #' @param expr Expression captured by [rlang::enexpr()].
 #'   Can be NULL, a character string, a number, a symbol, or a call.
@@ -734,9 +734,9 @@ update_variable_row <- function(object, type, name,
 #'
 #' # Multiple stocks
 #' sfm <- sdbuildR() |>
-#'   stock(susceptible, eqn = 999, label = "Susceptible") |>
-#'   stock(infected, eqn = 1, label = "Infected") |>
-#'   stock(recovered, eqn = 0, label = "Recovered")
+#'   stock(susceptible, eqn = 999, label = "susceptible") |>
+#'   stock(infected, eqn = 1, label = "infected") |>
+#'   stock(recovered, eqn = 0, label = "recovered")
 #'
 stock <- function(object, name,
                   eqn = 0,
@@ -896,19 +896,19 @@ aux <- auxiliary
 #' # Simple function
 #' sfm <- sdbuildR() |>
 #'   custom_func(double, eqn = "function(x) x * 2") |>
-#'   update(a, constant, eqn = double(2))
+#'   constant(a, eqn = double(2))
 #'
 #' # Function with defaults
 #' sfm <- sdbuildR() |>
 #'   custom_func(scale, eqn = "function(x, factor = 10) x * factor") |>
-#'   update(b, constant, eqn = scale(2))
+#'   constant(b, eqn = scale(2))
 #'
 #' # If the logistic() function did not exist, you could create it yourself:
 #' sfm <- sdbuildR() |>
 #'   custom_func(my_logistic, eqn = "function(x, slope = 1, midpoint = .5){
 #'    1 / (1 + exp(-slope*(x-midpoint)))
 #'  }") |>
-#'   update(c_, constant, eqn = my_logistic(2, slope = 50))
+#'   constant(c_, eqn = my_logistic(2, slope = 50))
 #'
 custom_func <- function(object, name, eqn = 0,
                         label = name, doc = "") {
@@ -1108,8 +1108,8 @@ lookup <- function(object, name,
 #'
 #' ```r
 #' # These are equivalent:
-#' update(sfm, "population", "stock", eqn = "birth_rate * 0.1")
-#' update(sfm, population, stock, eqn = birth_rate * 0.1)
+#' stock(sfm, "population", eqn = "birth_rate * 0.1")
+#' stock(sfm, population, eqn = birth_rate * 0.1)
 #' ```
 #'
 #' To inject the value of a variable (rather than its name), use the
@@ -1117,7 +1117,7 @@ lookup <- function(object, name,
 #'
 #' ```r
 #' my_name <- "population"
-#' update(sfm, !!my_name, stock, eqn = 100)
+#' stock(sfm, !!my_name, eqn = 100)
 #' ```
 #'
 #' The `label`, `doc`,  `non_negative`, `xpts`, `ypts`,
@@ -1131,7 +1131,7 @@ lookup <- function(object, name,
 #' @param eqn Equation (or initial value in the case of stocks). Accepts a bare expression (e.g., `a * b + 1`), a string (`"a * b + 1"`), or a numeric value. Use `!!` to inject from a variable. Defaults to `0`.
 #' @param to Target of flow. Accepts a bare symbol or string. Must be a stock in the model. Defaults to `NULL` to indicate no target.
 #' @param from Source of flow. Accepts a bare symbol or string. Must be a stock in the model. Defaults to `NULL` to indicate no source.
-#' @param non_negative If TRUE, variable is enforced to be non-negative (i.e. strictly 0 or positive). Defaults to `FALSE`.
+#' @param non_negative If TRUE, variable is enforced to be non-negative (i.e., strictly 0 or positive). Defaults to `FALSE`.
 #' @param xpts Only for graphical functions: vector of x-domain points. Must be of the same length as ypts.
 #' @param ypts Only for graphical functions: vector of y-domain points. Must be of the same length as xpts.
 #' @param source Only for graphical functions: name of the variable which will serve as the input to the graphical function. Accepts a bare symbol or string. Defaults to `NULL`.
@@ -1165,33 +1165,33 @@ lookup <- function(object, name,
 #'
 #' # First initialize an empty model
 #' sfm <- sdbuildR()
-#' summary(sfm)
+#' print(sfm)
 #' \dontshow{
 #' sfm <- sim_settings(sfm, save_at = .5)
 #' }
 #'
 #' # Add two stocks. Specify their initial values in the "eqn" property
 #' # and their plotting label.
-#' sfm <- update(sfm, predator, stock, eqn = 10, label = "Predator") |>
-#'   update(prey, stock, eqn = 50, label = "Prey")
+#' sfm <- stock(sfm, predator, eqn = 10, label = "Predator") |>
+#'   stock(prey, eqn = 50, label = "Prey")
 #'
 #'
 #' # Add four flows: the births and deaths of both the predators and prey. The
 #' # "eqn" property of flows represents the rate of the flow. In addition, we
 #' # specify which stock the flow is coming from ("from") or flowing to ("to").
-#' sfm <- update(sfm, predator_births, flow,
+#' sfm <- flow(sfm, predator_births,
 #'   eqn = delta * prey * predator,
 #'   label = "Predator Births", to = predator
 #' ) |>
-#'   update(predator_deaths, flow,
+#'   flow(predator_deaths,
 #'     eqn = gamma * predator,
 #'     label = "Predator Deaths", from = predator
 #'   ) |>
-#'   update(prey_births, flow,
+#'   flow(prey_births,
 #'     eqn = alpha * prey,
 #'     label = "Prey Births", to = prey
 #'   ) |>
-#'   update(prey_deaths, flow,
+#'   flow(prey_deaths,
 #'     eqn = beta * prey * predator,
 #'     label = "Prey Deaths", from = prey
 #'   )
@@ -1199,7 +1199,7 @@ lookup <- function(object, name,
 #'
 #' # The flows make use of four other variables: "delta", "gamma", "alpha", and
 #' # "beta". Define these as constants in a vectorized manner for efficiency.
-#' sfm <- update(sfm, c(delta, gamma, alpha, beta), constant,
+#' sfm <- constant(sfm, c(delta, gamma, alpha, beta),
 #'   eqn = c(.025, .5, .5, .05),
 #'   label = c("Delta", "Gamma", "Alpha", "Beta"),
 #'   doc = c(
@@ -1238,10 +1238,10 @@ lookup <- function(object, name,
 #'
 #' # To inject the value of an R variable, use !! (bang-bang)
 #' my_name <- "growth"
-#' sfm <- update(sfm, !!my_name, constant, eqn = 0.1)
+#' sfm <- constant(sfm, !!my_name, eqn = 0.1)
 #'
-#' # Strings still work for backward compatibility
-#' sfm <- update(sfm, "growth", eqn = 0.2)
+#' # Strings also work
+#' sfm <- constant(sfm, "growth", eqn = 0.2)
 #'
 update.sdbuildR <- function(object, name, type = NULL,
                             eqn = 0,
@@ -1272,12 +1272,11 @@ update.sdbuildR <- function(object, name, type = NULL,
   }
 
   # --- NSE: capture and deparse expressions before evaluation ----------------
-  # Allows bare symbols and expressions: update(object, pop, stock, eqn = a * b)
-  # Use !! for injection from variables: update(object, !!my_name, stock)
+  # Allows bare symbols and expressions: update(object, pop, eqn = a * b)
+  # Use !! for injection from variables: update(object, !!my_name, "stock")
   name_expr <- rlang::enexpr(name)
   .check_name_not_sdbuildR(name_expr, rlang::caller_env())
   name <- .expr_to_char(name_expr)
-  if (!missing(type)) type <- .expr_to_char(rlang::enexpr(type))
   if (!missing(eqn)) eqn <- .expr_to_char(rlang::enexpr(eqn))
   if (!missing(to)) to <- .expr_to_char(rlang::enexpr(to))
   if (!missing(from)) from <- .expr_to_char(rlang::enexpr(from))
@@ -1567,10 +1566,10 @@ add_from_df <- function(object, df) {
 #' @export
 #' @examples
 #' sfm <- sdbuildR("SIR")
-#' sfm <- change_name(sfm, c(Susceptible, Infected, Recovered),
+#' sfm <- change_name(sfm, c(susceptible, infected, recovered),
 #'   new_name = c(S, I, R)
 #' )
-#' summary(sfm)
+#' print(sfm)
 #'
 #' # References to old names are updated
 #' as.data.frame(sfm, type = "flow", properties = c("name", "eqn", "to", "from"))
@@ -1590,7 +1589,7 @@ change_name <- function(object, name, new_name) {
     missing_arg("new_name")
   }
 
-  # NSE: allow bare symbols, e.g. change_name(object, old, new_name = new)
+  # NSE: allow bare symbols, e.g., change_name(object, old, new_name = new)
   name_expr <- rlang::enexpr(name)
   .check_name_not_sdbuildR(name_expr, rlang::caller_env())
   name <- .expr_to_char(name_expr)
@@ -1645,7 +1644,7 @@ change_name <- function(object, name, new_name) {
 #' @inheritParams update.sdbuildR
 #' @param new_type New variable type; one of 'stock', 'flow', 'constant', 'aux', 'gf', or 'func'. Character vector of the same length as name. If NULL, types will be validated but not changed.
 #'
-#' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR()] with the variable type changed throughout the model. Note that changing the type may result in changes to other properties (e.g. a flow must have "to" and/or "from" properties, so these will be added if not already present), and may require changes to the equations of connected variables.
+#' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR()] with the variable type changed throughout the model. Note that changing the type may result in changes to other properties (e.g., a flow must have "to" and/or "from" properties, so these will be added if not already present), and may require changes to the equations of connected variables.
 #' @seealso [update()]
 #' @concept build
 #' @export
@@ -1673,7 +1672,7 @@ change_type <- function(object, name, new_type) {
     missing_arg("new_type")
   }
 
-  # NSE: allow bare symbols, e.g. change_type(object, delta, new_type = aux)
+  # NSE: allow bare symbols, e.g., change_type(object, delta, new_type = aux)
   name_expr <- rlang::enexpr(name)
   .check_name_not_sdbuildR(name_expr, rlang::caller_env())
   name <- .expr_to_char(name_expr)
@@ -1797,14 +1796,15 @@ check_var_existence <- function(name, var_names) {
 #' @export
 #' @concept build
 #' @examples
-#' sfm <- sdbuildR() |>
-#'   update(x, stock)
-#' as.data.frame(sfm)
+#' # Add stock
+#' sfm <- sdbuildR() |> stock(x)
+#' print(sfm)
 #'
+#' # Remove stock
 #' sfm <- discard(sfm, x)
-#' as.data.frame(sfm)
+#' print(sfm)
 discard <- function(object, name, remove_references = c("to", "from", "source", "unit_test")) {
-  # NSE: allow bare symbols, e.g. discard(object, population)
+  # NSE: allow bare symbols, e.g., discard(object, population)
   name_expr <- rlang::enexpr(name)
   .check_name_not_sdbuildR(name_expr, rlang::caller_env())
   name <- .expr_to_char(name_expr)

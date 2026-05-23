@@ -616,7 +616,6 @@ as.data.frame.sdbuildR <- function(x,
                                    name = NULL, type = NULL,
                                    properties = NULL, ...) {
   name <- .expr_to_char(rlang::enexpr(name))
-  type <- .expr_to_char(rlang::enexpr(type))
   check_sdbuildR(x)
   sfm <- x
   rm(x)
@@ -745,7 +744,7 @@ as.data.frame.sdbuildR <- function(x,
   df <- df[, new_cols, drop = FALSE]
 
   # Make sure that for all columns, at least one row is not NA or empty
-  # This is especially necessary when only interested in one type, e.g. func
+  # This is especially necessary when only interested in one type, e.g., func
 
   # Convert empty strings to NA and keep columns with at least one non-NA
   df[] <- lapply(df, function(x) {

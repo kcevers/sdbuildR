@@ -14,9 +14,9 @@ import_desolve(model, params, init, times, method = "lsoda", name = NULL)
 \item{init}{Named numeric vector of initial state values (stocks).}
 
 \item{times}{Numeric vector of time points. Must be evenly spaced
-(e.g. from \code{seq(start, stop, by = dt)}).}
+(e.g., from \code{seq(start, stop, by = dt)}).}
 
-\item{method}{Integration method. Defaults to \code{"lsoda"}. See \code{\link[=solvers]{solvers()}}.}
+\item{method}{Integration method. Defaults to \code{"lsoda"}. See \code{\link[=sim_methods]{sim_methods()}}.}
 
 \item{name}{Optional model name. Character scalar.}
 }

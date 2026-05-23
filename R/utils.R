@@ -1,3 +1,19 @@
+#' @noRd
+.clean_which <- function(which) {
+  which <- trimws(tolower(which))
+  switch(which,
+    sims = ,
+    sim  = "sims",
+    summary = ,
+    summ    = ,
+    sum     = "summary",
+    cli::cli_abort(c(
+      "Invalid {.arg which} value.",
+      "x" = "Must be {.code 'summary'} or {.code 'sims'}, not {.val {which}}."
+    ))
+  )
+}
+
 #' Set column names
 #' @noRd
 set_colnames <- `colnames<-`
@@ -629,19 +645,18 @@ validate_sim_vars <- function(object, vars) {
     cli::cli_abort(c(
       "x" = "Invalid {.arg vars} argument.",
       "i" = "The {.arg vars} argument cannot be empty.",
-      ">" = "Provide one or more variable names, e.g. {.code vars = c('S', 'I')}"
+      ">" = "Provide one or more variable names, e.g., {.code vars = c('S', 'I')}"
     ))
   }
 
-  names_df <- get_names(object)
-  allowed <- names_df[names_df[["type"]] %in% c("stock", "flow", "aux"), "name", drop = TRUE]
-  idx <- !(vars %in% allowed)
-  if (any(idx)) {
+  # Check that all vars are in model variables
+  model_vars <- get_model_var(object)
+  invalid_vars <- setdiff(vars, model_vars)
+  if (length(invalid_vars) > 0) {
     cli::cli_abort(c(
-      "x" = "Invalid variables in {.arg vars}.",
-      "i" = "Unsupported or unknown variable(s): {paste0(vars[idx], collapse = ', ')}.",
-      "i" = "Only time-varying variables ({.code stock}, {.code flow}, {.code aux}) are allowed.",
-      ">" = "Available variables: {paste0(allowed, collapse = ', ')}"
+      "x" = "Invalid variable name{?s} in {.arg vars}: {.val {invalid_vars}}.",
+      "i" = "The following variable names are not in the model: {.val {invalid_vars}}.",
+      ">" = "Available variable names are: {.val {model_vars}}."
     ))
   }
 
@@ -698,7 +713,7 @@ safe_convert <- function(x, target_class) {
 #' @noRd
 #'
 parse_args <- function(bracket_arg) {
-  # Split arguments by comma; in order to not split arguments which contain a comma (e.g. c(1,2,3)), find all brackets and quotation marks, and don't include commas within these
+  # Split arguments by comma; in order to not split arguments which contain a comma (e.g., c(1,2,3)), find all brackets and quotation marks, and don't include commas within these
 
   # Find indices of commas
   idxs_commas <- unname(stringr::str_locate_all(bracket_arg, ",")[[1]][, 1])
@@ -792,7 +807,7 @@ sort_args <- function(arg, func_name, default_arg = NULL, var_names = NULL) {
       ))
     }
 
-    # Add names to unnamed arguments; note that R can mix named and default arguments, e.g. runif(max = 10, 20, min = 1). Julia cannot if they're not keyword arguments!
+    # Add names to unnamed arguments; note that R can mix named and default arguments, e.g., runif(max = 10, 20, min = 1). Julia cannot if they're not keyword arguments!
     idx <- which(!contains_name & nzchar(values_arg)) # Find unnamed arguments which have values
     standard_order <- names(default_arg)
     if (length(idx) > 0 && length(standard_order) > 0) {
@@ -801,7 +816,7 @@ sort_args <- function(arg, func_name, default_arg = NULL, var_names = NULL) {
     }
 
     # Check for missing obligatory arguments
-    # obligatory arguments without a default (class == "name" or is.symbol, e.g. n in formals(rnorm) is a symbol)
+    # obligatory arguments without a default (class == "name" or is.symbol, e.g., n in formals(rnorm) is a symbol)
     obligatory_args <- unlist(lapply(default_arg, is.symbol))
     idx <- !names(default_arg[obligatory_args]) %in% names_arg
 
@@ -967,7 +982,7 @@ get_seq_exclude <- function(eqn,
 #' @noRd
 #'
 get_words <- function(eqn) {
-  # An existing function stringr::word() extracts words but treats e.g. "return(a)" as one word
+  # An existing function stringr::word() extracts words but treats e.g., "return(a)" as one word
   idxs_word <- stringr::str_locate_all(eqn, "([a-zA-Z_\\.0-9]+)")[[1]] |> as.data.frame()
 
   if (nrow(idxs_word) > 0) idxs_word[["word"]] <- stringr::str_sub(eqn, idxs_word[["start"]], idxs_word[["end"]])

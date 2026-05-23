@@ -23,8 +23,8 @@ validate_plot_params <- function(showlegend = NULL,
                                  wrap_width = NULL) {
   if (!is.null(showlegend) && !is.logical(showlegend)) {
     cli::cli_abort(c(
-      "Invalid {.arg showlegend} argument.",
-      "x" = "The {.arg showlegend} argument must be {.cls logical}.",
+      "x" = "Invalid {.arg showlegend} argument.",
+      "i" = "The {.arg showlegend} argument must be {.cls logical}.",
       ">" = "Use {.code TRUE} or {.code FALSE}."
     ))
   }
@@ -32,8 +32,7 @@ validate_plot_params <- function(showlegend = NULL,
   if (!is.null(vars)) {
     if (!is.character(vars)) {
       cli::cli_abort(c(
-        "Invalid {.arg vars} argument.",
-        "x" = "The {.arg vars} argument must be {.cls character}.",
+        "x" = "Invalid {.arg vars} argument.",
         "i" = "Received: {.cls {typeof(vars)}}.",
         ">" = "Provide a character vector of variable names."
       ))
@@ -41,8 +40,7 @@ validate_plot_params <- function(showlegend = NULL,
 
     if (length(vars) == 0) {
       cli::cli_abort(c(
-        "Empty {.arg vars} vector.",
-        "x" = "The {.arg vars} argument cannot be of length zero.",
+        "x" = "Empty {.arg vars} vector.",
         ">" = "Provide at least one variable name."
       ))
     }
@@ -50,42 +48,42 @@ validate_plot_params <- function(showlegend = NULL,
 
   if (!is.null(palette) && !is.character(palette)) {
     cli::cli_abort(c(
-      "Invalid {.arg palette} argument.",
-      "x" = "The {.arg palette} argument must be {.cls character}.",
+      "x" = "Invalid {.arg palette} argument.",
+      "i" = "The {.arg palette} argument must be {.cls character}.",
       ">" = "Use {.code hcl.pals()} to see available palettes."
     ))
   }
 
   if (!is.null(colors) && !is.character(colors)) {
     cli::cli_abort(c(
-      "Invalid {.arg colors} argument.",
-      "x" = "The {.arg colors} argument must be {.cls character}.",
+      "x" = "Invalid {.arg colors} argument.",
+      "i" = "The {.arg colors} argument must be {.cls character}.",
       ">" = "Provide a character vector of valid color names or hex codes."
     ))
   }
 
   if (!is.null(font_family) && !is.character(font_family)) {
     cli::cli_abort(c(
-      "Invalid {.arg font_family} argument.",
-      "x" = "The {.arg font_family} argument must be {.cls character}."
+      "x" = "Invalid {.arg font_family} argument.",
+      ">" = "The {.arg font_family} argument must be {.cls character}."
     ))
   }
 
   if (!is.null(font_size) && (!is.numeric(font_size) || font_size <= 0)) {
     cli::cli_abort(c(
-      "Invalid {.arg font_size} argument.",
-      "x" = "The {.arg font_size} argument must be a positive number."
+      "x" = "Invalid {.arg font_size} argument.",
+      ">" = "The {.arg font_size} argument must be a positive number."
     ))
   }
 
   if (!is.null(wrap_width) && (!is.numeric(wrap_width) || wrap_width <= 0)) {
     cli::cli_abort(c(
-      "Invalid {.arg wrap_width} argument.",
-      "x" = "The {.arg wrap_width} argument must be a positive integer."
+      "x" = "Invalid {.arg wrap_width} argument.",
+      ">" = "The {.arg wrap_width} argument must be a positive integer."
     ))
   }
 
-  return(invisible(TRUE))
+  invisible(TRUE)
 }
 
 
@@ -266,15 +264,17 @@ validate_vars_in_model <- function(vars, names_df, df = NULL, context = "model")
   if (!is.null(df) && "variable" %in% colnames(df)) {
     idx <- !(vars %in% df[["variable"]])
     if (any(idx)) {
-      cli::cli_abort(paste0(
+      cli::cli_abort(
+        c("x" = paste0(
         paste0(vars[idx], collapse = ", "),
         ifelse(sum(idx) == 1, " is", " are"),
-        " in the model, but not in the simulated data frame. Run simulate() with only_stocks = FALSE."
+        " in the model, but not in the simulated data frame."), 
+        ">" = "Run simulate() with only_stocks = FALSE."
       ))
     }
   }
 
-  return(invisible(TRUE))
+  invisible(TRUE)
 }
 
 
@@ -293,8 +293,8 @@ generate_colors <- function(n_vars, colors = NULL, palette = "Dark 2") {
   if (!is.null(colors)) {
     if (length(colors) < n_vars) {
       cli::cli_abort(c(
-        "Insufficient colors provided.",
-        "x" = "The {.arg colors} vector has length {.val {length(colors)}}, but {.val {n_vars}} variables need colors.",
+        "x" = "Insufficient colors provided.",
+        "i" = "The {.arg colors} vector has length {.val {length(colors)}}, but {.val {n_vars}} variables need colors.",
         ">" = "Provide at least {.val {n_vars}} colors or use {.arg palette} instead."
       ))
     }
@@ -305,7 +305,7 @@ generate_colors <- function(n_vars, colors = NULL, palette = "Dark 2") {
   n_colors <- max(n_vars, 3)
   generated <- grDevices::hcl.colors(n = n_colors, palette = palette)
 
-  return(generated[seq_len(n_vars)])
+  generated[seq_len(n_vars)]
 }
 
 
@@ -328,17 +328,18 @@ filter_variables <- function(vars, names_df, df, type_sim = "sim") {
 
   vars_in_df <- vars[vars %in% df[["variable"]]]
   vars_missing_df <- setdiff(vars, vars_in_df)
-  if (length(vars_missing_df) > 0) {
-    cli::cli_warn(c(
-      "Some requested variables are not available in the simulated data and will be ignored.",
-      "!" = "Missing: {paste0(vars_missing_df, collapse = ', ')}"
-    ))
-  }
 
   if (length(vars_in_df) == 0) {
     cli::cli_abort(c(
-      "No requested variables are available in the simulated data.",
+      "x" = "Requested variables are not available in the simulated data.",
       ">" = "Run {.fn simulate} with {.code only_stocks = FALSE} or choose different {.arg vars}."
+    ))
+  }
+
+  if (length(vars_missing_df) > 0) {
+    cli::cli_warn(c(
+      "!" = "Some requested variables are not available in the simulated data and will be ignored.",
+      "i" = "Missing: {paste0(vars_missing_df, collapse = ', ')}"
     ))
   }
 
@@ -346,7 +347,7 @@ filter_variables <- function(vars, names_df, df, type_sim = "sim") {
   names_df <- names_df[match(vars_in_df, names_df[["name"]]), , drop = FALSE]
   df <- df[df[["variable"]] %in% vars_in_df, , drop = FALSE]
 
-  return(list(names_df = names_df, df = df))
+  list(names_df = names_df, df = df)
 }
 
 

@@ -62,19 +62,14 @@ test_that("sim_settings() modifies seed", {
 
 test_that("sim_settings() stores vars and preserves order after deduplication", {
   sfm <- sdbuildR("SIR") |>
-    sim_settings(vars = c("Susceptible", "Infected", "Susceptible"))
+    sim_settings(vars = c("susceptible", "infected", "susceptible"))
 
-  expect_equal(sfm$sim_settings$vars, c("Susceptible", "Infected"))
-})
-
-test_that("sim_settings() rejects vars that are not time-varying", {
-  sfm <- sdbuildR("SIR")
-  expect_error(sim_settings(sfm, vars = c("Beta")), "time-varying")
+  expect_equal(sfm$sim_settings$vars, c("susceptible", "infected"))
 })
 
 test_that("sim_settings() rejects unknown vars", {
   sfm <- sdbuildR("SIR")
-  expect_error(sim_settings(sfm, vars = c("does_not_exist")), "Unsupported|unknown")
+  expect_error(sim_settings(sfm, vars = c("does_not_exist")), "Invalid variable name")
 })
 
 
@@ -323,7 +318,7 @@ test_that("sim_settings() default return_sims is FALSE on new model", {
 
 test_that("sim_settings(return_sims=TRUE) causes verify() to retain sims", {
   sfm <- sdbuildR("SIR") |>
-    unit_test(expr = all(Susceptible >= 0)) |>
+    unit_test(expr = all(susceptible >= 0)) |>
     sim_settings(return_sims = TRUE)
 
   res <- verify(sfm)

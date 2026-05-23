@@ -1,7 +1,7 @@
 #' Modify simulation specifications
 #'
 #' Simulation specifications are the settings that determine how the model is
-#' simulated, such as the integration method (i.e. solver), start and stop time,
+#' simulated, such as the integration method (i.e., solver), start and stop time,
 #' and timestep. Modify these specifications for an existing stock-and-flow model.
 #'
 #' @inheritParams update.sdbuildR
@@ -33,7 +33,6 @@
 #'   and auxiliaries. If `FALSE`, flows and auxiliaries are saved, which slows
 #'   down the simulation. Defaults to `TRUE`.
 #' @param vars Character vector of variable names to save in simulation output.
-#'   Can include only time-varying variables (`stock`, `flow`, `aux`).
 #'   If specified, this overrides `only_stocks`.
 #' @param keep_nonnegative_stock If `TRUE`, keeps original non-negativity setting
 #'   of stocks. Defaults to `FALSE`.
@@ -44,7 +43,7 @@
 #'
 #' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR]
 #' @concept simulate
-#' @seealso [solvers()]
+#' @seealso [sim_methods()]
 #' @export
 #'
 #' @examples
@@ -181,25 +180,15 @@ sim_settings <- function(object,
     old_language <- object[["sim_settings"]][["language"]]
     if (missing(method) && language != old_language) {
       # Method not specified: translate the current method to the new language
-      method <- solvers(object[["sim_settings"]][["method"]],
-        from = old_language, to = language,
-        show_info = TRUE
-      )
-      if (is.null(method[["translation"]])) {
-        method <- method[["alternatives"]][1]
-      } else {
-        method <- method[["translation"]]
-      }
+      method <- sim_methods(object[["sim_settings"]][["method"]], from = old_language, to = language)
       method_auto_set <- TRUE
     } else if (!missing(method)) {
       # Method specified: validate it against the new language
-      method <- solvers(method, from = language, show_info = TRUE)
-      method <- method[["name"]]
+      method <- sim_methods(method, from = language)
     }
   } else if (!missing(method)) {
     # Language not changing: validate method against the current language
-    method <- solvers(method, from = object[["sim_settings"]][["language"]], show_info = TRUE)
-    method <- method[["name"]]
+    method <- sim_methods(method, from = object[["sim_settings"]][["language"]])
   }
 
   # Seed must be NULL or an integer

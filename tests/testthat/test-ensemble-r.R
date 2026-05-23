@@ -78,7 +78,7 @@ test_that("ensemble() R returns all variables with only_stocks = FALSE", {
 
 test_that("ensemble() R filters outputs to vars", {
   sfm <- make_r_ensemble_random_sfm() |>
-    sim_settings(vars = c("Susceptible", "Infection_Rate"))
+    sim_settings(vars = c("susceptible", "new_infections"))
 
   sims <- silence(ensemble(sfm,
     n = 3,
@@ -87,8 +87,8 @@ test_that("ensemble() R filters outputs to vars", {
   ))
 
   expect_true(sims[["success"]])
-  expect_equal(sort(unique(sims[["summary"]][["variable"]])), c("Infection_Rate", "Susceptible"))
-  expect_equal(sort(unique(sims[["df"]][["variable"]])), c("Infection_Rate", "Susceptible"))
+  expect_equal(sort(unique(sims[["summary"]][["variable"]])), c("new_infections", "susceptible"))
+  expect_equal(sort(unique(sims[["df"]][["variable"]])), c("new_infections", "susceptible"))
 })
 
 test_that("ensemble() R returns correct n properties", {
@@ -124,7 +124,7 @@ test_that("ensemble() R custom quantiles", {
 test_that("ensemble() R works with single variable conditions", {
   sfm <- make_r_ensemble_random_sfm()
   sims <- silence(ensemble(sfm,
-    conditions = list("Effective_Contact_Rate" = c(1.5, 2, 2.5)),
+    conditions = list("contact_rate" = c(1.5, 2, 2.5)),
     n = 3, verbose = FALSE
   ))
   expect_true(sims[["success"]])
@@ -136,8 +136,8 @@ test_that("ensemble() R crossed design computes correct conditions", {
   n <- 2
   sims <- silence(ensemble(sfm,
     conditions = list(
-      "Effective_Contact_Rate" = c(1.5, 2.5),
-      "Delay" = c(1, 3)
+      "contact_rate" = c(1.5, 2.5),
+      "infection_rate" = c(1, 3)
     ),
     cross = TRUE, n = n, verbose = FALSE
   ))
@@ -154,8 +154,8 @@ test_that("ensemble() R non-crossed design pairs values", {
   nr_cond <- 3
   sims <- silence(ensemble(sfm,
     conditions = list(
-      "Effective_Contact_Rate" = c(1.5, 2, 2.5),
-      "Delay" = c(1, 2, 3)
+      "contact_rate" = c(1.5, 2, 2.5),
+      "infection_rate" = c(1, 2, 3)
     ),
     cross = FALSE, n = nr_sims, return_sims = TRUE, verbose = FALSE
   ))
@@ -170,8 +170,8 @@ test_that("ensemble() R conditions data frame is correct", {
   sfm <- make_r_ensemble_random_sfm()
   sims <- silence(ensemble(sfm,
     conditions = list(
-      "Effective_Contact_Rate" = c(1.5, 2, 2.5),
-      "Delay" = c(1, 2, 3)
+      "contact_rate" = c(1.5, 2, 2.5),
+      "infection_rate" = c(1, 2, 3)
     ),
     cross = FALSE, n = 2, return_sims = TRUE, verbose = FALSE
   ))
@@ -179,9 +179,9 @@ test_that("ensemble() R conditions data frame is correct", {
 
   cond_df <- as.data.frame(sims[["conditions"]])
   expect_equal(cond_df[["j"]], 1:3)
-  # Alphabetically sorted: Delay before Effective_Contact_Rate
-  expect_equal(cond_df[["Delay"]], c(1, 2, 3))
-  expect_equal(cond_df[["Effective_Contact_Rate"]], c(1.5, 2, 2.5))
+  # Alphabetically sorted: infection_rate before contact_rate
+  expect_equal(cond_df[["infection_rate"]], c(1, 2, 3))
+  expect_equal(cond_df[["contact_rate"]], c(1.5, 2, 2.5))
 })
 
 
@@ -197,11 +197,11 @@ test_that("ensemble() R result works with as.data.frame()", {
   sfm <- make_r_ensemble_random_sfm()
   sims <- silence(ensemble(sfm, n = 3, return_sims = TRUE, verbose = FALSE))
 
-  df_summary <- as.data.frame(sims, type = "summary")
+  df_summary <- as.data.frame(sims, which = "summary")
   expect_s3_class(df_summary, "data.frame")
   expect_true(all(c("j", "variable", "time", "mean", "median") %in% names(df_summary)))
 
-  df_sims <- as.data.frame(sims, type = "sims")
+  df_sims <- as.data.frame(sims, which = "sims")
   expect_s3_class(df_sims, "data.frame")
   expect_true(all(c("i", "j", "variable", "time", "value") %in% names(df_sims)))
 })
@@ -257,7 +257,7 @@ test_that("ensemble() R works with conditions and n = 1", {
   sfm <- make_r_ensemble_sfm()
   sims <- silence(ensemble(sfm,
     n = 1,
-    conditions = list("Effective_Contact_Rate" = c(1.5, 2.5)),
+    conditions = list("contact_rate" = c(1.5, 2.5)),
     verbose = FALSE
   ))
   expect_true(sims[["success"]])
@@ -290,7 +290,7 @@ test_that("ensemble() R uses parallel path when future plan has multiple workers
   on.exit(future::plan(future::sequential), add = TRUE)
 
   sfm <- sdbuildR("SIR") |>
-    update("Susceptible", eqn = "runif(1, 900, 1100)") |>
+    update("susceptible", eqn = "runif(1, 900, 1100)") |>
     sim_settings(language = "R", start = 0, stop = 10, dt = 0.1, save_at = 1)
 
   sims <- silence(ensemble(sfm, n = 4, verbose = FALSE))

@@ -124,17 +124,17 @@ test_that("discard() removes variables", {
 
 test_that("discard() removes discarded names from sim_settings vars", {
   sfm <- sdbuildR("SIR") |>
-    sim_settings(vars = c("Susceptible", "Infection_Rate"))
+    sim_settings(vars = c("susceptible", "new_infections"))
 
-  sfm2 <- discard(sfm, "Infection_Rate")
-  expect_equal(sfm2[["sim_settings"]][["vars"]], "Susceptible")
+  sfm2 <- discard(sfm, "new_infections")
+  expect_equal(sfm2[["sim_settings"]][["vars"]], "susceptible")
 })
 
 test_that("discard() clears sim_settings vars when all selected vars are removed", {
   sfm <- sdbuildR("SIR") |>
-    sim_settings(vars = c("Infection_Rate"))
+    sim_settings(vars = c("new_recoveries"))
 
-  sfm2 <- discard(sfm, "Infection_Rate")
+  sfm2 <- discard(sfm, "new_recoveries")
   expect_null(sfm2[["sim_settings"]][["vars"]])
 })
 
@@ -439,7 +439,7 @@ test_that("wrappers work in a pipe chain", {
 
 # ------------------------------------------------------------------------------
 # Tests for detecting accidentally doubly-passed model object
-# e.g. sfm |> constant(sfm, A) instead of sfm |> constant(A)
+# e.g., sfm |> constant(sfm, A) instead of sfm |> constant(A)
 # ------------------------------------------------------------------------------
 
 test_that("update() errors when model object passed as name", {

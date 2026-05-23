@@ -54,9 +54,11 @@ plot(sim)
 ```{r}
 sfm <- sfm |>
   unit_test(
-    expr = all(Susceptible >= 0)
+    expr = all(susceptible >= 0)
   ) 
 ```
+
+Note that a test expression can refer to any variable in the model. It is evaluated on the simulated output data, meaning that `susceptible` refers to the entire timeseries of the susceptible population (not just its initial value). 
 
 We assess our test with `verify()`, which simulates the model and assess the test on the output data:
 
@@ -64,12 +66,12 @@ We assess our test with `verify()`, which simulates the model and assess the tes
 verify(sfm)
 ```
 
-The test passed, so we can be confident that the susceptible population does not become negative under the current model specification. As shown above, a test label has been automatically generated. A custom label can also be provided:
+The test passed, so we can be confident that the susceptible population does not become negative under the current model specification. As shown above, a test label has been automatically generated. A custom label can also be provided, which we demonstrate with a test that checks that the total population is conserved (i.e., the sum of susceptible, infected, and recovered equals the total population at all times):
 
 ```{r}
 sfm <- sfm |>
   unit_test(
-    expr = all(abs(Susceptible + Infected + Recovered - Total_Population) < 1e-8),
+    expr = all(abs(susceptible + infected + recovered - total_population) < 1e-8),
     label = "Population is conserved"
   )
 
@@ -79,25 +81,40 @@ verify(sfm)
 Unit tests are most useful when kept small, readable, and tied to a specific
 model expectation.
 
-
 ## Test behaviour under a condition
 
-You can also test behaviour under a specific parameter setting using
-`conditions`. Here, we set `Beta = 0`, so no new infections should occur.
-Under this condition, the infected stock should not increase.
+Intended model behaviour can also be tested under a specific scenario using
+`conditions`. `conditions` should be a named list, and can only specify constants and initial conditions of stock variables.
+
+```{r}
+as.data.frame(sfm, type = c("constant", "stock"), 
+properties = c("eqn", "label"))
+```
+
+Here, we set `recovery_rate = 0`, so the recovered stock should not increase:
 
 ```{r}
 sfm <- sfm |>
   unit_test(
-    expr = all(diff(Infected) <= 0),
-    label = "Infected does not increase when Beta is zero",
-    conditions = list(Beta = 0)
+    expr = all(diff(recovered) == 0),
+    label = "Recovered does not increase when recovery_rate is zero",
+    conditions = list(recovery_rate = 0)
   )
 
 verify(sfm)
 ```
 
+Multiple conditions can be specified, which together define one scenario under which the expression is evaluated. In other words, all conditions are applied simultaneously. For example, when all stocks are initialized at zero (except for `recovered`, as this would lead to a `total_population` of zero and thus division by zero), they should remain at zero:
 
+```{r}
+sfm <- sfm |>
+  unit_test(
+    expr = all(susceptible == 0) & all(infected == 0) & all(diff(recovered) == 0),
+    conditions = list(susceptible = 0, infected = 0, recovered = 1)
+  )
+
+verify(sfm)
+```
 
 ## View defined tests
 
@@ -107,7 +124,7 @@ All defined tests can be viewed with `unit_tests()`.
 unit_tests(sfm)
 ```
 
-As shown above, the tests are numbered and labeled. The `expr` column shows the test expression, and the `conditions` column shows any parameter conditions for the test. The `active` column indicates whether the test is currently active (i.e., will be run when calling `verify()`).
+Each test shows its number, label, expression, and any conditions. Inactive tests (those with `active = FALSE`) are shown with a dotted icon and are skipped when `verify()` is called.
 
 Unit tests can be filtered by their number:
 
@@ -125,10 +142,6 @@ unit_tests(sfm, label = "population")
 unit_tests(sfm, label = "susceptible")
 ```
 
-```{r}
-unit_tests(sfm, label = "conserved")
-```
-
 By default, `ignore_case = TRUE`, so the regular expression is case-insensitive. Set `ignore_case = FALSE` for a case-sensitive search.
 
 ## Modify an existing test
@@ -136,8 +149,8 @@ By default, `ignore_case = TRUE`, so the regular expression is case-insensitive.
 Existing tests can be modified by their numeric position (`nr`):
 
 ```{r}
-# Modify test number 1 to be less strict
-sfm <- unit_test(sfm, nr = 1, expr = all(Susceptible >= -1))
+# Modify label of test number 1
+sfm <- unit_test(sfm, nr = 1, label = "Susceptible is non-negative")
 
 unit_tests(sfm, nr = 1)
 ```
@@ -146,7 +159,7 @@ Or their label (exact match):
 
 ```{r}
 sfm <- unit_test(sfm, 
-    expr = all(abs(Susceptible + Infected + Recovered - Total_Population) < 1e-5),
+    expr = all(abs(susceptible + infected + recovered - total_population) < 1e-5),
     label = "Population is conserved")
 
 unit_tests(sfm, label = "Population is conserved")
@@ -159,7 +172,9 @@ Use the `active` flag to temporarily disable a test without removing it.
 ```{r}
 sfm <- unit_test(sfm, nr = 1, active = FALSE)
 verify(sfm)
+```
 
+```{r}
 # Reactivate
 sfm <- unit_test(sfm, nr = 1, active = TRUE)
 verify(sfm)
@@ -167,10 +182,10 @@ verify(sfm)
 
 ## Remove tests
 
-Tests can be removed by number or by their (exact)label.
+Tests can be removed by number or by their (exact) label.
 
 ```{r}
-sfm <- discard_unit_test(sfm, nr = 1)
+sfm <- discard_unit_test(sfm, nr = 3)
 unit_tests(sfm)
 ```
 
@@ -193,20 +208,59 @@ When there are stochastic elements in the model, it is useful to run unit tests 
 
 ```{r}
 sfm <- sfm |>
-  update(Susceptible, eqn = runif(1, 500, 1000)) |>
-  update(Infected, eqn = runif(1, 0, 100)) |>
-  update(Recovered, eqn = runif(1, 0, 100))
+  update(c(susceptible, infected, recovered), eqn = runif(1, 500, 1000)) 
+```
+
+Reduce the output size for speed:
+
+```{r}
+sfm <- sim_settings(sfm, save_n = 100)
 ```
 
 Use `n > 1` to run multiple simulations per test:
 
 ```{r}
+verify(sfm, n = 10)
+```
+
+To speed up the simulation, we can use Julia:
+
+```{r}
+sfm <- sim_settings(sfm, language = "Julia", return_sims = FALSE)
+use_julia()
+```
+
+```{r}
 verify(sfm, n = 100)
+```
+
+Close the Julia session after use:
+
+```{r}
+use_julia(stop = TRUE)
+sfm <- sim_settings(sfm, language = "R")
+```
+
+Alternatively, set up multi-session parallel simulation with the `future` package: 
+
+```{r, eval = FALSE}
+future::plan(future::multisession, workers = parallelly::availableCores() - 1)
+```
+
+
+```{r}
+verify(sfm, n = 100)
+```
+
+Close parallel workers after use:
+
+```{r, eval = FALSE}
+future::plan(future::sequential)
 ```
 
 ## Inspecting `verify()` results and returned simulations
 
-`verify()` returns the simulations used when running tests if `return_sims = TRUE` is specified. These can be plotted or analyzed further.
+To inspect the simulations on which tests are evaluated, set `return_sims = TRUE`.
 
 ```{r}
 sfm <- sim_settings(sfm, return_sims = TRUE)
@@ -217,6 +271,8 @@ Or specify `return_sims` directly in `verify()`:
 ```{r}
 res <- verify(sfm, return_sims = TRUE)
 ```
+
+This allows the simulations used for testing to be retrieved and inspected:
 
 ```{r}
 plot(res)
@@ -242,6 +298,16 @@ as.data.frame(res, nr = 1)
 
 ## Inspect failed tests
 
+To demonstrate how to inspect failed tests, we will deliberately break the model by making the susceptible population negative:
+
+```{r}
+sfm <- update(sfm, susceptible, eqn = -10)
+```
+
+```{r}
+res <- verify(sfm, return_sims = TRUE)
+print(res)
+```
 
 ```{r}
 plot(res, status = "fail")
