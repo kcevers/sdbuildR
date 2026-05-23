@@ -12,14 +12,21 @@
   if (should_auto_setup) {
     tryCatch(
       {
-        status <- is_julia_env_setup()
 
-        if (!status) {
+        # status <- is_julia_env_setup()
+        # if (!status) {
+        #   install_julia_env()
+        # }
+
+        # For a clean installation, remove the Manifest.toml file
+        manifest_file <- system.file("Manifest.toml", package = "sdbuildR")
+        if (!file.exists(manifest_file)) {
           install_julia_env()
+          
+          # Close Julia session
+          use_julia(stop = TRUE)
         }
 
-        # Close Julia session
-        use_julia(stop = TRUE)
       },
       error = function(e) {
         invisible()

@@ -66,24 +66,3 @@ simulate_r <- function(object,
   sim
 }
 
-
-#' Compile script for enabling destructuring assignment in R
-#'
-#' @inheritParams update.sdbuildR
-#' @inheritParams compile_ode
-#'
-#' @returns List with necessary scripts
-#' @noRd
-#'
-compile_destructuring_assign <- function(object, static) {
-  # Add package for destructuring assignment in case it was used
-  eqns <- c(static, object[["variables"]][["eqn"]])
-
-  if (any(stats::na.omit(stringr::str_detect(eqns, stringr::fixed("%<-%"))))) {
-    script <- "\n# Add package for destructuring assignment\nif (!require('zeallot')) install.packages('zeallot'); library(zeallot)\n"
-  } else {
-    script <- ""
-  }
-
-  return(list(script = script))
-}

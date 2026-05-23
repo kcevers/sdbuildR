@@ -37,7 +37,7 @@ simulate_julia <- function(object,
       # Wrap in invisible and capture.output to keep Julia output quiet
       # out <- invisible({
       #   utils::capture.output({
-      out <- JuliaConnectoR::juliaEval(paste0('include("', jl_path(filepath), '")'))
+      out <- julia_eval(paste0('include("', jl_path(filepath), '")'))
       #   })
       # })
 
@@ -51,12 +51,12 @@ simulate_julia <- function(object,
       }
 
       # Read the constants
-      constants <- as.numeric(JuliaConnectoR::juliaEval(P[["parameter_name"]]))
-      names(constants) <- JuliaConnectoR::juliaEval(P[["parameter_names"]])
+      constants <- as.numeric(julia_eval(P[["parameter_name"]]))
+      names(constants) <- julia_eval(P[["parameter_names"]])
 
       # Read the initial values of stocks
-      init <- as.numeric(JuliaConnectoR::juliaEval(P[["initial_value_name"]]))
-      names(init) <- JuliaConnectoR::juliaEval(P[["initial_value_names"]])
+      init <- as.numeric(julia_eval(P[["initial_value_name"]]))
+      names(init) <- julia_eval(P[["initial_value_names"]])
 
       # Read the simulation results dataframe
       df <- as.data.frame(data.table::fread(filepath_sim, na.strings = c("", "NA")))

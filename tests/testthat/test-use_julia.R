@@ -28,11 +28,24 @@ test_that("use_julia() works", {
   expect_true(is_julia_init())
 })
 
+test_that("julia_eval() works", {
+  skip_if_julia_not_ready()
+
+  # Stop Julia
+  expect_no_error(expect_no_warning(expect_message(use_julia(stop = TRUE))))
+
+  # Calling julia_eval should start new Julia session quietly
+  expect_no_message(expect_no_warning(expect_no_error(julia_eval("1 + 1"))))
+
+  # Clean up
+  JuliaConnectoR::stopJulia()
+})
+
 
 test_that("use_julia() with threads works", {
   skip_if_julia_not_ready()
   old_threads <- Sys.getenv("JULIA_NUM_THREADS")
-  get_threads <- function() as.integer(JuliaConnectoR::juliaEval("string(Threads.nthreads())"))
+  get_threads <- function() as.integer(julia_eval("string(Threads.nthreads())"))
 
   # Set to 2 threads
   nthreads <- 2

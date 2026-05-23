@@ -73,7 +73,7 @@ ensemble_julia <- function(object, n, return_sims, conditions, cross,
 
       # Wrap in invisible and capture.output to keep Julia output quiet
       invisible(utils::capture.output(
-        JuliaConnectoR::juliaEval(paste0('include("', jl_path(filepath), '")'))
+        julia_eval(paste0('include("', jl_path(filepath), '")'))
       ))
 
       end_t <- Sys.time()
@@ -86,11 +86,11 @@ ensemble_julia <- function(object, n, return_sims, conditions, cross,
       }
 
       # Read the number of simulations per condition
-      n_val <- JuliaConnectoR::juliaEval(P[["ensemble_n"]])
+      n_val <- julia_eval(P[["ensemble_n"]])
 
       # Read the ensemble conditions
       if (!is.null(ensemble_pars[["conditions"]])) {
-        cond_matrix <- JuliaConnectoR::juliaEval(
+        cond_matrix <- julia_eval(
           paste0("Matrix(hcat(", P[["ensemble_pars"]], "...)')")
         )
         colnames(cond_matrix) <- names(conditions)
