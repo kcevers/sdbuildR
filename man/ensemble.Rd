@@ -128,7 +128,7 @@ plot(sims, which = "sims", i = 1)
 # Plot the median with lighter individual trajectories
 plot(sims, central_tendency = "median", which = "sims", alpha = 0.1)
 
-\dontshow{if (Sys.getenv("NOT_CRAN") == "true" && julia_env_ready()) withAutoprint(\{ # examplesIf}
+\dontshow{if (Sys.getenv("NOT_CRAN") == "true" && Sys.getenv("AUTO_INSTALL_JULIA_ENV") == "true") withAutoprint(\{ # examplesIf}
 # For larger ensembles, we can use parallelization with future
 if (requireNamespace("future", quietly = TRUE) &&
   requireNamespace("future.apply", quietly = TRUE)) {

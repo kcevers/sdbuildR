@@ -23,7 +23,7 @@ Start Julia session and activate Julia environment to simulate stock-and-flow mo
 In every R session, \code{\link[=use_julia]{use_julia()}} needs to be run once (which is done automatically in \code{\link[=simulate.sdbuildR]{simulate()}}), which can take around 30-60 seconds.
 }
 \examples{
-\dontshow{if (Sys.getenv("NOT_CRAN") == "true" && julia_env_ready()) withAutoprint(\{ # examplesIf}
+\dontshow{if (Sys.getenv("NOT_CRAN") == "true" && Sys.getenv("AUTO_INSTALL_JULIA_ENV") == "true") withAutoprint(\{ # examplesIf}
 # Start a Julia session and activate the Julia environment for sdbuildR
 use_julia()
 

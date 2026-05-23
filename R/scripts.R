@@ -117,7 +117,7 @@ end
 
     run_ode_r = "\n\n# Run ODE\n%(sim_df_name)s = as.data.frame(deSolve::ode(\n  func=%(ode_func_name)s,\n  y=%(initial_value_name)s,\n  times=%(times_name)s,\n  parms=%(parameter_name)s,\n  method = '%(method)s'%(root_arg)s\n)) %(check_root)s\n",
     post_ode_r = "%(saveat_script)s# Wide to long\n    %(sim_df_name)s <- stats::reshape(\n       data = as.data.frame(%(sim_df_name)s),\n       direction = \"long\",\n       idvar = \"time\",\n       varying = colnames(%(sim_df_name)s)[colnames(%(sim_df_name)s) != \"time\"],\n       v.names = \"value\",\n       timevar = \"variable\",\n       # Ensure variable names are used\n       times = colnames(%(sim_df_name)s)[colnames(%(sim_df_name)s) != \"time\"]\n     )\nrownames(%(sim_df_name)s) <- NULL",
-    run_ode_julia = "\n\n# Run ODE\n%(prob_name)s = ODEProblem(%(ode_func_name)s!, %(model_setup_name)s.%(initial_value_name)s, %(times_name)s, %(model_setup_name)s.%(parameter_name)s)\n%(solution_name)s = solve(%(prob_name)s, %(method)s, dt = %(timestep_name)s, saveat = %(saveat_name)s, tstops = %(tstops_name)s, adaptive = false%(callback_arg)s)\n",
+    run_ode_julia = "\n\n# Run ODE\n%(prob_name)s = Base.invokelatest(ODEProblem, %(ode_func_name)s!, %(model_setup_name)s.%(initial_value_name)s, %(times_name)s, %(model_setup_name)s.%(parameter_name)s)\n%(solution_name)s = solve(%(prob_name)s, %(method)s, dt = %(timestep_name)s, saveat = %(saveat_name)s, tstops = %(tstops_name)s, adaptive = false%(callback_arg)s)\n",
     post_ode_julia = "global %(sim_df_name)s, %(parameter_name)s, %(parameter_names)s, %(initial_value_name)s, %(initial_value_names)s\nglobal clean_df_ok = false\ntry\n\tglobal %(sim_df_name)s, %(parameter_name)s, %(parameter_names)s, %(initial_value_name)s, %(initial_value_names)s = clean_df(%(prob_name)s, %(solution_name)s, %(model_setup_name)s.%(initial_value_names)s, %(intermediaries_or_nothing)s, %(intermediary_names_arg)s, %(save_idx_arg)s)\n\tglobal clean_df_ok = true\ncatch\n\ttry\n\t\tglobal %(sim_df_name)s, %(parameter_name)s, %(parameter_names)s, %(initial_value_name)s, %(initial_value_names)s = clean_df(%(prob_name)s, %(solution_name)s, %(model_setup_name)s.%(initial_value_names)s, %(intermediaries_or_nothing)s, %(model_setup_name)s.%(intermediary_names)s)\n\t\tglobal clean_df_ok = true\n\tcatch\n\t\tglobal clean_df_ok = false\n\tend\nend\n\nif !clean_df_ok\n\terror(\"Failed to convert Julia solution to dataframe with clean_df\")\nend\n\nif %(selected_var_names_arg)s !== nothing\n\tselected_var_names = Set(String.(%(selected_var_names_arg)s))\n\tfilter!(row -> row.variable in selected_var_names, %(sim_df_name)s)\nend\n\nCSV.write(\"%(filepath_sim)s\", %(sim_df_name)s)\n\n# Delete variables\n%(solution_name)s = Nothing\n%(sim_df_name)s = Nothing\nNothing",
 
     # -- compile_run_ode: R saveat interpolation --------------------------------
@@ -155,7 +155,7 @@ end
     ensemble_prob_julia = "
 
 # Create ODE problem
-%(prob_name)s = ODEProblem(%(ode_func_name)s!, %(model_setup_name)s.%(initial_value_name)s, %(times_name)s, %(model_setup_name)s.%(parameter_name)s)
+%(prob_name)s = Base.invokelatest(ODEProblem, %(ode_func_name)s!, %(model_setup_name)s.%(initial_value_name)s, %(times_name)s, %(model_setup_name)s.%(parameter_name)s)
 
 %(intermediaries_setup)s
 

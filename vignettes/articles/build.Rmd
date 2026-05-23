@@ -49,8 +49,7 @@ font_family <- "Times New Roman"
 
 if (recreate_figs) {
   # Plotting parameters
-  # filepath_base <- dirname(rstudioapi::getActiveDocumentContext()$path)
-  filepath_base <- dirname(here::here())
+  filepath_base <- this.path::this.dir()
   filepath_figs <- file.path(filepath_base, "figs_tutorial2026")
 
   dir.create(filepath_figs)

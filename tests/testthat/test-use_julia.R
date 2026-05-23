@@ -83,11 +83,12 @@ test_that("use_julia() with threads works", {
 
 test_that("install_julia_env() works", {
   skip_if_julia_not_ready()
+  manifest_exists <- function(){ file.exists(system.file("Manifest.toml", package = "sdbuildR")) }
 
   # Test installation
   expect_no_error(install_julia_env())
   expect_no_error(install_julia_env(remove = TRUE))
-  expect_false(julia_env_ready())
+  expect_false(manifest_exists())
   expect_false(is_julia_env_setup(error = FALSE))
   expect_false(is_julia_env_setup(error = FALSE, force = TRUE))
 
@@ -96,7 +97,7 @@ test_that("install_julia_env() works", {
 
   # Install again and check that environment is ready
   expect_no_error(install_julia_env())
-  expect_true(julia_env_ready())
+  expect_true(manifest_exists())
   expect_true(is_julia_env_setup())
   expect_true(is_julia_env_setup(force = TRUE))
 })

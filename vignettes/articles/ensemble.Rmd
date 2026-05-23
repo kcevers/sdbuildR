@@ -30,7 +30,7 @@ library(sdbuildR)
 ```
 
 ```{r, echo = FALSE}
-if (!julia_env_ready()){
+if (!nzchar(system.file("Manifest.toml", package = "sdbuildR"))) {
   install_julia_env()
 }
 ```

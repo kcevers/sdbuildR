@@ -20,7 +20,7 @@
 #' @seealso [use_julia()]
 #' @concept julia
 #'
-#' @examplesIf Sys.getenv("NOT_CRAN") == "true" && julia_env_ready()
+#' @examplesIf Sys.getenv("NOT_CRAN") == "true" && Sys.getenv("AUTO_INSTALL_JULIA_ENV") == "true"
 #' \dontrun{
 #' install_julia_env()
 #'
@@ -131,7 +131,7 @@ install_julia_env <- function(remove = FALSE) {
 #' @seealso [install_julia_env()]
 #' @concept julia
 #'
-#' @examplesIf Sys.getenv("NOT_CRAN") == "true" && julia_env_ready()
+#' @examplesIf Sys.getenv("NOT_CRAN") == "true" && Sys.getenv("AUTO_INSTALL_JULIA_ENV") == "true"
 #' # Start a Julia session and activate the Julia environment for sdbuildR
 #' use_julia()
 #'
@@ -250,18 +250,6 @@ julia_eval <- function(string, suppressMessages = TRUE) {
 }
 
 
-#' Check whether the Julia environment for sdbuildR has been verified
-#'
-#' Returns `TRUE` if `use_julia()` has
-#' successfully verified the Julia installation in the current R session,
-#' `FALSE` otherwise.  Safe to call even when Julia is not installed.
-#'
-#' @return logical
-#' @export
-#' @concept julia
-julia_env_ready <- function() {
-  isTRUE(.sdbuildR_env[["jl"]][["env_checked"]])
-}
 
 #' Check Julia environment was initialized
 #'
