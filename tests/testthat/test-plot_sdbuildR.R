@@ -52,7 +52,6 @@ test_that("plot() checks vars argument", {
 
 test_that("plot() creates diagram for SIR template", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   sfm <- sdbuildR("SIR")
 
@@ -64,7 +63,6 @@ test_that("plot() creates diagram for SIR template", {
 
 test_that("plot() creates diagram for simple single-stock model", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   sfm <- sdbuildR()
   sfm1 <- update(sfm, "Stock1", type = "stock", label = "Population")
@@ -78,7 +76,6 @@ test_that("plot() creates diagram for simple single-stock model", {
 
 test_that("plot() creates diagram with auxiliary variables and dependencies", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   sfm <- sdbuildR()
   sfm1 <- update(sfm, "S", type = "stock")
@@ -93,7 +90,6 @@ test_that("plot() creates diagram with auxiliary variables and dependencies", {
 
 test_that("plot() with show_dependencies = FALSE hides dependency arrows", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   sfm <- sdbuildR()
   sfm1 <- update(sfm, "S", type = "stock")
@@ -107,7 +103,6 @@ test_that("plot() with show_dependencies = FALSE hides dependency arrows", {
 
 test_that("plot() with show_constants = TRUE displays constants", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   sfm <- sdbuildR()
   sfm1 <- update(sfm, "Stock1", type = "stock")
@@ -121,7 +116,6 @@ test_that("plot() with show_constants = TRUE displays constants", {
 
 test_that("plot() with show_constants = FALSE hides constants", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   sfm <- sdbuildR()
   sfm1 <- update(sfm, "Stock1", type = "stock")
@@ -135,7 +129,6 @@ test_that("plot() with show_constants = FALSE hides constants", {
 
 test_that("plot() with show_aux = FALSE hides auxiliary variables", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   sfm <- sdbuildR("SIR")
 
@@ -147,7 +140,6 @@ test_that("plot() with show_aux = FALSE hides auxiliary variables", {
 
 test_that("plot() filters variables correctly", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   sfm <- sdbuildR("SIR")
 
@@ -164,7 +156,6 @@ test_that("plot() filters variables correctly", {
 
 test_that("plot() applies custom stock color", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   sfm <- sdbuildR("SIR")
 
@@ -176,7 +167,6 @@ test_that("plot() applies custom stock color", {
 
 test_that("plot() applies custom flow color", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   sfm <- sdbuildR("SIR")
 
@@ -188,7 +178,6 @@ test_that("plot() applies custom flow color", {
 
 test_that("plot() applies custom dependency color", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   sfm <- sdbuildR("SIR")
 
@@ -200,7 +189,6 @@ test_that("plot() applies custom dependency color", {
 
 test_that("plot() with custom font size", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   sfm <- sdbuildR()
   sfm1 <- update(sfm, "Stock1", type = "stock", label = "Population")
@@ -213,7 +201,6 @@ test_that("plot() with custom font size", {
 
 test_that("plot() with custom wrap width", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   sfm <- sdbuildR()
   sfm1 <- update(sfm, "VeryLongStockNameThatShouldWrap",
@@ -228,7 +215,6 @@ test_that("plot() with custom wrap width", {
 
 test_that("plot() with format_label = FALSE preserves original labels", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   sfm <- sdbuildR()
   sfm1 <- update(sfm, "Stock_1", type = "stock", label = "Stock_1")
@@ -241,7 +227,6 @@ test_that("plot() with format_label = FALSE preserves original labels", {
 
 test_that("plot() with format_label = TRUE removes underscores", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   sfm <- sdbuildR()
   sfm1 <- update(sfm, "Stock_1", type = "stock", label = "Stock_1")

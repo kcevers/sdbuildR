@@ -1,7 +1,6 @@
 # init.jl - Script to initialize Julia environment for sdbuildR
 
 # Load packages
-using StockFlowRSupport
 using CSV
 using DataFrames
 using DiffEqCallbacks
@@ -12,6 +11,7 @@ using Random
 using SciMLBase
 using Statistics
 using StatsBase
+using StockFlowRSupport
 
 # Extend min/max: when applied to a single vector, use minimum, like in R
 Base.min(v::AbstractVector) = minimum(v)

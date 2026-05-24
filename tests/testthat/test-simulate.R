@@ -212,3 +212,159 @@ test_that("simulate() with Julia vars overrides only_stocks", {
   expect_true(sim$success)
   expect_equal(unique(sim$df$variable), "new_recoveries")
 })
+
+# Precision / accuracy tests for simulate.R
+# Covers: analytical solutions, conservation laws, save_at, save_n, seed
+
+
+# ============================================================================
+# Analytical solution: exponential decay (make_verifiable_sfm)
+# dS/dt = -rate * S  →  S(t) = S0 * exp(-rate * t)
+# ============================================================================
+
+test_that("exponential decay: simulation matches analytical solution to within 1%", {
+  sfm  <- make_verifiable_sfm()   # S, drain = rate*S (outflow), rate = 0.1; language = "R"
+  sim  <- simulate(sfm)
+  expect_true(sim$success)
+
+  wide  <- as.data.frame(sim, direction = "wide")
+  S0    <- wide[wide[["time"]] == 0, "S"]
+  rate  <- 0.1
+
+  S_sim  <- wide$S
+  S_true <- S0 * exp(-rate * wide$time)
+
+  max_err <- max(abs(S_sim - S_true) / S_true)
+  expect_lt(max_err, 0.01, label = "Max relative error < 1%")
+})
+
+
+# ============================================================================
+# Analytical solution: exponential growth (bank_account with R language)
+# dB/dt = interest_rate * B  →  B(t) = B0 * exp(interest_rate * t)
+# ============================================================================
+
+test_that("bank_account: exponential growth matches analytical solution within 1%", {
+  sfm_template <- templates("bank_account")
+  sfm  <- sim_settings(sfm_template, start = 0, stop = 50, dt = 0.001, language = "R")
+  sim  <- simulate(sfm, seed = 42)
+  expect_true(sim$success)
+
+  wide       <- as.data.frame(sim, direction = "wide")
+  stock_name <- as.data.frame(sfm_template, type = "stock")$name
+  B0         <- wide[wide[["time"]] == 0, stock_name]
+  r          <- as.numeric(as.data.frame(sfm_template, type = "constant")$eqn)
+
+  B_sim  <- wide[[stock_name]]
+  B_true <- B0 * exp(r * wide$time)
+
+  max_err <- max(abs(B_sim - B_true) / B_true)
+  expect_lt(max_err, 0.01, label = "Max relative error < 1%")
+})
+
+
+# ============================================================================
+# Conservation law: SIR — S + I + R = constant at every timestep
+# ============================================================================
+
+test_that("SIR: total population is conserved at every timestep", {
+  skip_if_julia_not_ready()
+  sfm  <- sim_settings(templates("SIR"), only_stocks = TRUE)
+  sim  <- simulate(sfm, seed = 42)
+  expect_true(sim$success)
+  wide       <- as.data.frame(sim, direction = "wide")
+  stock_cols <- setdiff(names(wide), "time")
+  N          <- rowSums(wide[, stock_cols, drop = FALSE])
+  expect_equal(diff(range(N)), 0, tolerance = 1e-3)
+})
+
+
+# ============================================================================
+# Convergence: logistic_model reaches carrying capacity K within 2%
+# ============================================================================
+
+test_that("logistic_model: stock reaches K within 2% at long times", {
+  sfm        <- sim_settings(templates("logistic_model"), stop = 300, dt = 0.1,
+                              language = "R")
+  sim        <- simulate(sfm, seed = 42)
+  expect_true(sim$success)
+  wide       <- as.data.frame(sim, direction = "wide")
+  stock_name <- as.data.frame(templates("logistic_model"), type = "stock")$name
+  const_df   <- as.data.frame(templates("logistic_model"), type = "constant")
+  K_val      <- max(as.numeric(const_df$eqn), na.rm = TRUE)
+  final_mean <- mean(tail(wide[[stock_name]], 10))
+  expect_equal(final_mean, K_val, tolerance = K_val * 0.02)
+})
+
+
+# ============================================================================
+# save_at: exact output times
+# ============================================================================
+
+test_that("simulate with save_at vector returns ONLY exactly those times", {
+  target_times <- c(0, 1, 2.5, 5, 10)
+  sfm  <- sim_settings(
+    sim_settings(make_verifiable_sfm(), save_at = target_times),
+    start = 0, stop = 10, dt = 0.01
+  )
+  sim  <- simulate(sfm)
+  wide <- as.data.frame(sim, direction = "wide")
+  expect_equal(sort(wide$time), target_times, tolerance = 1e-9)
+  expect_equal(nrow(wide), length(target_times))
+})
+
+test_that("simulate with scalar save_at returns regular grid of times", {
+  sfm  <- sim_settings(make_verifiable_sfm(), start = 0, stop = 10,
+                       dt = 0.01, save_at = 1)
+  sim  <- simulate(sfm)
+  wide <- as.data.frame(sim, direction = "wide")
+  expected_times <- seq(0, 10, by = 1)
+  expect_equal(sort(wide$time), expected_times, tolerance = 1e-9)
+})
+
+
+# ============================================================================
+# save_n: exact row count
+# ============================================================================
+
+test_that("simulate with save_n returns exactly N rows", {
+  n_save <- 25
+  sfm    <- sim_settings(make_verifiable_sfm(), start = 0, stop = 10,
+                         save_n = n_save, dt = 0.001)
+  sim    <- simulate(sfm)
+  expect_equal(nrow(as.data.frame(sim, direction = "wide")), n_save)
+})
+
+test_that("simulate with save_n = 1 returns a single-row data frame", {
+  sfm <- sim_settings(make_verifiable_sfm(), start = 0, stop = 5,
+                      save_n = 1, dt = 0.01)
+  sim <- simulate(sfm)
+  expect_equal(nrow(as.data.frame(sim, direction = "wide")), 1)
+})
+
+
+# ============================================================================
+# Seed reproducibility
+# ============================================================================
+
+test_that("simulation is reproducible with seed and random static and dynamic elements", {
+  sfm  <- sim_settings(sdbuildR("SIR"), language = "R",
+  # runif() should only be done with euler
+   method = "euler") |>
+          update(c(susceptible, infected, recovered), eqn = runif(1, 1, 1000)) |>
+          update(new_infections, eqn = runif(1, 0.01, 0.5) * susceptible * infected) |>
+          update(new_recoveries, eqn = runif(1, 0.01, 0.5) * infected)
+  sim1 <- simulate(sfm, seed = 42)
+  sim2 <- simulate(sfm, seed = 42)
+  expect_equal(
+    as.data.frame(sim1, direction = "wide"),
+    as.data.frame(sim2, direction = "wide")
+  )
+})
+
+
+test_that("NULL seed still produces a successful simulation", {
+  sfm <- sim_settings(make_verifiable_sfm(), seed = NULL)
+  sim <- simulate(sfm)
+  expect_true(sim$success)
+})

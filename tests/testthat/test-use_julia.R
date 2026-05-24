@@ -83,6 +83,8 @@ test_that("use_julia() with threads works", {
 
 test_that("install_julia_env() works", {
   skip_if_julia_not_ready()
+  skip_if(interactive())
+
   manifest_exists <- function(){ file.exists(system.file("Manifest.toml", package = "sdbuildR")) }
 
   # Test installation
@@ -90,7 +92,7 @@ test_that("install_julia_env() works", {
   expect_no_error(install_julia_env(remove = TRUE))
   expect_false(manifest_exists())
   expect_false(is_julia_env_setup(error = FALSE))
-  expect_false(is_julia_env_setup(error = FALSE, force = TRUE))
+  expect_false(is_julia_env_setup(error = FALSE, restart = TRUE))
 
   # Removing again should not cause an error
   expect_message(expect_no_error(install_julia_env(remove = TRUE)), "no need to remove")

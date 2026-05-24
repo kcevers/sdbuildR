@@ -28,10 +28,10 @@
 #'   file.remove(file)
 #' }
 #'
-#' @examplesIf interactive()
+#' @examplesIf has_internet()
 #' \dontrun{
 #' # requires internet
-#' # Only if dependencies are installed
+#' # Only if suggested dependencies are installed
 #' if (requireNamespace("htmlwidgets", quietly = TRUE) &&
 #'   requireNamespace("webshot2", quietly = TRUE)) {
 #'   # Requires Chrome to save plotly plot:

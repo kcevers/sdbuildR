@@ -486,16 +486,6 @@ clean_status <- function(status) {
   s
 }
 
-
-.julia_func_names <- function() {
-  c(
-    "is_function_or_interp", "itp", "make_ramp", "make_step", "make_pulse", "make_seasonal", "round_IM", "logit", "expit", "logistic", "nonnegative", "rbool", "rdist", "indexof", "contains_IM", "round_", "\u2295",
-    # "convert_u",
-    "saveat_func", "clean_df", "clean_constants", "clean_init", "transform_intermediaries", "generate_param_combinations", "ensemble_to_df", "ensemble_to_df_threaded", "ensemble_summ", "ensemble_summ_threaded"
-  )
-}
-
-
 #' Clean variable name(s)
 #'
 #' Clean variable name(s) to create syntactically valid, unique names for use in R and Julia.
@@ -513,51 +503,16 @@ clean_status <- function(status) {
 #' clean_name("predator", as.data.frame(sfm)[["name"]])
 #'
 clean_name <- function(new, protected = NULL) {
-  # Define protected names: these cannot be used as variable names
-  protected_names <- c(
-    # Reserved words in R
-    "if",
-    "else", "repeat", "function", "return", "while", "for", "in", "next", "break", "TRUE", "FALSE", # already protected
-    "T", "F",
-    # "NULL", "Inf", "NaN", "NA", "NA_integer_", "NA_real_", "NA_complex_", "NA_character_", # already protected
-    "time", # used as first variable in simulation dataframe #"Time", "TIME",
-    # "constraints",
-    # Add Julia keywords
-    "baremodule", "begin", "break", "catch", "const", "continue", "do",
-    "else", "elseif", "end", "export", "false", "finally",
-    "global", "error", "throw",
-    "import", "let", "local", P[["func_name"]], "module", "quote", "return", "struct", "true", "try", "catch", "using",
-    "Missing", "missing", "Nothing", "nothing",
-
-    # Add R custom functions
-    get_exported_functions("sdbuildR"),
-
-    # Add Julia custom function names
-    .julia_func_names(),
-
-    # These are variables in the ode and cannot be model element names
-    unname(unlist(P[names(P) %in% c(
-      "jl_pkg_name", "model_setup_name", "func_name", "initial_value_name",
-      "initial_value_names", "parameter_name", "parameter_names",
-      "state_name", "time_name", "change_state_name", "times_name",
-      "timestep_name", "saveat_name", "ensemble_iter",
-      "ode_func_name", "callback_func_name", "callback_name", "intermediaries",
-      "rootfun_name", "eventfun_name",
-      #  "sdbuildR_units",
-      # "MyCustomUnits",
-      "init_sdbuildR"
-    )])),
-    as.character(stats::na.omit(protected))
-  ) |> unique()
 
   # Make syntactically valid and unique names out of character vectors; Insight Maker allows names to be double, so make unique
-  new_names <- make.names(c(protected_names, trimws(new)), unique = TRUE)
+  protected_names_complete <- c(protected_names, as.character(stats::na.omit(protected)))
+  new_names <- make.names(c(protected_names_complete, trimws(new)), unique = TRUE)
   # For Julia translation, remove names with a period
   new_names <- stringr::str_replace_all(new_names, "\\.", "_")
   # This may cause overlap in names, so repeat
   new_names <- make.names(new_names, unique = TRUE)
   new_names <- stringr::str_replace_all(new_names, "\\.", "_")
-  new_names <- make.names(new_names, unique = TRUE)[-seq_along(protected_names)] # Remove protected names
+  new_names <- make.names(new_names, unique = TRUE)[-seq_along(protected_names_complete)] # Remove protected names
 
   new_names
 }

@@ -18,12 +18,9 @@ templates <- function(template) {
     # "spruce_budworm"
   )
 
+  # List template names for internal use
   if (missing(template)) {
-    cli::cli_inform(c(
-      "Choose from the following templates:",
-      " " = paste0(model_names, collapse = "\n")
-    ))
-    return(invisible())
+    return(model_names)
   }
 
   if (!is.character(template)) {
@@ -42,9 +39,8 @@ templates <- function(template) {
 
   if (!template %in% model_names) {
     cli::cli_abort(c(
-      "Template not found.",
-      "i" = "Available templates are:",
-      " " = paste0(model_names, collapse = "\n")
+      "x" = "Template not found.",
+      "i" = "Available templates: {.val {model_names}}"
     ))
   }
 

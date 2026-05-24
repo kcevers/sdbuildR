@@ -45,7 +45,6 @@ test_that("plot.verify_sdbuildR returns plotly for n > 1", {
 
 test_that("plot() single condition n=1", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   res <- make_verify_1cond()
   vdiffr::expect_doppelganger("verify-single-cond-n1", plot(res, nr = 1L))
@@ -53,7 +52,6 @@ test_that("plot() single condition n=1", {
 
 test_that("plot() two conditions n=1 (subplot)", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   res <- make_verify_2cond()
   vdiffr::expect_doppelganger("verify-two-cond-n1", plot(res))
@@ -61,7 +59,6 @@ test_that("plot() two conditions n=1 (subplot)", {
 
 test_that("plot() single condition n=3 (multi-run overlay)", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   res <- make_verify_1cond(n = 3L)
   vdiffr::expect_doppelganger("verify-single-cond-n3", plot(res))
@@ -69,7 +66,6 @@ test_that("plot() single condition n=3 (multi-run overlay)", {
 
 test_that("plot() filtered j selects one condition from two", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   res <- make_verify_2cond()
   vdiffr::expect_doppelganger("verify-filtered-j2", plot(res, nr = 2L))
@@ -77,7 +73,6 @@ test_that("plot() filtered j selects one condition from two", {
 
 test_that("plot() filtered i selects subset of runs", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   res <- make_verify_1cond(n = 3L)
   vdiffr::expect_doppelganger("verify-filtered-i12", plot(res, i = 1:2))
@@ -90,7 +85,6 @@ test_that("plot() filtered i selects subset of runs", {
 
 test_that("plot() showlegend = FALSE hides legend", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   res <- make_verify_1cond()
   vdiffr::expect_doppelganger("verify-showlegend-false", plot(res, showlegend = FALSE))
@@ -98,7 +92,6 @@ test_that("plot() showlegend = FALSE hides legend", {
 
 test_that("plot() nrows = 1 forces single-row layout", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   res <- make_verify_2cond()
   vdiffr::expect_doppelganger("verify-nrows-1", plot(res, nrows = 1L))
@@ -106,7 +99,6 @@ test_that("plot() nrows = 1 forces single-row layout", {
 
 test_that("plot() shareX = FALSE gives independent x axes", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   res <- make_verify_2cond()
   vdiffr::expect_doppelganger("verify-sharex-false", plot(res, shareX = FALSE))
@@ -114,7 +106,6 @@ test_that("plot() shareX = FALSE gives independent x axes", {
 
 test_that("plot() shareY = FALSE gives independent y axes", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   res <- make_verify_2cond()
   vdiffr::expect_doppelganger("verify-sharey-false", plot(res, shareY = FALSE))
@@ -127,7 +118,6 @@ test_that("plot() shareY = FALSE gives independent y axes", {
 
 test_that("plot() label filter selects matching condition from two", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   res <- make_verify_2cond()
   vdiffr::expect_doppelganger("verify-label-filter", plot(res, label = "non-neg"))
@@ -135,7 +125,6 @@ test_that("plot() label filter selects matching condition from two", {
 
 test_that("plot() status = 'pass' shows only passing tests", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   res <- make_verify_with_fail()
   vdiffr::expect_doppelganger("verify-status-pass-only", plot(res, status = "pass"))
@@ -143,7 +132,6 @@ test_that("plot() status = 'pass' shows only passing tests", {
 
 test_that("plot() status = 'fail' shows only failing tests", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   res <- make_verify_with_fail()
   vdiffr::expect_doppelganger("verify-status-fail-only", plot(res, status = "fail"))
@@ -156,7 +144,6 @@ test_that("plot() status = 'fail' shows only failing tests", {
 
 test_that("plot() custom palette changes line colours", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   res <- make_verify_1cond()
   vdiffr::expect_doppelganger("verify-custom-palette", plot(res, palette = "Pastel 1"))
@@ -164,7 +151,6 @@ test_that("plot() custom palette changes line colours", {
 
 test_that("plot() custom colors vector overrides palette", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   res <- make_verify_1cond()
   vdiffr::expect_doppelganger("verify-custom-colors", plot(res, colors = "steelblue"))
@@ -172,7 +158,6 @@ test_that("plot() custom colors vector overrides palette", {
 
 test_that("plot() custom font_family changes annotation font", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   res <- make_verify_1cond()
   vdiffr::expect_doppelganger("verify-custom-font-family", plot(res, font_family = "Arial"))
@@ -180,7 +165,6 @@ test_that("plot() custom font_family changes annotation font", {
 
 test_that("plot() custom font_size changes annotation font", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   res <- make_verify_1cond()
   vdiffr::expect_doppelganger("verify-custom-font-size", plot(res, font_size = 20))
@@ -188,7 +172,6 @@ test_that("plot() custom font_size changes annotation font", {
 
 test_that("plot() narrow wrap_width wraps long labels", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   res <- make_verify_1cond()
   vdiffr::expect_doppelganger("verify-wrap-width-narrow", plot(res, wrap_width = 10))
@@ -201,7 +184,6 @@ test_that("plot() narrow wrap_width wraps long labels", {
 
 test_that("plot() low alpha reduces trajectory opacity", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   res <- make_verify_1cond(n = 3L)
   vdiffr::expect_doppelganger("verify-alpha-low", plot(res, alpha = 0.1))

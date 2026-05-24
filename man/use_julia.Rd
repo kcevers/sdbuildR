@@ -4,12 +4,12 @@
 \alias{use_julia}
 \title{Start Julia and activate environment}
 \usage{
-use_julia(stop = FALSE, force = FALSE, nthreads = NULL)
+use_julia(stop = FALSE, restart = FALSE, nthreads = NULL)
 }
 \arguments{
 \item{stop}{If \code{TRUE}, stop active Julia session. Defaults to \code{FALSE}.}
 
-\item{force}{If \code{TRUE}, force Julia setup to execute again.}
+\item{restart}{If \code{TRUE}, force Julia session to restart.}
 
 \item{nthreads}{If not \code{NULL}, set the number of threads for Julia to use. This will temporarily set the environment variable \code{JULIA_NUM_THREADS} and restart Julia if it is already running to apply the new thread setting. See \href{https://docs.julialang.org/en/v1/manual/parallel-computing/#man-parallel-computing}{this page} for more details on threading in Julia.}
 }
@@ -29,6 +29,9 @@ use_julia()
 
 # Start Julia with 4 threads (only works if threading is supported)
 use_julia(nthreads = 4)
+
+# Restart Julia session (in case of issues)
+use_julia(restart = TRUE)
 
 # Stop Julia session
 use_julia(stop = TRUE)

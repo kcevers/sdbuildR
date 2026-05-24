@@ -137,7 +137,6 @@ test_that("plot() validates colors as character vector", {
 
 test_that("plot() creates standard line plot for SIR simulation", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   sim <- sir_sim()
 
@@ -149,7 +148,6 @@ test_that("plot() creates standard line plot for SIR simulation", {
 
 test_that("plot() respects showlegend", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   sim <- sir_sim()
 
@@ -165,7 +163,6 @@ test_that("plot() respects showlegend", {
 
 test_that("plot() respects vars argument", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   sim <- sir_sim()
 
@@ -182,7 +179,6 @@ test_that("plot() respects vars argument", {
 
 test_that("plot() with custom palette", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   sim <- sir_sim()
 
@@ -194,7 +190,6 @@ test_that("plot() with custom palette", {
 
 test_that("plot() with custom colors vector", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   sim <- sir_sim()
 
@@ -208,7 +203,6 @@ test_that("plot() with custom colors vector", {
 
 test_that("plot() with custom font family", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   sim <- sir_sim()
 
@@ -220,7 +214,6 @@ test_that("plot() with custom font family", {
 
 test_that("plot() with custom font size", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   sim <- sir_sim()
 
@@ -232,7 +225,6 @@ test_that("plot() with custom font size", {
 
 test_that("plot() with custom wrap width", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   sfm <- sdbuildR()
   sfm <- update(sfm,
@@ -255,7 +247,6 @@ test_that("plot() with custom wrap width", {
 
 test_that("plot() with custom title, axis labels, and limits", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   sim <- sir_sim()
 
@@ -270,7 +261,6 @@ test_that("plot() with custom title, axis labels, and limits", {
 
 test_that("plot() respects add_constants", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   sfm <- sdbuildR()
   sfm <- update(sfm, "Stock1", type = "stock")
@@ -294,7 +284,6 @@ test_that("plot() respects add_constants", {
 
 test_that("plot() shows legend for single-variable plot", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   sfm <- sdbuildR()
   sfm <- update(sfm, "Stock1", type = "stock")
@@ -308,7 +297,6 @@ test_that("plot() shows legend for single-variable plot", {
 
 test_that("plot() works with both stocks and flow variables", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   # SIR has susceptible (stock), infected (stock), recovered (stock)
   sim <- sir_sim(only_stocks = FALSE)
@@ -321,7 +309,6 @@ test_that("plot() works with both stocks and flow variables", {
 
 test_that("plot() handles variables with duplicate display labels", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   sfm <- sdbuildR()
   sfm <- update(sfm, "var1", type = "stock", label = "Same")
@@ -336,7 +323,6 @@ test_that("plot() handles variables with duplicate display labels", {
 
 test_that("plot() respects vars filtering for constants", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   sfm <- sdbuildR()
   sfm <- update(sfm, "S", type = "stock")
@@ -354,7 +340,6 @@ test_that("plot() respects vars filtering for constants", {
 
 test_that("plot() with vars = constant automatically enables add_constants", {
   skip_on_os("mac")
-  skip_if_not_installed("vdiffr")
 
   sfm <- sdbuildR()
   sfm <- update(sfm, "Stock1", type = "stock")

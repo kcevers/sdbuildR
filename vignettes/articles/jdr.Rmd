@@ -23,7 +23,10 @@ knitr::opts_chunk$set(
 )
 ```
 
-This is online supplemental material B accompanying the paper *Formalizing Psychological Theory with stockflow: A Stock-and-Flow Modelling Tutorial in R* by Evers et al. (under review). It contains the complete code to build, test, and simulate a formal model of Job Demands-Resources (JD-R) theory. To reproduce the figures in the paper, please see the corresponding .Rmd file.
+Stock-and-flow models present an intuitive way to formalize psychological systems as dynamic processes that unfold over time. In this vignette, we will formalize Job Demands-Resources (JD-R) theory as a stock-and-flow model. JD-R theory is a prominent theory of burnout and work engagement. 
+
+In this vignette, we will demonstrate how to create stock-and-flow models from scratch using sdbuildR. It covers the basics of stock-and-flow modelling in the context of psychology with an example of burnout. Note that this vignette serves as online supplemental material B accompanying the paper *Formalizing Psychological Theory with stockflow: A Stock-and-Flow Modelling Tutorial in R* by Evers et al. (under review). To reproduce the figures in the paper, please see the corresponding .Rmd file.
+
 
 
 ```{r libraries, results='hide', message=FALSE}
@@ -202,334 +205,7 @@ kableExtra::kbl(def_table,
 % We can immediately see that engagement only has an inflow that can increase engagement, namely motivation.
 
 
-## Stock-and-Flow Models
-
-### Single stock example
-
-```{r}
-sfm <- sdbuildR() |>
-  meta(name = "Burnout") |>
-  sim_settings(stop = 16, time_units = "weeks", only_stocks = FALSE)
-```
-
-```{r}
-sfm <- sfm |>
-  stock(energy, eqn = .3, label = "Energy")
-
-sim <- simulate(sfm)
-plot(sim)
-```
-
-
-```{r include=FALSE}
-if (recreate_figs) {
-  sfm_list <- list()
-  sfm_list[["A"]] <- sfm
-}
-```
-
-
-
-```{r}
-print(sfm)
-```
-
-
-```{r}
-sfm <- sfm |>
-  constant(work_rate, eqn = .5)
-```
-
-```{r}
-sfm <- sfm |>
-  flow(work,
-    eqn = work_rate,
-    from = energy, label = "Depletion from work"
-  )
-
-sim <- simulate(sfm)
-plot(sim)
-```
-
-
-```{r include=FALSE}
-if (recreate_figs) {
-  sfm_list[["B"]] <- sfm
-}
-```
-
-
-```{r}
-sfm <- sfm |>
-  update(work, eqn = work_rate * energy)
-
-sim <- simulate(sfm)
-plot(sim)
-```
-
-
-
-```{r include=FALSE}
-if (recreate_figs) {
-  sfm_list[["C"]] <- sfm
-}
-```
-
-```{r}
-sfm <- sfm |>
-  constant(recovery_rate, eqn = .3, label = "Recovery Rate") |>
-  flow(recovery, eqn = recovery_rate, to = energy, label = "Recovery")
-
-sim <- simulate(sfm)
-plot(sim)
-```
-
-
-
-```{r include=FALSE}
-if (recreate_figs) {
-  sfm_list[["D"]] <- sfm
-}
-```
-
-What if the ability to recover is not static, but erodes over time?
-
-```{r}
-sfm <- sfm |>
-  change_type(recovery_rate, new_type = stock) |>
-  update(recovery_rate, eqn = 1)
-```
-
-
-```{r}
-sfm <- sfm |>
-  flow(erosion,
-    eqn = recovery_rate * work,
-    # eqn = capacity * work / (1 + energy),
-    from = recovery_rate, label = "Recovery Erosion"
-  )
-
-sim <- simulate(sfm)
-plot(sim)
-```
-
-
-Counterintuitively, as recovery capacity erodes, energy first increases. This is because recovery first still exceeds energy depletion from work. 
-
-```{r}
-sfm <- sfm |>
-  aux(net_change, eqn = recovery - work, label = "Net change in energy")
-
-sim <- simulate(sfm)
-plot(sim)
-```
-
-
-```{r include=FALSE}
-if (recreate_figs) {
-  sfm_list[["E"]] <- sfm
-}
-```
-
-
-
-```{r include=FALSE}
-if (recreate_figs) {
-  # Create subplot figure
-  pl_list <- list()
-  max_letter <- max(names(sfm_list))
-  VARS_example <- c("energy", "work", "recovery", "recovery_rate", "net_change")
-
-  VARS_example <- c(
-    "energy", "work", "recovery",
-    # "recovery_rate",
-    "net_change"
-  )
-
-  # Recovery = recovery_rate so plot as one line
-  sfm_list[["E"]] <- sfm_list[["E"]] |>
-    update(recovery, label = "Recovery / recovery rate")
-
-  COLORS_example <- COLORS[seq_along(VARS_example)]
-
-  titles <- paste0(
-    paste0(
-      "<i>", LETTERS[seq_along(sfm_list)], ". ",
-      c(
-        "Static Stock",
-        "Constant Outflow",
-        "Stock-Dependent<br>Outflow",
-        "Constant Inflow",
-        "Erosion of Recovery Rate"
-        # "Auxiliary variable tracking net change in energy"
-      ), "</i>"
-    )
-  )
-  titles <- stats::setNames(titles, names(sfm_list))
-
-  for (letter in names(sfm_list)) {
-    sim <- simulate(sfm_list[[letter]],
-      save_at = .01, only_stocks = FALSE
-    )
-
-    # vars_in_sim <- intersect(vars, unique(sim$df$variable))
-    vars_in_sim <- unique(sim$df$variable)
-
-    vars_ <- VARS_example[VARS_example %in% vars_in_sim] |> rev()
-    colors_ <- COLORS_example[VARS_example %in% vars_in_sim] |> rev()
-    colors_ <- adjustcolor(colors_, alpha.f = .9)
-
-    pl_list[[letter]] <- plot(sim,
-      vars = vars_,
-      colors = colors_,
-      main = "",
-      # ylim = ylim,
-      showlegend = (letter == max_letter)
-    ) |>
-      rm_grid() |>
-      plotly::layout(yaxis = list(
-        nticks = 3
-      ), xaxis = list(
-        tickvals = list(0, 7.5, 15)
-      ))
-  }
-
-  # x1 <- 0.18
-  # x2 <- 0.8
-  # x3 <- .5
-  # y1 <- 1.03
-  # y2 <- 0.77
-  # y3 <- 0.45
-
-  x1 <- 0.1
-  x2 <- 0.37
-  x3 <- .78
-  y1 <- 1.06
-  y2 <- 0.48
-  # y3 <- 0.45
-
-  annot_ <- utils::modifyList(annot, list(
-    font = list(size = font_size_subplot + 4, family = font_family)
-  ))
-
-  pl <- plotly::subplot(
-    plotly::subplot(pl_list[1:4],
-      nrows = 2,
-      shareX = TRUE,
-      shareY = FALSE,
-      titleY = FALSE,
-      titleX = FALSE,
-      margin = 0.075
-    ), plotly::subplot(pl_list[5]),
-    nrows = 1,
-    # shareX = TRUE
-    # shareY = FALSE,
-    # titleY = FALSE,
-    # titleX = FALSE,
-    margin = 0.03
-  ) |>
-    plotly::layout(
-      yaxis4 = list(range = c(0, 1)),
-      yaxis2 = list(range = c(0, .4)),
-      font = annot_font,
-      # legend = annot_legend,
-      # legend = utils::modifyList(annot_legend, list(x = 1.4, y = 0.8)),
-      legend = utils::modifyList(annot_legend, list(
-        y = -.16,
-        font = list(size = font_size_legend)
-      )),
-      annotations = list(
-        utils::modifyList(annot_xlab, list(x = 0.5, y = -0.075))
-      )
-    ) |>
-    plotly::layout(annotations = list(
-      utils::modifyList(annot_, list(x = x1, y = y1, text = titles[["A"]])),
-      utils::modifyList(annot_, list(x = x2, y = y1, text = titles[["B"]])),
-      utils::modifyList(annot_, list(x = x1, y = y2 - .005, text = titles[["C"]])),
-      utils::modifyList(annot_, list(x = x2, y = y2 + .005, text = titles[["D"]])),
-      utils::modifyList(annot_, list(x = x3, y = y1, text = titles[["E"]]))
-      # utils::modifyList(annot_, list(x = .5, y = -.5, text = "F. Stock-and-Flow Diagram"))
-    ))
-
-  pl
-
-  export_plot(pl, file.path(filepath_figs, "build_sfm.pdf"),
-    width = 7, height = 4
-  )
-}
-```
-
-
-```{r}
-if (recreate_figs) {
-  # copy cat(viz_str) from plot.sdbuildR() with minlen=1.5
-  {
-    viz_str <- "
-
-    digraph sfm {
-
-      graph [layout = dot, rankdir = LR, center=true, outputorder='edgesfirst', pad=.1, nodesep= .15]
-
-      # Rank groupings
-      {rank=same; 'net_change1'; 'net_change'; 'invisnode1'; 'energy'; 'invisnode2'; 'recovery_rate'}
-
-      # Invisible edge to fix order
-      'net_change1' -> 'net_change' -> 'invisnode1' -> 'energy' -> 'invisnode2' -> 'recovery_rate' [style=invis]
-
-      # Define stock nodes
-      'recovery_rate' [id='recovery_rate',label='Recovery Rate',tooltip = 'eqn = 1',shape=box,style=filled,fillcolor='#09B0ACBF',fontsize=18,fontname='Times New Roman']
-
-     # Define invisible node
-      'invisnode1' [id='invisnode1',label='Invisible Node',shape=box,style=invis,fontsize=12,fontname='Times New Roman', width=.2, height=.1, fixedsize=true]
-      'invisnode2' [id='invisnode2',label='Invisible Node',shape=box,style=invis,fontsize=12,fontname='Times New Roman', width=.2, height=.1, fixedsize=true]
-
-      'energy' [id='energy',label='Energy',tooltip = 'eqn = 0.3',shape=box,style=filled,fillcolor='#09B0ACBF',fontsize=18,fontname='Times New Roman']
-
-      # Define flow nodes (intermediate nodes for flows)
-      'work' [id='work',label='Depletion from work', tooltip = 'eqn = work_rate * energy', shape = plaintext, fontsize=16, fontname='Times New Roman', width=0.6, height=0.3]
-                'recovery' [id='recovery',label='Recovery', tooltip = 'eqn = recovery_rate', shape = plaintext, fontsize=16, fontname='Times New Roman', width=0.6, height=0.3]
-                'erosion' [id='erosion',label='Erosion', tooltip = 'eqn = recovery_rate * work', shape = plaintext, fontsize=16, fontname='Times New Roman', width=0.6, height=0.3]
-
-      # Define external cloud nodes
-      'Cloud1' [label='', tooltip = 'Unspecified source',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
-                'Cloud2' [label='', tooltip = 'Unspecified source',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
-                'Cloud3' [label='', tooltip = 'Unspecified sink',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
-
-      # Define flow edges (stock -> flow_node -> stock)
-      'energy' -> 'work' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1, splines=false]
-      'work' -> 'Cloud1' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1, splines=ortho]
-      'Cloud3' -> 'recovery' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1, splines=false]
-      'recovery' -> 'energy' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1, splines=ortho]
-      'recovery_rate' -> 'erosion' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1, splines=false]
-      'erosion' -> 'Cloud2' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1, splines=ortho]
-
-      # Define dependency edges
-      'energy' -> 'work' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-      'recovery_rate' -> 'recovery' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-      'recovery_rate' -> 'erosion' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-      'work' -> 'erosion' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-      'recovery' -> 'net_change' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-      'work' -> 'net_change' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-
-      # Define auxiliary nodes
-      # 'net_change' [id='net_change',xlabel='',label='',tooltip = 'eqn = recovery - work',shape=circle,fontsize=16,fontname='Times New Roman', width=0.15, height=0.15, fixedsize=true, style=filled, fillcolor='grey90']
-      'net_change' [id='net_change',xlabel='',label='',tooltip = 'eqn = recovery - work',shape=circle,fontsize=16,fontname='Times New Roman', width=0.15, height=0.15, fixedsize=true, style=filled, fillcolor='grey90']
-      'net_change1' [id='net_change1',label='Net change in energy',tooltip = 'eqn = recovery - work',shape=plaintext,fontsize=16,fontname='Times New Roman', width=0.6, height=0.2, fixedsize=true]
-
-    }
-    "
-
-
-    pl <- DiagrammeR::grViz(viz_str)
-    pl
-  }
-
-  export_plot(pl, file.path(filepath_figs, "sfm_burnout_simple.pdf"))
-}
-```
-
-
-**
+Step 3b **
 
 ```{r} 
 sfm <- sdbuildR() |>
@@ -546,7 +222,7 @@ sfm <- sdbuildR() |>
 plot(sfm, show_constants = TRUE, show_aux = TRUE, show_dependencies = TRUE)
 ```
 
-## Simulating Stock-and-Flow Models in R
+## **
 
 ```{r}
 sfm <- sdbuildR() |>
@@ -1025,11 +701,6 @@ if (recreate_figs) {
 
 ```{r, fig.width = 1, fig.height=1}
 sfm <- sfm |>
-  custom_func(hill,
-    label = "Hill function",
-    eqn = "function(x, slope, midpoint = 0.5) {x^slope / (midpoint^slope + x^slope)}",
-    doc = "S-shaped functional form used to capture saturation effects. The midpoint determines the inflection point of the curve where the function reaches half its maximum value. The slope determines the steepness of the curve, where slope > 1 creates an S-shaped curve."
-  ) |>
   constant(m_slope, eqn = 3, label = "Medium Slope") |>
   update(motivation, eqn = motivation_rate * hill(resources, m_slope)) |>
   update(proactive, eqn = proactive_rate * hill(engagement, m_slope))
@@ -2666,5 +2337,337 @@ if (recreate_figs) {
 
 ```{r echo=TRUE}
 sessionInfo()
+```
+
+
+
+
+## Remove:
+
+
+## Stock-and-Flow Models
+
+### Single stock example
+
+```{r}
+sfm <- sdbuildR() |>
+  meta(name = "Burnout") |>
+  sim_settings(stop = 16, time_units = "weeks", only_stocks = FALSE)
+```
+
+```{r}
+sfm <- sfm |>
+  stock(energy, eqn = .3, label = "Energy")
+
+sim <- simulate(sfm)
+plot(sim)
+```
+
+
+```{r include=FALSE}
+if (recreate_figs) {
+  sfm_list <- list()
+  sfm_list[["A"]] <- sfm
+}
+```
+
+
+
+```{r}
+print(sfm)
+```
+
+
+```{r}
+sfm <- sfm |>
+  constant(work_rate, eqn = .5)
+```
+
+```{r}
+sfm <- sfm |>
+  flow(work,
+    eqn = work_rate,
+    from = energy, label = "Depletion from work"
+  )
+
+sim <- simulate(sfm)
+plot(sim)
+```
+
+
+```{r include=FALSE}
+if (recreate_figs) {
+  sfm_list[["B"]] <- sfm
+}
+```
+
+
+```{r}
+sfm <- sfm |>
+  update(work, eqn = work_rate * energy)
+
+sim <- simulate(sfm)
+plot(sim)
+```
+
+
+
+```{r include=FALSE}
+if (recreate_figs) {
+  sfm_list[["C"]] <- sfm
+}
+```
+
+```{r}
+sfm <- sfm |>
+  constant(recovery_rate, eqn = .3, label = "Recovery Rate") |>
+  flow(recovery, eqn = recovery_rate, to = energy, label = "Recovery")
+
+sim <- simulate(sfm)
+plot(sim)
+```
+
+
+
+```{r include=FALSE}
+if (recreate_figs) {
+  sfm_list[["D"]] <- sfm
+}
+```
+
+What if the ability to recover is not static, but erodes over time?
+
+```{r}
+sfm <- sfm |>
+  change_type(recovery_rate, new_type = stock) |>
+  update(recovery_rate, eqn = 1)
+```
+
+
+```{r}
+sfm <- sfm |>
+  flow(erosion,
+    eqn = recovery_rate * work,
+    # eqn = capacity * work / (1 + energy),
+    from = recovery_rate, label = "Recovery Erosion"
+  )
+
+sim <- simulate(sfm)
+plot(sim)
+```
+
+
+Counterintuitively, as recovery capacity erodes, energy first increases. This is because recovery first still exceeds energy depletion from work. 
+
+```{r}
+sfm <- sfm |>
+  aux(net_change, eqn = recovery - work, label = "Net change in energy")
+
+sim <- simulate(sfm)
+plot(sim)
+```
+
+
+```{r include=FALSE}
+if (recreate_figs) {
+  sfm_list[["E"]] <- sfm
+}
+```
+
+
+
+```{r include=FALSE}
+if (recreate_figs) {
+  # Create subplot figure
+  pl_list <- list()
+  max_letter <- max(names(sfm_list))
+  VARS_example <- c("energy", "work", "recovery", "recovery_rate", "net_change")
+
+  VARS_example <- c(
+    "energy", "work", "recovery",
+    # "recovery_rate",
+    "net_change"
+  )
+
+  # Recovery = recovery_rate so plot as one line
+  sfm_list[["E"]] <- sfm_list[["E"]] |>
+    update(recovery, label = "Recovery / recovery rate")
+
+  COLORS_example <- COLORS[seq_along(VARS_example)]
+
+  titles <- paste0(
+    paste0(
+      "<i>", LETTERS[seq_along(sfm_list)], ". ",
+      c(
+        "Static Stock",
+        "Constant Outflow",
+        "Stock-Dependent<br>Outflow",
+        "Constant Inflow",
+        "Erosion of Recovery Rate"
+        # "Auxiliary variable tracking net change in energy"
+      ), "</i>"
+    )
+  )
+  titles <- stats::setNames(titles, names(sfm_list))
+
+  for (letter in names(sfm_list)) {
+    sim <- simulate(sfm_list[[letter]],
+      save_at = .01, only_stocks = FALSE
+    )
+
+    # vars_in_sim <- intersect(vars, unique(sim$df$variable))
+    vars_in_sim <- unique(sim$df$variable)
+
+    vars_ <- VARS_example[VARS_example %in% vars_in_sim] |> rev()
+    colors_ <- COLORS_example[VARS_example %in% vars_in_sim] |> rev()
+    colors_ <- adjustcolor(colors_, alpha.f = .9)
+
+    pl_list[[letter]] <- plot(sim,
+      vars = vars_,
+      colors = colors_,
+      main = "",
+      # ylim = ylim,
+      showlegend = (letter == max_letter)
+    ) |>
+      rm_grid() |>
+      plotly::layout(yaxis = list(
+        nticks = 3
+      ), xaxis = list(
+        tickvals = list(0, 7.5, 15)
+      ))
+  }
+
+  # x1 <- 0.18
+  # x2 <- 0.8
+  # x3 <- .5
+  # y1 <- 1.03
+  # y2 <- 0.77
+  # y3 <- 0.45
+
+  x1 <- 0.1
+  x2 <- 0.37
+  x3 <- .78
+  y1 <- 1.06
+  y2 <- 0.48
+  # y3 <- 0.45
+
+  annot_ <- utils::modifyList(annot, list(
+    font = list(size = font_size_subplot + 4, family = font_family)
+  ))
+
+  pl <- plotly::subplot(
+    plotly::subplot(pl_list[1:4],
+      nrows = 2,
+      shareX = TRUE,
+      shareY = FALSE,
+      titleY = FALSE,
+      titleX = FALSE,
+      margin = 0.075
+    ), plotly::subplot(pl_list[5]),
+    nrows = 1,
+    # shareX = TRUE
+    # shareY = FALSE,
+    # titleY = FALSE,
+    # titleX = FALSE,
+    margin = 0.03
+  ) |>
+    plotly::layout(
+      yaxis4 = list(range = c(0, 1)),
+      yaxis2 = list(range = c(0, .4)),
+      font = annot_font,
+      # legend = annot_legend,
+      # legend = utils::modifyList(annot_legend, list(x = 1.4, y = 0.8)),
+      legend = utils::modifyList(annot_legend, list(
+        y = -.16,
+        font = list(size = font_size_legend)
+      )),
+      annotations = list(
+        utils::modifyList(annot_xlab, list(x = 0.5, y = -0.075))
+      )
+    ) |>
+    plotly::layout(annotations = list(
+      utils::modifyList(annot_, list(x = x1, y = y1, text = titles[["A"]])),
+      utils::modifyList(annot_, list(x = x2, y = y1, text = titles[["B"]])),
+      utils::modifyList(annot_, list(x = x1, y = y2 - .005, text = titles[["C"]])),
+      utils::modifyList(annot_, list(x = x2, y = y2 + .005, text = titles[["D"]])),
+      utils::modifyList(annot_, list(x = x3, y = y1, text = titles[["E"]]))
+      # utils::modifyList(annot_, list(x = .5, y = -.5, text = "F. Stock-and-Flow Diagram"))
+    ))
+
+  pl
+
+  export_plot(pl, file.path(filepath_figs, "build_sfm.pdf"),
+    width = 7, height = 4
+  )
+}
+```
+
+
+```{r}
+if (recreate_figs) {
+  # copy cat(viz_str) from plot.sdbuildR() with minlen=1.5
+  {
+    viz_str <- "
+
+    digraph sfm {
+
+      graph [layout = dot, rankdir = LR, center=true, outputorder='edgesfirst', pad=.1, nodesep= .15]
+
+      # Rank groupings
+      {rank=same; 'net_change1'; 'net_change'; 'invisnode1'; 'energy'; 'invisnode2'; 'recovery_rate'}
+
+      # Invisible edge to fix order
+      'net_change1' -> 'net_change' -> 'invisnode1' -> 'energy' -> 'invisnode2' -> 'recovery_rate' [style=invis]
+
+      # Define stock nodes
+      'recovery_rate' [id='recovery_rate',label='Recovery Rate',tooltip = 'eqn = 1',shape=box,style=filled,fillcolor='#09B0ACBF',fontsize=18,fontname='Times New Roman']
+
+     # Define invisible node
+      'invisnode1' [id='invisnode1',label='Invisible Node',shape=box,style=invis,fontsize=12,fontname='Times New Roman', width=.2, height=.1, fixedsize=true]
+      'invisnode2' [id='invisnode2',label='Invisible Node',shape=box,style=invis,fontsize=12,fontname='Times New Roman', width=.2, height=.1, fixedsize=true]
+
+      'energy' [id='energy',label='Energy',tooltip = 'eqn = 0.3',shape=box,style=filled,fillcolor='#09B0ACBF',fontsize=18,fontname='Times New Roman']
+
+      # Define flow nodes (intermediate nodes for flows)
+      'work' [id='work',label='Depletion from work', tooltip = 'eqn = work_rate * energy', shape = plaintext, fontsize=16, fontname='Times New Roman', width=0.6, height=0.3]
+                'recovery' [id='recovery',label='Recovery', tooltip = 'eqn = recovery_rate', shape = plaintext, fontsize=16, fontname='Times New Roman', width=0.6, height=0.3]
+                'erosion' [id='erosion',label='Erosion', tooltip = 'eqn = recovery_rate * work', shape = plaintext, fontsize=16, fontname='Times New Roman', width=0.6, height=0.3]
+
+      # Define external cloud nodes
+      'Cloud1' [label='', tooltip = 'Unspecified source',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
+                'Cloud2' [label='', tooltip = 'Unspecified source',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
+                'Cloud3' [label='', tooltip = 'Unspecified sink',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
+
+      # Define flow edges (stock -> flow_node -> stock)
+      'energy' -> 'work' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1, splines=false]
+      'work' -> 'Cloud1' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1, splines=ortho]
+      'Cloud3' -> 'recovery' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1, splines=false]
+      'recovery' -> 'energy' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1, splines=ortho]
+      'recovery_rate' -> 'erosion' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1, splines=false]
+      'erosion' -> 'Cloud2' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1, splines=ortho]
+
+      # Define dependency edges
+      'energy' -> 'work' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'recovery_rate' -> 'recovery' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'recovery_rate' -> 'erosion' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'work' -> 'erosion' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'recovery' -> 'net_change' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'work' -> 'net_change' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+
+      # Define auxiliary nodes
+      # 'net_change' [id='net_change',xlabel='',label='',tooltip = 'eqn = recovery - work',shape=circle,fontsize=16,fontname='Times New Roman', width=0.15, height=0.15, fixedsize=true, style=filled, fillcolor='grey90']
+      'net_change' [id='net_change',xlabel='',label='',tooltip = 'eqn = recovery - work',shape=circle,fontsize=16,fontname='Times New Roman', width=0.15, height=0.15, fixedsize=true, style=filled, fillcolor='grey90']
+      'net_change1' [id='net_change1',label='Net change in energy',tooltip = 'eqn = recovery - work',shape=plaintext,fontsize=16,fontname='Times New Roman', width=0.6, height=0.2, fixedsize=true]
+
+    }
+    "
+
+
+    pl <- DiagrammeR::grViz(viz_str)
+    pl
+  }
+
+  export_plot(pl, file.path(filepath_figs, "sfm_burnout_simple.pdf"))
+}
 ```
 

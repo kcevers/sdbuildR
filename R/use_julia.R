@@ -123,7 +123,7 @@ install_julia_env <- function(remove = FALSE) {
 #' In every R session, [use_julia()] needs to be run once (which is done automatically in [`simulate()`][simulate.sdbuildR]), which can take around 30-60 seconds.
 #'
 #' @param stop If `TRUE`, stop active Julia session. Defaults to `FALSE`.
-#' @param force If `TRUE`, force Julia setup to execute again.
+#' @param restart If `TRUE`, force Julia session to restart.
 #' @param nthreads If not `NULL`, set the number of threads for Julia to use. This will temporarily set the environment variable `JULIA_NUM_THREADS` and restart Julia if it is already running to apply the new thread setting. See [this page](https://docs.julialang.org/en/v1/manual/parallel-computing/#man-parallel-computing) for more details on threading in Julia.
 #'
 #' @returns Returns `NULL` invisibly, used for side effects
@@ -138,23 +138,29 @@ install_julia_env <- function(remove = FALSE) {
 #' # Start Julia with 4 threads (only works if threading is supported)
 #' use_julia(nthreads = 4)
 #'
+#' # Restart Julia session (in case of issues)
+#' use_julia(restart = TRUE)
+#' 
 #' # Stop Julia session
 #' use_julia(stop = TRUE)
 #'
 use_julia <- function(
   stop = FALSE,
-  force = FALSE,
+  restart = FALSE,
   nthreads = NULL
 ) {
-  if (stop) {
+  if (stop || restart) {
     .sdbuildR_env[["jl"]][["use_threads"]] <- FALSE
     JuliaConnectoR::stopJulia()
 
     cli::cli_inform(c("v" = "Closed Julia session."))
-    return(invisible())
+
+    if (stop) {
+      return(invisible())
+    }
   }
 
-  # If use_julia() was already run, no need to do anything, unless force or nthreads is specified
+  # If use_julia() was already run, no need to do anything, unless nthreads is specified
   if (!is.null(nthreads)) {
     if (!is.numeric(nthreads) || length(nthreads) != 1) {
       cli::cli_abort(c("x" = "nthreads must be a single positive integer."))
@@ -198,7 +204,7 @@ use_julia <- function(
   # - Julia version is ok
   # - Julia environment is set up and up to date
   status <- is_julia_init()
-  if (!force && is.null(nthreads) && status) {
+  if (is.null(nthreads) && status) {
     return(invisible())
   }
 
@@ -586,126 +592,3 @@ run_init_julia_env <- function() {
   invisible(NULL)
 }
 
-
-#' Internal function to create inst/setup.jl file for Julia
-#'
-#' @returns NULL
-#' @noRd
-#'
-create_julia_setup <- function() {
-  pkg_name <- "sdbuildR"
-  use_github_release <- TRUE
-  jl_pkg_name <- P[["jl_pkg_name"]]
-
-  script_setup <- sprintf(
-    '# setup.jl - One-time setup script for %s Julia environment
-
-println("Setting up Julia environment for %s...\\n\\n")
-
-using Pkg
-
-# Get the current script directory (where setup.jl is located)
-# This should be the %s package installation directory
-env_path = @__DIR__
-
-# println("Activating environment at: ", env_path, "\\n")
-Pkg.activate(env_path)
-
-# Install %s from GitHub
-println("\\nInstalling %s.jl from GitHub...")
-Pkg.add(url="https://github.com/KCEvers/%s.jl"%s)
-
-# Install all other dependencies from Project.toml
-println("\\nInstalling dependencies from Project.toml...")
-Pkg.instantiate()
-
-# Resolve dependencies without installing
-Pkg.resolve()
-
-# Precompile packages for faster loading
-println("\\nPrecompiling packages...")
-Pkg.precompile()
-
-println("\\nSetup complete!")
-', pkg_name, pkg_name, pkg_name,
-    jl_pkg_name, jl_pkg_name, jl_pkg_name,
-    ifelse(use_github_release, paste0(", rev = \"v", P[["jl_pkg_version_github_release"]], "\""), "")
-  )
-
-  # Write scripts
-  # filepath <- file.path(system.file(package = "sdbuildR"), "inst", "setup.jl")
-  filepath <- system.file("setup.jl", package = "sdbuildR")
-  write_script(script_setup, filepath)
-
-  invisible()
-}
-
-
-#' Internal function to create inst/Project.toml and inst/init.jl files for Julia
-#'
-#' @returns NULL
-#' @noRd
-#'
-create_julia_project_toml_init <- function() {
-  # Download Project.toml from StockFlowRSupport.jl
-  use_github_release <- TRUE
-  ref <- ifelse(use_github_release, paste0("v", P[["jl_pkg_version_github_release"]]), "main")
-  url <- sprintf(
-    "https://raw.githubusercontent.com/KCEvers/%s.jl/%s/Project.toml",
-    P[["jl_pkg_name"]], ref
-  )
-
-  lines <- readLines(url)
-
-  # Remove uuid, version, authors lines
-  lines <- lines[!grepl("^(uuid|version|authors)\\s*=", lines)]
-
-  # Extract dependency names from [deps] section
-  deps_start <- which(lines == "[deps]")
-  if (length(deps_start) == 1) {
-    # Find next section header or end of file
-    section_headers <- which(grepl("^\\[", lines))
-    deps_end <- section_headers[section_headers > deps_start][1]
-    if (is.na(deps_end)) deps_end <- length(lines) + 1
-    deps_lines <- lines[(deps_start + 1):(deps_end - 1)]
-    deps_names <- gsub("\\s*=.*", "", deps_lines[grepl("=", deps_lines)])
-  } else {
-    deps_names <- character(0)
-  }
-
-  # Replace package name with sdbuildR
-  pkg_name <- "sdbuildR"
-  lines <- gsub(
-    sprintf('^name\\s*=\\s*"%s"', P[["jl_pkg_name"]]),
-    sprintf('name = "%s"', pkg_name),
-    lines
-  )
-
-  script_project_toml <- paste(lines, collapse = "\n")
-
-  # Write script
-  # filepath <- file.path(system.file(package = "sdbuildR"), "inst", "Project.toml")
-  filepath <- system.file("Project.toml", package = "sdbuildR")
-  write_script(script_project_toml, filepath)
-
-  # init.jl
-  using_lines <- paste0("using ", deps_names, collapse = "\n")
-
-  script_init <- paste0(
-    "# init.jl - Script to initialize Julia environment for ", pkg_name, "\n\n",
-    "# Load packages\n",
-    "using ", P[["jl_pkg_name"]], "\n",
-    using_lines, "\n\n",
-    "# Extend min/max: when applied to a single vector, use minimum, like in R\n",
-    "Base.min(v::AbstractVector) = minimum(v)\n",
-    "Base.max(v::AbstractVector) = maximum(v)\n",
-    "\n# Add initialization of ", pkg_name, "\n",
-    P[["init_sdbuildR"]], " = true\n"
-  )
-
-  # filepath <- file.path(env_path, "init.jl")
-  filepath <- system.file("init.jl", package = "sdbuildR")
-  write_script(script_init, filepath)
-
-  invisible()
-}

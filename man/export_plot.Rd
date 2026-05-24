@@ -49,10 +49,10 @@ if (requireNamespace("DiagrammeRsvg", quietly = TRUE) &&
   file.remove(file)
 }
 
-\dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
+\dontshow{if (has_internet()) withAutoprint(\{ # examplesIf}
 \dontrun{
 # requires internet
-# Only if dependencies are installed
+# Only if suggested dependencies are installed
 if (requireNamespace("htmlwidgets", quietly = TRUE) &&
   requireNamespace("webshot2", quietly = TRUE)) {
   # Requires Chrome to save plotly plot:

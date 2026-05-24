@@ -1281,7 +1281,7 @@ new_names_IM <- function(old_names) {
       toupper(IM_func_names)
     )
   )
-  return(new_names)
+  new_names
 }
 
 
