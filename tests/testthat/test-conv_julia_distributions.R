@@ -67,8 +67,8 @@ test_that("conv_distribution_julia: non-integer first argument throws an error",
 
 test_that("conv_seq_julia: seq_along(x) → range(1.0, length(x))", {
   result <- conv_seq_julia(
-    arg     = list(along.with = "myvec"),
-    R_func  = "seq_along",
+    arg = list(along.with = "myvec"),
+    R_func = "seq_along",
     julia_func = "range"
   )
   expect_equal(result, "range(1.0, length(myvec))")
@@ -76,8 +76,8 @@ test_that("conv_seq_julia: seq_along(x) → range(1.0, length(x))", {
 
 test_that("conv_seq_julia: seq_len(n) → range(1.0, n)", {
   result <- conv_seq_julia(
-    arg     = list(length.out = "5"),
-    R_func  = "seq_len",
+    arg = list(length.out = "5"),
+    R_func = "seq_len",
     julia_func = "range"
   )
   expect_equal(result, "range(1.0, 5)")
@@ -85,8 +85,8 @@ test_that("conv_seq_julia: seq_len(n) → range(1.0, n)", {
 
 test_that("conv_seq_julia: seq(from, to, by) → range(from, to, step=by)", {
   result <- conv_seq_julia(
-    arg     = list(from = "0.0", to = "10.0", by = "2.0"),
-    R_func  = "seq",
+    arg = list(from = "0.0", to = "10.0", by = "2.0"),
+    R_func = "seq",
     julia_func = "range"
   )
   expect_equal(result, "range(0.0, 10.0, step=2.0)")
@@ -94,8 +94,8 @@ test_that("conv_seq_julia: seq(from, to, by) → range(from, to, step=by)", {
 
 test_that("conv_seq_julia: seq(from, to, length.out) → range(..., round_(n))", {
   result <- conv_seq_julia(
-    arg     = list(from = "0.0", to = "1.0", length.out = "5"),
-    R_func  = "seq",
+    arg = list(from = "0.0", to = "1.0", length.out = "5"),
+    R_func = "seq",
     julia_func = "range"
   )
   expect_equal(result, "range(0.0, 1.0, round_(5))")
@@ -103,8 +103,8 @@ test_that("conv_seq_julia: seq(from, to, length.out) → range(..., round_(n))",
 
 test_that("conv_seq_julia: seq with length.out=1 and from != to → returns just 'from'", {
   result <- conv_seq_julia(
-    arg     = list(from = "3.0", to = "7.0", length.out = "1"),
-    R_func  = "seq",
+    arg = list(from = "3.0", to = "7.0", length.out = "1"),
+    R_func = "seq",
     julia_func = "range"
   )
   expect_equal(result, "3.0")
@@ -112,8 +112,8 @@ test_that("conv_seq_julia: seq with length.out=1 and from != to → returns just
 
 test_that("conv_seq_julia: seq with length.out=1 and from == to → range(from, to, round_(1))", {
   result <- conv_seq_julia(
-    arg     = list(from = "3.0", to = "3.0", length.out = "1"),
-    R_func  = "seq",
+    arg = list(from = "3.0", to = "3.0", length.out = "1"),
+    R_func = "seq",
     julia_func = "range"
   )
   expect_equal(result, "range(3.0, 3.0, round_(1))")
@@ -121,8 +121,8 @@ test_that("conv_seq_julia: seq with length.out=1 and from == to → range(from, 
 
 test_that("conv_seq_julia: seq without by or length.out defaults to step=1.0", {
   result <- conv_seq_julia(
-    arg     = list(from = "1.0", to = "5.0"),
-    R_func  = "seq",
+    arg = list(from = "1.0", to = "5.0"),
+    R_func = "seq",
     julia_func = "range"
   )
   expect_match(result, "step=1\\.0")
@@ -135,8 +135,8 @@ test_that("conv_seq_julia: seq without by or length.out defaults to step=1.0", {
 
 test_that("conv_sample_julia: basic sample without replacement wraps size in round_()", {
   result <- conv_sample_julia(
-    arg      = list(x = "myvec", size = "3", replace = "FALSE"),
-    R_func   = "sample",
+    arg = list(x = "myvec", size = "3", replace = "FALSE"),
+    R_func = "sample",
     julia_func = "StatsBase.sample"
   )
   expect_equal(result, "StatsBase.sample(myvec, round_(3), replace=false)")
@@ -144,8 +144,8 @@ test_that("conv_sample_julia: basic sample without replacement wraps size in rou
 
 test_that("conv_sample_julia: replace=TRUE maps to julia true", {
   result <- conv_sample_julia(
-    arg      = list(x = "myvec", size = "3", replace = "TRUE"),
-    R_func   = "sample",
+    arg = list(x = "myvec", size = "3", replace = "TRUE"),
+    R_func = "sample",
     julia_func = "StatsBase.sample"
   )
   expect_match(result, "replace=true")
@@ -153,17 +153,17 @@ test_that("conv_sample_julia: replace=TRUE maps to julia true", {
 })
 
 test_that("conv_sample_julia: replace is case-insensitive (TRUE, True, true all work)", {
-  r1 <- conv_sample_julia(list(x = "v", size = "1", replace = "TRUE"),  "sample", "StatsBase.sample")
-  r2 <- conv_sample_julia(list(x = "v", size = "1", replace = "True"),  "sample", "StatsBase.sample")
-  r3 <- conv_sample_julia(list(x = "v", size = "1", replace = "true"),  "sample", "StatsBase.sample")
+  r1 <- conv_sample_julia(list(x = "v", size = "1", replace = "TRUE"), "sample", "StatsBase.sample")
+  r2 <- conv_sample_julia(list(x = "v", size = "1", replace = "True"), "sample", "StatsBase.sample")
+  r3 <- conv_sample_julia(list(x = "v", size = "1", replace = "true"), "sample", "StatsBase.sample")
   expect_equal(r1, r2)
   expect_equal(r2, r3)
 })
 
 test_that("conv_sample_julia: weighted sample uses StatsBase.pweights()", {
   result <- conv_sample_julia(
-    arg      = list(x = "myvec", size = "2", replace = "TRUE", prob = "myprobs"),
-    R_func   = "sample",
+    arg = list(x = "myvec", size = "2", replace = "TRUE", prob = "myprobs"),
+    R_func = "sample",
     julia_func = "StatsBase.sample"
   )
   expect_match(result, "StatsBase\\.pweights\\(myprobs\\)")
@@ -173,8 +173,8 @@ test_that("conv_sample_julia: weighted sample uses StatsBase.pweights()", {
 
 test_that("conv_sample_julia: sample.int generates integer range seq(1.0, n)", {
   result <- conv_sample_julia(
-    arg      = list(n = "10", size = "3", replace = "FALSE"),
-    R_func   = "sample.int",
+    arg = list(n = "10", size = "3", replace = "FALSE"),
+    R_func = "sample.int",
     julia_func = "StatsBase.sample"
   )
   expect_match(result, "seq\\(1\\.0,\\s*10\\)")

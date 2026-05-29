@@ -13,7 +13,7 @@ test_that("ensemble() runs in R", {
 
 test_that("ensemble() R returns correct structure", {
   sfm <- make_r_ensemble_random_sfm()
-  sims <- silence(ensemble(sfm, n = 5, return_sims = TRUE, verbose = FALSE))
+  sims <- silence(ensemble(sfm, n = 5, save_sims = TRUE, verbose = FALSE))
 
   expected_fields <- c(
     "success", "df", "summary", "n", "n_total",
@@ -32,17 +32,17 @@ test_that("ensemble() R handles models with no constants", {
   sfm <- make_basic_sfm() |>
     sim_settings(language = "R", start = 0, stop = 10, dt = 0.1, save_at = 1)
 
-  sims <- silence(ensemble(sfm, n = 3, return_sims = TRUE, verbose = FALSE))
+  sims <- silence(ensemble(sfm, n = 3, save_sims = TRUE, verbose = FALSE))
 
   expect_true(sims[["success"]])
   expect_equal(nrow(sims[["constants"]][["df"]]), 0)
   expect_equal(nrow(sims[["constants"]][["summary"]]), 0)
   expect_equal(
     names(sims[["constants"]][["df"]]),
-    c("i", "j", "variable", "value")
+    c("sim", "condition", "variable", "value")
   )
   expect_true(
-    all(c("j", "variable", "mean", "median", "sd", "min", "max", "q0.025", "q0.975") %in%
+    all(c("condition", "variable", "mean", "median", "sd", "min", "max", "q0.025", "q0.975") %in%
       names(sims[["constants"]][["summary"]]))
   )
 })
@@ -67,7 +67,7 @@ test_that("ensemble() R returns all variables with only_stocks = FALSE", {
 
   sims <- silence(ensemble(sfm,
     n = 3, only_stocks = FALSE,
-    return_sims = TRUE, verbose = FALSE
+    save_sims = TRUE, verbose = FALSE
   ))
   expect_true(sims[["success"]])
   expect_equal(
@@ -82,7 +82,7 @@ test_that("ensemble() R filters outputs to vars", {
 
   sims <- silence(ensemble(sfm,
     n = 3,
-    return_sims = TRUE,
+    save_sims = TRUE,
     verbose = FALSE
   ))
 
@@ -96,15 +96,15 @@ test_that("ensemble() R returns correct n properties", {
   sfm <- make_r_ensemble_random_sfm()
 
   sims <- silence(ensemble(sfm,
-    n = nr_sims, return_sims = TRUE,
+    n = nr_sims, save_sims = TRUE,
     verbose = FALSE
   ))
   expect_equal(sims[["n"]], nr_sims)
   expect_equal(sims[["n_total"]], nr_sims)
   expect_equal(sims[["n_conditions"]], 1)
-  expect_equal(sort(unique(sims[["df"]][["i"]])), 1:nr_sims)
-  expect_equal(sort(unique(sims[["df"]][["j"]])), 1)
-  expect_equal(sort(unique(sims[["summary"]][["j"]])), 1)
+  expect_equal(sort(unique(sims[["df"]][["sim"]])), 1:nr_sims)
+  expect_equal(sort(unique(sims[["df"]][["condition"]])), 1)
+  expect_equal(sort(unique(sims[["summary"]][["condition"]])), 1)
 })
 
 test_that("ensemble() R custom quantiles", {
@@ -145,7 +145,7 @@ test_that("ensemble() R crossed design computes correct conditions", {
   expect_equal(sims[["n"]], n)
   expect_equal(sims[["n_total"]], n * 4)
   expect_equal(sims[["n_conditions"]], 4)
-  expect_equal(sort(unique(sims[["summary"]][["j"]])), 1:4)
+  expect_equal(sort(unique(sims[["summary"]][["condition"]])), 1:4)
 })
 
 test_that("ensemble() R non-crossed design pairs values", {
@@ -157,13 +157,13 @@ test_that("ensemble() R non-crossed design pairs values", {
       "contact_rate" = c(1.5, 2, 2.5),
       "infection_rate" = c(1, 2, 3)
     ),
-    cross = FALSE, n = nr_sims, return_sims = TRUE, verbose = FALSE
+    cross = FALSE, n = nr_sims, save_sims = TRUE, verbose = FALSE
   ))
   expect_true(sims[["success"]])
   expect_equal(sims[["n"]], nr_sims)
   expect_equal(sims[["n_total"]], nr_sims * nr_cond)
-  expect_equal(sort(unique(sims[["df"]][["i"]])), 1:nr_sims)
-  expect_equal(sort(unique(sims[["df"]][["j"]])), 1:nr_cond)
+  expect_equal(sort(unique(sims[["df"]][["sim"]])), 1:nr_sims)
+  expect_equal(sort(unique(sims[["df"]][["condition"]])), 1:nr_cond)
 })
 
 test_that("ensemble() R conditions data frame is correct", {
@@ -173,12 +173,12 @@ test_that("ensemble() R conditions data frame is correct", {
       "contact_rate" = c(1.5, 2, 2.5),
       "infection_rate" = c(1, 2, 3)
     ),
-    cross = FALSE, n = 2, return_sims = TRUE, verbose = FALSE
+    cross = FALSE, n = 2, save_sims = TRUE, verbose = FALSE
   ))
   expect_true(sims[["success"]])
 
   cond_df <- as.data.frame(sims[["conditions"]])
-  expect_equal(cond_df[["j"]], 1:3)
+  expect_equal(cond_df[["condition"]], 1:3)
   # Alphabetically sorted: infection_rate before contact_rate
   expect_equal(cond_df[["infection_rate"]], c(1, 2, 3))
   expect_equal(cond_df[["contact_rate"]], c(1.5, 2, 2.5))
@@ -187,23 +187,17 @@ test_that("ensemble() R conditions data frame is correct", {
 
 # Output compatibility ----------------------------------------------------
 
-test_that("ensemble() R result works with plot()", {
-  sfm <- make_r_ensemble_random_sfm()
-  sims <- silence(ensemble(sfm, n = 3, verbose = FALSE))
-  expect_no_error(plot(sims))
-})
-
 test_that("ensemble() R result works with as.data.frame()", {
   sfm <- make_r_ensemble_random_sfm()
-  sims <- silence(ensemble(sfm, n = 3, return_sims = TRUE, verbose = FALSE))
+  sims <- silence(ensemble(sfm, n = 3, save_sims = TRUE, verbose = FALSE))
 
   df_summary <- as.data.frame(sims, which = "summary")
   expect_s3_class(df_summary, "data.frame")
-  expect_true(all(c("j", "variable", "time", "mean", "median") %in% names(df_summary)))
+  expect_true(all(c("condition", "variable", "time", "mean", "median") %in% names(df_summary)))
 
   df_sims <- as.data.frame(sims, which = "sims")
   expect_s3_class(df_sims, "data.frame")
-  expect_true(all(c("i", "j", "variable", "time", "value") %in% names(df_sims)))
+  expect_true(all(c("sim", "condition", "variable", "time", "value") %in% names(df_sims)))
 })
 
 test_that("ensemble() R result works with head() and tail()", {

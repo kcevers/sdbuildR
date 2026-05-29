@@ -20,20 +20,17 @@ verify <- function(object, ...) {
 #'
 #' Calling `verify()` on a `sdbuildR` model will first simulate the model, then
 #' run all tests — including those that require re-simulation under alternative
-#' [conditions][unit_test()].
+#' [conditions][unit_test()]. Simulations are always retained in the returned
+#' object so that [plot.verify_sdbuildR()] works without any extra arguments.
 #'
-#' Setting `n > 1` runs an ensemble of `n` simulations per condition (robustness
-#' testing). Each test is evaluated against all `n` runs. The test passes only
-#' if all `n` runs pass.
+#' For repeated-run robustness testing use [ensemble()] instead.
 #'
 #' @param object An [`sdbuildR`][sdbuildR] object.
 #' @param verbose If `TRUE` (default), print results to the console.
-#' @param n Number of simulations to run per condition. Defaults to `1` (deterministic
-#'   verification). Set to a larger value for robustness testing of stochastic models.
-#' @param nr Integer vector of test number(s) to run (1-based, as shown by [unit_tests()]).
+#' @param test Integer vector of test number(s) to run (numbers-based, as shown by [unit_tests()]).
 #'   Defaults to `NULL` (run all tests).
-#' @param ... Additional arguments passed to [sim_settings()] (e.g., `return_sims`,
-#'   `seed`, `dt`) and then to [simulate.sdbuildR()].
+#' @param ... Additional arguments passed to [sim_settings()] (e.g., `seed`,
+#'   `dt`) and then to [simulate.sdbuildR()].
 #'
 #' @returns An object of class `verify_sdbuildR`, returned invisibly. Use
 #'   [as.data.frame()] to extract results as a data frame and [plot()] to
@@ -41,18 +38,17 @@ verify <- function(object, ...) {
 #'   \describe{
 #'     \item{results}{List of test result entries, one per test (including inactive
 #'       tests, which appear with `status = "skip"`). Each entry has `label`,
-#'       `expr_str`, `conditions`, `status`, `error_type`, `message`, `outcome`,
-#'       `pass_rate`, `n_pass`, `n_fail`, and `n_error`.}
+#'       `expr_str`, `conditions`, `status`, `error_type`, `message`, and `outcome`.}
 #'     \item{object}{The `sdbuildR` model the tests were run against.}
 #'     \item{sims}{Nested list of `simulate_sdbuildR` objects used internally by
-#'       [plot.verify_sdbuildR()], or `NULL` if `return_sims = FALSE`.}
+#'       [plot.verify_sdbuildR()]. Always present (never `NULL`).}
 #'     \item{j}{Named integer vector mapping each test label to its condition index.
 #'       Used internally by [plot.verify_sdbuildR()].}
 #'     \item{n}{Number of simulations run per condition.}
 #'     \item{n_conditions}{Number of unique simulation conditions.}
 #'     \item{test_indices}{Integer vector of the original 1-based test numbers that
 #'       were run (as shown by [unit_tests()]). Equal to `seq_along(results)` when
-#'       `nr = NULL` (all tests run).}
+#'       `test = NULL` (all tests run).}
 #'   }
 #'
 #' @export
@@ -70,9 +66,10 @@ verify <- function(object, ...) {
 #'   )
 #'
 #' verify(sfm)
-verify.sdbuildR <- function(object, verbose = TRUE, n = 1L, nr = NULL, ...) {
+verify.sdbuildR <- function(object, verbose = TRUE, test = NULL, ...) {
   check_sdbuildR(object)
-  rlang::check_installed("testthat", reason = "to run unit tests with {.fn verify}")
+  # Not yet implemented:
+  # rlang::check_installed("testthat", reason = "to run unit tests with {.fn verify}")
 
   # Override sim_settings with any arguments passed via ...
   varargs <- list(...)
@@ -80,31 +77,23 @@ verify.sdbuildR <- function(object, verbose = TRUE, n = 1L, nr = NULL, ...) {
     object <- do.call(sim_settings, c(list(object), varargs))
   }
 
-  # Persistent meta-setting: read return_sims from sim_settings AFTER applying varargs
-  return_sims <- isTRUE(object[["sim_settings"]][["return_sims"]])
-
-  if (!is.numeric(n) || length(n) != 1L || is.na(n) || n < 1L || n != as.integer(n)) {
-    cli::cli_abort(c(
-      "x" = "The {.arg n} argument must be a positive integer scalar.",
-      "i" = "Received: {.val {n}}"
-    ))
-  }
-  n <- as.integer(n)
-
   tests <- object[["unit_tests"]]
   if (length(tests) == 0) {
     cli::cli_abort(c(
-      "x" = "No unit tests defined. Add tests with {.fn unit_test}."
+      "x" = "No unit tests defined.",
+      ">" = "Add tests with {.fn unit_test}."
     ))
-    return(invisible(new_verify_sdbuildR(results = list(), object = object)))
+    return(invisible(new_verify_sdbuildR(success = FALSE, 
+    error_message = "No unit tests defined.", 
+    results = list(), object = object)))
   }
 
-  # Subset tests if nr supplied
+  # Subset tests if test supplied
   test_indices <- seq_along(tests)
-  if (!is.null(nr)) {
-    .check_nr_index(nr, length(tests))
-    tests        <- tests[nr]
-    test_indices <- as.integer(nr)
+  if (!is.null(test)) {
+    .check_test_index(test, length(tests))
+    tests <- tests[test]
+    test_indices <- as.integer(test)
   }
 
   # Group tests by unique conditions to minimise re-simulations.
@@ -115,38 +104,51 @@ verify.sdbuildR <- function(object, verbose = TRUE, n = 1L, nr = NULL, ...) {
     if (length(t[["conditions"]]) == 0) {
       return(.BASELINE)
     }
-    paste(names(t[["conditions"]]), unlist(t[["conditions"]]), sep = "=", collapse = ";")
+    paste(names(t[["conditions"]]), unlist(t[["conditions"]]),
+     sep = "=", collapse = ";")
   }, character(1))
 
   unique_keys <- unique(condition_keys)
   n_conditions <- length(unique_keys)
 
-  # Determine per condition whether the simulation requires `only_stocks = FALSE`,
-  # which is necessary when unit test expressions contain flows or auxiliaries.
-  stock_or_constant_names <- object[["variables"]][
-    object[["variables"]][["type"]] %in% c("stock", "constant"), "name"
-  ]
+  # All test simulations should return the same variables
+  # Get test dependencies to determine which variables are needed for the simulations
   td <- get_test_deps(object)
   object <- td[["object"]]
   deps <- td[["deps"]]
 
-  needs_non_stocks <- vapply(seq_along(unique_keys), function(i) {
-    key <- unique_keys[[i]]
-    test_indices <- which(condition_keys == key)
-    all_refs <- unique(unlist(lapply(test_indices, function(k) deps[[k]][["expr_refs"]])))
-    any(!all_refs %in% stock_or_constant_names)
-  }, logical(1))
+  # Compute all variables referenced by tests across the whole test set
+  all_refs <- unique(unlist(lapply(seq_along(deps), function(k) deps[[k]][["expr_refs"]])))
 
-  # Remove only_stocks from dots if mistakenly passed (prevent duplicate arg error)
-  dots <- list(...)
-  dots[["only_stocks"]] <- NULL
+  # Get specified vars and only_stocks; vars overrides only_stocks
+  vars <- object[["sim_settings"]][["vars"]]
+  only_stocks <- object[["sim_settings"]][["only_stocks"]]
 
-  # Run n simulations per unique condition set.
-  # sim_cache[[j_idx]] is a list of n simulate_sdbuildR objects.
+  # Compute sim_vars with precedence:
+  # 1) If user provided `vars` explicitly -> include those + test refs
+  if (!is.null(vars)) {
+    sim_vars <- sort(unique(c(vars, all_refs)))
+  # 2) Else if user set only_stocks = FALSE -> simulate all model variables
+  } else if (!only_stocks) {
+    all_model_vars <- get_model_var(object)
+    sim_vars <- sort(all_model_vars)
+  # 3) Else (user did not specify vars, and only_stocks = TRUE) -> default to stocks + test refs
+  } else {
+    df <- get_names(object)
+    all_stock_names <- df[df[["type"]] == "stock", "name"]
+    sim_vars <- sort(unique(c(all_stock_names, all_refs)))
+  }
+
+  # Set sim_vars in simulation specifications
+  object <- sim_settings(object, vars = sim_vars)
+
+  # Run one simulation per unique condition set. Each simulate() call receives
+  # the same centrally-computed `sim_vars` so all conditions return consistent
+  # variable sets.
   sim_cache <- vector("list", n_conditions)
   for (j_idx in seq_along(unique_keys)) {
     key <- unique_keys[[j_idx]]
-    os <- !needs_non_stocks[[j_idx]]
+
     if (key == .BASELINE) {
       obj_for_cond <- object
     } else {
@@ -158,12 +160,11 @@ verify.sdbuildR <- function(object, verbose = TRUE, n = 1L, nr = NULL, ...) {
         obj_for_cond <- rlang::inject(update(obj_for_cond, name = !!nm, eqn = !!eqn_val))
       }
     }
-    sim_cache[[j_idx]] <- lapply(seq_len(n), function(dummy)
-      rlang::inject(simulate(obj_for_cond, only_stocks = os, !!!dots))
-    )
+
+    sim_cache[[j_idx]] <- simulate(obj_for_cond)
   }
 
-  # Evaluate each test against the appropriate simulation(s).
+  # Evaluate each test against the single simulation for its condition.
   results <- lapply(tests, function(test) {
     key <- if (length(test[["conditions"]]) == 0) {
       .BASELINE
@@ -171,32 +172,27 @@ verify.sdbuildR <- function(object, verbose = TRUE, n = 1L, nr = NULL, ...) {
       paste(names(test[["conditions"]]), unlist(test[["conditions"]]), sep = "=", collapse = ";")
     }
     j_idx <- match(key, unique_keys)
-    run_results <- lapply(sim_cache[[j_idx]], function(sim) .run_one_unit_test(test, sim))
-    if (n == 1L) {
-      .enrich_single_result(run_results[[1L]])
-    } else {
-      .aggregate_run_results(run_results)
-    }
+    .run_one_unit_test(test, sim_cache[[j_idx]])
   })
 
-  # j always populated: named integer vector mapping test label -> condition index
-  j <- stats::setNames(
+  # condition always populated: named integer vector mapping test label -> condition index
+  condition <- stats::setNames(
     match(condition_keys, unique_keys),
     vapply(tests, function(t) t[["label"]], character(1))
   )
 
-  sims <- if (return_sims) sim_cache else NULL
+  sims <- sim_cache
 
   result_obj <- new_verify_sdbuildR(
+    success = TRUE,
     results = results, object = object,
-    sims = sims, j = j,
-    n = n, n_conditions = n_conditions,
+    sims = sims, condition = condition,
+    n_conditions = n_conditions,
     test_indices = test_indices
   )
   if (verbose) print(result_obj)
   invisible(result_obj)
 }
-
 
 
 # ==============================================================================
@@ -212,23 +208,19 @@ verify.sdbuildR <- function(object, verbose = TRUE, n = 1L, nr = NULL, ...) {
 #' evaluated with [verify()]. All unit tests can be displayed with
 #' `unit_tests()`.
 #'
-#' The `expr` argument accepts either a plain logical expression or a
-#' `testthat` expectation:
-#' - **Logical**: `all(S >= 0)`, `cor(D, C) < -.5` — wrapped in
-#'   `expect_true()` internally.
-#' - **testthat expectation**: `expect_lt(max(D), 100)`, `expect_gt(tail(R, 1), 0)`
-#'   — evaluated as-is for richer failure messages.
+#' The `expr` argument accepts a plain logical expression:
+#' - **Logical**: `all(S >= 0)`, `cor(D, C) < -.5`.
 #'
 #' When `label` is omitted, a human-readable label is generated automatically
 #' by parsing the expression (e.g., `all(S >= 0)` →
 #' `"S is at least 0 (for all values)"`).
 #'
 #' @section Adding vs. modifying:
-#' - **Add** a new test: omit `nr` (and provide a `label` that does not match
+#' - **Add** a new test: omit `test` (and provide a `label` that does not match
 #'   any existing test, or omit `label` to auto-generate one).
-#' - **Modify** an existing test by number: supply `nr` (integer).
+#' - **Modify** an existing test by number: supply `test` (integer).
 #' - **Modify** an existing test by label: supply a `label` that matches an
-#'   existing test (without specifying `nr`).
+#'   existing test (without specifying `test`).
 #'
 #' When modifying, only the arguments you explicitly supply are changed; all
 #' other fields keep their current value.
@@ -239,9 +231,9 @@ verify.sdbuildR <- function(object, verbose = TRUE, n = 1L, nr = NULL, ...) {
 #' an error is thrown if an identical `expr` already exists on another test.
 #'
 #' @inheritParams update.sdbuildR
-#' @param nr Integer number of the test to modify. Must be a positive integer
+#' @param test Integer number of the test to modify. Must be a positive integer
 #'   (a warning is issued and the value rounded when a non-integer is
-#'   supplied). When `nr` exceeds the current number of tests a warning is
+#'   supplied). When `test` exceeds the current number of tests a warning is
 #'   issued and a new test is appended instead. Can be omitted when adding a
 #'   new test.
 #' @param expr An expression to evaluate against simulation results. Variable
@@ -288,8 +280,8 @@ verify.sdbuildR <- function(object, verbose = TRUE, n = 1L, nr = NULL, ...) {
 #' # View all tests
 #' unit_tests(sfm)
 #'
-#' # Deactivate test nr. 1
-#' sfm <- unit_test(sfm, nr = 1, active = FALSE)
+#' # Deactivate test test 1
+#' sfm <- unit_test(sfm, test = 1, active = FALSE)
 #' verify(sfm)
 #'
 #' # Modify test by label, e.g., to change the expression
@@ -299,7 +291,7 @@ verify.sdbuildR <- function(object, verbose = TRUE, n = 1L, nr = NULL, ...) {
 #' )
 #' verify(sfm)
 #'
-unit_test <- function(object, nr, expr, label, conditions = list(), active = TRUE) {
+unit_test <- function(object, test, expr, label, conditions = list(), active = TRUE) {
   check_sdbuildR(object)
 
   tests <- object[["unit_tests"]]
@@ -324,16 +316,16 @@ unit_test <- function(object, nr, expr, label, conditions = list(), active = TRU
         parse(text = expr_obj, keep.source = FALSE),
         error = function(e) {
           cli::cli_abort(c(
-            "Expression has invalid R syntax.",
-            "x" = "Failed to parse: {.code {expr_obj}}.",
+            "x" = "Expression has invalid R syntax.",
+            "!" = "Failed to parse: {.code {expr_obj}}.",
             "i" = "{conditionMessage(e)}"
           ))
         }
       )
       if (length(parsed_all) != 1L) {
         cli::cli_abort(c(
-          "Invalid {.arg expr} argument.",
-          "x" = "Character {.arg expr} must contain exactly one expression."
+          "x" = "Invalid {.arg expr} argument.",
+          "!" = "Character {.arg expr} must contain exactly one expression."
         ))
       }
       expr_obj <- parsed_all[[1L]]
@@ -344,44 +336,44 @@ unit_test <- function(object, nr, expr, label, conditions = list(), active = TRU
       parse(text = expr_str_local, keep.source = FALSE),
       error = function(e) {
         cli::cli_abort(c(
-          "Expression has invalid R syntax.",
-          "x" = "Failed to parse: {.code {expr_str_local}}.",
+          "x" = "Expression has invalid R syntax.",
+          "!" = "Failed to parse: {.code {expr_str_local}}.",
           "i" = "{conditionMessage(e)}"
         ))
       }
     )
     if (length(parsed_roundtrip) != 1L) {
       cli::cli_abort(c(
-        "Invalid {.arg expr} argument.",
-        "x" = "Expression must contain exactly one expression."
+        "x" = "Invalid {.arg expr} argument.",
+        "!" = "Expression must contain exactly one expression."
       ))
     }
 
     list(expr_obj = parsed_roundtrip[[1L]], expr_str = expr_str_local)
   }
 
-  # --- Validate nr ---
-  nr_missing <- missing(nr)
-  if (!nr_missing) {
-    if (!is.numeric(nr) || length(nr) != 1L || is.na(nr)) {
+  # --- Validate test ---
+  test_missing <- missing(test)
+  if (!test_missing) {
+    if (!is.numeric(test) || length(test) != 1L || is.na(test)) {
       cli::cli_abort(c(
-        "Invalid {.arg nr} argument.",
-        "x" = "{.arg nr} must be a single integer."
+        "x" = "Invalid {.arg test} argument.",
+        "!" = "{.arg test} must be a single integer."
       ))
     }
-    if (nr != round(nr)) {
-      nr_old <- nr
-      nr <- as.integer(round(nr))
+    if (test != round(test)) {
+      test_old <- test
+      test <- as.integer(round(test))
       cli::cli_warn(c(
-        "{.arg nr} must be an integer.",
-        "!" = "{.val {nr_old}} will be replaced by [{nr}]."
+        "x" = "{.arg test} must be an integer.",
+        "!" = "{.val {test_old}} will be replaced by [{test}]."
       ))
     }
-    nr <- as.integer(nr)
-    if (nr < 1L) {
+    test <- as.integer(test)
+    if (test < 1L) {
       cli::cli_abort(c(
-        "Invalid {.arg nr} argument.",
-        "x" = "{.arg nr} must be a positive integer."
+        "x" = "Invalid {.arg test} argument.",
+        "!" = "{.arg test} must be a positive integer."
       ))
     }
   }
@@ -390,17 +382,17 @@ unit_test <- function(object, nr, expr, label, conditions = list(), active = TRU
   modifying <- FALSE
   modify_pos <- NULL
 
-  if (!nr_missing) {
-    if (nr <= n_tests) {
+  if (!test_missing) {
+    if (test <= n_tests) {
       modifying <- TRUE
-      modify_pos <- nr
+      modify_pos <- test
     } else {
       next_nr <- n_tests + 1L
-      if (nr > next_nr) {
+      if (test > next_nr) {
         cli::cli_warn(c(
-          "!" = "Invalid {.arg nr} ({.val {nr}}).",
-          "i" = "{.arg nr} does not need to be specified when adding a new test.",
-          ">" = "{.arg nr} will be set to the existing number of tests + 1 ({.arg nr} = {.val {next_nr}})."
+          "!" = "Invalid {.arg test} ({.val {test}}).",
+          "i" = "{.arg test} does not need to be specified when adding a new test.",
+          ">" = "{.arg test} will be set to the existing number of tests + 1 ({.arg test} = {.val {next_nr}})."
         ))
       }
     }
@@ -445,8 +437,8 @@ unit_test <- function(object, nr, expr, label, conditions = list(), active = TRU
     # Adding: expr is required
     if (expr_missing) {
       cli::cli_abort(c(
-        "{.arg expr} is required when adding a new unit test.",
-        "i" = "To modify an existing test, specify its {.arg nr} or {.arg label}."
+        "x" = "{.arg expr} is required when adding a new unit test.",
+        "i" = "To modify an existing test, specify its {.arg test} or {.arg label}."
       ))
     }
     normalized <- .normalize_expr(expr_captured)
@@ -473,8 +465,8 @@ unit_test <- function(object, nr, expr, label, conditions = list(), active = TRU
   # --- Validate label ---
   if (!is.character(label) || length(label) != 1L || is.na(label) || !nzchar(trimws(label))) {
     cli::cli_abort(c(
-      "Invalid {.arg label} argument.",
-      "x" = "{.arg label} must be a single non-empty character string."
+      "x" = "Invalid {.arg label} argument.",
+      "!" = "{.arg label} must be a single non-empty character string."
     ))
   }
   label <- trimws(label)
@@ -489,8 +481,8 @@ unit_test <- function(object, nr, expr, label, conditions = list(), active = TRU
   if (!modifying && label_missing && label %in% existing_labels) {
     dup_pos <- match(label, existing_labels)
     cli::cli_abort(c(
-      "Auto-generated label {.val {label}} already exists ([{dup_pos}]).",
-      "i" = "Provide a unique {.arg label} explicitly."
+      "x"= "Auto-generated label {.val {label}} already exists ([{dup_pos}]).",
+      ">" = "Provide a unique {.arg label} explicitly."
     ))
   }
 
@@ -499,16 +491,16 @@ unit_test <- function(object, nr, expr, label, conditions = list(), active = TRU
     if (label %in% other_labels) {
       dup_pos <- match(label, existing_labels)
       cli::cli_abort(c(
-        "Label {.val {label}} is already used by unit test [{dup_pos}].",
-        "x" = "Labels must be unique."
+        "x" = "Label {.val {label}} is already used by unit test [{dup_pos}].",
+        "!" = "Labels must be unique."
       ))
     }
   } else {
     if (label %in% existing_labels) {
       dup_pos <- match(label, existing_labels)
       cli::cli_abort(c(
-        "A unit test with label {.val {label}} already exists ([{dup_pos}]).",
-        "i" = "Labels must be unique. Use {.code unit_test(object, nr = {dup_pos})} to modify the existing test."
+        "x" = "A unit test with label {.val {label}} already exists ([{dup_pos}]).",
+        "!" = "Labels must be unique. Use {.code unit_test(object, test = {dup_pos})} to modify the existing test."
       ))
     }
   }
@@ -528,8 +520,8 @@ unit_test <- function(object, nr, expr, label, conditions = list(), active = TRU
     }, logical(1))]
     if (length(dup_idx) > 0) {
       cli::cli_abort(c(
-        "An identical expression already exists in unit test number {dup_idx[1]}.",
-        "i" = "Use {.code unit_test(object, nr = {dup_idx[1]})} to modify the existing test."
+        "x" = "An identical expression already exists in unit test number {dup_idx[1]}.",
+        ">" = "Use {.code unit_test(object, test = {dup_idx[1]})} to modify the existing test."
       ))
     }
   }
@@ -539,24 +531,24 @@ unit_test <- function(object, nr, expr, label, conditions = list(), active = TRU
   ut_vars <- .ut_expr_vars(expr_str, model_names)
   if (length(ut_vars[["unknown"]]) > 0) {
     cli::cli_abort(c(
-      "Invalid {.arg expr}: variable{?s} not found in model: {.val {ut_vars[['unknown']]}}.",
-      "i" = "Check for typos. Available variables: {.val {model_names}}."
+      "x" = "Invalid {.arg expr}: variable{?s} not found in model: {.val {ut_vars[['unknown']]}}.",
+      ">" = "Check for typos. Available variables: {.val {model_names}}."
     ))
   }
 
   # --- Validate conditions ---
   if (!is.list(conditions)) {
     cli::cli_abort(c(
-      "Invalid {.arg conditions} argument.",
-      "x" = "{.arg conditions} must be a named list of parameter overrides.",
+      "x" = "Invalid {.arg conditions} argument.",
+      "!" = "{.arg conditions} must be a named list of parameter overrides.",
       ">" = "Example: {.code conditions = list(beta = 0.1)}"
     ))
   }
   if (length(conditions) > 0) {
     if (is.null(names(conditions)) || any(!nzchar(names(conditions)))) {
       cli::cli_abort(c(
-        "Invalid {.arg conditions} argument.",
-        "x" = "All elements of {.arg conditions} must be named."
+        "x" = "Invalid {.arg conditions} argument.",
+        "!" = "All elements of {.arg conditions} must be named."
       ))
     }
     valid_names <- object[["variables"]][
@@ -565,9 +557,9 @@ unit_test <- function(object, nr, expr, label, conditions = list(), active = TRU
     bad_names <- setdiff(names(conditions), valid_names)
     if (length(bad_names) > 0) {
       cli::cli_abort(c(
-        "Invalid {.arg conditions} argument.",
-        "x" = "Names not found as stocks or constants: {.val {bad_names}}.",
-        "i" = "Only stocks and constants can be specified as conditions. Available: {.val {valid_names}}."
+        "x" = "Invalid {.arg conditions} argument.",
+        "!" = "Names not found as stocks or constants: {.val {bad_names}}.",
+        ">" = "Only stocks and constants can be specified as conditions. Available: {.val {valid_names}}."
       ))
     }
   }
@@ -575,8 +567,8 @@ unit_test <- function(object, nr, expr, label, conditions = list(), active = TRU
   # --- Validate active ---
   if (!is.logical(active) || length(active) != 1L || is.na(active)) {
     cli::cli_abort(c(
-      "Invalid {.arg active} argument.",
-      "x" = "{.arg active} must be {.val TRUE} or {.val FALSE}."
+       "x" = "Invalid {.arg active} argument.",
+       "!" = "{.arg active} must be {.val TRUE} or {.val FALSE}."
     ))
   }
 
@@ -608,12 +600,12 @@ unit_test <- function(object, nr, expr, label, conditions = list(), active = TRU
 
 #' Remove a unit test from a stock-and-flow model
 #'
-#' Remove one or more unit tests by `nr` (integer position as shown by
+#' Remove one or more unit tests by `test` (integer position as shown by
 #' [unit_tests()]) or by `label` (character). Warns if a label or index is
 #' not found. Remaining tests are renumbered sequentially after removal.
 #'
 #' @inheritParams update.sdbuildR
-#' @param nr Integer index/indices of the test(s) to remove. Corresponds to
+#' @param test Integer index/indices of the test(s) to remove. Corresponds to
 #'   the order shown by [unit_tests()].
 #' @param label Character label(s) of the test(s) to remove. Supports NSE
 #'   (bare symbol or string). For backward compatibility, integer values
@@ -630,25 +622,25 @@ unit_test <- function(object, nr, expr, label, conditions = list(), active = TRU
 #'   unit_test(label = "susceptible is non-negative", expr = all(susceptible >= 0)) |>
 #'   unit_test(label = "recovered increases", expr = all(diff(recovered) >= 0))
 #'
-#' # Remove by nr
-#' sfm <- discard_unit_test(sfm, nr = 1)
+#' # Remove by test
+#' sfm <- discard_unit_test(sfm, test = 1)
 #'
 #' # Remove by label
 #' sfm <- discard_unit_test(sfm, label = "recovered increases")
-discard_unit_test <- function(object, label, nr) {
+discard_unit_test <- function(object, label, test) {
   check_sdbuildR(object)
 
   n_tests <- length(object[["unit_tests"]])
 
-  if (!missing(nr)) {
-    # --- Explicit nr path ---
-    if (!is.numeric(nr)) {
+  if (!missing(test)) {
+    # --- Explicit test path ---
+    if (!is.numeric(test)) {
       cli::cli_abort(c(
-        "Invalid {.arg nr} argument.",
-        "x" = "{.arg nr} must be an integer vector."
+        "x" = "Invalid {.arg test} argument.",
+        "!" = "{.arg test} must be an integer vector."
       ))
     }
-    idx <- as.integer(nr)
+    idx <- as.integer(test)
 
     bad_idx <- idx[idx < 1L | idx > n_tests]
     if (length(bad_idx) > 0) {
@@ -686,7 +678,7 @@ discard_unit_test <- function(object, label, nr) {
       idx_to_remove <- which(all_labels %in% labels_wanted)
     }
   } else {
-    cli::cli_abort(c("x" = "Please specify {.arg nr} or {.arg label} to identify the test(s) to remove."))
+    cli::cli_abort(c("x" = "Please specify {.arg test} or {.arg label} to identify the test(s) to remove."))
   }
 
   # Batch remove (remaining tests are renumbered implicitly by position)
@@ -711,12 +703,12 @@ discard_unit_test <- function(object, label, nr) {
 #' has a `print()` method.
 #'
 #' @inheritParams update.sdbuildR
-#' @param nr Integer vector of test number(s) to display (1-based). Defaults to
+#' @param test Integer vector of test number(s) to display (1-based). Defaults to
 #'   `NULL` (show all tests). Can be combined with `label` (intersection).
 #' @param label Character vector of regex patterns for partial, case-insensitive
 #'   label matching. A test is included if its label matches *any* pattern.
 #'   E.g., `c("non-neg", "beta")` returns tests matching either fragment.
-#'   Can be combined with `nr` (intersection).
+#'   Can be combined with `test` (intersection).
 #' @param ignore_case Logical; whether `label` matching is case-insensitive.
 #'   Default `TRUE`.
 #'
@@ -735,35 +727,36 @@ discard_unit_test <- function(object, label, nr) {
 #'   )
 #'
 #' unit_tests(sfm)
-#' unit_tests(sfm, nr = 1L)
+#' unit_tests(sfm, test = 1L)
 #' unit_tests(sfm, label = "increases")
-unit_tests <- function(object, nr = NULL, label = NULL, ignore_case = TRUE) {
+unit_tests <- function(object, test = NULL, label = NULL, ignore_case = TRUE) {
   check_sdbuildR(object)
-  tests   <- object[["unit_tests"]]
+  tests <- object[["unit_tests"]]
   indices <- seq_along(tests)
-  if (!is.null(nr)) {
-    .check_nr_index(nr, length(tests))
-    tests   <- tests[as.integer(nr)]
-    indices <- as.integer(nr)
+  if (!is.null(test)) {
+    .check_test_index(test, length(tests))
+    tests <- tests[as.integer(test)]
+    indices <- as.integer(test)
   }
   if (!is.null(label)) {
-    if (!is.character(label) || length(label) == 0L || any(is.na(label)) || any(!nzchar(label)))
+    if (!is.character(label) || length(label) == 0L || any(is.na(label)) || any(!nzchar(label))) {
       cli::cli_abort(c(
-        "Invalid {.arg label}.",
-        "x" = "{.arg label} must be a character vector of non-empty regex pattern(s)."
+        "x" = "Invalid {.arg label}.",
+        "!" = "{.arg label} must be a character vector of non-empty regex pattern(s)."
       ))
+    }
     current_labels <- vapply(tests, function(t) t[["label"]], character(1L))
-    hits    <- Reduce("|", lapply(label, grepl, x = current_labels, ignore.case = ignore_case))
+    hits <- Reduce("|", lapply(label, grepl, x = current_labels, ignore.case = ignore_case))
     matched <- which(hits)
     if (length(matched) == 0) {
       cli::cli_warn(c(
-        "No tests matched pattern{?s} {.val {label}}.",
+        "x" = "No tests matched pattern{?s} {.val {label}}.",
         "i" = "Available labels: {.val {current_labels}}."
       ))
-      tests   <- list()
+      tests <- list()
       indices <- integer(0L)
     } else {
-      tests   <- tests[matched]
+      tests <- tests[matched]
       indices <- indices[matched]
     }
   }
@@ -814,13 +807,17 @@ print.unit_tests_sdbuildR <- function(x, ...) {
 # ==============================================================================
 
 #' @noRd
-new_verify_sdbuildR <- function(results, object, sims = NULL, j = NULL,
-                                 n = 1L, n_conditions = 1L, test_indices = NULL) {
+new_verify_sdbuildR <- function(success = FALSE,
+                                  error_message = NULL,
+                                  results, object, sims = NULL, condition = NULL,
+                                n_conditions = 1L, test_indices = NULL) {
   if (is.null(test_indices)) test_indices <- seq_along(results)
   structure(
     list(
-      results = results, object = object, sims = sims, j = j,
-      n = n, n_conditions = n_conditions,
+        success = success,
+        error_message = error_message,
+      results = results, object = object, sims = sims, condition = condition,
+      n_conditions = n_conditions,
       test_indices = as.integer(test_indices)
     ),
     class = "verify_sdbuildR"
@@ -828,79 +825,9 @@ new_verify_sdbuildR <- function(results, object, sims = NULL, j = NULL,
 }
 
 
-#' Add pass_rate/n_pass/n_fail/n_error fields to a single-run result
-#' @noRd
-.enrich_single_result <- function(r) {
-  r[["pass_rate"]] <- if (r[["status"]] == "pass") 1.0 else if (r[["status"]] %in% c("fail", "error")) 0.0 else NA_real_
-  r[["n_pass"]]  <- if (r[["status"]] == "pass") 1L else 0L
-  r[["n_fail"]]  <- if (r[["status"]] == "fail") 1L else 0L
-  r[["n_error"]] <- if (r[["status"]] == "error") 1L else 0L
-  r
-}
-
-
-#' Aggregate n run results into a single summary result
-#' @noRd
-.aggregate_run_results <- function(run_results) {
-  # If the test is skipped in every run, return the first skipped entry enriched
-  if (all(vapply(run_results, function(r) r[["status"]] == "skip", logical(1)))) {
-    return(.enrich_single_result(run_results[[1]]))
-  }
-
-  n_pass  <- sum(vapply(run_results, function(r) identical(r[["status"]], "pass"),  logical(1)))
-  n_fail  <- sum(vapply(run_results, function(r) identical(r[["status"]], "fail"),  logical(1)))
-  n_error <- sum(vapply(run_results, function(r) identical(r[["status"]], "error"), logical(1)))
-  n_run   <- n_pass + n_fail + n_error
-
-  pass_rate <- if (n_run == 0L) NA_real_ else n_pass / n_run
-
-  # Determine aggregate status: strict — all runs must pass
-  status <- if (is.na(pass_rate)) {
-    "skip"
-  } else if (n_error == n_run) {
-    "error"
-  } else if (n_fail == 0L && n_error == 0L) {
-    "pass"
-  } else {
-    "fail"
-  }
-
-  # Build message from first non-passing run
-  first_bad <- Find(function(r) r[["status"]] %in% c("fail", "error"), run_results)
-  message <- if (!is.null(first_bad) && nzchar(first_bad[["message"]])) {
-    paste0(n_pass, "/", n_run, " runs passed. First issue: ", first_bad[["message"]])
-  } else if (status == "fail") {
-    paste0(n_pass, "/", n_run, " runs passed.")
-  } else {
-    ""
-  }
-
-  # Most common error_type among non-NA entries
-  error_types <- vapply(run_results, function(r) {
-    if (is.na(r[["error_type"]])) "" else r[["error_type"]]
-  }, character(1))
-  error_type <- if (all(error_types == "")) NA_character_ else {
-    tab <- table(error_types[error_types != ""])
-    names(tab)[which.max(tab)]
-  }
-
-  # outcome: TRUE if passed threshold, FALSE if failed, NA for skip/error
-  outcome <- if (status %in% c("skip", "error")) NULL else isTRUE(status == "pass")
-
-  base <- run_results[[1]]
-  list(
-    label      = base[["label"]],
-    expr_str   = base[["expr_str"]],
-    conditions = base[["conditions"]],
-    status     = status,
-    error_type = error_type,
-    message    = message,
-    outcome    = outcome,
-    pass_rate  = pass_rate,
-    n_pass     = n_pass,
-    n_fail     = n_fail,
-    n_error    = n_error
-  )
+.unit_test_expected_actual_message <- function(actual, expected = TRUE) {
+  actual_str <- if (length(actual) == 1L && is.na(actual)) "NA" else as.character(actual)
+  paste0("Expected: ", as.character(expected), "\nActual: ", actual_str)
 }
 
 
@@ -908,25 +835,22 @@ new_verify_sdbuildR <- function(results, object, sims = NULL, j = NULL,
 #' @concept unitTest
 print.verify_sdbuildR <- function(x, ...) {
   results <- x[["results"]]
-  n_sims  <- if (is.null(x[["n"]])) 1L else x[["n"]]
 
   if (length(results) == 0) {
     cli::cli_inform(c("i" = "No unit tests to report."))
     return(invisible(x))
   }
 
-  n_pass  <- sum(vapply(results, function(r) identical(r[["status"]], "pass"),    logical(1L)))
-  n_fail  <- sum(vapply(results, function(r) identical(r[["status"]], "fail"),    logical(1L)))
-  n_skip  <- sum(vapply(results, function(r) identical(r[["status"]], "skip"), logical(1L)))
-  n_error <- sum(vapply(results, function(r) identical(r[["status"]], "error"),   logical(1L)))
-  n_run   <- n_pass + n_fail + n_error
+  n_pass <- sum(vapply(results, function(r) identical(r[["status"]], "pass"), logical(1L)))
+  n_fail <- sum(vapply(results, function(r) identical(r[["status"]], "fail"), logical(1L)))
+  n_skip <- sum(vapply(results, function(r) identical(r[["status"]], "skip"), logical(1L)))
+  n_error <- sum(vapply(results, function(r) identical(r[["status"]], "error"), logical(1L)))
+  n_run <- n_pass + n_fail + n_error
   n_total <- length(results)
 
   cli::cli_h1("Stock-and-Flow Unit Test Results")
 
-  if (n_sims > 1L) {
-    cli::cli_text("{n_pass}/{n_run} test{?s} passed ({n_sims} simulations).")
-  } else if (n_skip > 0 && n_run == 0) {
+  if (n_skip > 0 && n_run == 0) {
     cli::cli_text("{n_skip}/{n_total} test{?s} skipped.")
   } else {
     cli::cli_text("{n_pass}/{n_run} test{?s} passed.")
@@ -937,37 +861,33 @@ print.verify_sdbuildR <- function(x, ...) {
     r <- results[[i]]
     original_nr <- if (!is.null(test_indices)) test_indices[[i]] else i
 
-    # Build optional run-count prefix for n > 1
-    run_prefix <- if (n_sims > 1L && !is.null(r[["pass_rate"]]) && !is.na(r[["pass_rate"]])) {
-      n_pass_r  <- if (is.null(r[["n_pass"]]))  0L else r[["n_pass"]]
-      n_fail_r  <- if (is.null(r[["n_fail"]]))  0L else r[["n_fail"]]
-      n_error_r <- if (is.null(r[["n_error"]])) 0L else r[["n_error"]]
-      n_r <- n_pass_r + n_fail_r + n_error_r
-      paste0("(", formatC(n_pass_r, width = nchar(as.character(n_r))), "/", n_r, ") ")
-    } else {
-      ""
-    }
-
     switch(r[["status"]],
       pass = {
-        cli::cli_inform(c("v" = "{original_nr}. {run_prefix}{r[['label']]}"))
+        cli::cli_inform(c("v" = "{original_nr}. {r[['label']]}"))
       },
       fail = {
-        cli::cli_inform(c("x" = "{original_nr}. {run_prefix}{r[['label']]}"))
+        cli::cli_inform(c("x" = "{original_nr}. {r[['label']]}"))
         if (!is.null(r[["message"]]) && nzchar(r[["message"]])) {
-          cli::cli_bullets(c(" " = "{r$message}"))
+          lines <- strsplit(r[["message"]], "\\n", fixed = TRUE)[[1L]]
+          bullets <- stats::setNames(lines, rep(" ", length(lines)))
+          cli::cli_bullets(bullets)
         }
       },
       error = {
-        cli::cli_inform(c("!" = "{original_nr}. {run_prefix}{r[['label']]}"))
+        cli::cli_inform(c("!" = "{original_nr}. {r[['label']]}"))
         if (!is.null(r[["message"]]) && nzchar(r[["message"]])) {
-          cli::cli_bullets(c(" " = "{r$message}"))
+          lines <- strsplit(r[["message"]], "\\n", fixed = TRUE)[[1L]]
+          bullets <- stats::setNames(lines, rep(" ", length(lines)))
+          cli::cli_bullets(bullets)
         }
       },
       skip = {
-        cli::cli_inform(c("i" = "{original_nr}. {run_prefix}{r[['label']]}"))
+        cli::cli_inform(c("i" = "{original_nr}. {r[['label']]}"))
         if (!is.null(r[["message"]]) && nzchar(r[["message"]])) {
-          cli::cli_bullets(c(" " = "{.emph {r$message}}"))
+          lines <- strsplit(r[["message"]], "\\n", fixed = TRUE)[[1L]]
+          emph_lines <- vapply(lines, function(L) paste0("{.emph ", L, "}"), character(1))
+          bullets <- stats::setNames(emph_lines, rep(" ", length(emph_lines)))
+          cli::cli_bullets(bullets)
         }
       }
     )
@@ -981,65 +901,273 @@ print.verify_sdbuildR <- function(x, ...) {
 # AS.DATA.FRAME / HEAD / TAIL
 # ==============================================================================
 
-#' Convert verify results to a data frame
+#' Convert verify() results to a data frame
 #'
-#' Returns one row per unit test with columns `nr`, `label`, `status`, `outcome`,
-#' `pass_rate`, `n_pass`, `n_fail`, `n_error`, `expr_str`, `conditions`, and
-#' `message`. Use the `nr` argument to filter to specific tests.
+#' Converts a `verify_sdbuildR` object to a data frame.
+#'
+#' **`which = "tests"` (default)** returns one row per unit test with columns
+#' `test`, `label`, `status`, `outcome`, `expr_str`, `conditions`, and `message`.
+#' Use `test`, `label`, and `status` to filter.
+#'
+#' **`which = "sims"`** returns the underlying simulation time-series in long
+#' format with columns `test` (test number(s) that used this simulation, as a
+#' comma-separated string), `conditions` (specified conditions per test, if any),
+#' `time`, `variable`, and `value`. Each unique condition generates one
+#' simulation; if multiple tests share a condition their numbers are combined
+#' in `test` (e.g. `"1, 3"`). When filtering with `test`, the displayed `test` value
+#' shows only the requested matching test number(s) for the retained simulation
+#' row(s). Use `direction = "wide"` to pivot variables into columns.
 #'
 #' @param x A `verify_sdbuildR` object (output of [verify()]).
 #' @param row.names `NULL` or a character vector giving row names (optional).
 #' @param optional Ignored; present for compatibility.
-#' @param status Optional character vector of test statuses to include (e.g., `c("fail", "error")`). Defaults to `c("pass", "fail", "error", "skip")` (include all).
+#' @param which Character. `"tests"` (default) or `"sims"`. Partial matching
+#'   supported.
+#' @param direction Character. `"long"` (default) or `"wide"`. Only used when
+#'   `which = "sims"`.
+#' @param status Optional character vector of statuses to include (e.g.,
+#'   `c("fail", "error")`). Defaults to all statuses.
+#'   - `which = "tests"`: filters rows by test status.
+#'   - `which = "sims"`: filters to conditions that have at least one test
+#'     with a matching status.
+#' @param condition Optional integer vector of condition numbers to filter by.
+#'   For `which = "sims"`, keeps only the matching condition simulations.
+#'   For `which = "tests"`, keeps only tests belonging to those conditions.
 #' @inheritParams unit_tests
 #' @param ... Additional arguments (unused).
 #'
-#' @returns A `data.frame`.
+#' @returns A `data.frame`. Column set depends on `which`:
+#'   - `"tests"`: `test`, `label`, `status`, `outcome`, `expr_str`, `condition`, `conditions`,
+#'     `message`.
+#'   - `"sims"` (long): `test`, `condition`, `conditions`, `time`, `variable`, `value`.
+#'   - `"sims"` (wide): `test`, `condition`, `conditions`, `time`, then one column per variable.
 #' @export
 #' @concept unitTest
 #' @method as.data.frame verify_sdbuildR
 #'
 #' @examples
 #' sfm <- sdbuildR("SIR") |>
-#'   unit_test(expr = all(susceptible >= 0))
+#'   unit_test(expr = all(susceptible >= 0)) |>
+#'   unit_test(
+#'     label = "lower infection rate",
+#'     expr = all(susceptible >= 0),
+#'     conditions = list(infection_rate = 0.1)
+#'   )
 #' res <- verify(sfm)
+#'
+#' # Test results (default)
 #' as.data.frame(res)
+#'
+#' # Simulation time-series (long format)
+#' as.data.frame(res, which = "sims")
+#'
+#' # Simulation time-series (wide format)
+#' as.data.frame(res, which = "sims", direction = "wide")
+#'
+#' # Filter to simulation for test 2 only
+#' as.data.frame(res, which = "sims", test = 2)
+#'
+#' # Only simulations for passing tests
+#' as.data.frame(res, which = "sims", status = "pass")
 as.data.frame.verify_sdbuildR <- function(x, row.names = NULL, optional = FALSE,
-                                           nr = NULL, label = NULL, ignore_case = TRUE,
-                                           status = c("pass", "fail", "error", "skip"), ...) {
-  results      <- x[["results"]]
-  test_indices <- if (is.null(x[["test_indices"]])) seq_along(results) else x[["test_indices"]]
+                                          which = c("tests", "sims")[1],
+                                          direction = "long",
+                                          test = NULL, label = NULL, ignore_case = TRUE,
+                                          status = c("pass", "fail", "error", "skip"), 
+                                          condition = NULL,
+                                          ...) {
+  which <- .clean_which_verify(which)
 
-  if (!is.null(nr)) {
-    if (!all(nr %in% test_indices)) {
-      bad <- nr[!nr %in% test_indices]
+  # ---- which = "sims": return simulation time-series -------------------------
+  if (which == "sims") {
+    direction <- trimws(tolower(direction))
+    if (!direction %in% c("long", "wide")) {
       cli::cli_abort(c(
-        "Test number{?s} not found in this result: {.val {bad}}.",
+        "x" = "Invalid {.arg direction} argument.",
+        ">" = "Must be either {.code 'long'} or {.code 'wide'}."
+      ))
+    }
+
+    condition_vec <- x[["condition"]] # named int: test_label -> condition_index
+    test_indices_all <- x[["test_indices"]]
+
+    # For each condition index, collect the corresponding test numbers
+    nr_by_ji <- lapply(seq_len(x[["n_conditions"]]), function(ji) {
+      positions <- base::which(condition_vec == ji)
+      sort(test_indices_all[positions])
+    })
+    # Human-readable "test" string per condition (e.g. "1" or "1, 3")
+    nr_strs <- vapply(nr_by_ji, function(nrs) paste(nrs, collapse = ", "), character(1))
+    nr_display_strs <- nr_strs
+
+    # Validate and apply test filter: keep conditions that include any requested test
+    if (!is.null(test)) {
+      if (!is.numeric(test) || any(is.na(test)) || any(test != as.integer(test))) {
+        cli::cli_abort(c(
+          "x" = "Invalid {.arg test}.",
+          ">" = "{.arg test} must be an integer vector of test numbers."
+        ))
+      }
+      test <- as.integer(test)
+      if (!all(test %in% test_indices_all)) {
+        bad <- test[!test %in% test_indices_all]
+        cli::cli_abort(c(
+          "x" = "Test number{?s} not found in this result: {.val {bad}}.",
+          "i" = "Available: {.val {test_indices_all}}."
+        ))
+      }
+      keep_ji <- vapply(nr_by_ji, function(nrs) any(nrs %in% test), logical(1))
+      if (!any(keep_ji)) {
+        cli::cli_abort(c("x" = "No simulations match the requested {.arg test}."))
+      }
+      nr_display_strs[keep_ji] <- vapply(nr_by_ji[keep_ji], function(nrs) {
+        paste(intersect(nrs, test), collapse = ", ")
+      }, character(1))
+      ji_to_use <- base::which(keep_ji)
+    } else {
+      ji_to_use <- seq_len(x[["n_conditions"]])
+    }
+
+    # Apply condition filter: keep only specified condition indices
+    if (!is.null(condition)) {
+      if (!is.numeric(condition) || any(is.na(condition)) || any(condition != as.integer(condition))) {
+        cli::cli_abort(c(
+          "x" = "Invalid {.arg condition}.",
+          ">" = "{.arg condition} must be an integer vector of condition numbers."
+        ))
+      }
+      condition <- as.integer(condition)
+      valid_conds <- seq_len(x[["n_conditions"]])
+      if (!all(condition %in% valid_conds)) {
+        bad <- condition[!condition %in% valid_conds]
+        cli::cli_abort(c(
+          "x" = "Condition number{?s} not found: {.val {bad}}.",
+          "i" = "Available: {.val {valid_conds}}."
+        ))
+      }
+      ji_to_use <- intersect(ji_to_use, condition)
+      if (length(ji_to_use) == 0) {
+        cli::cli_abort(c("x" = "No simulations match the requested {.arg condition}."))
+      }
+    }
+
+    # Apply status filter: keep conditions with at least one test matching status
+    if (!is.null(status)) {
+      status_clean <- clean_status(status)
+      keep_status <- vapply(ji_to_use, function(ji) {
+        any(vapply(nr_by_ji[[ji]], function(nr_val) {
+          pos <- base::which(test_indices_all == nr_val)[1L]
+          x[["results"]][[pos]][["status"]] %in% status_clean
+        }, logical(1)))
+      }, logical(1))
+      if (!any(keep_status)) {
+        cli::cli_abort(c("x" = "No simulations match the requested {.arg status}."))
+      }
+      ji_to_use <- ji_to_use[keep_status]
+    }
+
+    # Build conditions string per condition index
+    .cond_str <- function(conds) {
+      if (is.null(conds) || length(conds) == 0) {
+        return("")
+      }
+      paste(names(conds), unlist(conds), sep = " = ", collapse = ", ")
+    }
+    condition_strs <- vapply(seq_len(x[["n_conditions"]]), function(ji) {
+      pos <- base::which(condition_vec == ji)[1L]
+      if (is.na(pos)) {
+        return("")
+      }
+      .cond_str(x[["results"]][[pos]][["conditions"]])
+    }, character(1))
+
+    sims_dfs <- lapply(ji_to_use, function(ji) {
+      sim <- x[["sims"]][[ji]]
+      if (!isTRUE(sim[["success"]])) {
+        cli::cli_warn(c("!" = "Simulation for condition {ji} (test {nr_strs[ji]}) did not succeed; skipping."))
+        return(NULL)
+      }
+      df <- sim[["df"]]
+      df[["test"]] <- nr_display_strs[ji]
+      df[["condition"]] <- ji
+      df[["conditions"]] <- condition_strs[ji]
+      df[, c("test", "condition", "conditions", "time", "variable", "value")]
+    })
+    sims_dfs <- Filter(Negate(is.null), sims_dfs)
+
+    if (length(sims_dfs) == 0) {
+      df <- data.frame(
+        test = character(0), 
+        condition = numeric(0),
+        conditions = character(0),
+        time = numeric(0), variable = character(0), value = numeric(0),
+        stringsAsFactors = FALSE
+      )
+    } else {
+      df <- do.call(rbind, c(sims_dfs, list(make.row.names = FALSE)))
+    }
+
+    if (direction == "wide") {
+      df <- stats::reshape(df,
+        timevar = "variable",
+        idvar = c("test", "conditions", "time"),
+        direction = "wide"
+      )
+      names(df) <- sub("^value\\.", "", names(df))
+      rownames(df) <- NULL
+    }
+
+    if (!is.null(row.names)) {
+      if (length(row.names) != nrow(df)) {
+        cli::cli_abort(c(
+          "x" = "Length mismatch in {.arg row.names}.",
+          "i" = "Got {length(row.names)} name{?s} but {nrow(df)} row{?s}."
+        ))
+      }
+      rownames(df) <- row.names
+    }
+
+    return(df)
+  }
+
+  # ---- which = "tests": return unit test metadata (existing behaviour) -------
+  results <- x[["results"]]
+  test_indices <- if (is.null(x[["test_indices"]])) seq_along(results) else x[["test_indices"]]
+  condition_indices <- as.integer(x[["condition"]])
+
+  if (!is.null(test)) {
+    if (!all(test %in% test_indices)) {
+      bad <- test[!test %in% test_indices]
+      cli::cli_abort(c(
+        "x" = "Test number{?s} not found in this result: {.val {bad}}.",
         "i" = "Available: {.val {test_indices}}."
       ))
     }
-    keep         <- which(test_indices %in% nr)
-    results      <- results[keep]
+    keep <- which(test_indices %in% test)
+    results <- results[keep]
     test_indices <- test_indices[keep]
+    condition_indices <- condition_indices[keep]
   }
 
   if (!is.null(label)) {
-    if (!is.character(label) || length(label) == 0L || any(is.na(label)) || any(!nzchar(label)))
+    if (!is.character(label) || length(label) == 0L || any(is.na(label)) || any(!nzchar(label))) {
       cli::cli_abort(c(
-        "Invalid {.arg label}.",
-        "x" = "{.arg label} must be a character vector of non-empty regex pattern(s)."
+        "x" = "Invalid {.arg label}.",
+        "i" = "{.arg label} must be a character vector of non-empty regex pattern(s)."
       ))
+    }
     result_labels <- vapply(results, function(r) r[["label"]], character(1L))
     hits <- Reduce("|", lapply(label, grepl, x = result_labels, ignore.case = ignore_case))
     keep <- which(hits)
     if (length(keep) == 0) {
-      cli::cli_warn(c(
-        "No results matched pattern{?s} {.val {label}}.",
+      cli::cli_abort(c(
+        "x" = "No results matched pattern{?s} {.val {label}}.",
         "i" = "Available labels: {.val {result_labels}}."
       ))
     } else {
-      results      <- results[keep]
+      results <- results[keep]
       test_indices <- test_indices[keep]
+      condition_indices <- condition_indices[keep]
     }
   }
 
@@ -1047,55 +1175,83 @@ as.data.frame.verify_sdbuildR <- function(x, row.names = NULL, optional = FALSE,
     status <- clean_status(status)
     keep <- which(vapply(results, function(r) r[["status"]] %in% status, logical(1L)))
     if (length(keep) == 0) {
-      cli::cli_warn("No tests with status {.val {status}} found.")
+      cli::cli_abort(c(
+        "x" = "No tests with status {.val {status}} found."
+      ))
     } else {
-      results      <- results[keep]
+      results <- results[keep]
       test_indices <- test_indices[keep]
+      condition_indices <- condition_indices[keep]
     }
+  }
+
+  if (!is.null(condition)) {
+    if (!is.numeric(condition) || any(is.na(condition)) || any(condition != as.integer(condition))) {
+      cli::cli_abort(c(
+        "x" = "Invalid {.arg condition}.",
+        ">" = "{.arg condition} must be an integer vector of condition numbers."
+      ))
+    }
+    condition <- as.integer(condition)
+    valid_conds <- seq_len(x[["n_conditions"]])
+    if (!all(condition %in% valid_conds)) {
+      bad <- condition[!condition %in% valid_conds]
+      cli::cli_abort(c(
+        "x" = "Condition number{?s} not found: {.val {bad}}.",
+        "i" = "Available: {.val {valid_conds}}."
+      ))
+    }
+    keep <- which(condition_indices %in% condition)
+    if (length(keep) == 0) {
+      cli::cli_abort(c("x" = "No tests with condition number{?s} {.val {condition}} found."))
+    }
+    results <- results[keep]
+    test_indices <- test_indices[keep]
+    condition_indices <- condition_indices[keep]
   }
 
   if (length(results) == 0) {
     df <- data.frame(
-      nr = integer(0), label = character(0), status = character(0),
-      outcome = logical(0), pass_rate = numeric(0),
-      n_pass = integer(0), n_fail = integer(0), n_error = integer(0),
-      expr_str = character(0), conditions = character(0), message = character(0),
+      test = integer(0), label = character(0), status = character(0),
+      outcome = logical(0), expr_str = character(0),
+      condition = numeric(0),
+      conditions = character(0), message = character(0),
       stringsAsFactors = FALSE
     )
     return(df)
   }
 
-  .null_chr  <- function(v) if (is.null(v)) "" else v
-  .null_real <- function(v) if (is.null(v)) NA_real_ else v
-  .null_int  <- function(v) if (is.null(v)) NA_integer_ else v
+  .null_chr <- function(v) if (is.null(v)) "" else v
 
   df <- data.frame(
-    nr        = test_indices,
-    label     = vapply(results, function(r) .null_chr(r[["label"]]),   character(1)),
-    status    = vapply(results, function(r) .null_chr(r[["status"]]),  character(1)),
-    outcome   = vapply(results, function(r) {
+    test = test_indices,
+    label = vapply(results, function(r) .null_chr(r[["label"]]), character(1)),
+    status = vapply(results, function(r) .null_chr(r[["status"]]), character(1)),
+    outcome = vapply(results, function(r) {
       v <- r[["outcome"]]
       if (is.null(v) || (length(v) == 1L && is.na(v))) NA else isTRUE(v)
     }, logical(1)),
-    pass_rate = vapply(results, function(r) .null_real(r[["pass_rate"]]), numeric(1)),
-    n_pass    = vapply(results, function(r) .null_int(r[["n_pass"]]),  integer(1)),
-    n_fail    = vapply(results, function(r) .null_int(r[["n_fail"]]),  integer(1)),
-    n_error   = vapply(results, function(r) .null_int(r[["n_error"]]), integer(1)),
-    expr_str  = vapply(results, function(r) .null_chr(r[["expr_str"]]), character(1)),
+    expr_str = vapply(results, function(r) .null_chr(r[["expr_str"]]), character(1)),
+    # Condition number
+    condition = condition_indices,
+    # Condition string (e.g. "beta = 0.1, gamma = 0.05")
     conditions = vapply(results, function(r) {
       conds <- r[["conditions"]]
-      if (is.null(conds) || length(conds) == 0) "" else
+      if (is.null(conds) || length(conds) == 0) {
+        ""
+      } else {
         paste(names(conds), unlist(conds), sep = " = ", collapse = ", ")
+      }
     }, character(1)),
-    message   = vapply(results, function(r) .null_chr(r[["message"]]), character(1)),
+    message = vapply(results, function(r) .null_chr(r[["message"]]), character(1)),
     stringsAsFactors = FALSE
   )
 
   if (!is.null(row.names)) {
     if (length(row.names) != nrow(df)) {
       cli::cli_abort(c(
-        "Length mismatch in {.arg row.names}.",
-        "x" = "Got {length(row.names)} name{?s} but {nrow(df)} row{?s}."
+        "x" = "Length mismatch in {.arg row.names}.",
+        "i" = "Got {length(row.names)} name{?s} but {nrow(df)} row{?s}."
       ))
     }
     rownames(df) <- row.names
@@ -1165,9 +1321,7 @@ tail.verify_sdbuildR <- function(x, n = 6L, ...) {
 #' Build an evaluation environment from a simulation data frame
 #'
 #' Converts the long-format `df` (columns: time, variable, value) to a named
-#' environment where each variable maps to its full time-series vector. The
-#' parent is `asNamespace("testthat")` so `expect_*` functions are available
-#' without qualification.
+#' environment where each variable maps to its full time-series vector.
 #'
 #' @param df A data frame with columns `time`, `variable`, `value`
 #' @return A new environment suitable for `eval()`
@@ -1181,7 +1335,7 @@ tail.verify_sdbuildR <- function(x, n = 6L, ...) {
   if (!"time" %in% vars) {
     var_list[["time"]] <- sort(unique(df[["time"]]))
   }
-  list2env(var_list, parent = asNamespace("testthat"))
+  list2env(var_list)
 }
 
 
@@ -1293,7 +1447,11 @@ tail.verify_sdbuildR <- function(x, n = 6L, ...) {
       }
 
       if (!isTRUE(val)) {
-        testthat::expect_true(val, label = label)
+        return(list(
+          label = label, expr_str = expr_str, conditions = conditions,
+          status = "fail", error_type = NA, outcome = val,
+          message = .unit_test_expected_actual_message(val)
+        ))
       }
 
       list(label = label, expr_str = expr_str, conditions = conditions, status = "pass", error_type = NA, message = "", outcome = val)

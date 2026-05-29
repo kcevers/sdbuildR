@@ -63,7 +63,7 @@ attributes(%(sim_df_name)s)$valroot
     # -- compile_static ----------------------------------------------------
 
     static_r = "\n\n# Define parameters, initial conditions, and functions in correct order
-    
+
 %(static_str)s%(constants_def)s%(init_def)s",
     static_julia = "\n\n# Define parameters, initial conditions, and functions in correct order
 
@@ -77,36 +77,36 @@ end
     # -- compile_ode -----------------------------------------------------------
 
     ode_r = "\n\n# Define ODE\n%(ode_func_name)s = function(%(time_name)s, %(state_name)s, %(parameter_name)s){
-    
+
     %(S_str)s
-    
+
     # Compute change in stocks at current time %(time_name)s
     with(c(%(state_name)s, %(parameter_name)s), {
-    
+
         # Update auxiliaries and flows
         %(dynamic_eqn_str)s
-        
+
         # Collect inflows and outflows for each stock
         %(stock_change_str)s
-        
+
         # Combine change in stocks
         %(state_change_str)s
-        
+
         return(list(%(change_state_name)s%(save_var_str)s))
       })
       }",
     ode_julia = "\n\n# Define ODE
   function %(ode_func_name)s!(%(change_state_name)s, %(state_name)s, %(parameter_name)s, %(time_name)s)
-    
+
     # Unpack state variables
     %(unpack_state_str)s%(unpack_pars_str)s
-    
+
     # Update auxiliaries
     %(dynamic_eqn_str)s
-    
+
     # Collect inflows and outflows for each stock
     %(stock_change_str)s
-    
+
     nothing
     end
     ",
@@ -132,22 +132,22 @@ try
 catch
   try
       global %(sim_df_name)s, %(parameter_name)s, %(parameter_names)s, %(initial_value_name)s, %(initial_value_names)s = clean_df(%(prob_name)s, %(solution_name)s, %(model_setup_name)s.%(initial_value_names)s, %(intermediaries_or_nothing)s, %(model_setup_name)s.%(intermediary_names)s)
-      
+
       global clean_df_ok = true
-    
+
     catch
-    
+
       global clean_df_ok = false
       end
   end
-  
+
 if !clean_df_ok
   error(\"Failed to convert Julia solution to dataframe with clean_df\")
 end
 
 if %(selected_var_names_arg)s !== nothing
   selected_var_names = Set(String.(%(selected_var_names_arg)s))
-  
+
   filter!(row -> row.variable in selected_var_names, %(sim_df_name)s)
 end
 
@@ -168,7 +168,7 @@ Nothing",
     # -- compile_static: Julia ensemble definition --------------------------
 
     ensemble_def_conditions_julia = "
-    
+
 # Generate ensemble design
 %(ensemble_n)s = %(n_value)s
 %(ensemble_conditions)s = (
@@ -185,7 +185,7 @@ Nothing",
     ensemble_iter_julia = "
   # Assign ensemble parameters
   %(conditions_names)s, = %(ensemble_pars)s[div(%(ensemble_iter)s-1, %(ensemble_n)s) + 1]
-  
+
 ",
 
     # -- compile_run_ode: Julia ensemble problem --------------------------------

@@ -1,6 +1,5 @@
-
 # Use specific GitHub release version of StockFlowRSupport (rather than main/ or dev/)
-use_github_release = TRUE
+use_github_release <- TRUE
 
 # Names of variables and functions
 P <- list(
@@ -9,8 +8,8 @@ P <- list(
   # jl_pkg_name = "SystemDynamicsBuildR",
   # jl_pkg_version = "0.2.5", # required version SystemDynamicsBuildR
   jl_pkg_name = "StockFlowRSupport",
-  jl_pkg_version_github_release = "0.0.2", # required version StockFlowRSupport
-  jl_required_version = "1.10", # required minimum version of Julia
+  jl_pkg_version_github_release = "0.0.4", # required version StockFlowRSupport
+  # jl_required_version = "1.10", # required minimum version of Julia
   model_setup_name = "model_setup",
   func_name = "func",
   initial_value_name = "init",
@@ -327,10 +326,10 @@ get_syntax_julia <- function() {
   conv_df <- matrix(
     c(
       # Statistics
-      "min", "min", "syntax1", "", "", FALSE,
-      "max", "max", "syntax1", "", "", FALSE,
-      "pmin", "min", "syntax1", "", "", FALSE,
-      "pmax", "max", "syntax1", "", "", FALSE,
+      "min", "r_min", "syntax1", "", "", FALSE,
+      "max", "r_max", "syntax1", "", "", FALSE,
+      "pmin", "min", "syntax1", "", "", TRUE,
+      "pmax", "max", "syntax1", "", "", TRUE,
       "mean", "Statistics.mean", "syntax1", "", "", FALSE,
       "median", "Statistics.median", "syntax1", "", "", FALSE,
       "prod", "prod", "syntax1", "", "", FALSE,
@@ -398,9 +397,9 @@ get_syntax_julia <- function() {
       "rev", "reverse", "syntax1", "", "", FALSE,
       "print", "println", "syntax1", "", "", FALSE,
       "na.omit", "skipmissing", "syntax1", "", "", FALSE,
-      "eigen", "eig", "syntax1", "", "", FALSE,
-      "getcd", "getcwd", "syntax1", "", "", FALSE,
-      "setwd", "setcwd", "syntax1", "", "", FALSE,
+      "eigen", "LinearAlgebra.eigen", "syntax1", "", "", FALSE,
+      "getcd", "pwd", "syntax1", "", "", FALSE,
+      "setwd", "cd", "syntax1", "", "", FALSE,
       "Filter", "filter", "syntax1", "", "", TRUE,
       "which", "findall", "syntax1", "", "", FALSE,
       "class", "typeof", "syntax1", "", "", FALSE,
@@ -415,22 +414,22 @@ get_syntax_julia <- function() {
       "union", "union", "syntax1", "", "", FALSE,
       "intersect", "intersect", "syntax1", "", "", FALSE,
       "setdiff", "setdiff", "syntax1", "", "", FALSE,
-      "setequal", "setequal", "syntax1", "", "", FALSE,
+      "setequal", "issetequal", "syntax1", "", "", FALSE,
       # is....()
       "rlang::is_empty", "isempty", "syntax1", "", "", FALSE,
       "all", "all", "syntax1", "", "", FALSE,
       "any", "any", "syntax1", "", "", FALSE,
       "is.infinite", "isinf", "syntax1", "", "", TRUE,
       "is.finite", "isfinite", "syntax1", "", "", TRUE,
-      "is.nan", "ismissing", "syntax1", "", "", TRUE,
+      "is.nan", "isnan", "syntax1", "", "", TRUE,
       # https://docs.julialang.org/en/v1/base/collections
       # Julia: indexin, sortperm, findfirst
       "sort", "sort", "syntax1", "", "", FALSE,
       # Complex numbers
       "Re", "real", "syntax1", "", "", TRUE,
       "Im", "imag", "syntax1", "", "", TRUE,
-      "Mod", "", "syntax1", "", "", TRUE,
-      "Arg", "", "syntax1", "", "", TRUE,
+      "Mod", "abs", "syntax1", "", "", TRUE,
+      "Arg", "angle", "syntax1", "", "", TRUE,
       "Conj", "conj", "syntax1", "", "", TRUE,
       # Custom functions
       "logistic", "logistic", "syntax1", "", "", TRUE,
@@ -553,7 +552,7 @@ get_syntax_julia <- function() {
 
 
 #' Internal function to fetch Project.toml from GitHub
-#' 
+#'
 #' @param use_github_release Whether to fetch from GitHub release (TRUE) or main branch (FALSE)
 #' @returns character vector of lines from Project.toml
 #' @noRd
@@ -569,7 +568,7 @@ fetch_jl_Project_toml <- function(use_github_release = TRUE) {
 }
 
 #' Internal function to extract Julia version from Project.toml lines
-#' 
+#'
 #' @param lines character vector of lines from Project.toml
 #' @returns Julia version as a string, or NA if not found
 #' @noRd
@@ -636,7 +635,6 @@ println("\\nSetup complete!")
 
   invisible()
 }
-
 
 
 #' Internal function to create inst/Project.toml and inst/init.jl files for Julia
@@ -715,7 +713,7 @@ create_julia_project_toml_init <- function(use_github_release = TRUE) {
 
 
 #' Internal function to fetch exported Julia functions from GitHub
-#' 
+#'
 #' @param use_github_release Whether to fetch from GitHub release (TRUE) or main branch (FALSE)
 #' @returns character vector of exported function names from the Julia package
 #' @noRd
@@ -738,7 +736,6 @@ fetch_jl_functions <- function(use_github_release = TRUE) {
 }
 
 
-
 # .julia_func_names <- function() {
 #   c(
 #     "is_function_or_interp", "itp", "make_ramp", "make_step", "make_pulse", "make_seasonal", "round_IM", "logit", "expit", "logistic", "nonnegative", "rbool", "rdist", "indexof", "contains_IM", "round_", "\u2295",
@@ -755,7 +752,7 @@ create_julia_project_toml_init()
 ##### Overwrite Julia version in P with the one from Project.toml #####
 jl_version <- get_julia_version_from_Project_toml(fetch_jl_Project_toml(use_github_release = use_github_release))
 if (!is.na(jl_version)) {
-  P[["jl_version"]] <- jl_version
+  P[["jl_required_version"]] <- jl_version
 } else {
   warning("Using default Julia version from P because it could not be fetched from Project.toml")
 }
@@ -803,4 +800,5 @@ protected_names <- c(
 ) |> unique()
 
 ##### Save internal variables for global access throughout the package #####
-usethis::use_data(syntax_IM, syntax_julia, P, protected_names, internal = TRUE, overwrite = TRUE)
+usethis::use_data(syntax_IM, syntax_julia, P, 
+protected_names, internal = TRUE, overwrite = TRUE)

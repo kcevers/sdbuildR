@@ -22,14 +22,14 @@ library(JuliaConnectoR)
 ```
 
 
-sdbuildR offers running simulations of stock-and-flow models with Julia as the backend. This is supported by the R package [`JuliaConnectoR`](https://github.com/stefan-m-lenz/JuliaConnectoR/). This guide will help you install Julia and configure it to work with sdbuildR.
+sdbuildR supports simulating stock-and-flow models with Julia as the backend. Julia is a modern, open-source programming language that reaches performance comparable to lower-level languages like C while maintaining higher-level syntax similar to R and Python. To simulate with Julia, sdbuildR translates R to Julia code and uses [`JuliaConnectoR`](https://github.com/stefan-m-lenz/JuliaConnectoR/) to call Julia from R, so that users may benefit from Julia's computational speed without interacting with Julia directly.This guide will help you install Julia and configure it to work with sdbuildR.
 
 
 ## Step 1: Install Julia
 
 Download and install Julia from [https://julialang.org/install/](https://julialang.org/install/). If you already have Julia installed, go to the next step.
 
-We recommend using juliaup, Julia's official version manager, which makes it easy to install and switch between Julia versions. Alternatively, you can download a standalone Julia installer from [https://julialang.org/downloads/](https://julialang.org/downloads/).
+We recommend using **juliaup**, Julia's official version manager, which makes it easy to install and switch between Julia versions. Alternatively, you can download a standalone Julia installer from [https://julialang.org/downloads/](https://julialang.org/downloads/).
 
 ## Step 2: Check if Julia is accessible
 
@@ -157,7 +157,7 @@ PATH="/usr/bin:${PATH}"
 
 Replace the path before the separator with your actual Julia `bin` directory. Be sure to keep `${PATH}` at the end, such that the Julia path is appended to the PATH.
 
-If using juliaup (recommended), you can point to the juliaup directory instead of a specific version:
+If using **juliaup** (recommended), you can point to the juliaup directory instead of a specific version:
 
 **Windows:**
 ```
@@ -169,7 +169,7 @@ PATH="C:/Users/YourName/.julia/juliaup;${PATH}"
 PATH="~/.julia/juliaup/bin:${PATH}"
 ```
 
-This allows juliaup to manage which Julia version is used.
+This allows **juliaup** to manage which Julia version is used.
 
 
 #### Save and restart R.
@@ -207,9 +207,9 @@ paths <- strsplit(Sys.getenv("PATH"), .Platform$path.sep)[[1]]
 paths[grepl("julia", paths)]
 ```
 
-### Managing Julia versions with juliaup
+### Managing Julia versions with **juliaup**
 
-Some useful commands are listed below.
+Some useful terminal commands are listed below.
 
 ```bash
 # See installed versions and current default
@@ -244,9 +244,9 @@ install_julia_env(remove = TRUE)
 
 If you have multiple Julia versions installed, the first one found in your PATH will be used by default.
 
-#### Switch versions with juliaup
+#### Switch versions with **juliaup**
 
-If using juliaup, you can change the default version without modifying `.Renviron`:
+If using **juliaup**, you can change the default version without modifying `.Renviron`:
 
 ```bash
 # From terminal/command prompt

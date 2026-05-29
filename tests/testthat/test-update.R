@@ -69,6 +69,7 @@ test_that("update() rejects disallowed names", {
 })
 
 
+
 test_that("update() enforces flow rules", {
   sfm <- sdbuildR()
   sfm <- update(sfm, "StockA", type = "stock")
@@ -89,7 +90,10 @@ test_that("change_name() renames variables and updates references", {
   sfm <- sdbuildR()
   sfm <- update(sfm, "Prey", type = "stock", eqn = "10")
   sfm <- update(sfm, "Predator", type = "stock", eqn = "5")
-  sfm <- update(sfm, "Hunt", type = "flow", eqn = "Prey * 0.1", from = "Predator", to = "Prey")
+  sfm <- update(sfm, "Hunt",
+    type = "flow", eqn = "Prey * 0.1",
+    from = "Predator", to = "Prey"
+  )
 
   sfm_renamed <- change_name(sfm, "Prey", "Bunnies")
   vars <- sfm_renamed[["variables"]]

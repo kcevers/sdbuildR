@@ -6,12 +6,12 @@
 # ============================================================================
 
 test_that("compare_models: identical models have zero differences", {
-  sfm  <- make_basic_sfm()
+  sfm <- make_basic_sfm()
   diff <- compare_models(sfm, sfm)
-  expect_equal(nrow(diff$added),      0)
-  expect_equal(nrow(diff$removed),    0)
+  expect_equal(nrow(diff$added), 0)
+  expect_equal(nrow(diff$removed), 0)
   expect_equal(nrow(diff$type_changed), 0)
-  expect_equal(nrow(diff$eqn_changed),  0)
+  expect_equal(nrow(diff$eqn_changed), 0)
   expect_equal(length(diff$sim_settings_diff), 0)
 })
 
@@ -25,8 +25,8 @@ test_that("compare_models: detects added variable in sfm2", {
 })
 
 test_that("compare_models: detects variable removed from sfm1", {
-  sfm1 <- make_basic_sfm()  # has stock S + flow Flow1
-  sfm2 <- sdbuildR() |> update("S", type = "stock", eqn = "1")  # only stock S
+  sfm1 <- make_basic_sfm() # has stock S + flow Flow1
+  sfm2 <- sdbuildR() |> update("S", type = "stock", eqn = "1") # only stock S
   diff <- compare_models(sfm1, sfm2)
   expect_equal(nrow(diff$removed), 1)
   expect_true("Flow1" %in% diff$removed$name)
@@ -70,10 +70,10 @@ test_that("compare_models: result contains 'properties' with per-model stats", {
 # ============================================================================
 
 test_that("model_properties: stock/flow counts match as.data.frame() counts", {
-  sfm   <- templates("SIR")
+  sfm <- templates("SIR")
   props <- model_properties(sfm)
   expect_equal(props$n_stocks, nrow(as.data.frame(sfm, type = "stock")))
-  expect_equal(props$n_flows,  nrow(as.data.frame(sfm, type = "flow")))
+  expect_equal(props$n_flows, nrow(as.data.frame(sfm, type = "flow")))
 })
 
 test_that("model_properties: nonlinearity score is a non-negative number", {
@@ -95,18 +95,17 @@ test_that("model_properties: logistic_model (nonlinear growth) scores higher tha
 })
 
 test_that("model_properties: nonlinearity$by_variable is a character vector (named)", {
-  sfm   <- templates("SIR")
+  sfm <- templates("SIR")
   props <- model_properties(sfm)
   expect_true(is.character(props$nonlinearity$by_variable))
 })
 
 test_that("model_properties: returns all expected top-level fields", {
   props <- model_properties(templates("SIR"))
-  expect_true("n_stocks"     %in% names(props))
-  expect_true("n_flows"      %in% names(props))
-  expect_true("n_aux"        %in% names(props))
-  expect_true("n_constants"  %in% names(props))
-  expect_true("n_lookups"    %in% names(props))
+  expect_true("n_stocks" %in% names(props))
+  expect_true("n_flows" %in% names(props))
+  expect_true("n_aux" %in% names(props))
+  expect_true("n_constants" %in% names(props))
+  expect_true("n_lookups" %in% names(props))
   expect_true("nonlinearity" %in% names(props))
 })
-

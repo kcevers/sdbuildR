@@ -229,7 +229,7 @@ print.simulate_sdbuildR <- function(x, ...) {
   if (!is.null(df) && nrow(df) > 0) {
     cli::cli_h2("Data (first rows)")
     print(head(as.data.frame(x, direction = "wide"), 5))
-    
+
     # Print blank line
     cli::cli_text("")
   }
@@ -836,4 +836,3 @@ summary.simulate_sdbuildR <- function(object, ...) {
   rownames(result) <- NULL
   result
 }
-

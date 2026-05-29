@@ -360,7 +360,7 @@ test_that("generate_colors uses custom colors when provided", {
 
   result <- generate_colors(3, colors = custom)
 
-  expect_equal(result, custom)
+  expect_equal(unname(result), custom)
 })
 
 test_that("generate_colors truncates excess custom colors", {
@@ -369,7 +369,7 @@ test_that("generate_colors truncates excess custom colors", {
   result <- generate_colors(2, colors = custom)
 
   expect_equal(length(result), 2)
-  expect_equal(result, custom[1:2])
+  expect_equal(unname(result), custom[1:2])
 })
 
 test_that("generate_colors errors on insufficient colors", {

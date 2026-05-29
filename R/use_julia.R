@@ -29,13 +29,15 @@
 #' }
 install_julia_env <- function(remove = FALSE) {
   # Just in case a Julia session is already running:
-  on.exit({
-        .sdbuildR_env[["jl"]][["use_threads"]] <- FALSE
+  on.exit(
+    {
+      .sdbuildR_env[["jl"]][["use_threads"]] <- FALSE
 
-        # Stop Julia
-        JuliaConnectoR::stopJulia()
-
-  }, add = TRUE)
+      # Stop Julia
+      JuliaConnectoR::stopJulia()
+    },
+    add = TRUE
+  )
 
   # Julia should be able to be started; JuliaConnectoR will handle errors if this is not the case
   is_julia_working()
@@ -103,7 +105,7 @@ install_julia_env <- function(remove = FALSE) {
     # Run the setup script
     setup_script <- system.file("setup.jl", package = "sdbuildR")
     julia_eval(sprintf('include("%s")', jl_path(setup_script)))
-    status <- is_julia_env_setup(force = TRUE)
+    status <- is_julia_env_setup(force = TRUE, error = TRUE)
 
     if (isTRUE(status)) {
       cli::cli_inform(c("v" = "Julia environment installed."))
@@ -140,7 +142,7 @@ install_julia_env <- function(remove = FALSE) {
 #'
 #' # Restart Julia session (in case of issues)
 #' use_julia(restart = TRUE)
-#' 
+#'
 #' # Stop Julia session
 #' use_julia(stop = TRUE)
 #'
@@ -175,7 +177,6 @@ use_julia <- function(
       .sdbuildR_env[["jl"]][["use_threads"]] <- FALSE
       # Sys.unsetenv("JULIA_NUM_THREADS")
     } else {
-
       # Set to FALSE in case of an error in stopping Julia
       .sdbuildR_env[["jl"]][["use_threads"]] <- FALSE
 
@@ -185,13 +186,16 @@ use_julia <- function(
       # Find current thread setting to restore it after Julia session is started (this won't affect the new Julia session)
       .sdbuildR_env[["jl"]][["use_threads"]] <- TRUE
       old_threads <- Sys.getenv("JULIA_NUM_THREADS")
-      on.exit({
-        if (old_threads == "") {
-          Sys.unsetenv("JULIA_NUM_THREADS")
-        } else {
-          Sys.setenv(JULIA_NUM_THREADS = old_threads)
-        }
-      }, add = TRUE)
+      on.exit(
+        {
+          if (old_threads == "") {
+            Sys.unsetenv("JULIA_NUM_THREADS")
+          } else {
+            Sys.setenv(JULIA_NUM_THREADS = old_threads)
+          }
+        },
+        add = TRUE
+      )
 
       # Set JULIA_NUM_THREADS for this session
       Sys.setenv(JULIA_NUM_THREADS = nthreads)
@@ -240,13 +244,13 @@ use_julia <- function(
 
 
 #' Evaluate a Julia expression
-#' 
+#'
 #' Evaluate a Julia expression using julia_eval(), with an option to suppress messages (such as the startup message when starting a Julia session).
-#' 
+#'
 #' @param string Julia code to evaluate as a string
 #' @param suppressMessages If `TRUE`, suppress messages from julia_eval(). Defaults to `TRUE`.
-#' 
-#' @noRd 
+#'
+#' @noRd
 julia_eval <- function(string, suppressMessages = TRUE) {
   if (suppressMessages) {
     suppressMessages(JuliaConnectoR::juliaEval(string))
@@ -254,7 +258,6 @@ julia_eval <- function(string, suppressMessages = TRUE) {
     JuliaConnectoR::juliaEval(string)
   }
 }
-
 
 
 #' Check Julia environment was initialized
@@ -371,6 +374,7 @@ is_julia_env_setup <- function(force = FALSE, error = TRUE) {
 
   if (package_version(installed_pkg_version) < package_version(required_pkg_version)) {
     if (error) {
+      .sdbuildR_env[["jl"]][["use_threads"]] <- FALSE
       JuliaConnectoR::stopJulia()
       cli::cli_abort(c(
         "x" = "Julia packages need updating.",
@@ -570,7 +574,6 @@ jl_path <- function(path) {
 #' @returns NULL
 #' @noRd
 run_init_julia_env <- function() {
-
   # Find set-up location for sdbuildR in Julia
   env_path <- dirname(system.file("Project.toml", package = "sdbuildR"))
 
@@ -591,4 +594,3 @@ run_init_julia_env <- function() {
 
   invisible(NULL)
 }
-

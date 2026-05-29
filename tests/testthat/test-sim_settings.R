@@ -311,32 +311,31 @@ test_that("sim_settings() save_at overwrites previous save_n", {
   expect_null(sfm2[["sim_settings"]][["save_n"]])
 })
 
-test_that("sim_settings() default return_sims is FALSE on new model", {
+test_that("sim_settings() default save_sims is FALSE on new model", {
   sfm <- sdbuildR("SIR")
-  expect_false(isTRUE(sfm[["sim_settings"]][["return_sims"]]))
+  expect_false(isTRUE(sfm[["sim_settings"]][["save_sims"]]))
 })
 
-test_that("sim_settings(return_sims=TRUE) causes verify() to retain sims", {
+test_that("verify() always retains sims regardless of save_sims", {
   sfm <- sdbuildR("SIR") |>
-    unit_test(expr = all(susceptible >= 0)) |>
-    sim_settings(return_sims = TRUE)
+    unit_test(expr = all(susceptible >= 0))
 
   res <- verify(sfm)
   expect_s3_class(res, "verify_sdbuildR")
-  expect_true(!is.null(res$sims))
+  expect_true(!is.null(res$sims)) # always present, no save_sims needed
 })
 
-test_that("ensemble respects sim_settings return_sims and per-call override via ...", {
+test_that("ensemble respects sim_settings save_sims and per-call override via ...", {
   sfm <- sdbuildR("SIR") |>
-    sim_settings(return_sims = TRUE)
+    sim_settings(save_sims = TRUE)
 
   ens_keep <- ensemble(sfm, n = 2)
   expect_true(!is.null(ens_keep$df))
 
-  ens_drop <- ensemble(sfm, n = 2, return_sims = FALSE)
+  ens_drop <- ensemble(sfm, n = 2, save_sims = FALSE)
   expect_null(ens_drop$df)
 })
 
-test_that("sim_settings() rejects invalid return_sims", {
-  expect_error(sim_settings(sdbuildR(), return_sims = "notlogical"), "Invalid")
+test_that("sim_settings() rejects invalid save_sims", {
+  expect_error(sim_settings(sdbuildR(), save_sims = "notlogical"), "Invalid")
 })

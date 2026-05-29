@@ -182,8 +182,8 @@ test_that("replace_comments: converts // to # (line comment)", {
 
 test_that("replace_comments: converts /* to # and */ to newline (block comment)", {
   result <- replace_comments("x /* block comment */ + y")
-  expect_false(grepl("/*",  result, fixed = TRUE))
-  expect_false(grepl("*/",  result, fixed = TRUE))
+  expect_false(grepl("/*", result, fixed = TRUE))
+  expect_false(grepl("*/", result, fixed = TRUE))
   # The comment chars have been replaced; equation portion should survive
   expect_match(result, "x")
   expect_match(result, "y")
@@ -191,7 +191,7 @@ test_that("replace_comments: converts /* to # and */ to newline (block comment)"
 
 test_that("replace_comments: equation without IM comment chars is returned unchanged", {
   original <- "x + y * z"
-  result   <- replace_comments(original)
+  result <- replace_comments(original)
   expect_equal(result, original)
 })
 
@@ -234,19 +234,19 @@ test_that("replace_op_IM: AND (case-insensitive) → &", {
 })
 
 test_that("replace_op_IM: OR (case-insensitive) → |", {
-  expect_match(replace_op_IM("x OR y",  character(0)), "\\|")
-  expect_match(replace_op_IM("x or y",  character(0)), "\\|")
+  expect_match(replace_op_IM("x OR y", character(0)), "\\|")
+  expect_match(replace_op_IM("x or y", character(0)), "\\|")
 })
 
 test_that("replace_op_IM: NOT (case-insensitive) → !", {
-  expect_match(replace_op_IM("NOT x",   character(0)), "!")
-  expect_match(replace_op_IM("not x",   character(0)), "!")
+  expect_match(replace_op_IM("NOT x", character(0)), "!")
+  expect_match(replace_op_IM("not x", character(0)), "!")
 })
 
 test_that("replace_op_IM: true/false (case-insensitive) → TRUE/FALSE", {
-  expect_match(replace_op_IM("true",  character(0)), "TRUE")
+  expect_match(replace_op_IM("true", character(0)), "TRUE")
   expect_match(replace_op_IM("false", character(0)), "FALSE")
-  expect_match(replace_op_IM("True",  character(0)), "TRUE")
+  expect_match(replace_op_IM("True", character(0)), "TRUE")
   expect_match(replace_op_IM("FALSE", character(0)), "FALSE")
 })
 
@@ -307,7 +307,7 @@ test_that("curly_to_vector_brackets: {} immediately after identifier becomes []"
 
 test_that("curly_to_vector_brackets: no curly braces → string returned unchanged", {
   original <- "x + y"
-  result   <- curly_to_vector_brackets(original, character(0))
+  result <- curly_to_vector_brackets(original, character(0))
   expect_equal(result, original)
 })
 
@@ -333,7 +333,7 @@ test_that("conv_step: add_var has correct type, name, and equation", {
 })
 
 test_that("conv_step: second occurrence gets a numbered suffix", {
-  r1 <- conv_step(func = "step", arg = c("1", "1"), match_idx = "",  name = "v")
+  r1 <- conv_step(func = "step", arg = c("1", "1"), match_idx = "", name = "v")
   r2 <- conv_step(func = "step", arg = c("2", "1"), match_idx = "2", name = "v")
   expect_false(grepl("2", r1$replacement, fixed = TRUE))
   expect_match(r2$replacement, "2")

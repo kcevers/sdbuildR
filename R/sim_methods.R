@@ -94,7 +94,9 @@ sim_methods <- function(method, from = NULL, to = NULL) {
   if (!is.null(to)) to <- clean_language(to)
 
   if (missing(method)) {
-    if (from == "R") return(names(solver_dict$r_to_julia))
+    if (from == "R") {
+      return(names(solver_dict$r_to_julia))
+    }
     return(names(solver_dict$julia_to_r))
   }
 
@@ -121,7 +123,9 @@ sim_methods <- function(method, from = NULL, to = NULL) {
       ))
     }
     solver_info <- solver_dict$r_to_julia[[method]]
-    if (!translate) return(method)
+    if (!translate) {
+      return(method)
+    }
     if (isTRUE(solver_info$approximate)) {
       cli::cli_warn(c(
         "!" = "No exact Julia equivalent for {.val {method}}.",
@@ -139,8 +143,12 @@ sim_methods <- function(method, from = NULL, to = NULL) {
     ))
   }
   solver_info <- solver_dict$julia_to_r[[method_clean]]
-  if (!translate) return(method_clean)
-  if (!is.null(solver_info$translation)) return(solver_info$translation)
+  if (!translate) {
+    return(method_clean)
+  }
+  if (!is.null(solver_info$translation)) {
+    return(solver_info$translation)
+  }
   cli::cli_warn(c(
     "!" = "No exact R equivalent for {.val {method_clean}}.",
     "i" = "Using {.val {solver_info$alternatives[[1]]}} as the closest supported R solver."

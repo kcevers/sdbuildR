@@ -6,12 +6,14 @@
 \usage{
 \method{plot}{verify_sdbuildR}(
   x,
-  nr = NULL,
-  i = NULL,
+  test = NULL,
+  vars = NULL,
+  add_constants = FALSE,
   label = NULL,
   ignore_case = TRUE,
   status = c("pass", "fail", "error", "skip"),
-  nrows = NULL,
+  condition = seq(1, min(c(x[["n_conditions"]], 9))),
+  nrows = ceiling(sqrt(max(condition))),
   shareX = TRUE,
   shareY = TRUE,
   palette = "Dark 2",
@@ -20,18 +22,21 @@
   font_size = 16,
   wrap_width = 25,
   showlegend = TRUE,
-  alpha = 1/x[["n"]],
+  label_subplots = TRUE,
+  alpha = 1,
+  margin = 0.05,
   ...
 )
 }
 \arguments{
-\item{x}{Output of \code{\link[=verify]{verify()}} with \code{return_sims = TRUE}.}
+\item{x}{Output of \code{\link[=verify]{verify()}}.}
 
-\item{nr}{Integer vector of test numbers to plot. Defaults to the first 9
-available tests. Combines with \code{label} and \code{status} as AND intersection.}
+\item{test}{Integer vector of test numbers to plot.
+Combines with \code{label} and \code{status} as AND intersection.}
 
-\item{i}{Integer vector. Trajectories to plot when \code{n > 1}. Defaults to the
-first 10 runs.}
+\item{vars}{Variables to plot. Defaults to NULL to plot all variables.}
+
+\item{add_constants}{If TRUE, include constants in plot. Defaults to FALSE.}
 
 \item{label}{Character vector of regex patterns for partial, case-insensitive
 label matching. A test is included if its label matches any pattern.}
@@ -39,9 +44,17 @@ label matching. A test is included if its label matches any pattern.}
 \item{ignore_case}{Logical; whether \code{label} matching is case-insensitive.
 Default \code{TRUE}.}
 
-\item{status}{Optional character vector of test statuses to include (e.g., \code{c("fail", "error")}). Defaults to \code{c("pass", "fail", "error", "skip")} (include all).}
+\item{status}{Optional character vector of statuses to include (e.g.,
+\code{c("fail", "error")}). Defaults to all statuses.
+\itemize{
+\item \code{which = "tests"}: filters rows by test status.
+\item \code{which = "sims"}: filters to conditions that have at least one test
+with a matching status.
+}}
 
-\item{nrows}{Number of subplot rows. Defaults to \code{ceiling(sqrt(n_conditions))}.}
+\item{condition}{Integer vector of condition numbers to plot. Defaults to \code{1:9}. If only one condition is specified, the plot will not be a grid of subplots.}
+
+\item{nrows}{Number of subplot rows. Defaults to \code{ceiling(sqrt(condition))}.}
 
 \item{shareX}{Share the x-axis across subplots. Defaults to \code{TRUE}.}
 
@@ -59,8 +72,9 @@ Default \code{TRUE}.}
 
 \item{showlegend}{Whether to show the legend. Defaults to \code{TRUE}.}
 
-\item{alpha}{Opacity for individual trajectories (when \code{n > 1}). Defaults
-to \code{0.4}.}
+\item{label_subplots}{Whether to plot labels indicating the test number of the subplot.}
+
+\item{alpha}{Trajectory opacity. Defaults to \code{1}.}
 
 \item{...}{Additional arguments passed to \code{\link[=plot.simulate_sdbuildR]{plot.simulate_sdbuildR()}}.}
 }
@@ -68,15 +82,14 @@ to \code{0.4}.}
 A plotly object.
 }
 \description{
-Visualize the simulation(s) used during \code{\link[=verify]{verify()}}. Requires that \code{verify()}
-was called with \code{return_sims = TRUE}. Each condition \code{j} is displayed as a
-subplot; when \code{n > 1} (robustness testing), individual trajectories are
-overlaid within each subplot.
+Visualize the simulation(s) used during \code{\link[=verify]{verify()}}. Each condition \code{j} is
+displayed as a subplot. Simulations are always available since \code{\link[=verify]{verify()}}
+unconditionally retains them.
 }
 \examples{
 sfm <- sdbuildR("SIR") |>
   unit_test(expr = all(susceptible >= 0))
-res <- verify(sfm, return_sims = TRUE)
+res <- verify(sfm)
 plot(res)
 }
 \seealso{

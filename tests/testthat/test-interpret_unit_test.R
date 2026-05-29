@@ -11,30 +11,30 @@ expr_ <- function(text) parse(text = text)[[1]]
 
 test_that("op_precedence: logical and comparison operator levels are correct", {
   expect_equal(op_precedence("||"), 1L)
-  expect_equal(op_precedence("|"),  2L)
+  expect_equal(op_precedence("|"), 2L)
   expect_equal(op_precedence("&&"), 3L)
-  expect_equal(op_precedence("&"),  4L)
-  expect_equal(op_precedence("!"),  5L)
-  expect_equal(op_precedence(">"),  6L)
+  expect_equal(op_precedence("&"), 4L)
+  expect_equal(op_precedence("!"), 5L)
+  expect_equal(op_precedence(">"), 6L)
   expect_equal(op_precedence(">="), 6L)
-  expect_equal(op_precedence("<"),  6L)
+  expect_equal(op_precedence("<"), 6L)
   expect_equal(op_precedence("<="), 6L)
   expect_equal(op_precedence("=="), 6L)
   expect_equal(op_precedence("!="), 6L)
 })
 
 test_that("op_precedence: arithmetic operator levels are correct", {
-  expect_equal(op_precedence("+"),  7L)
-  expect_equal(op_precedence("-"),  7L)
-  expect_equal(op_precedence("*"),  8L)
-  expect_equal(op_precedence("/"),  8L)
-  expect_equal(op_precedence("^"),  9L)
+  expect_equal(op_precedence("+"), 7L)
+  expect_equal(op_precedence("-"), 7L)
+  expect_equal(op_precedence("*"), 8L)
+  expect_equal(op_precedence("/"), 8L)
+  expect_equal(op_precedence("^"), 9L)
 })
 
 test_that("op_precedence: unknown operator returns -1", {
-  expect_equal(op_precedence("@"),   -1L)
-  expect_equal(op_precedence("??"),  -1L)
-  expect_equal(op_precedence(NULL),  -1L)
+  expect_equal(op_precedence("@"), -1L)
+  expect_equal(op_precedence("??"), -1L)
+  expect_equal(op_precedence(NULL), -1L)
 })
 
 test_that("op_precedence: multiplication strictly outranks addition", {
@@ -55,13 +55,13 @@ test_that("op_precedence: comparisons strictly outrank addition", {
 # ============================================================================
 
 test_that("needs_parens: lower-prec inner inside higher-prec outer → TRUE", {
-  expect_true(needs_parens("+", "*"))   # (a+b) inside a*b
-  expect_true(needs_parens("+", "^"))   # (a+b) inside a^b
-  expect_true(needs_parens("*", "^"))   # (a*b) inside a^b
+  expect_true(needs_parens("+", "*")) # (a+b) inside a*b
+  expect_true(needs_parens("+", "^")) # (a+b) inside a^b
+  expect_true(needs_parens("*", "^")) # (a*b) inside a^b
 })
 
 test_that("needs_parens: higher-prec inner inside lower-prec outer → FALSE", {
-  expect_false(needs_parens("*", "+"))   # a*b inside a+b → no wrapping
+  expect_false(needs_parens("*", "+")) # a*b inside a+b → no wrapping
   expect_false(needs_parens("^", "*"))
   expect_false(needs_parens("^", "+"))
 })
@@ -73,7 +73,7 @@ test_that("needs_parens: same operator, same precedence → FALSE", {
 })
 
 test_that("needs_parens: same precedence, different operator → TRUE", {
-  expect_true(needs_parens("+", "-"))   # subtraction is not associative
+  expect_true(needs_parens("+", "-")) # subtraction is not associative
   expect_true(needs_parens("-", "+"))
 })
 
@@ -95,8 +95,8 @@ test_that("needs_parens: unknown operator → FALSE (safe, not enough info)", {
 test_that("find_named_arg: returns correct value by name", {
   args <- list(a = 1, tolerance = 1e-6, b = 2)
   expect_equal(find_named_arg(args, "tolerance"), 1e-6)
-  expect_equal(find_named_arg(args, "a"),         1)
-  expect_equal(find_named_arg(args, "b"),         2)
+  expect_equal(find_named_arg(args, "a"), 1)
+  expect_equal(find_named_arg(args, "b"), 2)
 })
 
 test_that("find_named_arg: returns NULL for absent name", {
@@ -116,9 +116,9 @@ test_that("find_named_arg: works when list is fully unnamed → returns NULL", {
 # ============================================================================
 
 test_that("interpret: numeric literals round-trip as strings", {
-  expect_equal(interpret(expr_("42")),   "42")
+  expect_equal(interpret(expr_("42")), "42")
   expect_equal(interpret(expr_("3.14")), "3.14")
-  expect_equal(interpret(expr_("0")),    "0")
+  expect_equal(interpret(expr_("0")), "0")
 })
 
 test_that("interpret: unary minus produces negative string", {
@@ -127,12 +127,12 @@ test_that("interpret: unary minus produces negative string", {
 })
 
 test_that("interpret: logical literals are lowercase", {
-  expect_equal(interpret(expr_("TRUE")),  "true")
+  expect_equal(interpret(expr_("TRUE")), "true")
   expect_equal(interpret(expr_("FALSE")), "false")
 })
 
 test_that("interpret: symbol returns variable name unchanged", {
-  expect_equal(interpret(expr_("x")),      "x")
+  expect_equal(interpret(expr_("x")), "x")
   expect_equal(interpret(expr_("my_var")), "my_var")
 })
 
@@ -151,7 +151,7 @@ test_that("interpret: binary arithmetic operators use English words", {
 test_that("interpret: a + b * c needs no extra parens (precedence correct)", {
   result <- interpret(expr_("a + b * c"))
   expect_equal(result, "a plus b times c")
-  expect_false(grepl("\\(b", result))  # b should NOT be wrapped
+  expect_false(grepl("\\(b", result)) # b should NOT be wrapped
 })
 
 test_that("interpret: (a + b) * c preserves parens around low-prec sub-expr", {
@@ -177,8 +177,8 @@ test_that("interpret: exponentiation with general power uses 'raised to the powe
 # ============================================================================
 
 test_that("interpret: comparison operators produce correct English phrases", {
-  expect_equal(interpret(expr_("x > 0")),  "x is greater than 0")
-  expect_equal(interpret(expr_("x < 0")),  "x is less than 0")
+  expect_equal(interpret(expr_("x > 0")), "x is greater than 0")
+  expect_equal(interpret(expr_("x < 0")), "x is less than 0")
   expect_equal(interpret(expr_("x >= 0")), "x is at least 0")
   expect_equal(interpret(expr_("x <= 0")), "x is at most 0")
   expect_equal(interpret(expr_("x == y")), "x is equal to y")
@@ -228,9 +228,9 @@ test_that("interpret: all() and any() include the inner expression", {
 
 test_that("interpret: summary statistics use 'the <stat> of' form", {
   expect_equal(interpret(expr_("mean(x)")), "the mean of x")
-  expect_equal(interpret(expr_("sum(x)")),  "the sum of x")
-  expect_equal(interpret(expr_("max(x)")),  "the maximum of x")
-  expect_equal(interpret(expr_("min(x)")),  "the minimum of x")
+  expect_equal(interpret(expr_("sum(x)")), "the sum of x")
+  expect_equal(interpret(expr_("max(x)")), "the maximum of x")
+  expect_equal(interpret(expr_("min(x)")), "the minimum of x")
 })
 
 
@@ -246,10 +246,10 @@ test_that("interpret: expect_equal(x, 1) → 'expect that x equals 1'", {
 })
 
 test_that("interpret: expect_equal WRAPS — output differs from interpret(x == 1)", {
-  direct  <- interpret(expr_("x == 1"))
+  direct <- interpret(expr_("x == 1"))
   wrapped <- interpret(expr_("expect_equal(x, 1)"))
   expect_false(identical(direct, wrapped))
-  expect_match(direct,  "is equal to")
+  expect_match(direct, "is equal to")
   expect_match(wrapped, "equals")
 })
 

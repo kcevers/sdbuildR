@@ -394,7 +394,7 @@ compile_post_ensemble <- function(object, ensemble_pars) {
     ensemble_to_df_func = ensemble_to_df_func
   ))
 
-  if (ensemble_pars[["return_sims"]]) {
+  if (ensemble_pars[["save_sims"]]) {
     script <- paste0(script, fmt_script("ensemble_csv", "Julia",
       filepath_df = ensemble_pars[["filepath_df"]][["df"]],
       filepath_constants = ensemble_pars[["filepath_df"]][["constants"]],

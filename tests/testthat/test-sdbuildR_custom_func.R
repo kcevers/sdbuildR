@@ -212,14 +212,14 @@ cli::test_that_cli(configs = c("plain", "ansi"), "logistic() validates parameter
 test_that("ramp: is 0 strictly before start", {
   times <- seq(0, 10, by = 0.01)
   f <- ramp(times, start = 3, finish = 7, height = 4)
-  expect_equal(f(0),   0, tolerance = 1e-9)
+  expect_equal(f(0), 0, tolerance = 1e-9)
   expect_equal(f(2.9), 0, tolerance = 1e-9)
 })
 
 test_that("ramp: equals height at and after finish", {
   times <- seq(0, 10, by = 0.01)
   f <- ramp(times, start = 3, finish = 7, height = 4)
-  expect_equal(f(7),  4, tolerance = 1e-6)
+  expect_equal(f(7), 4, tolerance = 1e-6)
   expect_equal(f(10), 4, tolerance = 1e-6)
 })
 
@@ -232,7 +232,7 @@ test_that("ramp: midpoint equals height/2", {
 test_that("ramp: negative height produces a decreasing ramp", {
   times <- seq(0, 10, by = 0.01)
   f <- ramp(times, start = 2, finish = 8, height = -6)
-  expect_equal(f(0),  0,  tolerance = 1e-9)
+  expect_equal(f(0), 0, tolerance = 1e-9)
   expect_equal(f(10), -6, tolerance = 1e-6)
 })
 
@@ -256,7 +256,7 @@ test_that("pulse: is 0 strictly before start", {
   times <- seq(0, 20, by = 0.001)
   f <- pulse(times, start = 5, height = 3, width = 2)
   expect_equal(f(4.99), 0, tolerance = 1e-6)
-  expect_equal(f(0),    0, tolerance = 1e-6)
+  expect_equal(f(0), 0, tolerance = 1e-6)
 })
 
 test_that("pulse: equals height during [start, start+width)", {
@@ -270,16 +270,16 @@ test_that("pulse: returns to 0 after start+width", {
   times <- seq(0, 20, by = 0.001)
   f <- pulse(times, start = 5, height = 3, width = 2)
   expect_equal(f(7.5), 0, tolerance = 1e-6)
-  expect_equal(f(15),  0, tolerance = 1e-6)
+  expect_equal(f(15), 0, tolerance = 1e-6)
 })
 
 test_that("pulse: repeats correctly at each interval", {
   times <- seq(0, 30, by = 0.001)
   f <- pulse(times, start = 0, height = 1, width = 1, repeat_interval = 5)
-  expect_equal(f(0.5),  1, tolerance = 1e-6)   # first pulse
-  expect_equal(f(5.5),  1, tolerance = 1e-6)   # second pulse
-  expect_equal(f(10.5), 1, tolerance = 1e-6)   # third pulse
-  expect_equal(f(3),    0, tolerance = 1e-6)   # gap between pulses
+  expect_equal(f(0.5), 1, tolerance = 1e-6) # first pulse
+  expect_equal(f(5.5), 1, tolerance = 1e-6) # second pulse
+  expect_equal(f(10.5), 1, tolerance = 1e-6) # third pulse
+  expect_equal(f(3), 0, tolerance = 1e-6) # gap between pulses
 })
 
 test_that("pulse: warns when width >= repeat_interval", {
@@ -304,13 +304,13 @@ test_that("step: is 0 strictly before start", {
   times <- seq(0, 10, by = 0.001)
   f <- step(times, start = 5, height = 2)
   expect_equal(f(4.99), 0, tolerance = 1e-6)
-  expect_equal(f(0),    0, tolerance = 1e-6)
+  expect_equal(f(0), 0, tolerance = 1e-6)
 })
 
 test_that("step: equals height at and after start", {
   times <- seq(0, 10, by = 0.001)
   f <- step(times, start = 5, height = 2)
-  expect_equal(f(5),   2, tolerance = 1e-6)
+  expect_equal(f(5), 2, tolerance = 1e-6)
   expect_equal(f(9.9), 2, tolerance = 1e-6)
 })
 
@@ -323,7 +323,7 @@ test_that("step: default height is 1", {
 test_that("step: negative height produces a downward step", {
   times <- seq(0, 10, by = 0.1)
   f <- step(times, start = 5, height = -3)
-  expect_equal(f(0), 0,  tolerance = 1e-6)
+  expect_equal(f(0), 0, tolerance = 1e-6)
   expect_equal(f(8), -3, tolerance = 1e-6)
 })
 
@@ -339,24 +339,24 @@ test_that("step: returns a callable function", {
 
 test_that("seasonal: output is bounded within [-1, 1]", {
   times <- seq(0, 100, by = 0.01)
-  f     <- seasonal(times, period = 1)
-  vals  <- vapply(seq(0, 100, by = 0.5), f, numeric(1))
-  expect_lte(max(vals),  1 + 1e-6)
+  f <- seasonal(times, period = 1)
+  vals <- vapply(seq(0, 100, by = 0.5), f, numeric(1))
+  expect_lte(max(vals), 1 + 1e-6)
   expect_gte(min(vals), -1 - 1e-6)
 })
 
 test_that("seasonal: peak occurs at shift and every period thereafter", {
   times <- seq(0, 10, by = 0.001)
-  f     <- seasonal(times, period = 2, shift = 0)
-  expect_equal(f(0), 1, tolerance = 1e-6)  # cos(0) = 1
-  expect_equal(f(2), 1, tolerance = 1e-6)  # one period later
+  f <- seasonal(times, period = 2, shift = 0)
+  expect_equal(f(0), 1, tolerance = 1e-6) # cos(0) = 1
+  expect_equal(f(2), 1, tolerance = 1e-6) # one period later
   expect_equal(f(4), 1, tolerance = 1e-6)
 })
 
 test_that("seasonal: shift moves the peak by the shift amount", {
   times <- seq(0, 10, by = 0.001)
-  f     <- seasonal(times, period = 4, shift = 1)
-  expect_equal(f(1), 1, tolerance = 1e-6)  # peak at t = shift
+  f <- seasonal(times, period = 4, shift = 1)
+  expect_equal(f(1), 1, tolerance = 1e-6) # peak at t = shift
 })
 
 test_that("seasonal: errors when period <= 0", {
@@ -371,27 +371,27 @@ test_that("seasonal: errors when period <= 0", {
 # ============================================================================
 
 test_that("saveat_func: linearly interpolates x = 2*time correctly", {
-  df     <- data.frame(time = c(0, 1, 2, 3, 4), x = c(0, 2, 4, 6, 8))
+  df <- data.frame(time = c(0, 1, 2, 3, 4), x = c(0, 2, 4, 6, 8))
   result <- saveat_func(df, "time", c(0.5, 1.5, 2.5))
   expect_equal(result$time, c(0.5, 1.5, 2.5))
-  expect_equal(result$x,    c(1.0, 3.0, 5.0), tolerance = 1e-9)
+  expect_equal(result$x, c(1.0, 3.0, 5.0), tolerance = 1e-9)
 })
 
 test_that("saveat_func: at original times returns exact original values", {
-  df     <- data.frame(time = c(0, 1, 2), x = c(10, 20, 30))
+  df <- data.frame(time = c(0, 1, 2), x = c(10, 20, 30))
   result <- saveat_func(df, "time", c(0, 1, 2))
   expect_equal(result$x, c(10, 20, 30), tolerance = 1e-9)
 })
 
 test_that("saveat_func: preserves all non-time columns", {
-  df     <- data.frame(time = 0:4, a = 0:4, b = (0:4)^2)
+  df <- data.frame(time = 0:4, a = 0:4, b = (0:4)^2)
   result <- saveat_func(df, "time", c(1.0, 2.0))
   expect_setequal(names(result), names(df))
   expect_equal(nrow(result), 2)
 })
 
 test_that("saveat_func: new_times with 1 entry gives 1-row data frame", {
-  df     <- data.frame(time = c(0, 1, 2), x = c(0, 1, 2))
+  df <- data.frame(time = c(0, 1, 2), x = c(0, 1, 2))
   result <- saveat_func(df, "time", 1.0)
   expect_equal(nrow(result), 1)
   expect_equal(result$x, 1, tolerance = 1e-9)
@@ -403,16 +403,16 @@ test_that("saveat_func: new_times with 1 entry gives 1-row data frame", {
 # ============================================================================
 
 test_that("rem: sign follows dividend (truncated division)", {
-  expect_equal(rem( 7,  3),  1)
-  expect_equal(rem(-7,  3), -1)  # negative dividend → negative result
-  expect_equal(rem( 7, -3),  1)  # positive dividend → positive result
+  expect_equal(rem(7, 3), 1)
+  expect_equal(rem(-7, 3), -1) # negative dividend → negative result
+  expect_equal(rem(7, -3), 1) # positive dividend → positive result
   expect_equal(rem(-7, -3), -1)
 })
 
 test_that("mod: result matches R %% operator (sign follows divisor)", {
-  expect_equal(mod( 7,  3),  7 %%  3)
-  expect_equal(mod(-7,  3), -7 %%  3)
-  expect_equal(mod( 7, -3),  7 %% -3)
+  expect_equal(mod(7, 3), 7 %% 3)
+  expect_equal(mod(-7, 3), -7 %% 3)
+  expect_equal(mod(7, -3), 7 %% -3)
   expect_equal(mod(-7, -3), -7 %% -3)
 })
 
@@ -424,14 +424,14 @@ test_that("rem and mod agree for positive operands", {
 test_that("rem and mod DISAGREE for negative dividend", {
   # For -7 / 3: rem = -1 (sign follows -7), mod = 2 (sign follows 3)
   expect_equal(rem(-7, 3), -1)
-  expect_equal(mod(-7, 3),  2)
+  expect_equal(mod(-7, 3), 2)
   expect_false(rem(-7, 3) == mod(-7, 3))
 })
 
 test_that("%REM% operator matches rem() exactly", {
-  expect_equal( 7L %REM%  3L, rem( 7,  3))
-  expect_equal(-7L %REM%  3L, rem(-7,  3))
-  expect_equal( 7L %REM% -3L, rem( 7, -3))
+  expect_equal(7L %REM% 3L, rem(7, 3))
+  expect_equal(-7L %REM% 3L, rem(-7, 3))
+  expect_equal(7L %REM% -3L, rem(7, -3))
   expect_equal(-7L %REM% -3L, rem(-7, -3))
 })
 
@@ -447,28 +447,28 @@ test_that("logistic: output is bounded [0, upper]", {
 })
 
 test_that("logistic: equals upper/2 at the midpoint", {
-  expect_equal(logistic(3,  midpoint = 3,  upper = 1),  0.5, tolerance = 1e-9)
-  expect_equal(logistic(7,  midpoint = 7,  upper = 10), 5.0, tolerance = 1e-9)
-  expect_equal(logistic(0,  midpoint = 0,  upper = 1),  0.5, tolerance = 1e-9)
+  expect_equal(logistic(3, midpoint = 3, upper = 1), 0.5, tolerance = 1e-9)
+  expect_equal(logistic(7, midpoint = 7, upper = 10), 5.0, tolerance = 1e-9)
+  expect_equal(logistic(0, midpoint = 0, upper = 1), 0.5, tolerance = 1e-9)
 })
 
 test_that("logistic: is monotonically increasing", {
-  x    <- seq(-10, 10, by = 0.1)
+  x <- seq(-10, 10, by = 0.1)
   vals <- logistic(x)
   expect_true(all(diff(vals) >= 0))
 })
 
 test_that("sigmoid is identical to logistic for the same arguments", {
-  expect_equal(sigmoid(0),             logistic(0))
-  expect_equal(sigmoid(2, slope = 3),  logistic(2, slope = 3))
+  expect_equal(sigmoid(0), logistic(0))
+  expect_equal(sigmoid(2, slope = 3), logistic(2, slope = 3))
   expect_equal(sigmoid(-1, upper = 2), logistic(-1, upper = 2))
 })
 
 test_that("logistic: larger slope gives steeper transition", {
   mid <- 0
   # At x = 0.5 (past midpoint), steep logistic should be closer to upper
-  slow   <- logistic(0.5, slope = 0.5, midpoint = mid, upper = 1)
-  fast   <- logistic(0.5, slope = 5.0, midpoint = mid, upper = 1)
+  slow <- logistic(0.5, slope = 0.5, midpoint = mid, upper = 1)
+  fast <- logistic(0.5, slope = 5.0, midpoint = mid, upper = 1)
   expect_lt(slow, fast)
 })
 
@@ -479,8 +479,8 @@ test_that("logistic: larger slope gives steeper transition", {
 
 test_that("hill: equals upper/2 at the midpoint (EC50 property)", {
   expect_equal(hill(0.5, slope = 1, midpoint = 0.5, upper = 1), 0.5, tolerance = 1e-9)
-  expect_equal(hill(2,   slope = 1, midpoint = 2,   upper = 4), 2.0, tolerance = 1e-9)
-  expect_equal(hill(5,   slope = 2, midpoint = 5,   upper = 3), 1.5, tolerance = 1e-9)
+  expect_equal(hill(2, slope = 1, midpoint = 2, upper = 4), 2.0, tolerance = 1e-9)
+  expect_equal(hill(5, slope = 2, midpoint = 5, upper = 3), 1.5, tolerance = 1e-9)
 })
 
 test_that("hill: output is bounded [0, upper]", {
@@ -490,7 +490,7 @@ test_that("hill: output is bounded [0, upper]", {
 })
 
 test_that("hill: is monotonically increasing for positive x", {
-  x    <- seq(0.01, 50, by = 0.1)
+  x <- seq(0.01, 50, by = 0.1)
   vals <- hill(x, slope = 2, midpoint = 5, upper = 10)
   expect_true(all(diff(vals) >= 0))
 })
@@ -509,13 +509,13 @@ test_that("nonnegative: returns NA when input is NA", {
 })
 
 test_that("nonnegative: clamps negative values to 0", {
-  expect_equal(nonnegative(-5),   0)
+  expect_equal(nonnegative(-5), 0)
   expect_equal(nonnegative(-0.1), 0)
   expect_equal(nonnegative(-1e6), 0)
 })
 
 test_that("nonnegative: passes through non-negative values unchanged", {
-  expect_equal(nonnegative(3),   3)
-  expect_equal(nonnegative(0),   0)
+  expect_equal(nonnegative(3), 3)
+  expect_equal(nonnegative(0), 0)
   expect_equal(nonnegative(100), 100)
 })

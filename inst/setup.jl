@@ -13,7 +13,7 @@ Pkg.activate(env_path)
 
 # Install StockFlowRSupport from GitHub
 println("\nInstalling StockFlowRSupport.jl from GitHub...")
-Pkg.add(url="https://github.com/KCEvers/StockFlowRSupport.jl", rev = "v0.0.2")
+Pkg.add(url="https://github.com/KCEvers/StockFlowRSupport.jl", rev = "v0.0.4")
 
 # Install all other dependencies from Project.toml
 println("\nInstalling dependencies from Project.toml...")

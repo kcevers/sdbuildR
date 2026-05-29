@@ -26,6 +26,12 @@ test_that("use_julia() works", {
   expect_true(is_julia_working())
   expect_true(is_julia_env_setup())
   expect_true(is_julia_init())
+
+  # Restart Julia
+  expect_no_error(expect_no_warning(expect_message(use_julia(restart = TRUE))))
+  expect_true(is_julia_working())
+  expect_true(is_julia_env_setup())
+  expect_true(is_julia_init())
 })
 
 test_that("julia_eval() works", {
@@ -77,7 +83,6 @@ test_that("use_julia() with threads works", {
   } else {
     expect_equal(actual_threads, as.numeric(old_threads))
   }
-
 })
 
 
@@ -85,14 +90,16 @@ test_that("install_julia_env() works", {
   skip_if_julia_not_ready()
   skip_if(interactive())
 
-  manifest_exists <- function(){ file.exists(system.file("Manifest.toml", package = "sdbuildR")) }
+  manifest_exists <- function() {
+    file.exists(system.file("Manifest.toml", package = "sdbuildR"))
+  }
 
   # Test installation
   expect_no_error(install_julia_env())
   expect_no_error(install_julia_env(remove = TRUE))
   expect_false(manifest_exists())
   expect_false(is_julia_env_setup(error = FALSE))
-  expect_false(is_julia_env_setup(error = FALSE, restart = TRUE))
+  expect_false(is_julia_env_setup(error = FALSE, force = TRUE))
 
   # Removing again should not cause an error
   expect_message(expect_no_error(install_julia_env(remove = TRUE)), "no need to remove")

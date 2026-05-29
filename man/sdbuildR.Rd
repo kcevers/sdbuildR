@@ -9,21 +9,21 @@ sdbuildR(template = NULL)
 \arguments{
 \item{template}{Name of the template to load. If \code{NULL}, an empty stock-and-flow
 model will be created with default simulation parameters and a default meta.
-If specified, \code{template} should be one of the available templates:
+If specified, \code{template} should be one of the available templates (case-insensitive):
 \itemize{
 \item \strong{logistic_model}: Population growth with carrying capacity
-\item \strong{SIR}: Epidemic model (Susceptible-Infected-Recovered)
+\item \strong{sir}: Epidemic model (Susceptible-Infected-Recovered)
 \item \strong{predator_prey}: Lotka-Volterra dynamics
 \item \strong{cusp}: Cusp catastrophe model
-\item \strong{Crielaard2022}: Eating behavior (doi: 10.1037/met0000484)
+\item \strong{crielaard2022}: Eating behavior (doi: 10.1037/met0000484)
 \item \strong{coffee_cup}: Temperature equilibration (Meadows)
 \item \strong{bank_account}: Compound interest (Meadows)
-\item \strong{Lorenz}: Lorenz attractor (chaotic)
-\item \strong{Rossler}: Rossler attractor (chaotic)
-\item \strong{vanderPol}: Van der Pol oscillator
-\item \strong{Duffing}: Forced Duffing oscillator
-\item \strong{Chua}: Chua's circuit (chaotic)
-\item \strong{JDR}: Job Demands-Resources Theory as formalized in Evers et al. (submitted)
+\item \strong{lorenz}: Lorenz attractor (chaotic)
+\item \strong{rossler}: Rossler attractor (chaotic)
+\item \strong{vanderpol}: Van der Pol oscillator
+\item \strong{duffing}: Forced Duffing oscillator
+\item \strong{chua}: Chua's circuit (chaotic)
+\item \strong{jdr}: Job Demands-Resources Theory as formalized in Evers et al. (under review)
 }}
 }
 \value{
@@ -55,7 +55,7 @@ sfm <- sim_settings(sfm, save_at = 1)
 }
 
 # Load a template
-sfm <- sdbuildR("Lorenz")
+sfm <- sdbuildR("lorenz")
 sim <- simulate(sfm)
 plot(sim)
 }

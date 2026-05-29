@@ -57,22 +57,30 @@ Above, we use the pipe operator `|>` for better legibility. It simply passes the
 
 ```{r scratch_build2}
 sfm <- sfm |>
-  constant(total_population, eqn = "susceptible + infected + recovered", 
-          label = "Total population") |>
-  constant(contact_rate, eqn = 2, label = "Contact rate") |> 
-  constant(recovery_rate, eqn = 0.1, label = "Recovery rate") |> 
-  constant(infection_rate, eqn = "contact_rate / total_population", 
-          label = "Infection rate")
+  constant(total_population,
+    eqn = "susceptible + infected + recovered",
+    label = "Total population"
+  ) |>
+  constant(contact_rate, eqn = 2, label = "Contact rate") |>
+  constant(recovery_rate, eqn = 0.1, label = "Recovery rate") |>
+  constant(infection_rate,
+    eqn = "contact_rate / total_population",
+    label = "Infection rate"
+  )
 ```
 
 Finally, we add two flows that move population from one stock to another:
 
 ```{r scratch_build3}
 sfm <- sfm |>
-  flow(new_infections, eqn = "infection_rate * susceptible * infected", 
-      from = "susceptible", to = "infected", label = "New infections") |>
-  flow(new_recoveries, eqn = "recovery_rate * infected", 
-      from = "infected", to = "recovered", label = "New recoveries") 
+  flow(new_infections,
+    eqn = "infection_rate * susceptible * infected",
+    from = "susceptible", to = "infected", label = "New infections"
+  ) |>
+  flow(new_recoveries,
+    eqn = "recovery_rate * infected",
+    from = "infected", to = "recovered", label = "New recoveries"
+  )
 
 print(sfm)
 ```
@@ -128,7 +136,7 @@ sfm <- sdbuildR("SIR") |>
 verify(sfm)
 ```
 
-See the [Unit tests](https://kcevers.github.io/sdbuildR/articles/unit-tests.html) vignette for more, including conditional tests, ensemble-based verification, and debugging failed tests.
+See the [Unit tests](https://kcevers.github.io/sdbuildR/articles/unit-tests.html) vignette for more, including conditional tests, visualizing and extracting test results, and debugging failed tests.
 
 ## Learn more
 

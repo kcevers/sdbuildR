@@ -17,7 +17,7 @@ test_that("print.simulate_sdbuildR() snapshot: named model", {
 })
 
 test_that("print.simulate_sdbuildR() snapshot: failed simulation", {
-  sim <- sdbuildR:::new_simulate_sdbuildR(
+  sim <- new_simulate_sdbuildR(
     success       = FALSE,
     error_message = "something went wrong"
   )
@@ -46,7 +46,7 @@ test_that("summary.simulate_sdbuildR() has one row per variable", {
 })
 
 test_that("summary.simulate_sdbuildR() errors on failed simulation", {
-  sim <- sdbuildR:::new_simulate_sdbuildR(
+  sim <- new_simulate_sdbuildR(
     success       = FALSE,
     error_message = "something went wrong"
   )

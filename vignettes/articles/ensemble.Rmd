@@ -76,11 +76,11 @@ To explore this more systematically, we can run an ensemble simulation using the
 
 ## Running ensemble simulations
 
-Ensemble simulations create multiple runs of the model, which only makes sense if the model either has some random elements or if parameters are being varied. Our model already has random initial conditions, but if it had not, we could create these:
+Ensemble simulations create multiple runs of the model, which only makes sense if the model either has some random elements or if parameters are being varied. Our model already has random initial conditions, but if it did not, we could create these:
 
 ```{r}
 sfm <- update(sfm, c(Food_intake, Hunger, Compensatory_behaviour),
-              eqn = runif(1)
+  eqn = runif(1)
 )
 ```
 
@@ -100,10 +100,10 @@ sims <- ensemble(sfm, n = 100)
 plot(sims)
 ```
 
-The plot shows the mean and confidence interval of the stocks (mean with 95% confidence interval). We can also plot the individual runs, for which we first have to rerun the simulation and set `return_sims = TRUE`:
+The plot shows the mean and confidence interval of the stocks (mean with 95% confidence interval). We can also plot the individual runs, for which we first have to rerun the simulation with `save_sims = TRUE`:
 
 ```{r}
-sims <- ensemble(sfm, n = 30, return_sims = TRUE)
+sims <- ensemble(sfm, n = 30, save_sims = TRUE)
 ```
 
 
@@ -114,7 +114,7 @@ plot(sims, which = "sims")
 This automatically only plots the first ten simulations, as plotting a large number of simulations can be quite slow. We can change which simulations we plot by specifying the `i` argument:
 
 ```{r }
-plot(sims, which = "sims", i = 15:30)
+plot(sims, which = "sims", sim = 15:30)
 ```
 
 By default, only the stocks are saved. To save all variables, set `only_stocks = FALSE`:
@@ -173,8 +173,7 @@ use_julia(nthreads = 4)
 To stop using threaded simulations, run:
 
 ```{r, eval=FALSE}
-use_julia(stop = TRUE)
-use_julia()
+use_julia(restart = TRUE)
 ```
 
 ## Specifying ranges
@@ -209,7 +208,7 @@ sims <- ensemble(sfm,
 plot(sims)
 ```
 
-The plot shows similarity within columns but differences between columns. As $a_1$ differs between columns, it appears that $a_1$ has a larger effect than $a_2$. To view the parameter combination corresponding to each condition $j$, view `conditions` in `sims`: 
+The plot shows similarity within columns but differences between columns. As $a_1$ differs between columns, it appears that $a_1$ has a larger effect than $a_2$. To view the parameter combination corresponding to each condition, view `conditions` in `sims`: 
 
 ```{r}
 sims$conditions
@@ -223,7 +222,7 @@ sims <- ensemble(sfm,
     a2 = c(0.4, 0.5, 0.6),
     a1 = c(1.3, 1.4, 1.5)
   ),
-  n = 100, cross = FALSE, return_sims = TRUE
+  n = 100, cross = FALSE, save_sims = TRUE
 )
 ```
 
@@ -234,25 +233,24 @@ plot(sims, nrows = 1)
 We can select specific conditions to compare, where here we plot the first fifteen simulations of the first two conditions:
 
 ```{r}
-plot(sims, i = 1:15, j = 1:2, which = "sims", nrows = 1)
+plot(sims, sim = 1:15, condition = 1:2, which = "sims", nrows = 1)
 ```
 
 ### Accessing simulation results
 
 The results of the ensemble simulation are stored in the `sims` object, which is a list containing, among others:
 - `summary`: summary statistics across all simulations per condition
-- `df`: individual simulation data (if `return_sims = TRUE`)
+- `df`: individual simulation data (if `save_sims = TRUE`)
 - `init`: initial values of stocks
 - `constants`: parameter values used
-- `conditions`: matrix showing parameter combinations for each $j$
+- `conditions`: matrix showing parameter combinations for each condition
 
-You can access the summary statistics per condition $j$ and per time point, such as the mean and confidence intervals, using:
+You can access the summary statistics per condition and per time point, such as the mean and confidence intervals, using:
 
 ```{r}
 head(sims)
 # or
-df <- as.data.frame(sims)
-head(df)
+head(as.data.frame(sims))
 ```
 
 By default, simulations are returned in long format, but can also be shaped in wide format as well: 
@@ -261,14 +259,14 @@ By default, simulations are returned in long format, but can also be shaped in w
 head(sims, direction = "wide")
 ```
 
-If you have set `return_sims = TRUE`, you can access the individual simulation runs as well. The dataframe contains the value of each variable, for each time point, for each simulation $i$, per condition $j$. 
+If you have set `save_sims = TRUE`, you can access the individual simulation runs as well. The dataframe contains the value of each variable, for each time point, for each simulation, for each condition. 
 
 ```{r}
 head(sims, which = "sims", direction = "long")
 ```
 
 
-Finally, to access the parameters (i.e., constants) of each simulation $i$ per condition $j$, run:
+Finally, to access the parameters (i.e., constants) of each simulation per condition, run:
 
 ```{r}
 head(sims, which = "sims", type = "constant")
@@ -279,3 +277,10 @@ To view their summary statistics, run:
 ```{r}
 head(sims, which = "summary", type = "constant")
 ```
+
+### Close Julia session
+
+```{r}
+use_julia(stop = TRUE)
+```
+

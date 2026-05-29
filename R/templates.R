@@ -9,12 +9,12 @@
 #'
 templates <- function(template) {
   model_names <- c(
-    "logistic_model", "SIR", "predator_prey",
+    "logistic_model", "sir", "predator_prey",
     "cusp",
-    "Crielaard2022",
+    "crielaard2022",
     "coffee_cup", "bank_account",
-    "Lorenz", "Rossler", "vanderPol", "Duffing", "Chua",
-    "JDR"
+    "lorenz", "rossler", "vanderpol", "duffing", "chua",
+    "jdr"
     # "spruce_budworm"
   )
 
@@ -25,21 +25,24 @@ templates <- function(template) {
 
   if (!is.character(template)) {
     cli::cli_abort(c(
-      "Invalid {.arg template} argument.",
-      "x" = "The {.arg template} argument must be {.cls character}."
+      "x" = "Invalid {.arg template} argument.",
+      "i" = "The {.arg template} argument must be {.cls character}."
     ))
   }
 
   if (length(template) != 1) {
     cli::cli_abort(c(
-      "Invalid {.arg template} length.",
-      "x" = "The {.arg template} argument must be a single {.cls character} string."
+      "x" = "Invalid {.arg template} length.",
+      "i" = "The {.arg template} argument must be a single {.cls character} string."
     ))
   }
 
+  # Case-insensitive template matching
+  template <- tolower(template)
+
   if (!template %in% model_names) {
     cli::cli_abort(c(
-      "x" = "Template not found.",
+      "x" = "Template '{template}' not found.",
       "i" = "Available templates: {.val {model_names}}"
     ))
   }
@@ -55,22 +58,19 @@ templates <- function(template) {
       update("deaths", "flow", eqn = "r * X^2 / K", from = "X", label = "Deaths") |>
       update("r", "constant", eqn = "0.1", label = "Growth rate") |>
       update("K", "constant", eqn = "1", label = "Carrying capacity")
-      
-  } else if (template == "SIR") {
-
+  } else if (template == "sir") {
     object <- sdbuildR() |>
       meta(name = "Susceptible-Infected-Recovered (SIR)") |>
       sim_settings(start = 0, stop = 20, time_units = "weeks") |>
       update("susceptible", "stock", eqn = "99999", label = "Susceptible") |>
       update("infected", "stock", eqn = 1, label = "Infected") |>
       update("recovered", "stock", eqn = 0, label = "Recovered") |>
-      update("contact_rate", "constant", eqn = 2, label = "Contact rate") |> 
-      update("recovery_rate", "constant", eqn = 0.1, label = "Recovery rate") |> 
+      update("contact_rate", "constant", eqn = 2, label = "Contact rate") |>
+      update("recovery_rate", "constant", eqn = 0.1, label = "Recovery rate") |>
       update("infection_rate", "constant", eqn = "contact_rate / total_population", label = "Infection rate") |>
       update("new_infections", "flow", eqn = "infection_rate * susceptible * infected", from = "susceptible", to = "infected", label = "New infections") |>
       update("new_recoveries", "flow", eqn = "recovery_rate * infected", from = "infected", to = "recovered", label = "New recoveries") |>
       update("total_population", "constant", eqn = "susceptible + infected + recovered", label = "Total population")
-
   } else if (template == "predator_prey") {
     object <- sdbuildR() |>
       meta(name = "Predator-Prey Dynamics (Lotka-Volterra)") |>
@@ -112,7 +112,7 @@ templates <- function(template) {
       ) |>
       update("a", "constant", eqn = 2, label = "Normal variable") |>
       update("b", "constant", eqn = 2, label = "Splitting variable")
-  } else if (template == "Crielaard2022") {
+  } else if (template == "crielaard2022") {
     object <- sdbuildR() |>
       meta(
         name = "Eating Behaviour (Crielaard et al., 2022)",
@@ -191,7 +191,7 @@ templates <- function(template) {
       update("interest_rate", "constant",
         eqn = ".02", label = "Interest rate"
       )
-  } else if (template == "Lorenz") {
+  } else if (template == "lorenz") {
     object <- sdbuildR() |>
       meta(
         name = "Lorenz Attractor",
@@ -210,7 +210,7 @@ templates <- function(template) {
       update("sigma", "constant", eqn = "10") |>
       update("rho", "constant", eqn = "28") |>
       update("beta", "constant", eqn = "8/3")
-  } else if (template == "Rossler") {
+  } else if (template == "rossler") {
     object <- sdbuildR() |>
       meta(
         name = "Rossler Attractor",
@@ -229,7 +229,7 @@ templates <- function(template) {
       update("a", "constant", eqn = "0.2") |>
       update("b", "constant", eqn = "0.2") |>
       update("c", "constant", eqn = "5.7")
-  } else if (template == "vanderPol") {
+  } else if (template == "vanderpol") {
     object <- sdbuildR() |>
       meta(
         name = "Van der Pol Oscillator",
@@ -244,7 +244,7 @@ templates <- function(template) {
       update("dy_dt", "flow", eqn = "mu * (1 - x^2) * y - x", to = "y", label = "Rate of change of velocity") |>
       # Parameters
       update("mu", "constant", eqn = "1", label = "Damping parameter")
-  } else if (template == "Duffing") {
+  } else if (template == "duffing") {
     object <- sdbuildR() |>
       meta(
         name = "Duffing Oscillator",
@@ -269,7 +269,7 @@ templates <- function(template) {
       update("beta", "constant", eqn = "1", label = "Nonlinear stiffness") |>
       update("gamma", "constant", eqn = "0.5", label = "Forcing amplitude") |>
       update("omega", "constant", eqn = "1.2", label = "Forcing frequency")
-  } else if (template == "Chua") {
+  } else if (template == "chua") {
     object <- sdbuildR() |>
       meta(name = "Chua's Circuit", caption = "Chaotic electronic circuit model") |>
       sim_settings(stop = 50, time_units = "hours") |>
@@ -290,45 +290,39 @@ templates <- function(template) {
       update("beta", "constant", eqn = "28", label = "Parameter beta") |>
       update("m0", "constant", eqn = "-1.143", label = "Nonlinear slope m0") |>
       update("m1", "constant", eqn = "-0.714", label = "Nonlinear slope m1")
-  } else if (template == "JDR") {
+  } else if (template == "jdr") {
     object <- sdbuildR() |>
-      sim_settings(method = "euler", start = "0.0", stop = "182.5", dt = "0.01", save_at = "0.1", seed = "123", time_units = "d", language = "R") |>
-      meta(
-        name = "Job Resources and Demands Theory",
-        caption = "JD-R Theory as formalized in Evers et al. (submitted)"
-      ) |>
-      update(name = "E", type = "stock", eqn = "0.5", label = "Engagement") |>
-      update(name = "R", type = "stock", eqn = "0.7", label = "Job Resources") |>
-      update(name = "D", type = "stock", eqn = "0.2", label = "Job Demands") |>
-      update(name = "X", type = "stock", eqn = "0.5", label = "Energy") |>
-      update(name = "r_E_R", type = "constant", eqn = "0.2", label = "Motivation Rate") |>
-      update(name = "K_E", type = "constant", eqn = "1", label = "Engagement Capacity") |>
-      update(name = "r_A", type = "constant", eqn = "0.2", label = "Proactive Behaviour Rate") |>
-      update(name = "K_R", type = "constant", eqn = "1", label = "Resource Capacity") |>
-      update(name = "r_R", type = "constant", eqn = "0.05", label = "Resource Decay Rate") |>
-      update(name = "r_X_D", type = "constant", eqn = "0.4", label = "Fatigue from Demand Rate") |>
-      update(name = "K_X", type = "constant", eqn = "1", label = "Energy Capacity") |>
-      update(name = "r_X_X", type = "constant", eqn = "0.15", label = "Restoration Rate") |>
-      update(name = "r_E_X", type = "constant", eqn = "0.1", label = "Energy-Based Disengagement Rate") |>
-      update(name = "r_U", type = "constant", eqn = "0.15", label = "Self-undermining Rate") |>
-      update(name = "K_D", type = "constant", eqn = "1", label = "Demand Capacity") |>
-      update(name = "r_D", type = "constant", eqn = "0.2", label = "Demand Regulation Rate") |>
-      update(name = "P", type = "aux", eqn = "E + X", label = "Job Performance") |>
-      update(name = "E_R", type = "flow", eqn = "r_E_R * X * R * (1 + D) * (1 - E/K_E)", to = "E", label = "Motivation", doc = "Boost of demands") |>
-      update(name = "A_to_R", type = "flow", eqn = "r_A * E * (1 - R/K_R)", to = "R", label = "Proactive Behaviour") |>
-      # update(name = "R_X", type = "flow", eqn = "r_R_X * R", from = "R", label = "Decay") |>
-      update(name = "from_R", type = "flow", eqn = "r_R * R * (1 - X/K_X)", from = "R", label = "Decay from effort") |>
-      update(name = "X_D", type = "flow", eqn = "r_X_D * X * D / (1 + R)", from = "X", label = "Effort", doc = "Buffer of resources") |>
-      update(name = "X_X", type = "flow", eqn = "r_X_X * X * (1 - X/K_X)", to = "X", label = "Restoration") |>
-      update(name = "E_X", type = "flow", eqn = "r_E_X * E * (1 - X/K_X)", from = "E", label = "Energy-Based Disengagement") |>
-      update(name = "A_from_D", type = "flow", eqn = "r_A * E * D", from = "D", label = "Proactive Behaviour") |>
-      update(name = "U", type = "flow", eqn = "r_U * (1 - X/K_X)", to = "D", label = "Self-undermining") |>
-      update(name = "D_D", type = "flow", eqn = "r_D * (1 - D/K_D)", to = "D", label = "Demand Regulation")
+      sim_settings(start = "0.0", stop = "182.5", dt = "0.01", seed = "123", time_units = "day", only_stocks = FALSE) |>
+      meta(name = "Job Demands and Resources (JD-R) Theory", created = "2026-05-25 10:42:07.289319") |>
+      stock("demands", eqn = "runif(1, 0.01, 2)", label = "Job Demands") |>
+      stock("energy", eqn = "runif(1, 0.01, 2)", label = "Energy") |>
+      stock("engagement", eqn = "runif(1, 0.01, 2)", label = "Work Engagement") |>
+      stock("resources", eqn = "runif(1, 0.01, 2)", label = "Job Resources") |>
+      flow("effort", eqn = "effort_rate / (1 + engagement) * energy * demands / (1 + resources)", from = "energy", label = "Effort") |>
+      flow("engagement_decay", eqn = "engagement_decay_rate * engagement / (1 + energy)", from = "engagement", label = "Decay") |>
+      flow("exo_demands", eqn = "exo_demand_rate * exp(-s_slope * demands)", to = "demands", label = "Exogenous tasks") |>
+      flow("exo_resources", eqn = "exo_resource_rate * exp(-s_slope * resources)", to = "resources", label = "Exogenous support") |>
+      flow("motivation", eqn = "motivation_rate * energy * hill(resources, m_slope) * demands", to = "engagement", label = "Motivation") |>
+      flow("proactive", eqn = "proactive_rate * hill(engagement, m_slope)", to = "resources", label = "Proactive behaviour") |>
+      flow("recovery", eqn = "recovery_rate * energy * exp(-s_slope * energy)", to = "energy", label = "Recovery") |>
+      flow("resource_decay", eqn = "resource_decay_rate * resources / (1 + energy)", from = "resources", label = "Decay") |>
+      flow("undermining", eqn = "undermining_rate * energy * exp(-e_slope * energy)", to = "demands", label = "Self-undermining") |>
+      flow("work", eqn = "work_rate * energy * demands * (1 + engagement)", from = "demands", label = "Work") |>
+      constant("e_slope", eqn = 10, label = "Extreme Slope") |>
+      constant("effort_rate", eqn = 0.5, label = "Effort Rate") |>
+      constant("engagement_decay_rate", eqn = 0.2, label = "Engagement Decay Rate") |>
+      constant("exo_demand_rate", eqn = 0.1, label = "New task rate") |>
+      constant("exo_resource_rate", eqn = 0.1, label = "New resource rate") |>
+      constant("m_slope", eqn = 3, label = "Medium Slope") |>
+      constant("motivation_rate", eqn = 0.3, label = "Motivation Rate") |>
+      constant("proactive_rate", eqn = 0.2, label = "Proactive Behaviour Rate") |>
+      constant("recovery_rate", eqn = 0.3, label = "Recovery Rate") |>
+      constant("resource_decay_rate", eqn = 0.1, label = "Resource Decay Rate") |>
+      constant("s_slope", eqn = 5, label = "Steep Slope") |>
+      constant("undermining_rate", eqn = 5, label = "Self-undermining Rate") |>
+      constant("work_rate", eqn = 0.5, label = "Demand Reduction Rate") |>
+      aux("performance", eqn = "engagement + energy", label = "Job Performance")
   }
-
-
-  # Compile the model to populate the assemble cache
-
 
   object
 }

@@ -526,6 +526,8 @@
 #' @noRd
 .change_name <- function(object, old_name, new_name) {
   var_names <- object[["variables"]][["name"]]
+  # Validate that all requested old names exist to avoid NA subscripts
+  check_var_existence(old_name, var_names)
 
   # Update name in data frame
   idx_var <- match(old_name, object[["variables"]][["name"]])
@@ -1606,6 +1608,8 @@ change_name <- function(object, name, new_name) {
 
   # Ensure new_name is clean and unique across variables
   var_names <- object[["variables"]][["name"]]
+  # Validate requested source names exist before attempting to match/index
+  check_var_existence(name, var_names)
   chosen_new_name <- new_name
   new_name <- clean_name(new_name, var_names)
   report_name_change(chosen_new_name, new_name)
@@ -1642,7 +1646,7 @@ change_name <- function(object, name, new_name) {
 #' Change the type of a variable in a stock-and-flow model.
 #'
 #' @inheritParams update.sdbuildR
-#' @param new_type New variable type; one of 'stock', 'flow', 'constant', 'aux', 'gf', or 'func'. Character vector of the same length as name. If NULL, types will be validated but not changed.
+#' @param new_type New variable type; one of `'stock'`, `'flow'`, `'constant'`, `'aux'`, `'gf'`, or `'func'`. Character vector of the same length as name.
 #'
 #' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR()] with the variable type changed throughout the model. Note that changing the type may result in changes to other properties (e.g., a flow must have "to" and/or "from" properties, so these will be added if not already present), and may require changes to the equations of connected variables.
 #' @seealso [update()]
@@ -1651,7 +1655,7 @@ change_name <- function(object, name, new_name) {
 #' @examples
 #' # Change the birth rate of predators from a constant to an auxiliary
 #' sfm <- sdbuildR("predator_prey")
-#' sfm <- change_type(sfm, delta, new_type = aux) |>
+#' sfm <- change_type(sfm, delta, new_type = "aux") |>
 #'   # Use a sin function to introduce seasonality in the birth rate
 #'   update(delta, eqn = 0.025 + 0.01 * sin(2 * pi * t / 12))
 #' sim <- simulate(sfm)

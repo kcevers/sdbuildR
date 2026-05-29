@@ -22,3 +22,14 @@
       v 1. S is non-negative
       v 2. S starts at 100
 
+# print.verify_sdbuildR() snapshot for failing FALSE tests
+
+    Code
+      print(result)
+    Message
+      
+      -- Stock-and-Flow Unit Test Results --------------------------------------------
+      0/1 test passed.
+      x 1. S is zero
+        Expected: TRUE Actual: FALSE
+

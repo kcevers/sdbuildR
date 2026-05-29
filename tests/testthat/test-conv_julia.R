@@ -7,13 +7,13 @@ test_that("converting equations to Julia", {
   result <- convert_equations_julia(
     type, name, "min(predator_births)", var_names
   )
-  expected <- "min(predator_births)"
+  expected <- "r_min(predator_births)"
   expect_equal(result$eqn, expected)
 
   result <- convert_equations_julia(
     type, name, "max(predator_births)", var_names
   )
-  expected <- "max(predator_births)"
+  expected <- "r_max(predator_births)"
   expect_equal(result$eqn, expected)
 
   result <- convert_equations_julia(
@@ -87,13 +87,13 @@ test_that("converting functions to Julia with named arguments", {
   result <- convert_equations_julia(
     type, name, "min(x = predator_births)", var_names
   )
-  expected <- "min(predator_births)"
+  expected <- "r_min(predator_births)"
   expect_equal(result$eqn, expected)
 
   result <- convert_equations_julia(
     type, name, "min(x = max(y = predator_births))", var_names
   )
-  expected <- "min(max(predator_births))"
+  expected <- "r_min(r_max(predator_births))"
   expect_equal(result$eqn, expected)
 
   result <- convert_equations_julia(

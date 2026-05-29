@@ -14,12 +14,12 @@ knitr::opts_chunk$set(
 )
 ```
 
-```{r setup}
+```{r, echo=TRUE, message=FALSE}
 library(sdbuildR)
 ```
 
 sdbuildR can exchange models with several external tools. This vignette covers
-two workflows:
+three workflows:
 
 1. **Importing** from [Insight Maker](https://insightmaker.com/)
 2. **Importing** from [deSolve](https://cran.r-project.org/package=deSolve)
@@ -29,9 +29,7 @@ two workflows:
 
 ## Importing from Insight Maker
 
-[Insight Maker](https://insightmaker.com/) is a free, browser-based system
-dynamics tool with a large library of public models. `import_insightmaker()`
-converts any public stock-and-flow model into an `sdbuildR` object.
+[Insight Maker](https://insightmaker.com/) is a free, browser-based tool. It contains a large library of public stock-and-flow models which can be imported to sdbuildR with `import_insightmaker()`.
 
 ### From a URL
 
@@ -62,18 +60,20 @@ sim <- simulate(sfm)
 plot(sim)
 ```
 
+Note that some features of Insight Maker models are not supported by sdbuildR, such as units and arrays. Only stock-and-flow models are supported (not agent-based models or Causal Loop Diagrams). 
+
 ---
 
 ## Importing from deSolve
 
 [deSolve](https://cran.r-project.org/package=deSolve) is the standard R
-package for solving ODEs. If you have an existing deSolve model you can import
+package for solving ODEs. If you have an existing **deSolve** model you can import
 it into sdbuildR to access features like ensemble simulations, stock-and-flow
 diagrams, and export to Psychomodels.
 
 ### Supported pattern
 
-`import_desolve()` parses the canonical deSolve model convention:
+`import_desolve()` parses the canonical **deSolve** model convention:
 
 ```r
 model <- function(t, state, parameters) {
@@ -153,7 +153,7 @@ export_model(sfm, format = "sdbuildR")
 
 ### deSolve script
 
-To generate a complete script for simulating a model with `deSolve`, use `format = "deSolve"`. This will return a character string containing the R code for the model function, parameter and initial value definitions, and simulation code.
+To generate a complete script for simulating a model with **deSolve**, use `format = "deSolve"`. This will return a character string containing the R code for the model function, parameter and initial value definitions, and simulation code.
 
 ```{r}
 script <- export_model(sfm, format = "deSolve")

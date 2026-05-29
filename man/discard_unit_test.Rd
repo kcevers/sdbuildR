@@ -4,7 +4,7 @@
 \alias{discard_unit_test}
 \title{Remove a unit test from a stock-and-flow model}
 \usage{
-discard_unit_test(object, label, nr)
+discard_unit_test(object, label, test)
 }
 \arguments{
 \item{object}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
@@ -13,14 +13,14 @@ discard_unit_test(object, label, nr)
 (bare symbol or string). For backward compatibility, integer values
 passed via \code{label} are also accepted.}
 
-\item{nr}{Integer index/indices of the test(s) to remove. Corresponds to
+\item{test}{Integer index/indices of the test(s) to remove. Corresponds to
 the order shown by \code{\link[=unit_tests]{unit_tests()}}.}
 }
 \value{
 The model object with the specified test(s) removed.
 }
 \description{
-Remove one or more unit tests by \code{nr} (integer position as shown by
+Remove one or more unit tests by \code{test} (integer position as shown by
 \code{\link[=unit_tests]{unit_tests()}}) or by \code{label} (character). Warns if a label or index is
 not found. Remaining tests are renumbered sequentially after removal.
 }
@@ -29,8 +29,8 @@ sfm <- sdbuildR("SIR") |>
   unit_test(label = "susceptible is non-negative", expr = all(susceptible >= 0)) |>
   unit_test(label = "recovered increases", expr = all(diff(recovered) >= 0))
 
-# Remove by nr
-sfm <- discard_unit_test(sfm, nr = 1)
+# Remove by test
+sfm <- discard_unit_test(sfm, test = 1)
 
 # Remove by label
 sfm <- discard_unit_test(sfm, label = "recovered increases")

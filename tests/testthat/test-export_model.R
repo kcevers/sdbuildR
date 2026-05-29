@@ -121,9 +121,9 @@ test_that("export_model(format='deSolve') output contains model variable names",
   sfm <- sdbuildR("SIR")
   out <- export_model(sfm, format = "deSolve")
   expect_match(out, "susceptible", fixed = TRUE)
-  expect_match(out, "infected",    fixed = TRUE)
-  expect_match(out, "recovered",   fixed = TRUE)
-  expect_match(out, "init = c(",   fixed = TRUE)
+  expect_match(out, "infected", fixed = TRUE)
+  expect_match(out, "recovered", fixed = TRUE)
+  expect_match(out, "init = c(", fixed = TRUE)
 })
 
 test_that("export_model(format='deSolve') errors on Julia language", {

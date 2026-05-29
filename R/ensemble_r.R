@@ -77,7 +77,7 @@ summarise_by <- function(df, by, quantiles, q_names) {
 #'
 #' @returns Object of class [`ensemble_sdbuildR`][ensemble()]
 #' @noRd
-ensemble_r <- function(object, n, return_sims, conditions, cross,
+ensemble_r <- function(object, n, save_sims, conditions, cross,
                        quantiles, only_stocks, vars = NULL, verbose,
                        n_conditions, total_sims) {
   # Build conditions grid
@@ -89,7 +89,7 @@ ensemble_r <- function(object, n, return_sims, conditions, cross,
     }
     # Sort columns alphabetically (conditions was already sorted)
     cond_grid <- cond_grid[, sort(names(cond_grid)), drop = FALSE]
-    cond_matrix <- cbind(j = seq_len(nrow(cond_grid)), cond_grid)
+    cond_matrix <- cbind(condition = seq_len(nrow(cond_grid)), cond_grid)
   } else {
     cond_grid <- NULL
     cond_matrix <- NULL
@@ -126,13 +126,13 @@ ensemble_r <- function(object, n, return_sims, conditions, cross,
   # Parse once per condition to avoid parse() overhead per simulation run
   parsed_scripts <- lapply(scripts, function(script) parse(text = script))
 
-  # Build task list: list of (j, i) pairs
+  # Build task list: list of (condition, sim) pairs
   tasks <- vector("list", total_sims)
   idx <- 0L
   for (j_idx in seq_len(n_conditions)) {
     for (i_idx in seq_len(n)) {
       idx <- idx + 1L
-      tasks[[idx]] <- list(j = j_idx, i = i_idx)
+      tasks[[idx]] <- list(condition = j_idx, sim = i_idx)
     }
   }
 
@@ -148,15 +148,15 @@ ensemble_r <- function(object, n, return_sims, conditions, cross,
       if (use_par) {
         apply_fun(tasks, function(task) {
           .eval_sim(
-            parsed_expr = parsed_scripts[[task[["j"]]]],
-            j = task[["j"]], i = task[["i"]]
+            parsed_expr = parsed_scripts[[task[["condition"]]]],
+            condition = task[["condition"]], sim = task[["sim"]]
           )
         }, future.seed = TRUE, future.packages = "sdbuildR")
       } else {
         lapply(tasks, function(task) {
           eval_sim_script_r(
-            parsed_expr = parsed_scripts[[task[["j"]]]],
-            j = task[["j"]], i = task[["i"]]
+            parsed_expr = parsed_scripts[[task[["condition"]]]],
+            condition = task[["condition"]], sim = task[["sim"]]
           )
         })
       }
@@ -213,7 +213,7 @@ ensemble_r <- function(object, n, return_sims, conditions, cross,
   assemble_ensemble_results_r(
     good_results = good_results,
     n = n, n_conditions = n_conditions, total_sims = total_sims,
-    return_sims = return_sims, only_stocks = only_stocks,
+    save_sims = save_sims, only_stocks = only_stocks,
     vars = vars,
     quantiles = quantiles, cross = cross,
     cond_matrix = cond_matrix, object = object,
@@ -229,12 +229,12 @@ ensemble_r <- function(object, n, return_sims, conditions, cross,
 #' equations (e.g., `runif()`) produce different results on each call.
 #'
 #' @param parsed_expr Parsed R expression for a compiled simulation script.
-#' @param j Integer; condition index.
-#' @param i Integer; simulation index.
+#' @param condition Integer; condition index.
+#' @param sim Integer; simulation index.
 #'
-#' @returns List with success, df, init, constants, j, i
+#' @returns List with success, df, init, constants, condition, sim
 #' @noRd
-eval_sim_script_r <- function(parsed_expr, j, i) {
+eval_sim_script_r <- function(parsed_expr, condition, sim) {
   envir <- new.env()
   tryCatch(
     {
@@ -244,14 +244,14 @@ eval_sim_script_r <- function(parsed_expr, j, i) {
         df = envir[[P[["sim_df_name"]]]],
         init = unlist(envir[[P[["initial_value_name"]]]]),
         constants = unlist(Filter(Negate(is.function), envir[[P[["parameter_name"]]]])),
-        j = j, i = i
+        condition = condition, sim = sim
       )
     },
     error = function(e) {
       list(
         success = FALSE,
         error_message = e[["message"]],
-        j = j, i = i
+        condition = condition, sim = sim
       )
     }
   )
@@ -264,17 +264,17 @@ eval_sim_script_r <- function(parsed_expr, j, i) {
 #' compilation by accepting a pre-compiled script.
 #'
 #' @param object Stock-and-flow model
-#' @param task List with j (condition index) and i (simulation index)
+#' @param task List with condition (condition index) and sim (simulation index)
 #' @param conditions Named list of conditions or NULL
 #' @param cond_grid Data frame of condition combinations or NULL
 #' @param only_stocks Logical; only keep stock variables
 #'
-#' @returns List with success, df, init, constants, j, i
+#' @returns List with success, df, init, constants, condition, sim
 #' @noRd
 run_single_sim_r <- function(object, task, conditions, cond_grid,
                              only_stocks) {
-  j_idx <- task[["j"]]
-  i_idx <- task[["i"]]
+  j_idx <- task[["condition"]]
+  i_idx <- task[["sim"]]
 
   # Apply conditions for this condition index
   if (!is.null(cond_grid)) {
@@ -297,7 +297,7 @@ run_single_sim_r <- function(object, task, conditions, cond_grid,
     return(list(
       success = FALSE,
       error_message = sim[["error_message"]],
-      j = j_idx, i = i_idx
+      condition = j_idx, sim = i_idx
     ))
   }
 
@@ -306,8 +306,8 @@ run_single_sim_r <- function(object, task, conditions, cond_grid,
     df = sim[["df"]],
     init = sim[["init"]],
     constants = sim[["constants"]],
-    j = j_idx,
-    i = i_idx
+    condition = j_idx,
+    sim = i_idx
   )
 }
 
@@ -318,7 +318,7 @@ run_single_sim_r <- function(object, task, conditions, cond_grid,
 #' @param n Simulations per condition
 #' @param n_conditions Number of conditions
 #' @param total_sims Total simulations
-#' @param return_sims Logical; include individual sim data
+#' @param save_sims Logical; include individual sim data
 #' @param only_stocks Logical; filter to stocks only
 #' @param quantiles Numeric vector of quantiles
 #' @param cross Logical; crossed design
@@ -329,7 +329,7 @@ run_single_sim_r <- function(object, task, conditions, cond_grid,
 #' @returns Object of class [`ensemble_sdbuildR`][ensemble()]
 #' @noRd
 assemble_ensemble_results_r <- function(good_results, n, n_conditions,
-                                        total_sims, return_sims,
+                                        total_sims, save_sims,
                                         only_stocks, vars = NULL, quantiles, cross,
                                         cond_matrix, object, duration) {
   # Build individual simulation data frames
@@ -340,14 +340,14 @@ assemble_ensemble_results_r <- function(good_results, n, n_conditions,
   for (k in seq_along(good_results)) {
     res <- good_results[[k]]
     df_k <- res[["df"]]
-    df_k[["i"]] <- res[["i"]]
-    df_k[["j"]] <- res[["j"]]
+    df_k[["sim"]] <- res[["sim"]]
+    df_k[["condition"]] <- res[["condition"]]
     all_dfs[[k]] <- df_k
 
     # Init values
     init_vals <- res[["init"]]
     all_init[[k]] <- data.frame(
-      i = res[["i"]], j = res[["j"]],
+      sim = res[["sim"]], condition = res[["condition"]],
       variable = names(init_vals),
       value = unname(init_vals),
       stringsAsFactors = FALSE
@@ -357,15 +357,15 @@ assemble_ensemble_results_r <- function(good_results, n, n_conditions,
     const_vals <- res[["constants"]]
     if (length(const_vals) == 0L) {
       all_constants[[k]] <- data.frame(
-        i = integer(0),
-        j = integer(0),
+        sim = integer(0),
+        condition = integer(0),
         variable = character(0),
         value = numeric(0),
         stringsAsFactors = FALSE
       )
     } else {
       all_constants[[k]] <- data.frame(
-        i = res[["i"]], j = res[["j"]],
+        sim = res[["sim"]], condition = res[["condition"]],
         variable = names(const_vals),
         value = unname(const_vals),
         stringsAsFactors = FALSE
@@ -384,21 +384,21 @@ assemble_ensemble_results_r <- function(good_results, n, n_conditions,
 
   summary_df <- summarise_by(
     combined_df,
-    by = c("j", "variable", "time"),
+    by = c("condition", "variable", "time"),
     quantiles = quantiles, q_names = q_names
   )
 
   # Build init summary
   init_summary <- summarise_by(
     combined_init,
-    by = c("j", "variable"),
+    by = c("condition", "variable"),
     quantiles = quantiles, q_names = q_names
   )
 
   # Build constants summary
   constants_summary <- summarise_by(
     combined_constants,
-    by = c("j", "variable"),
+    by = c("condition", "variable"),
     quantiles = quantiles, q_names = q_names
   )
 
@@ -406,7 +406,7 @@ assemble_ensemble_results_r <- function(good_results, n, n_conditions,
   init_out <- list(summary = init_summary)
   constants_out <- list(summary = constants_summary)
 
-  if (return_sims) {
+  if (save_sims) {
     df_out <- as.data.frame(combined_df)
     init_out[["df"]] <- as.data.frame(combined_init)
     constants_out[["df"]] <- as.data.frame(combined_constants)

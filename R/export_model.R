@@ -116,14 +116,18 @@ export_model <- function(object,
   switch(format,
     sdbuildR = {
       code <- build_sdbuildR_code_(object)
-      if (is.null(file)) return(code)
+      if (is.null(file)) {
+        return(code)
+      }
       file <- .validate_r_path(file)
       writeLines(code, file)
       invisible(file)
     },
     deSolve = {
       code <- export_desolve_(object)
-      if (is.null(file)) return(code)
+      if (is.null(file)) {
+        return(code)
+      }
       file <- .validate_r_path(file)
       writeLines(code, file)
       invisible(file)

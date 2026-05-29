@@ -9,21 +9,21 @@
 #'
 #' @param template Name of the template to load. If `NULL`, an empty stock-and-flow
 #' model will be created with default simulation parameters and a default meta.
-#' If specified, `template` should be one of the available templates:
+#' If specified, `template` should be one of the available templates (case-insensitive):
 #' \itemize{
 #'   \item \strong{logistic_model}: Population growth with carrying capacity
-#'   \item \strong{SIR}: Epidemic model (Susceptible-Infected-Recovered)
+#'   \item \strong{sir}: Epidemic model (Susceptible-Infected-Recovered)
 #'   \item \strong{predator_prey}: Lotka-Volterra dynamics
 #'   \item \strong{cusp}: Cusp catastrophe model
-#'   \item \strong{Crielaard2022}: Eating behavior (doi: 10.1037/met0000484)
+#'   \item \strong{crielaard2022}: Eating behavior (doi: 10.1037/met0000484)
 #'   \item \strong{coffee_cup}: Temperature equilibration (Meadows)
 #'   \item \strong{bank_account}: Compound interest (Meadows)
-#'   \item \strong{Lorenz}: Lorenz attractor (chaotic)
-#'   \item \strong{Rossler}: Rossler attractor (chaotic)
-#'   \item \strong{vanderPol}: Van der Pol oscillator
-#'   \item \strong{Duffing}: Forced Duffing oscillator
-#'   \item \strong{Chua}: Chua's circuit (chaotic)
-#'   \item \strong{JDR}: Job Demands-Resources Theory as formalized in Evers et al. (submitted)
+#'   \item \strong{lorenz}: Lorenz attractor (chaotic)
+#'   \item \strong{rossler}: Rossler attractor (chaotic)
+#'   \item \strong{vanderpol}: Van der Pol oscillator
+#'   \item \strong{duffing}: Forced Duffing oscillator
+#'   \item \strong{chua}: Chua's circuit (chaotic)
+#'   \item \strong{jdr}: Job Demands-Resources Theory as formalized in Evers et al. (under review)
 #' }
 #'
 #' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR]. Its structure is based
@@ -48,11 +48,10 @@
 #' }
 #'
 #' # Load a template
-#' sfm <- sdbuildR("Lorenz")
+#' sfm <- sdbuildR("lorenz")
 #' sim <- simulate(sfm)
 #' plot(sim)
 sdbuildR <- function(template = NULL) {
-  template <- .expr_to_char(rlang::enexpr(template))
   if (!is.null(template)) {
     return(templates(template))
   }
@@ -882,8 +881,25 @@ print.sdbuildR <- function(x, ...) {
   cli::cli_h2("Simulation Settings")
   ss <- x[["sim_settings"]]
   time_unit <- ss[["time_units"]]
+
+  save_type <- ss[["save_type"]]
+  if (save_type == "all") {
+    save_suffix <- ""
+  } else if (save_type == "at") {
+    l_save_at <- length(ss[["save_at"]])
+    if (l_save_at > 1) {
+      save_suffix <- paste0(", save_at = ", l_save_at, " time points")
+    } else {
+      save_suffix <- paste0(", save_at = ", ss[["save_at"]])
+    }
+  } else if (save_type == "n") {
+    save_suffix <- paste0(", save_n = ", ss[["save_n"]])
+  } else {
+    save_suffix <- ""
+  }
+
   cli::cli_text(
-    "  Time: {ss$start} to {ss$stop} {time_unit} (dt = {ss$dt}) \u2022 {ss$method} \u2022 {ss$language}"
+    "  Time: {ss$start} to {ss$stop} {time_unit} (dt = {ss$dt}{save_suffix}) \u2022 {ss$method} \u2022 {ss$language}"
   )
 
   # Unit tests (only shown when at least one is defined)

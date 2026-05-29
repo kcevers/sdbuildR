@@ -51,8 +51,8 @@ containing:
 failed.}
 
 \item{error_message}{If success is \code{FALSE}, contains the error message.}
-\item{df}{data.frame with simulation results in long format, if return_sims
-is \code{TRUE}. The iteration number is indicated by column "i". If conditions
+\item{df}{data.frame with simulation results in long format, if save_sims
+is \code{TRUE}. The iteration number is indicated by column "sim". If conditions
 was specified, the condition is indicated by column "j".}
 \item{summary}{data.frame with summary statistics of the ensemble,
 including quantiles specified in quantiles. If conditions was specified,
@@ -64,9 +64,9 @@ conditions if conditions is specified).}
 \item{n_conditions}{Total number of conditions.}
 \item{conditions}{data.frame with the conditions used in the ensemble, if
 conditions was specified.}
-\item{init}{List with df (if return_sims = TRUE) and summary, containing
+\item{init}{List with df (if save_sims = TRUE) and summary, containing
 data.frame with the initial values of the stocks used in the ensemble.}
-\item{constants}{List with df (if return_sims = TRUE) and summary,
+\item{constants}{List with df (if save_sims = TRUE) and summary,
 containing data.frame with the constant parameters used in the ensemble.}
 \item{script}{Script used for the ensemble simulation.}
 \item{duration}{Duration of the simulation in seconds.}
@@ -82,8 +82,8 @@ It is strongly recommended to reduce the size of the simulation output by
 saving fewer values with \code{save_at} or \code{save_n} in \code{\link[=sim_settings]{sim_settings()}}.
 
 By default, only summary statistics across simulations are returned.
-To return individual simulations, set \code{return_sims = TRUE} in \code{\link[=sim_settings]{sim_settings()}} or
-pass \code{return_sims = TRUE} via \code{...} in \code{\link[=ensemble]{ensemble()}}.
+To return individual simulations, set \code{save_sims = TRUE} in \code{\link[=sim_settings]{sim_settings()}} or
+pass \code{save_sims = TRUE} via \code{...} in \code{\link[=ensemble]{ensemble()}}.
 Note that returning individual simulations can consume a lot of memory for large ensembles.
 
 For simulations in Julia, the ensemble can be run in parallel using multiple threads
@@ -117,9 +117,9 @@ sfm <- sim_settings(sfm, save_n = 100)
 sims <- ensemble(sfm, n = 10)
 plot(sims)
 
-# To plot individual trajectories, rerun the ensemble with return_sims = TRUE.
+# To plot individual trajectories, rerun the ensemble with save_sims = TRUE.
 # Note that this can consume a lot of memory for large simulations.
-sims <- ensemble(sfm, n = 10, return_sims = TRUE)
+sims <- ensemble(sfm, n = 10, save_sims = TRUE)
 plot(sims, which = "sims")
 
 # Specify which trajectories to plot

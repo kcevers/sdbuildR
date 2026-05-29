@@ -6,7 +6,7 @@ vignette: >
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
 editor_options: 
-  chunk_output_type: console
+  chunk_output_type: inline
 ---
 
 ```{r, include = FALSE}
@@ -32,7 +32,7 @@ library(kableExtra)
 ```
 
 
-```{r eval = TRUE, include=FALSE}
+```{r include=FALSE}
 # Set this to TRUE to recreate the figures in the paper
 recreate_figs <- TRUE
 ```
@@ -82,7 +82,7 @@ if (recreate_figs) {
   xlab <- "Time (days)"
 
   # Finer-grained simulation
-  dt <- .1
+  save_at <- .1 # .01
 
   # Annotation template
   annot <- list(xanchor = "center", yanchor = "middle", showarrow = FALSE, xref = "paper", yref = "paper", font = list(size = font_size_subplot, family = font_family))
@@ -130,95 +130,93 @@ Stock-and-flow models conceptualize systems in terms of quantities that accumula
 
 
 ```{r, echo = FALSE}
+colors <- c(stock_col, inflow_col, outflow_col)
+sfm_list <- list()
 
-  vars <- c("Stock", "Inflow", "Outflow")
-  colors <- c(stock_col, inflow_col, outflow_col)
-  sfm_list <- list()
+sfm <- sdbuildR() |>
+  sim_settings(only_stocks = FALSE, stop = 1, save_at = .01, dt = .01) |>
+  stock(Stock)
 
-  sfm <- sdbuildR() |>
-    sim_settings(only_stocks = FALSE, stop = 1, save_at = .01, dt = .01) |>
-    stock(Stock)
+sfm1 <- sfm |>
+  flow(Inflow, eqn = 1, to = Stock)
+sfm_list[["A"]] <- sfm1
 
-  sfm1 <- sfm |>
-    flow(Inflow, eqn = 1, to = Stock)
-  sfm_list[["A"]] <- sfm1
+sfm2 <- sfm |>
+  flow(Outflow, eqn = 1, from = Stock)
+sfm_list[["B"]] <- sfm2
 
-  sfm2 <- sfm |>
-    flow(Outflow, eqn = 1, from = Stock)
-  sfm_list[["B"]] <- sfm2
+sfm3 <- sfm |>
+  flow(Inflow, eqn = 1, to = Stock) |>
+  flow(Outflow, eqn = 5 * Stock, from = Stock)
+sfm_list[["C"]] <- sfm3
 
-  sfm3 <- sfm |>
-    flow(Inflow, eqn = 1, to = Stock) |>
-    flow(Outflow, eqn = 5 * Stock, from = Stock)
-  sfm_list[["C"]] <- sfm3
+sfm_big <- sdbuildR() |>
+  stock(stockA, label = "Stock") |>
+  flow(inflowA, label = "Inflow", to = stockA) |>
+  stock(stockB, label = "Stock") |>
+  flow(outflowB, label = "Outflow", from = stockB) |>
+  stock(stockC, label = "Stock") |>
+  flow(inflowC, label = "Inflow", to = stockC) |>
+  flow(outflowC, label = "Outflow", from = stockC)
 
-  sfm_big <- sdbuildR() |>
-    stock(stockA, label = "Stock") |>
-    flow(inflowA, label = "Inflow", to = stockA) |>
-    stock(stockB, label = "Stock") |>
-    flow(outflowB, label = "Outflow", from = stockB) |>
-    stock(stockC, label = "Stock") |>
-    flow(inflowC, label = "Inflow", to = stockC) |>
-    flow(outflowC, label = "Outflow", from = stockC)
+# copy (cat(viz_str))
+{
+  viz_str <- "
+  digraph sfm {
 
-  # copy (cat(viz_str))
-  {
-    viz_str <- "
-    digraph sfm {
+    graph [layout = dot, rankdir = LR, center=true, outputorder='edgesfirst', pad=.1, nodesep= .8]
 
-      graph [layout = dot, rankdir = LR, center=true, outputorder='edgesfirst', pad=.1, nodesep= .8]
+    # Rank groupings
+    {rank=same; stockA; stockB; stockC}
 
-      # Rank groupings
-      {rank=same; stockA; stockB; stockC}
+    # Invisible edge to fix order
+    stockA -> stockB -> stockC [style=invis]
 
-      # Invisible edge to fix order
-      stockA -> stockB -> stockC [style=invis]
+    # Define stock nodes
+    'stockA' [id='stockA',label='Stock',tooltip = 'eqn = 0',shape=box,style=filled,fillcolor='#09B0ACBF',fontsize=20,fontname='Times New Roman']
+    'stockB' [id='stockB',label='Stock',tooltip = 'eqn = 0',shape=box,style=filled,fillcolor='#09B0ACBF',fontsize=20,fontname='Times New Roman']
+    'stockC' [id='stockC',label='Stock',tooltip = 'eqn = 0',shape=box,style=filled,fillcolor='#09B0ACBF',fontsize=20,fontname='Times New Roman']
 
-      # Define stock nodes
-      'stockA' [id='stockA',label='Stock',tooltip = 'eqn = 0',shape=box,style=filled,fillcolor='#09B0ACBF',fontsize=20,fontname='Times New Roman']
-      'stockB' [id='stockB',label='Stock',tooltip = 'eqn = 0',shape=box,style=filled,fillcolor='#09B0ACBF',fontsize=20,fontname='Times New Roman']
-      'stockC' [id='stockC',label='Stock',tooltip = 'eqn = 0',shape=box,style=filled,fillcolor='#09B0ACBF',fontsize=20,fontname='Times New Roman']
+    # Define flow nodes (intermediate nodes for flows)
+    'inflowA' [id='inflowA',label='Inflow', tooltip = 'eqn = 0', shape = plaintext, fontsize=18, fontname='Times New Roman', width=0.6, height=0.3]
+    'outflowB' [id='outflowB',label='Outflow', tooltip = 'eqn = 0', shape = plaintext, fontsize=18, fontname='Times New Roman', width=0.6, height=0.3]
+    'inflowC' [id='inflowC',label='Inflow', tooltip = 'eqn = 0', shape = plaintext, fontsize=18, fontname='Times New Roman', width=0.6, height=0.3]
+    'outflowC' [id='outflowC',label='Outflow', tooltip = 'eqn = 0', shape = plaintext, fontsize=18, fontname='Times New Roman', width=0.6, height=0.3]
 
-      # Define flow nodes (intermediate nodes for flows)
-      'inflowA' [id='inflowA',label='Inflow', tooltip = 'eqn = 0', shape = plaintext, fontsize=18, fontname='Times New Roman', width=0.6, height=0.3]
-      'outflowB' [id='outflowB',label='Outflow', tooltip = 'eqn = 0', shape = plaintext, fontsize=18, fontname='Times New Roman', width=0.6, height=0.3]
-      'inflowC' [id='inflowC',label='Inflow', tooltip = 'eqn = 0', shape = plaintext, fontsize=18, fontname='Times New Roman', width=0.6, height=0.3]
-      'outflowC' [id='outflowC',label='Outflow', tooltip = 'eqn = 0', shape = plaintext, fontsize=18, fontname='Times New Roman', width=0.6, height=0.3]
+    # Define external cloud nodes
+    'Cloud1' [label='', tooltip = 'Unspecified source',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
+    'Cloud2' [label='', tooltip = 'Unspecified source',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
+    'Cloud3' [label='', tooltip = 'Unspecified sink',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
+    'Cloud4' [label='', tooltip = 'Unspecified sink',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
 
-      # Define external cloud nodes
-      'Cloud1' [label='', tooltip = 'Unspecified source',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
-      'Cloud2' [label='', tooltip = 'Unspecified source',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
-      'Cloud3' [label='', tooltip = 'Unspecified sink',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
-      'Cloud4' [label='', tooltip = 'Unspecified sink',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
+    # Define flow edges (stock -> flow_node -> stock)
+    'Cloud3' -> 'inflowA' [arrowhead='none', color='black:%(inflow_col)s:black', penwidth=1.1, minlen=1.5, splines=false]
+    'inflowA' -> 'stockA' [arrowhead='normal', color='black:%(inflow_col)s:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
+    'stockB' -> 'outflowB' [arrowhead='none', color='black:%(outflow_col)s:black', penwidth=1.1, minlen=1.5, splines=false]
+    'outflowB' -> 'Cloud1' [arrowhead='normal', color='black:%(outflow_col)s:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
+    'Cloud4' -> 'inflowC' [arrowhead='none', color='black:%(inflow_col)s:black', penwidth=1.1, minlen=1.5, splines=false]
+    'inflowC' -> 'stockC' [arrowhead='normal', color='black:%(inflow_col)s:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
+    'stockC' -> 'outflowC' [arrowhead='none', color='black:%(outflow_col)s:black', penwidth=1.1, minlen=1.5, splines=false]
+    'outflowC' -> 'Cloud2' [arrowhead='normal', color='black:%(outflow_col)s:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
 
-      # Define flow edges (stock -> flow_node -> stock)
-      'Cloud3' -> 'inflowA' [arrowhead='none', color='black:%(inflow_col)s:black', penwidth=1.1, minlen=1.5, splines=false]
-      'inflowA' -> 'stockA' [arrowhead='normal', color='black:%(inflow_col)s:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
-      'stockB' -> 'outflowB' [arrowhead='none', color='black:%(outflow_col)s:black', penwidth=1.1, minlen=1.5, splines=false]
-      'outflowB' -> 'Cloud1' [arrowhead='normal', color='black:%(outflow_col)s:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
-      'Cloud4' -> 'inflowC' [arrowhead='none', color='black:%(inflow_col)s:black', penwidth=1.1, minlen=1.5, splines=false]
-      'inflowC' -> 'stockC' [arrowhead='normal', color='black:%(inflow_col)s:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
-      'stockC' -> 'outflowC' [arrowhead='none', color='black:%(outflow_col)s:black', penwidth=1.1, minlen=1.5, splines=false]
-      'outflowC' -> 'Cloud2' [arrowhead='normal', color='black:%(outflow_col)s:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
-
-    }
+  }
 
 "
-    viz_str <- sprintf_arg(
-      viz_str,
-      list(
-        inflow_col = inflow_col,
-        outflow_col = outflow_col
-      )
+  viz_str <- sprintf_arg(
+    viz_str,
+    list(
+      inflow_col = inflow_col,
+      outflow_col = outflow_col
     )
-  }
+  )
+}
 
 
 if (recreate_figs) {
-    pl <- DiagrammeR::grViz(viz_str)
-    pl
-    export_plot(pl, file.path(filepath_figs, "sfm.pdf"))
-  }
+  pl <- DiagrammeR::grViz(viz_str)
+  pl
+  export_plot(pl, file.path(filepath_figs, "sfm.pdf"))
+}
 
 print(pl)
 ```
@@ -226,51 +224,50 @@ print(pl)
 
 
 ```{r, echo = FALSE}
-  vars <- c("Stock", "Inflow", "Outflow")
-  colors <- c(stock_col, inflow_col, outflow_col)
-  pl_list <- list()
+vars <- c("Stock", "Inflow", "Outflow")
+colors <- c(stock_col, inflow_col, outflow_col)
+pl_list <- list()
 
-  for (i in names(sfm_list)) {
-
-    if (i == "A") {
-      idx <- c(1, 2)
-    } else if (i == "B") {
-      idx <- c(1, 3)
-    } else {
-      idx <- 1:3
-    }
-    idx <- rev(idx)
-
-    sim <- simulate(sfm_list[[i]])
-    pl_list[[i]] <- plot(sim,
-      vars = vars[idx],
-      xlab = "", main = "",
-      colors = colors[idx],
-      font_family = font_family,
-      font_size = font_size_subplot,
-      showlegend = (i == "C")
-    ) |> rm_grid()
+for (i in names(sfm_list)) {
+  if (i == "A") {
+    idx <- c(1, 2)
+  } else if (i == "B") {
+    idx <- c(1, 3)
+  } else {
+    idx <- 1:3
   }
+  idx <- rev(idx)
 
-  # Simulation
-  pl_sim <- plotly::subplot(pl_list,
-    nrows = 3,
-    shareX = FALSE, shareY = FALSE,
-    margin = 0.05, heights = c(.25, .3, .25)
+  sim <- simulate(sfm_list[[i]])
+  pl_list[[i]] <- plot(sim,
+    vars = vars[idx],
+    xlab = "", main = "",
+    colors = colors[idx],
+    font_family = font_family,
+    font_size = font_size_subplot,
+    showlegend = (i == "C")
+  ) |> rm_grid()
+}
+
+# Simulation
+pl_sim <- plotly::subplot(pl_list,
+  nrows = 3,
+  shareX = FALSE, shareY = FALSE,
+  margin = 0.05, heights = c(.25, .3, .25)
+) |>
+  plotly::layout(
+    # margin = 0.05,
+    font = annot_font,
+    legend = utils::modifyList(annot_legend, list(y = -0.02))
   ) |>
-    plotly::layout(
-      # margin = 0.05,
-      font = annot_font,
-      legend = utils::modifyList(annot_legend, list(y = -0.02))
-    ) |>
-    plotly::layout(
-      yaxis = list(range = c(0, 1.1)),
-      yaxis3 = list(range = c(0, 1.1)),
-      annotations = list(
-        utils::modifyList(annot_xlab, list(x = 0.5, y = 0.05))
-      )
+  plotly::layout(
+    yaxis = list(range = c(0, 1.1)),
+    yaxis3 = list(range = c(0, 1.1)),
+    annotations = list(
+      utils::modifyList(annot_xlab, list(x = 0.5, y = 0.05))
     )
-  print(pl_sim)
+  )
+print(pl_sim)
 
 if (recreate_figs) {
   export_plot(pl_sim, file.path(filepath_figs, "sfm_sim.pdf"),
@@ -297,7 +294,7 @@ Though the model contains no elements, it includes default simulation settings, 
 sfm <- sim_settings(sfm, stop = 16, time_units = "weeks", only_stocks = FALSE)
 ```
 
-Above, we use the pipe operator `|>` for better legibility. It simply passes the result of an expression to the next expression as its first argument. A model name can be supplied with `meta()`.
+A model name can be supplied with `meta()`.
 
 ```{r}
 sfm <- meta(sfm, name = "Burnout")
@@ -333,16 +330,19 @@ To assess its dynamics, we simulate the model over time and visualise the result
 simulate(sfm) |> plot()
 ```
 
-Across the entirety of the simulation, energy remains at its initial state. Stocks without flows are static, as there is no process specifying how they change. To deplete energy, we introduce an outflow representing work. For simplicity, we specify that work occurs at a constant rate over time, say `.3`. Rather than defining the flow's `eqn` to be `.3` directly, we add a constant to the model, so that it can easily be changed later. This also helps to keep track of how parametrized the model is. 
+Above, we use the pipe operator `|>` for better legibility. It simply passes the result of an expression to the next expression as its first argument. Across the entirety of the simulation, energy remains at its initial state. Stocks without flows are static, as there is no process specifying how they change. To deplete energy, we introduce an outflow representing work. For simplicity, we specify that work occurs at a constant rate over time, say `.5`. Rather than defining the flow's `eqn` to be `.5` directly, we add a constant to the model, so that it can easily be changed later. This also helps to keep track of how parametrized the model is. 
 
 ```{r}
-sfm <- constant(sfm, work_rate, eqn = .3, label = "Work Rate")
+sfm <- constant(sfm, work_rate, eqn = .5, label = "Work Rate")
 ```
 
 As shown above, `eqn` is a generic argument used for all variable types. `work_rate` can now be used as a variable in the equation for the outflow from energy:
 
 ```{r}
-sfm <- flow(sfm, work, eqn = work_rate, from = energy, label = "Depletion from work")
+sfm <- flow(sfm, work,
+  eqn = work_rate, from = energy,
+  label = "Depletion from work"
+)
 ```
 
 
@@ -362,13 +362,14 @@ simulate(sfm) |> plot()
 ```
 
 
-As shown in the plot, energy decreases with a constant rate at each time step, creating linear decay over time. As the outflow is specified as `.3`, energy decreases by `.3` per unit of time (1 week), producing a negative energy state. To rectify this implausible behaviour, a naive solution may be to include a logical statement such as `ifelse(energy < 0, 0, energy)`. However, this computational trick would mask model misspecification. Ideally, stocks should remain within bounds as a result of the model's equations and parameters. For instance, we can prevent negative energy by making `work` proportional to the amount of available energy. 
+As shown in the plot, energy decreases with a constant rate at each time step, creating linear decay over time. As the outflow is specified as `.5`, energy decreases by `.5` per unit of time (1 week), producing a negative energy state. To rectify this implausible behaviour, a naive solution may be to include a logical statement such as `ifelse(energy < 0, 0, energy)`. However, this computational trick would mask model misspecification. Ideally, stocks should remain within bounds as a result of the model's equations and parameters. For instance, we can prevent negative energy by making `work` proportional to the amount of available energy: `work_rate * energy`. 
 
 To assess whether this produces more plausible model behaviour, we modify the outflow using `update()`:
 
 
 ```{r}
 sfm <- update(sfm, work, eqn = work_rate * energy)
+
 simulate(sfm) |> plot()
 ```
 
@@ -380,13 +381,14 @@ if (recreate_figs) {
 ```
 
 
-Work now depletes energy until it is zero, but not beyond this point. Work reduces more and more as energy is depleted, producing a pattern of exponential decay. By letting the flow rate depend on the level of the stock itself, we have introduced a *feedback loop* to the system. Positive feedback loops amplify change, whereas negative feedback loops bring the system back to a target state. Here, `work` consists of a negative feedback loop that pulls energy to zero: the higher energy is, the more its outflow decreases it.
+Energy now follows an exponential decay pattern, where work now depletes energy until it is zero, but not beyond this point. By letting the flow rate depend on the level of the stock itself, we have introduced a *feedback loop* to the system. Positive feedback loops amplify change, whereas negative feedback loops bring the system back to a target state. Here, `work` consists of a negative feedback loop that pulls energy to zero: the higher energy is, the more its outflow decreases it.
 
 To allow energy to recover, we introduce an inflow, again specified as a simple constant rate:
 
 ```{r}
 sfm <- constant(sfm, recovery_rate, eqn = .3, label = "Recovery Rate") |>
-       flow(recovery, eqn = recovery_rate, to = energy, label = "Recovery")
+  flow(recovery, eqn = recovery_rate, to = energy, label = "Recovery")
+
 simulate(sfm) |> plot()
 ```
 
@@ -402,14 +404,16 @@ Flows can differ in their rates, meaning some processes are slower or faster tha
 
 ```{r}
 sfm <- change_type(sfm, recovery_rate, new_type = stock) |>
-       update(recovery_rate, eqn = 1)
+  update(recovery_rate, eqn = 1)
 ```
 
 We specify with a new outflow that the recovery rate erodes over time as a function of the available recovery rate and the amount worked.
 
 ```{r}
-sfm <- flow(sfm, erosion, eqn = recovery_rate * work, 
-            from = recovery_rate, label = "Recovery Erosion")
+sfm <- flow(sfm, erosion,
+  eqn = recovery_rate * work,
+  from = recovery_rate, label = "Recovery Erosion"
+)
 simulate(sfm) |> plot()
 ```
 
@@ -470,7 +474,6 @@ if (recreate_figs) {
       save_at = .01, only_stocks = FALSE
     )
 
-    # vars_in_sim <- intersect(vars, unique(sim$df$variable))
     vars_in_sim <- unique(sim$df$variable)
 
     vars_ <- VARS_example[VARS_example %in% vars_in_sim] |> rev()
@@ -552,7 +555,7 @@ if (recreate_figs) {
 ```
 
 
-```{r}
+```{r include = FALSE}
 if (recreate_figs) {
   # copy cat(viz_str) from plot.sdbuildR() with minlen=1.5
   {
@@ -629,7 +632,7 @@ plot(sfm)
 Throughout the modelling process, variables can be renamed with `change_name()` and removed with `discard()`. Moreover, we can easily check for common mistakes in the model specification, such as references to undefined variables or flows which are not connected to any stock:
 
 ```{r}
-print(sfm)
+summary(sfm)
 ```
 
 
@@ -698,7 +701,7 @@ kableExtra::kbl(variable_types_table,
 
 The following flowchart can be used to determine a variable's type:
 
-```{r}
+```{r include = FALSE}
 {
   viz_str <- "
 digraph flowchart {
@@ -865,14 +868,14 @@ kableExtra::kbl(functions_table,
 ```
 
 
-In some cases, it may be useful to refer to global variables that are available in the model's equations:
+In some cases, it may be useful to refer to global simulation variables in the model's equations:
 
 ```{r echo=FALSE}
 functions_table <- data.frame(
   Variable = c(
     "`times`", "`t`", "`dt`"
   ),
-  Decription = c(
+  Description = c(
     "Vector with simulation times",
     "Current time in the ODE",
     "Time step of the simulation"
@@ -887,10 +890,9 @@ functions_table <- data.frame(
 kableExtra::kbl(functions_table,
   format = "markdown",
   col.names = c(
-    "Variable", "Description",
-    "Use case"
+    "Variable", "Description", "Use case"
   ),
-  caption = "Global variables in *sdbuildR*"
+  caption = "Global simulation variables in *sdbuildR*"
 ) |>
   kableExtra::kable_styling()
 ```
@@ -913,7 +915,7 @@ sfm <- sfm |>
 Simulation settings can be set directly on the model object as above, or passed to `simulate()`:
 
 ```{r}
-simulate(sfm, start = 0, stop = 250)
+sim <- simulate(sfm, start = 0, stop = 250)
 ```
 
 `dt` refers to the time step of the simulation, which determines how often the model's equations are evaluated. A smaller `dt` can increase the accuracy of the simulation, but also increases computational time and the size of the resulting dataframe. To reduce the saved output, we may save fewer timepoints, for instance, every 0.1 days:
@@ -945,7 +947,7 @@ All available simulation methods can found with:
 sim_methods()
 ```
 
-Note that some sim_methods may not be available in Julia and vice versa.
+Note that some methods may not be available in Julia and vice versa.
 
 In case the simulation contains stochastic elements, we may want to set a seed to ensure that the simulation is reproducible. For example, the initial value of energy could be a random number:
 
@@ -965,14 +967,6 @@ The seed can also be removed to ensure variation in the simulation. This can be 
 sfm <- sim_settings(sfm, seed = NULL)
 ```
 
-### Documenting
-
-To document meta-properties of the model, use `meta()`. For example, the model's `name`, subtitle (`caption`), or `author`. `meta()` accepts any key-value pair, so custom metadata can also be added.
-
-```{r}
-sfm <- meta(sfm, author = "Kyra Evers", affiliation = "University of Amsterdam")
-```
-
 
 ### Renaming variables
 
@@ -984,7 +978,25 @@ sfm <- change_name(sfm, recovery_rate, new_name = recovery_store)
 
 This will ensure that all references to `recovery_rate` are changed to `recovery_store`. 
 
-When creating variables or changing variable names, a warning may be issued that the name was modified to be syntactically valid and unique. For example, the name `t` is not usable, as this already refers to the current time step. Similarly, names cannot contain spaces or special characters. Use `change_name()` to adjust the name to your liking.
+### Allowed variable names
+
+When creating variables or changing variable names, a warning may be issued that the name was modified to be syntactically valid and unique. For example:
+
+```{r error = TRUE, warning = TRUE}
+sfm <- change_name(sfm, recovery_rate, new_name = t)
+```
+
+The name `t` is not usable, as this already refers to the current time step. Similarly, names cannot contain spaces or special characters:
+
+```{r error = TRUE}
+sfm <- change_name(sfm, recovery_rate, new_name = recovery - rate)
+```
+
+Names also cannot be duplicated:
+
+```{r error = TRUE, warning = TRUE}
+sfm <- change_name(sfm, energy, new_name = recovery)
+```
 
 ### Removing variables
 
@@ -1032,3 +1044,11 @@ sfm <- constant(sfm, x, eqn = f(0))
 
 
 
+
+### Documenting
+
+To document meta-properties of the model, use `meta()`. For example, the model's `name`, subtitle (`caption`), or `author`. `meta()` accepts any key-value pair, so custom metadata can also be added.
+
+```{r}
+sfm <- meta(sfm, author = "Kyra Evers", affiliation = "University of Amsterdam")
+```

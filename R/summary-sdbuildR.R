@@ -276,7 +276,7 @@ print.summary_sdbuildR <- function(x, ...) {
       cli::cli_inform(c("*" = "{cli::qty(n)}Unit test{?s} reference{?s} undefined variable{?s}."))
       lapply(check$refs, function(r) {
         cli::cli_inform(c(
-          " " = "[{r$nr}] {.val {r$label}} {r$prop}: {cli::qty(length(r$undefined))}{.code {r$undefined}} {?is/are} undefined."
+          " " = "[{r$test}] {.val {r$label}} {r$prop}: {cli::qty(length(r$undefined))}{.code {r$undefined}} {?is/are} undefined."
         ))
       })
       cli::cli_inform(c(">" = "Update the affected tests or add the missing variables."))
@@ -432,7 +432,7 @@ detect_undefined_var <- function(object) {
     unknown_expr <- .ut_expr_vars(test[["expr_str"]], model_names)[["unknown"]]
     if (length(unknown_expr) > 0L) {
       refs <- c(refs, list(list(
-        nr        = idx,
+        test        = idx,
         label     = test[["label"]],
         prop      = "expr",
         undefined = unknown_expr
@@ -443,7 +443,7 @@ detect_undefined_var <- function(object) {
     bad_cond <- setdiff(names(test[["conditions"]]), model_names)
     if (length(bad_cond) > 0L) {
       refs <- c(refs, list(list(
-        nr        = idx,
+        test        = idx,
         label     = test[["label"]],
         prop      = "conditions",
         undefined = bad_cond

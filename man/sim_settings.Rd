@@ -10,7 +10,7 @@ sim_settings(
   start = 0,
   stop = 100,
   dt = 0.01,
-  save_at = NULL,
+  save_at = 0.1,
   save_n = NULL,
   seed = NULL,
   time_units = "seconds",
@@ -19,7 +19,7 @@ sim_settings(
   vars = NULL,
   keep_nonnegative_stock = FALSE,
   keep_nonnegative_flow = TRUE,
-  return_sims = FALSE
+  save_sims = FALSE
 )
 }
 \arguments{
@@ -71,7 +71,7 @@ of stocks. Defaults to \code{FALSE}.}
 \item{keep_nonnegative_flow}{If \code{TRUE}, keeps original non-negativity setting
 of flows. Defaults to \code{TRUE}.}
 
-\item{return_sims}{If \code{TRUE}, simulations are retained in \code{\link[=verify]{verify()}} and
+\item{save_sims}{If \code{TRUE}, individual simulations are retained in
 \code{\link[=ensemble]{ensemble()}} output. Defaults to \code{FALSE}.}
 }
 \value{

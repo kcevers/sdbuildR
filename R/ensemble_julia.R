@@ -12,14 +12,14 @@
 #'
 #' @returns Object of class [`ensemble_sdbuildR`][ensemble()]
 #' @noRd
-ensemble_julia <- function(object, n, return_sims, conditions, cross,
+ensemble_julia <- function(object, n, save_sims, conditions, cross,
                            quantiles, only_stocks, vars = NULL, verbose,
                            n_conditions, total_sims) {
   # Create ensemble parameters
   ensemble_pars <- list(
     n = n,
     quantiles = quantiles,
-    return_sims = return_sims,
+    save_sims = save_sims,
     conditions = conditions, cross = cross
   )
 
@@ -106,7 +106,7 @@ ensemble_julia <- function(object, n, return_sims, conditions, cross,
       stock_names <- get_variables_by_type(object, "stock")[["name"]]
 
       # Read the simulation results
-      if (return_sims) {
+      if (save_sims) {
         # First check whether files exist
         if (!file.exists(ensemble_pars[["filepath_df"]][["df"]]) ||
           !file.exists(ensemble_pars[["filepath_df"]][["constants"]]) ||

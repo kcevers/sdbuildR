@@ -60,10 +60,10 @@ test_that("unit_test() upserts: same label replaces existing test", {
   expect_equal(sfm[["unit_tests"]][[1]][["expr_str"]], "all(S > 0)")
 })
 
-test_that("unit_test() upserts: same nr replaces existing test", {
+test_that("unit_test() upserts: same test replaces existing test", {
   sfm <- make_verifiable_sfm() |>
     unit_test(label = "test A", expr = all(S >= 0)) |>
-    unit_test(nr = 1, expr = all(S > 0)) # overwrite
+    unit_test(test = 1, expr = all(S > 0)) # overwrite
 
   expect_equal(length(sfm[["unit_tests"]]), 1L)
   expect_equal(sfm[["unit_tests"]][[1]][["expr_str"]], "all(S > 0)")
@@ -337,35 +337,27 @@ test_that("verify.sdbuildR() errors when no tests defined", {
 })
 
 
-# --- return_sims parameter ---
+# --- sims always retained ---
 
-test_that("verify() errors when return_sims is not logical", {
-  sfm <- make_verifiable_sfm() |> unit_test(expr = all(S >= 0))
-  expect_error(
-    silence(verify(sfm, return_sims = "yes")),
-    regexp = "return_sims"
-  )
-})
-
-test_that("verify() returns NULL sims by default (return_sims = FALSE)", {
+test_that("verify() always returns non-NULL sims (no save_sims needed)", {
   sfm <- make_verifiable_sfm() |> unit_test(expr = all(S >= 0))
   result <- silence(verify(sfm))
-  expect_null(result[["sims"]])
-  # j is always populated even without sims
-  expect_false(is.null(result[["j"]]))
+  expect_false(is.null(result[["sims"]]))
+  # condition is always populated
+  expect_false(is.null(result[["condition"]]))
 })
 
 test_that("verify() returns sims as nested list and j as named int vector", {
   sfm <- make_verifiable_sfm() |>
     unit_test(label = "S non-negative", expr = all(S >= 0))
-  result <- silence(verify(sfm, return_sims = TRUE))
+  result <- silence(verify(sfm))
   expect_true(is.list(result[["sims"]]))
   expect_null(names(result[["sims"]]))
   expect_equal(length(result[["sims"]]), 1L)
   # sims[[j]][[i]] structure
   expect_true(is.list(result[["sims"]][[1]]))
   expect_s3_class(result[["sims"]][[1]][[1]], "simulate_sdbuildR")
-  expect_equal(result[["j"]], c("S non-negative" = 1L))
+  expect_equal(result[["condition"]], c("S non-negative" = 1L))
 })
 
 test_that("verify() deduplicates sims: two tests sharing conditions map to the same index", {
@@ -377,42 +369,30 @@ test_that("verify() deduplicates sims: two tests sharing conditions map to the s
       expr = all(diff(S) == 0),
       conditions = list(rate = 0)
     )
-  result <- silence(verify(sfm, return_sims = TRUE))
+  result <- silence(verify(sfm))
   # Two unique condition sets -> two sim objects
   expect_equal(length(result[["sims"]]), 2L)
   # Three tests, each mapped to a condition index
-  expect_equal(length(result[["j"]]), 3L)
+  expect_equal(length(result[["condition"]]), 3L)
   expect_setequal(
-    names(result[["j"]]),
+    names(result[["condition"]]),
     c("S non-negative", "S ends positive", "S constant at zero rate")
   )
   # The two baseline tests share the same index
   expect_equal(
-    result[["j"]][["S non-negative"]],
-    result[["j"]][["S ends positive"]]
+    result[["condition"]][["S non-negative"]],
+    result[["condition"]][["S ends positive"]]
   )
   # The condition test has a different index
   expect_false(
-    result[["j"]][["S non-negative"]] ==
-      result[["j"]][["S constant at zero rate"]]
+    result[["condition"]][["S non-negative"]] ==
+      result[["condition"]][["S constant at zero rate"]]
   )
   # All sims are nested simulate_sdbuildR objects
   for (sim_list in result[["sims"]]) {
     expect_true(is.list(sim_list))
     expect_s3_class(sim_list[[1]], "simulate_sdbuildR")
   }
-})
-
-test_that("verify() n > 1 returns pass_rate and counts in each result", {
-  sfm <- make_verifiable_sfm() |>
-    unit_test(label = "S non-negative", expr = all(S >= 0))
-  result <- silence(verify(sfm, n = 3L))
-  r <- result[["results"]][[1]]
-  expect_true(!is.null(r[["pass_rate"]]))
-  expect_true(!is.null(r[["n_pass"]]))
-  expect_true(!is.null(r[["n_fail"]]))
-  expect_true(!is.null(r[["n_error"]]))
-  expect_equal(r[["n_pass"]] + r[["n_fail"]] + r[["n_error"]], 3L)
 })
 
 
@@ -422,11 +402,21 @@ test_that("as.data.frame.verify_sdbuildR returns a data frame with expected colu
   result <- silence(verify(sfm))
   df <- as.data.frame(result)
   expect_s3_class(df, "data.frame")
-  expect_true(all(c("nr", "label", "status", "pass_rate", "n_pass", "n_fail", "n_error") %in% names(df)))
+  expect_true(all(c("test", "label", "status") %in% names(df)))
   expect_equal(nrow(df), 1L)
 })
 
-test_that("as.data.frame.verify_sdbuildR nr filter works", {
+test_that("as.data.frame.verify_sdbuildR stores compact FALSE failure messages", {
+  sfm <- make_verifiable_sfm() |>
+    unit_test(label = "S is zero", expr = all(S == 0))
+
+  result <- silence(verify(sfm))
+  df <- as.data.frame(result)
+
+  expect_equal(df[["message"]], "Expected: TRUE\nActual: FALSE")
+})
+
+test_that("as.data.frame.verify_sdbuildR test filter works", {
   sfm <- make_verifiable_sfm() |>
     unit_test(label = "S non-negative", expr = all(S >= 0)) |>
     unit_test(
@@ -435,9 +425,23 @@ test_that("as.data.frame.verify_sdbuildR nr filter works", {
       conditions = list(rate = 0)
     )
   result <- silence(verify(sfm))
-  df_nr1 <- as.data.frame(result, nr = 1L)
+  df_nr1 <- as.data.frame(result, test = 1L)
   expect_equal(nrow(df_nr1), 1L)
   expect_equal(df_nr1[["label"]], "S non-negative")
+})
+
+test_that("as.data.frame.verify_sdbuildR sims test display shows only requested numbers", {
+  sfm <- make_verifiable_sfm() |>
+    unit_test(label = "A", expr = all(S >= 0)) |>
+    unit_test(label = "B", expr = all(S > 0))
+
+  result <- silence(verify(sfm))
+
+  df_all <- as.data.frame(result, which = "sims")
+  expect_true(all(df_all[["test"]] == "1, 2"))
+
+  df_nr1 <- as.data.frame(result, which = "sims", test = 1L)
+  expect_true(all(df_nr1[["test"]] == "1"))
 })
 
 test_that("head.verify_sdbuildR and tail.verify_sdbuildR return data frames", {
@@ -560,30 +564,30 @@ test_that("error_type = 'expr_eval' when expression references undefined variabl
   expect_match(res_entry[["message"]], "not found|undefined")
 })
 
-test_that("verify() nr parameter runs only specified tests", {
+test_that("verify() test parameter runs only specified tests", {
   sfm <- make_verifiable_sfm() |>
     unit_test(label = "A", expr = all(S >= 0)) |>
     unit_test(label = "B", expr = all(S == 0))
-  result <- silence(verify(sfm, nr = 1L))
+  result <- silence(verify(sfm, test = 1L))
   expect_equal(length(result[["results"]]), 1L)
   expect_equal(result[["test_indices"]], 1L)
   df <- as.data.frame(result)
-  expect_equal(df$nr, 1L)
+  expect_equal(df$test, 1L)
 })
 
 test_that("as.data.frame test_indices preserved correctly", {
   sfm <- make_verifiable_sfm() |>
     unit_test(label = "A", expr = all(S >= 0)) |>
     unit_test(label = "B", expr = all(S > 0))
-  result <- silence(verify(sfm, nr = 2L))
+  result <- silence(verify(sfm, test = 2L))
   df <- as.data.frame(result)
-  expect_equal(df$nr, 2L)
+  expect_equal(df$test, 2L)
 })
 
 test_that("unit_tests() label partial match works", {
   sfm <- make_verifiable_sfm() |>
     unit_test(label = "S non-negative", expr = all(S >= 0)) |>
-    unit_test(label = "S constant",     expr = all(diff(S) == 0))
+    unit_test(label = "S constant", expr = all(diff(S) == 0))
   res <- unit_tests(sfm, label = "non-neg")
   expect_equal(res$n, 1L)
   expect_equal(res$indices, 1L)
@@ -592,7 +596,7 @@ test_that("unit_tests() label partial match works", {
 test_that("unit_tests() label vector matches either (OR)", {
   sfm <- make_verifiable_sfm() |>
     unit_test(label = "S non-negative", expr = all(S >= 0)) |>
-    unit_test(label = "S constant",     expr = all(diff(S) == 0))
+    unit_test(label = "S constant", expr = all(diff(S) == 0))
   res <- unit_tests(sfm, label = c("non-neg", "constant"))
   expect_equal(res$n, 2L)
 })
@@ -608,7 +612,8 @@ test_that("unit_tests() label ignore_case = FALSE respects case", {
   sfm <- make_verifiable_sfm() |>
     unit_test(label = "S Non-Negative", expr = all(S >= 0))
   expect_warning(unit_tests(sfm, label = "non-negative", ignore_case = FALSE),
-                 regexp = "No tests matched")
+    regexp = "No tests matched"
+  )
 })
 
 test_that("unit_tests() label warns on no match", {
@@ -617,11 +622,11 @@ test_that("unit_tests() label warns on no match", {
   expect_warning(unit_tests(sfm, label = "xyz_no_match"), regexp = "No tests matched")
 })
 
-test_that("unit_tests() nr and label combine as intersection", {
+test_that("unit_tests() test and label combine as intersection", {
   sfm <- make_verifiable_sfm() |>
     unit_test(label = "S non-negative", expr = all(S >= 0)) |>
-    unit_test(label = "S constant",     expr = all(diff(S) == 0))
-  res <- unit_tests(sfm, nr = 1:2, label = "non-neg")
+    unit_test(label = "S constant", expr = all(diff(S) == 0))
+  res <- unit_tests(sfm, test = 1:2, label = "non-neg")
   expect_equal(res$n, 1L)
   expect_equal(res$indices, 1L)
 })
@@ -629,7 +634,7 @@ test_that("unit_tests() nr and label combine as intersection", {
 test_that("as.data.frame label filter works", {
   sfm <- make_verifiable_sfm() |>
     unit_test(label = "S non-negative", expr = all(S >= 0)) |>
-    unit_test(label = "S constant",     expr = all(diff(S) == 0))
+    unit_test(label = "S constant", expr = all(diff(S) == 0))
   result <- silence(verify(sfm))
   df <- as.data.frame(result, label = "non-neg")
   expect_equal(nrow(df), 1L)
@@ -639,27 +644,27 @@ test_that("as.data.frame label filter works", {
 test_that("as.data.frame label vector matches either", {
   sfm <- make_verifiable_sfm() |>
     unit_test(label = "S non-negative", expr = all(S >= 0)) |>
-    unit_test(label = "S constant",     expr = all(diff(S) == 0))
+    unit_test(label = "S constant", expr = all(diff(S) == 0))
   result <- silence(verify(sfm))
   df <- as.data.frame(result, label = c("non-neg", "constant"))
   expect_equal(nrow(df), 2L)
 })
 
-test_that("as.data.frame nr and label combine (intersection)", {
+test_that("as.data.frame test and label combine (intersection)", {
   sfm <- make_verifiable_sfm() |>
     unit_test(label = "S non-negative", expr = all(S >= 0)) |>
-    unit_test(label = "S constant",     expr = all(diff(S) == 0))
+    unit_test(label = "S constant", expr = all(diff(S) == 0))
   result <- silence(verify(sfm))
-  df <- as.data.frame(result, nr = 1:2, label = "non-neg")
+  df <- as.data.frame(result, test = 1:2, label = "non-neg")
   expect_equal(nrow(df), 1L)
-  expect_equal(df$nr, 1L)
+  expect_equal(df$test, 1L)
 })
 
-test_that("as.data.frame label warns on no match", {
+test_that("as.data.frame label errors no match", {
   sfm <- make_verifiable_sfm() |>
     unit_test(label = "S non-negative", expr = all(S >= 0))
   result <- silence(verify(sfm))
-  expect_warning(as.data.frame(result, label = "xyz"), regexp = "No results matched")
+  expect_error(as.data.frame(result, label = "xyz"), regexp = "No results matched")
 })
 
 
@@ -684,9 +689,18 @@ test_that("verify().results always includes error_type field", {
 # ==============================================================================
 
 test_that("print.verify_sdbuildR() snapshot for passing tests", {
-  sfm <- make_verifiable_sfm() |> update(S, eqn = 100) |>
+  sfm <- make_verifiable_sfm() |>
+    update(S, eqn = 100) |>
     unit_test(label = "S is non-negative", expr = all(S >= 0)) |>
     unit_test(label = "S starts at 100", expr = expect_equal(S[[1]], 100))
+
+  result <- silence(verify(sfm))
+  expect_snapshot(print(result))
+})
+
+test_that("print.verify_sdbuildR() snapshot for failing FALSE tests", {
+  sfm <- make_verifiable_sfm() |>
+    unit_test(label = "S is zero", expr = all(S == 0))
 
   result <- silence(verify(sfm))
   expect_snapshot(print(result))
@@ -810,14 +824,14 @@ test_that("unit_test() errors on duplicate expression", {
   )
 })
 
-test_that("unit_test() warns when nr is not sequential (gap)", {
+test_that("unit_test() warns when test is not sequential (gap)", {
   sfm <- make_verifiable_sfm() |>
     unit_test(label = "test A", expr = all(S >= 0))
 
-  # Nr 5 is far beyond next_nr = 2
+  # Test 5 is far beyond next_test = 2
   expect_warning(
-    unit_test(sfm, nr = 5, label = "test B", expr = all(S > 0)),
-    regexp = "will be set to the existing number of tests \\+ 1"
+    unit_test(sfm, test = 5, label = "test B", expr = all(S > 0)),
+    regexp = "will be set to the existing number of tests"
   )
 })
 
@@ -908,172 +922,34 @@ test_that("verify.sdbuildR() passes mixed stock and non-stock tests", {
 })
 
 
-# ==============================================================================
-# verify() — R backend, n > 1 (aggregate path)
-# ==============================================================================
-
-test_that("verify() n > 1 all-pass: status = 'pass', pass_rate = 1", {
-  sfm <- make_verifiable_sfm() |>
-    unit_test(label = "S non-negative", expr = all(S >= 0))
-  result <- silence(verify(sfm, n = 3L))
-  r <- result[["results"]][[1]]
-  expect_equal(r[["status"]], "pass")
-  expect_equal(r[["pass_rate"]], 1)
-  expect_equal(r[["n_pass"]], 3L)
-  expect_equal(r[["n_fail"]], 0L)
-  expect_equal(r[["n_error"]], 0L)
-})
-
-test_that("verify() n > 1 all-fail: status = 'fail', pass_rate = 0", {
-  sfm <- make_verifiable_sfm() |>
-    unit_test(label = "S always zero", expr = all(S == 0))
-  result <- silence(verify(sfm, n = 3L))
-  r <- result[["results"]][[1]]
-  expect_equal(r[["status"]], "fail")
-  expect_equal(r[["pass_rate"]], 0)
-  expect_equal(r[["n_pass"]], 0L)
-  expect_equal(r[["n_fail"]], 3L)
-  expect_equal(r[["n_error"]], 0L)
-})
-
-test_that("verify() n > 1 all-error: status = 'error'", {
-  sfm <- make_verifiable_sfm() |>
-    unit_test(label = "numeric result", expr = mean(S > 0.2))
-  result <- silence(verify(sfm, n = 3L))
-  r <- result[["results"]][[1]]
-  expect_equal(r[["status"]], "error")
-  expect_equal(r[["n_error"]], 3L)
-  expect_equal(r[["n_pass"]], 0L)
-  expect_equal(r[["n_fail"]], 0L)
-})
-
-test_that("verify() n > 1 with conditions all-pass: counts sum to n for each test", {
-  sfm <- make_verifiable_sfm() |>
-    unit_test(label = "S non-negative", expr = all(S >= 0)) |>
-    unit_test(
-      label = "S constant at zero rate",
-      expr = all(diff(S) == 0),
-      conditions = list(rate = 0)
-    )
-  result <- silence(verify(sfm, n = 3L))
-  r1 <- result[["results"]][[1]]
-  r2 <- result[["results"]][[2]]
-  expect_equal(r1[["n_pass"]] + r1[["n_fail"]] + r1[["n_error"]], 3L)
-  expect_equal(r2[["n_pass"]] + r2[["n_fail"]] + r2[["n_error"]], 3L)
-  expect_equal(r1[["status"]], "pass")
-  expect_equal(r2[["status"]], "pass")
-})
-
-test_that("verify() n > 1 with conditions all-fail: status = 'fail', n_fail = n", {
-  # rate = 0 keeps S at 100; asserting S < 50 fails on every run
-  sfm <- make_verifiable_sfm() |> update(S, eqn = 100) |>
-    unit_test(
-      label = "S low when rate is zero",
-      expr = all(S < 50),
-      conditions = list(rate = 0)
-    )
-  result <- silence(verify(sfm, n = 3L))
-  r <- result[["results"]][[1]]
-  expect_equal(r[["status"]], "fail")
-  expect_equal(r[["n_fail"]], 3L)
-  expect_equal(r[["n_pass"]], 0L)
-  expect_equal(r[["pass_rate"]], 0)
-})
-
-test_that("verify() n > 1 with conditions all-error: status = 'error', n_error = n", {
-  sfm <- make_verifiable_sfm() |>
-    unit_test(
-      label = "numeric result under condition",
-      expr = mean(S > 0.2),
-      conditions = list(rate = 0)
-    )
-  result <- silence(verify(sfm, n = 3L))
-  r <- result[["results"]][[1]]
-  expect_equal(r[["status"]], "error")
-  expect_equal(r[["n_error"]], 3L)
-  expect_equal(r[["n_pass"]], 0L)
-})
-
 # --- Conditions are actually applied to the simulation ---
 
-test_that("verify(): constant-only condition is present in sim (n = 1)", {
+test_that("verify(): constant-only condition is present in sim", {
   sfm <- make_verifiable_sfm() |>
     unit_test(label = "x", expr = all(S >= 0), conditions = list(rate = 0))
-  result <- silence(verify(sfm, return_sims = TRUE))
-  j_idx <- result[["j"]][[1]]
-  sim   <- result[["sims"]][[j_idx]][[1]]
+  result <- silence(verify(sfm))
+  condition_idx <- result[["condition"]][[1]]
+  sim <- result[["sims"]][[condition_idx]][[1]]
   expect_equal(sim[["constants"]][["rate"]], 0)
 })
 
-test_that("verify(): stock initial-value condition is present in sim (n = 1)", {
+test_that("verify(): stock initial-value condition is present in sim", {
   sfm <- make_verifiable_sfm() |>
     unit_test(label = "x", expr = all(S >= 0), conditions = list(S = 50))
-  result <- silence(verify(sfm, return_sims = TRUE))
-  j_idx <- result[["j"]][[1]]
-  sim   <- result[["sims"]][[j_idx]][[1]]
+  result <- silence(verify(sfm))
+  condition_idx <- result[["condition"]][[1]]
+  sim <- result[["sims"]][[condition_idx]][[1]]
   expect_equal(sim[["init"]][["S"]], 50)
 })
 
-test_that("verify(): mixed conditions are both present in sim (n = 1)", {
+test_that("verify(): mixed conditions are both present in sim", {
   sfm <- make_verifiable_sfm() |>
     unit_test(label = "x", expr = all(S >= 0), conditions = list(S = 50, rate = 0))
-  result <- silence(verify(sfm, return_sims = TRUE))
-  j_idx <- result[["j"]][[1]]
-  sim   <- result[["sims"]][[j_idx]][[1]]
+  result <- silence(verify(sfm))
+  condition_idx <- result[["condition"]][[1]]
+  sim <- result[["sims"]][[condition_idx]][[1]]
   expect_equal(sim[["constants"]][["rate"]], 0)
   expect_equal(sim[["init"]][["S"]], 50)
-})
-
-test_that("verify(): constant-only condition is present in all n sims (n > 1)", {
-  sfm <- make_verifiable_sfm() |>
-    unit_test(label = "x", expr = all(S >= 0), conditions = list(rate = 0))
-  result <- silence(verify(sfm, n = 3L, return_sims = TRUE))
-  j_idx <- result[["j"]][[1]]
-  for (sim in result[["sims"]][[j_idx]]) {
-    expect_equal(sim[["constants"]][["rate"]], 0)
-  }
-})
-
-test_that("verify(): stock initial-value condition is present in all n sims (n > 1)", {
-  sfm <- make_verifiable_sfm() |>
-    unit_test(label = "x", expr = all(S >= 0), conditions = list(S = 50))
-  result <- silence(verify(sfm, n = 3L, return_sims = TRUE))
-  j_idx <- result[["j"]][[1]]
-  for (sim in result[["sims"]][[j_idx]]) {
-    expect_equal(sim[["init"]][["S"]], 50)
-  }
-})
-
-test_that("verify(): mixed conditions are both present in all n sims (n > 1)", {
-  sfm <- make_verifiable_sfm() |>
-    unit_test(label = "x", expr = all(S >= 0), conditions = list(S = 50, rate = 0))
-  result <- silence(verify(sfm, n = 3L, return_sims = TRUE))
-  j_idx <- result[["j"]][[1]]
-  for (sim in result[["sims"]][[j_idx]]) {
-    expect_equal(sim[["constants"]][["rate"]], 0)
-    expect_equal(sim[["init"]][["S"]], 50)
-  }
-})
-
-test_that("as.data.frame() on n > 1 verify result has expected columns", {
-  sfm <- make_verifiable_sfm() |>
-    unit_test(label = "S non-negative", expr = all(S >= 0))
-  result <- silence(verify(sfm, n = 3L))
-  df <- as.data.frame(result)
-  expect_s3_class(df, "data.frame")
-  expect_true(all(c("nr", "label", "status", "pass_rate", "n_pass", "n_fail", "n_error") %in% names(df)))
-})
-
-test_that("verify() n > 1 with return_sims = TRUE: each condition holds n sims", {
-  sfm <- make_verifiable_sfm() |>
-    unit_test(label = "S non-negative", expr = all(S >= 0))
-  result <- silence(verify(sfm, n = 3L, return_sims = TRUE))
-  expect_false(is.null(result[["sims"]]))
-  for (sim_list in result[["sims"]]) {
-    expect_true(is.list(sim_list))
-    expect_equal(length(sim_list), 3L)
-    expect_s3_class(sim_list[[1]], "simulate_sdbuildR")
-  }
 })
 
 
@@ -1083,7 +959,7 @@ test_that("verify() n > 1 with return_sims = TRUE: each condition holds n sims",
 
 test_that("verify() with Julia backend returns verify_sdbuildR class (n = 1)", {
   skip_if_julia_not_ready()
-  sfm <- make_verifiable_jl_sfm() |>
+  sfm <- make_verifiable_sfm(language = "Julia") |>
     unit_test(label = "S non-negative", expr = all(S >= 0))
   result <- silence(verify(sfm))
   expect_s3_class(result, "verify_sdbuildR")
@@ -1091,7 +967,7 @@ test_that("verify() with Julia backend returns verify_sdbuildR class (n = 1)", {
 
 test_that("verify() with Julia backend passes correct test (n = 1)", {
   skip_if_julia_not_ready()
-  sfm <- make_verifiable_jl_sfm() |>
+  sfm <- make_verifiable_sfm(language = "Julia") |>
     unit_test(label = "S non-negative", expr = all(S >= 0))
   result <- silence(verify(sfm))
   expect_equal(result[["results"]][[1]][["status"]], "pass")
@@ -1099,7 +975,7 @@ test_that("verify() with Julia backend passes correct test (n = 1)", {
 
 test_that("verify() with Julia backend fails incorrect test (n = 1)", {
   skip_if_julia_not_ready()
-  sfm <- make_verifiable_jl_sfm() |>
+  sfm <- make_verifiable_sfm(language = "Julia") |>
     unit_test(label = "S always zero", expr = all(S == 0))
   result <- silence(verify(sfm))
   expect_equal(result[["results"]][[1]][["status"]], "fail")
@@ -1107,37 +983,16 @@ test_that("verify() with Julia backend fails incorrect test (n = 1)", {
 
 test_that("verify() with Julia backend errors on non-logical expression (n = 1)", {
   skip_if_julia_not_ready()
-  sfm <- make_verifiable_jl_sfm() |>
+  sfm <- make_verifiable_sfm(language = "Julia") |>
     unit_test(label = "numeric output", expr = mean(S > 0.2))
   result <- silence(verify(sfm))
   expect_equal(result[["results"]][[1]][["status"]], "error")
 })
 
-test_that("verify() with Julia backend n > 1 all-pass: status = 'pass', pass_rate = 1", {
-  skip_if_julia_not_ready()
-  sfm <- make_verifiable_jl_sfm() |>
-    unit_test(label = "S non-negative", expr = all(S >= 0))
-  result <- silence(verify(sfm, n = 3L))
-  r <- result[["results"]][[1]]
-  expect_equal(r[["status"]], "pass")
-  expect_equal(r[["pass_rate"]], 1)
-  expect_equal(r[["n_pass"]], 3L)
-})
-
-test_that("verify() with Julia backend n > 1 all-fail: status = 'fail', pass_rate = 0", {
-  skip_if_julia_not_ready()
-  sfm <- make_verifiable_jl_sfm() |>
-    unit_test(label = "S always zero", expr = all(S == 0))
-  result <- silence(verify(sfm, n = 3L))
-  r <- result[["results"]][[1]]
-  expect_equal(r[["status"]], "fail")
-  expect_equal(r[["pass_rate"]], 0)
-  expect_equal(r[["n_pass"]], 0L)
-})
 
 test_that("verify() with Julia backend passes conditioned test (n = 1)", {
   skip_if_julia_not_ready()
-  sfm <- make_verifiable_jl_sfm() |>
+  sfm <- make_verifiable_sfm(language = "Julia") |>
     unit_test(
       label = "S constant at zero rate",
       expr = all(diff(S) == 0),
@@ -1150,7 +1005,7 @@ test_that("verify() with Julia backend passes conditioned test (n = 1)", {
 test_that("verify() with Julia backend fails conditioned test (n = 1)", {
   skip_if_julia_not_ready()
   # rate = 0 keeps S at 100; asserting S < 50 fails
-  sfm <- make_verifiable_jl_sfm() |>
+  sfm <- make_verifiable_sfm(language = "Julia") |>
     unit_test(
       label = "S low when rate is zero",
       expr = all(S < 50),
@@ -1160,99 +1015,247 @@ test_that("verify() with Julia backend fails conditioned test (n = 1)", {
   expect_equal(result[["results"]][[1]][["status"]], "fail")
 })
 
-test_that("verify() with Julia backend n > 1 with conditions all-pass", {
+# --- Conditions are actually applied to the Julia simulation ---
+
+test_that("verify(): constant-only condition is present in Julia sim", {
   skip_if_julia_not_ready()
-  sfm <- make_verifiable_jl_sfm() |>
+  sfm <- make_verifiable_sfm(language = "Julia") |>
+    unit_test(label = "x", expr = all(S >= 0), conditions = list(rate = 0))
+  result <- silence(verify(sfm))
+  condition_idx <- result[["condition"]][[1]]
+  sim <- result[["sims"]][[condition_idx]][[1]]
+  expect_equal(sim[["constants"]][["rate"]], 0)
+})
+
+test_that("verify(): stock initial-value condition is present in Julia sim", {
+  skip_if_julia_not_ready()
+  sfm <- make_verifiable_sfm(language = "Julia") |>
+    unit_test(label = "x", expr = all(S >= 0), conditions = list(S = 50))
+  result <- silence(verify(sfm))
+  condition_idx <- result[["condition"]][[1]]
+  sim <- result[["sims"]][[condition_idx]][[1]]
+  expect_equal(sim[["init"]][["S"]], 50)
+})
+
+test_that("verify(): mixed conditions are both present in Julia sim", {
+  skip_if_julia_not_ready()
+  sfm <- make_verifiable_sfm(language = "Julia") |>
+    unit_test(label = "x", expr = all(S >= 0), conditions = list(S = 50, rate = 0))
+  result <- silence(verify(sfm))
+  condition_idx <- result[["condition"]][[1]]
+  sim <- result[["sims"]][[condition_idx]][[1]]
+  expect_equal(sim[["constants"]][["rate"]], 0)
+  expect_equal(sim[["init"]][["S"]], 50)
+})
+
+test_that("verify() augments sfm vars with test refs (fixes vars/only_stocks conflict)", {
+  sfm <- make_verifiable_sfm()
+
+  # User limits sim_settings to only include stock 'S'
+  sfm2 <- sim_settings(sfm, vars = "S")
+
+  # Add a test that references the flow 'drain' (not included in user vars)
+  sfm2 <- unit_test(sfm2, label = "drain non-negative", expr = "all(drain >= 0)")
+
+  res <- silence(verify(sfm2, verbose = FALSE))
+
+  # Simulation data for the first condition must contain 'drain'
+  sims_j1 <- res$sims[[1]][[1]]
+  expect_true("variable" %in% colnames(sims_j1$df))
+  expect_true(any(sims_j1$df$variable == "drain"))
+})
+
+
+test_that("plot.verify_sdbuildR respects vars argument and returns plotly", {
+  res <- make_verify_model(n_tests = 1)
+  pl <- plot(res, vars = "S")
+  expect_plotly(pl)
+})
+
+
+# ==============================================================================
+# as.data.frame — condition filter (which = "tests")
+# ==============================================================================
+
+# Helper shared across this section: 2-test result with 2 distinct conditions
+# Test 1 → condition 1 (baseline)
+# Test 2 → condition 2 (rate = 0)
+make_two_condition_result <- function() {
+  sfm <- make_verifiable_sfm() |>
+    unit_test(label = "S non-negative", expr = all(S >= 0)) |>
     unit_test(
       label = "S constant at zero rate",
       expr = all(diff(S) == 0),
       conditions = list(rate = 0)
     )
-  result <- silence(verify(sfm, n = 3L))
-  r <- result[["results"]][[1]]
-  expect_equal(r[["status"]], "pass")
-  expect_equal(r[["n_pass"]], 3L)
-  expect_equal(r[["n_fail"]], 0L)
+  silence(verify(sfm))
+}
+
+test_that("condition column in which='tests' output is an integer vector", {
+  res <- make_two_condition_result()
+  df <- as.data.frame(res)
+  expect_true(is.integer(df[["condition"]]))
+  expect_equal(df[["condition"]], c(1L, 2L))
 })
 
-test_that("verify() with Julia backend n > 1 with conditions all-fail", {
-  skip_if_julia_not_ready()
-  sfm <- make_verifiable_jl_sfm() |>
-    unit_test(
-      label = "S low when rate is zero",
-      expr = all(S < 50),
-      conditions = list(rate = 0)
-    )
-  result <- silence(verify(sfm, n = 3L))
-  r <- result[["results"]][[1]]
-  expect_equal(r[["status"]], "fail")
-  expect_equal(r[["n_fail"]], 3L)
-  expect_equal(r[["n_pass"]], 0L)
+test_that("as.data.frame condition filter (tests): single condition keeps only matching tests", {
+  res <- make_two_condition_result()
+
+  df1 <- as.data.frame(res, condition = 1)
+  expect_equal(nrow(df1), 1L)
+  expect_equal(df1[["label"]], "S non-negative")
+  expect_equal(df1[["condition"]], 1L)
+
+  df2 <- as.data.frame(res, condition = 2)
+  expect_equal(nrow(df2), 1L)
+  expect_equal(df2[["label"]], "S constant at zero rate")
+  expect_equal(df2[["condition"]], 2L)
 })
 
-# --- Conditions are actually applied to the Julia simulation ---
-
-test_that("verify(): constant-only condition is present in Julia sim (n = 1)", {
-  skip_if_julia_not_ready()
-  sfm <- make_verifiable_jl_sfm() |>
-    unit_test(label = "x", expr = all(S >= 0), conditions = list(rate = 0))
-  result <- silence(verify(sfm, return_sims = TRUE))
-  j_idx <- result[["j"]][[1]]
-  sim   <- result[["sims"]][[j_idx]][[1]]
-  expect_equal(sim[["constants"]][["rate"]], 0)
+test_that("as.data.frame condition filter (tests): vector keeps tests from all listed conditions", {
+  res <- make_two_condition_result()
+  df <- as.data.frame(res, condition = c(1, 2))
+  expect_equal(nrow(df), 2L)
+  expect_setequal(df[["condition"]], c(1L, 2L))
 })
 
-test_that("verify(): stock initial-value condition is present in Julia sim (n = 1)", {
-  skip_if_julia_not_ready()
-  sfm <- make_verifiable_jl_sfm() |>
-    unit_test(label = "x", expr = all(S >= 0), conditions = list(S = 50))
-  result <- silence(verify(sfm, return_sims = TRUE))
-  j_idx <- result[["j"]][[1]]
-  sim   <- result[["sims"]][[j_idx]][[1]]
-  expect_equal(sim[["init"]][["S"]], 50)
+test_that("as.data.frame condition filter (tests): combined with test filter gives intersection", {
+  res <- make_two_condition_result()
+  # test = 1 is condition 1, so condition = 1 should return 1 row
+  df <- as.data.frame(res, test = 1L, condition = 1)
+  expect_equal(nrow(df), 1L)
+  expect_equal(df[["test"]], 1L)
+  # test = 1 (condition 1) filtered to condition = 2 → no match
+  expect_error(
+    as.data.frame(res, test = 1L, condition = 2),
+    regexp = "No tests with condition"
+  )
 })
 
-test_that("verify(): mixed conditions are both present in Julia sim (n = 1)", {
-  skip_if_julia_not_ready()
-  sfm <- make_verifiable_jl_sfm() |>
-    unit_test(label = "x", expr = all(S >= 0), conditions = list(S = 50, rate = 0))
-  result <- silence(verify(sfm, return_sims = TRUE))
-  j_idx <- result[["j"]][[1]]
-  sim   <- result[["sims"]][[j_idx]][[1]]
-  expect_equal(sim[["constants"]][["rate"]], 0)
-  expect_equal(sim[["init"]][["S"]], 50)
+test_that("as.data.frame condition filter (tests): combined with status filter gives intersection", {
+  res <- make_two_condition_result()
+  # Both tests pass; filtering to passing tests in condition 1 gives 1 row
+  df <- as.data.frame(res, condition = 1, status = "pass")
+  expect_equal(nrow(df), 1L)
+  expect_equal(df[["condition"]], 1L)
 })
 
-test_that("verify(): constant-only condition is present in all Julia runs (n > 1)", {
-  skip_if_julia_not_ready()
-  sfm <- make_verifiable_jl_sfm() |>
-    unit_test(label = "x", expr = all(S >= 0), conditions = list(rate = 0))
-  result <- silence(verify(sfm, n = 3L, return_sims = TRUE))
-  j_idx <- result[["j"]][[1]]
-  for (sim in result[["sims"]][[j_idx]]) {
-    expect_equal(sim[["constants"]][["rate"]], 0)
-  }
+test_that("as.data.frame condition filter (tests): combined with label filter gives intersection", {
+  res <- make_two_condition_result()
+  df <- as.data.frame(res, condition = 1, label = "non-negative")
+  expect_equal(nrow(df), 1L)
+  expect_equal(df[["label"]], "S non-negative")
+  # label in condition 2, filtered to condition 1 → label matches but condition eliminates it
+  expect_error(
+    as.data.frame(res, condition = 1, label = "zero rate"),
+    regexp = "No tests with condition number"
+  )
 })
 
-test_that("verify(): stock initial-value condition is present in all Julia runs (n > 1)", {
-  skip_if_julia_not_ready()
-  sfm <- make_verifiable_jl_sfm() |>
-    unit_test(label = "x", expr = all(S >= 0), conditions = list(S = 50))
-  result <- silence(verify(sfm, n = 3L, return_sims = TRUE))
-  j_idx <- result[["j"]][[1]]
-  for (sim in result[["sims"]][[j_idx]]) {
-    expect_equal(sim[["init"]][["S"]], 50)
-  }
+test_that("as.data.frame condition filter (tests): out-of-range condition errors", {
+  res <- make_two_condition_result()
+  expect_error(
+    as.data.frame(res, condition = 99),
+    regexp = "Condition number.*not found"
+  )
 })
 
-test_that("verify(): mixed conditions are both present in all Julia runs (n > 1)", {
-  skip_if_julia_not_ready()
-  sfm <- make_verifiable_jl_sfm() |>
-    unit_test(label = "x", expr = all(S >= 0), conditions = list(S = 50, rate = 0))
-  result <- silence(verify(sfm, n = 3L, return_sims = TRUE))
-  j_idx <- result[["j"]][[1]]
-  for (sim in result[["sims"]][[j_idx]]) {
-    expect_equal(sim[["constants"]][["rate"]], 0)
-    expect_equal(sim[["init"]][["S"]], 50)
-  }
+test_that("as.data.frame condition filter (tests): non-integer condition errors", {
+  res <- make_two_condition_result()
+  expect_error(
+    as.data.frame(res, condition = 1.5),
+    regexp = "must be an integer"
+  )
+})
+
+test_that("as.data.frame condition filter (tests): NA condition errors", {
+  res <- make_two_condition_result()
+  expect_error(
+    as.data.frame(res, condition = NA_integer_),
+    regexp = "must be an integer"
+  )
+})
+
+test_that("as.data.frame condition filter (tests): no-match after other filters errors clearly", {
+  res <- make_two_condition_result()
+  # Filter status to "fail" first (both pass → nothing left) then condition
+  expect_error(
+    as.data.frame(res, status = "fail", condition = 1),
+    regexp = "No tests with status|No tests with condition"
+  )
+})
+
+
+# ==============================================================================
+# as.data.frame — condition filter (which = "sims")
+# ==============================================================================
+
+test_that("as.data.frame condition filter (sims): single condition keeps only that simulation", {
+  res <- make_two_condition_result()
+
+  df1 <- as.data.frame(res, which = "sims", condition = 1)
+  expect_true(all(df1[["condition"]] == 1L))
+  expect_false(any(df1[["condition"]] == 2L))
+
+  df2 <- as.data.frame(res, which = "sims", condition = 2)
+  expect_true(all(df2[["condition"]] == 2L))
+  expect_false(any(df2[["condition"]] == 1L))
+})
+
+test_that("as.data.frame condition filter (sims): vector keeps all listed conditions", {
+  res <- make_two_condition_result()
+  df <- as.data.frame(res, which = "sims", condition = c(1, 2))
+  expect_setequal(unique(df[["condition"]]), c(1L, 2L))
+})
+
+test_that("as.data.frame condition filter (sims): combined with test filter is intersection", {
+  res <- make_two_condition_result()
+  # test 1 maps to condition 1 — requesting condition 1 is consistent
+  df <- as.data.frame(res, which = "sims", test = 1L, condition = 1)
+  expect_true(all(df[["condition"]] == 1L))
+
+  # test 1 (condition 1) + condition 2 → disjoint → no rows
+  expect_error(
+    as.data.frame(res, which = "sims", test = 1L, condition = 2),
+    regexp = "No simulations match"
+  )
+})
+
+test_that("as.data.frame condition filter (sims): combined with status filter is intersection", {
+  res <- make_two_condition_result()
+  # Both conditions pass; filtering to pass + condition 1 keeps condition 1 only
+  df <- as.data.frame(res, which = "sims", condition = 1, status = "pass")
+  expect_true(all(df[["condition"]] == 1L))
+})
+
+test_that("as.data.frame condition filter (sims): out-of-range condition errors", {
+  res <- make_two_condition_result()
+  expect_error(
+    as.data.frame(res, which = "sims", condition = 99),
+    regexp = "Condition number.*not found"
+  )
+})
+
+test_that("as.data.frame condition filter (sims): non-integer condition errors", {
+  res <- make_two_condition_result()
+  expect_error(
+    as.data.frame(res, which = "sims", condition = 1.5),
+    regexp = "must be an integer"
+  )
+})
+
+test_that("as.data.frame condition filter (sims): NA condition errors", {
+  res <- make_two_condition_result()
+  expect_error(
+    as.data.frame(res, which = "sims", condition = NA_integer_),
+    regexp = "must be an integer"
+  )
+})
+
+test_that("as.data.frame condition filter (sims): wide direction still respects condition filter", {
+  res <- make_two_condition_result()
+  df <- as.data.frame(res, which = "sims", direction = "wide", condition = 1)
+  expect_true(all(df[["condition"]] == 1L))
+  # wide format: variables become columns
+  expect_false("variable" %in% names(df))
 })

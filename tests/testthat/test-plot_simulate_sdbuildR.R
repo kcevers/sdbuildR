@@ -132,100 +132,56 @@ test_that("plot() validates colors as character vector", {
 })
 
 # ============================================================================
-# VISUAL REGRESSION TESTS (vdiffr)
+# VISUAL REGRESSION TESTS (expect_snapshot_plot)
 # ============================================================================
 
 test_that("plot() creates standard line plot for SIR simulation", {
-  skip_on_os("mac")
-
   sim <- sir_sim()
 
-  vdiffr::expect_doppelganger(
-    "sim-SIR-default",
-    plot(sim)
-  )
+  expect_snapshot_plot("sim-sir-default", plot(sim))
 })
 
 test_that("plot() respects showlegend", {
-  skip_on_os("mac")
-
   sim <- sir_sim()
 
-  vdiffr::expect_doppelganger(
-    "sim-showlegend-true",
-    plot(sim, showlegend = TRUE)
-  )
-  vdiffr::expect_doppelganger(
-    "sim-showlegend-false",
-    plot(sim, showlegend = FALSE)
-  )
+  expect_snapshot_plot("sim-showlegend-true", plot(sim, showlegend = TRUE))
+  expect_snapshot_plot("sim-showlegend-false", plot(sim, showlegend = FALSE))
 })
 
 test_that("plot() respects vars argument", {
-  skip_on_os("mac")
-
   sim <- sir_sim()
 
-  vdiffr::expect_doppelganger(
-    "sim-single-variable",
-    plot(sim, vars = "susceptible")
-  )
-
-  vdiffr::expect_doppelganger(
-    "sim-filtered-vars",
-    plot(sim, vars = c("susceptible", "infected"))
-  )
+  expect_snapshot_plot("sim-single-variable", plot(sim, vars = "susceptible"))
+  expect_snapshot_plot("sim-filtered-vars", plot(sim, vars = c("susceptible", "infected")))
 })
 
 test_that("plot() with custom palette", {
-  skip_on_os("mac")
-
   sim <- sir_sim()
 
-  vdiffr::expect_doppelganger(
-    "sim-custom-palette",
-    plot(sim, palette = "Set 2")
-  )
+  expect_snapshot_plot("sim-custom-palette", plot(sim, palette = "Set 2"))
 })
 
 test_that("plot() with custom colors vector", {
-  skip_on_os("mac")
-
   sim <- sir_sim()
 
   custom_colors <- c("#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A")
 
-  vdiffr::expect_doppelganger(
-    "sim-custom-colors",
-    plot(sim, colors = custom_colors)
-  )
+  expect_snapshot_plot("sim-custom-colors", plot(sim, colors = custom_colors))
 })
 
 test_that("plot() with custom font family", {
-  skip_on_os("mac")
-
   sim <- sir_sim()
 
-  vdiffr::expect_doppelganger(
-    "sim-custom-font-family",
-    plot(sim, font_family = "Arial")
-  )
+  expect_snapshot_plot("sim-custom-font-family", plot(sim, font_family = "Arial"))
 })
 
 test_that("plot() with custom font size", {
-  skip_on_os("mac")
-
   sim <- sir_sim()
 
-  vdiffr::expect_doppelganger(
-    "sim-large-font-size",
-    plot(sim, font_size = 20)
-  )
+  expect_snapshot_plot("sim-large-font-size", plot(sim, font_size = 20))
 })
 
 test_that("plot() with custom wrap width", {
-  skip_on_os("mac")
-
   sfm <- sdbuildR()
   sfm <- update(sfm,
     name = "a",
@@ -239,18 +195,13 @@ test_that("plot() with custom wrap width", {
   )
   sim <- simulate(sfm, only_stocks = FALSE)
 
-  vdiffr::expect_doppelganger(
-    "sim-wrap-width-narrow",
-    plot(sim, wrap_width = 10)
-  )
+  expect_snapshot_plot("sim-wrap-width-narrow", plot(sim, wrap_width = 10))
 })
 
 test_that("plot() with custom title, axis labels, and limits", {
-  skip_on_os("mac")
-
   sim <- sir_sim()
 
-  vdiffr::expect_doppelganger(
+  expect_snapshot_plot(
     "sim-custom-title-axes-limits",
     plot(sim,
       main = "Custom Simulation Title",
@@ -260,22 +211,13 @@ test_that("plot() with custom title, axis labels, and limits", {
 })
 
 test_that("plot() respects add_constants", {
-  skip_on_os("mac")
-
   sfm <- sdbuildR()
   sfm <- update(sfm, "Stock1", type = "stock")
   sfm <- update(sfm, "const_val", type = "constant", eqn = "100")
   sim <- simulate(sfm)
 
-  vdiffr::expect_doppelganger(
-    "sim-with-constants",
-    plot(sim, add_constants = TRUE)
-  )
-
-  vdiffr::expect_doppelganger(
-    "sim-without-constants",
-    plot(sim, add_constants = FALSE)
-  )
+  expect_snapshot_plot("sim-with-constants", plot(sim, add_constants = TRUE))
+  expect_snapshot_plot("sim-without-constants", plot(sim, add_constants = FALSE))
 })
 
 # ============================================================================
@@ -283,47 +225,30 @@ test_that("plot() respects add_constants", {
 # ============================================================================
 
 test_that("plot() shows legend for single-variable plot", {
-  skip_on_os("mac")
-
   sfm <- sdbuildR()
   sfm <- update(sfm, "Stock1", type = "stock")
   sim <- simulate(sfm)
 
-  vdiffr::expect_doppelganger(
-    "sim-single-var-legend",
-    plot(sim, showlegend = TRUE)
-  )
+  expect_snapshot_plot("sim-single-var-legend", plot(sim, showlegend = TRUE))
 })
 
 test_that("plot() works with both stocks and flow variables", {
-  skip_on_os("mac")
-
   # SIR has susceptible (stock), infected (stock), recovered (stock)
   sim <- sir_sim(only_stocks = FALSE)
 
-  vdiffr::expect_doppelganger(
-    "sim-only-stocks-false",
-    plot(sim, showlegend = TRUE)
-  )
+  expect_snapshot_plot("sim-only-stocks-false", plot(sim, showlegend = TRUE))
 })
 
 test_that("plot() handles variables with duplicate display labels", {
-  skip_on_os("mac")
-
   sfm <- sdbuildR()
   sfm <- update(sfm, "var1", type = "stock", label = "Same")
   sfm <- update(sfm, "var2", type = "stock", label = "Same")
   sim <- simulate(sfm)
 
-  vdiffr::expect_doppelganger(
-    "sim-duplicate-labels",
-    plot(sim)
-  )
+  expect_snapshot_plot("sim-duplicate-labels", plot(sim))
 })
 
 test_that("plot() respects vars filtering for constants", {
-  skip_on_os("mac")
-
   sfm <- sdbuildR()
   sfm <- update(sfm, "S", type = "stock")
   sfm <- update(sfm, "I", type = "stock")
@@ -332,22 +257,20 @@ test_that("plot() respects vars filtering for constants", {
   sim <- simulate(sfm)
 
   # Request only S and const1
-  vdiffr::expect_doppelganger(
+  expect_snapshot_plot(
     "sim-constants-filtered-vars",
     plot(sim, vars = c("S", "const1"), add_constants = TRUE)
   )
 })
 
 test_that("plot() with vars = constant automatically enables add_constants", {
-  skip_on_os("mac")
-
   sfm <- sdbuildR()
   sfm <- update(sfm, "Stock1", type = "stock")
   sfm <- update(sfm, "const_val", type = "constant", eqn = "75")
   sim <- simulate(sfm)
 
   # Even without add_constants = TRUE, specifying a constant in vars should include it
-  vdiffr::expect_doppelganger(
+  expect_snapshot_plot(
     "sim-vars-constant-add-constants",
     plot(sim, vars = c("Stock1", "const_val"), add_constants = FALSE)
   )

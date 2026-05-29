@@ -38,7 +38,7 @@
 #'   of stocks. Defaults to `FALSE`.
 #' @param keep_nonnegative_flow If `TRUE`, keeps original non-negativity setting
 #'   of flows. Defaults to `TRUE`.
-#' @param return_sims If `TRUE`, simulations are retained in [verify()] and
+#' @param save_sims If `TRUE`, individual simulations are retained in
 #'   [ensemble()] output. Defaults to `FALSE`.
 #'
 #' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR]
@@ -71,20 +71,21 @@
 #'   update(c(predator, prey), eqn = runif(1, 20, 50))
 #'
 sim_settings <- function(object,
-                      method = "euler",
-                      start = 0,
-                      stop = 100,
-                      dt = 0.01,
-                      save_at = NULL,
-                      save_n = NULL,
-                      seed = NULL,
-                      time_units = "seconds",
-                      language = "R",
-                      only_stocks = TRUE,
-                      vars = NULL,
-                      keep_nonnegative_stock = FALSE,
-                      keep_nonnegative_flow = TRUE,
-                      return_sims = FALSE) {
+                         method = "euler",
+                         start = 0,
+                         stop = 100,
+                         dt = 0.01,
+                         save_at = 0.1,
+                         # save_at = NULL,
+                         save_n = NULL,
+                         seed = NULL,
+                         time_units = "seconds",
+                         language = "R",
+                         only_stocks = TRUE,
+                         vars = NULL,
+                         keep_nonnegative_stock = FALSE,
+                         keep_nonnegative_flow = TRUE,
+                         save_sims = FALSE) {
   # Basic check
   if (missing(object)) {
     missing_arg("object")
@@ -266,16 +267,16 @@ sim_settings <- function(object,
 
   object <- sanitize_sdbuildR(object)
 
-  # --- return_sims handling (meta-setting, does NOT invalidate cache) ---
-  if (!missing(return_sims)) {
-    if (!is.logical(return_sims) || length(return_sims) != 1L || is.na(return_sims)) {
+  # --- save_sims handling (meta-setting, does NOT invalidate cache) ---
+  if (!missing(save_sims)) {
+    if (!is.logical(save_sims) || length(save_sims) != 1L || is.na(save_sims)) {
       cli::cli_abort(c(
-        "Invalid {.arg return_sims} argument.",
-        "x" = "The {.arg return_sims} argument must be {.code TRUE} or {.code FALSE}.",
-        "i" = "Received: {.val {return_sims}}"
+        "Invalid {.arg save_sims} argument.",
+        "x" = "The {.arg save_sims} argument must be {.code TRUE} or {.code FALSE}.",
+        "i" = "Received: {.val {save_sims}}"
       ))
     }
-    object[["sim_settings"]][["return_sims"]] <- return_sims
+    object[["sim_settings"]][["save_sims"]] <- save_sims
     # Intentionally do not call invalidate_assemble(): this is a meta-setting only
   }
 

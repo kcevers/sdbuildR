@@ -4,21 +4,18 @@
 \alias{verify.sdbuildR}
 \title{Verify unit tests against simulation results}
 \usage{
-\method{verify}{sdbuildR}(object, verbose = TRUE, n = 1L, nr = NULL, ...)
+\method{verify}{sdbuildR}(object, verbose = TRUE, test = NULL, ...)
 }
 \arguments{
 \item{object}{An \code{\link{sdbuildR}} object.}
 
 \item{verbose}{If \code{TRUE} (default), print results to the console.}
 
-\item{n}{Number of simulations to run per condition. Defaults to \code{1} (deterministic
-verification). Set to a larger value for robustness testing of stochastic models.}
-
-\item{nr}{Integer vector of test number(s) to run (1-based, as shown by \code{\link[=unit_tests]{unit_tests()}}).
+\item{test}{Integer vector of test number(s) to run (numbers-based, as shown by \code{\link[=unit_tests]{unit_tests()}}).
 Defaults to \code{NULL} (run all tests).}
 
-\item{...}{Additional arguments passed to \code{\link[=sim_settings]{sim_settings()}} (e.g., \code{return_sims},
-\code{seed}, \code{dt}) and then to \code{\link[=simulate.sdbuildR]{simulate.sdbuildR()}}.}
+\item{...}{Additional arguments passed to \code{\link[=sim_settings]{sim_settings()}} (e.g., \code{seed},
+\code{dt}) and then to \code{\link[=simulate.sdbuildR]{simulate.sdbuildR()}}.}
 }
 \value{
 An object of class \code{verify_sdbuildR}, returned invisibly. Use
@@ -27,18 +24,17 @@ visualize the simulations used. The object contains:
 \describe{
 \item{results}{List of test result entries, one per test (including inactive
 tests, which appear with \code{status = "skip"}). Each entry has \code{label},
-\code{expr_str}, \code{conditions}, \code{status}, \code{error_type}, \code{message}, \code{outcome},
-\code{pass_rate}, \code{n_pass}, \code{n_fail}, and \code{n_error}.}
+\code{expr_str}, \code{conditions}, \code{status}, \code{error_type}, \code{message}, and \code{outcome}.}
 \item{object}{The \code{sdbuildR} model the tests were run against.}
 \item{sims}{Nested list of \code{simulate_sdbuildR} objects used internally by
-\code{\link[=plot.verify_sdbuildR]{plot.verify_sdbuildR()}}, or \code{NULL} if \code{return_sims = FALSE}.}
+\code{\link[=plot.verify_sdbuildR]{plot.verify_sdbuildR()}}. Always present (never \code{NULL}).}
 \item{j}{Named integer vector mapping each test label to its condition index.
 Used internally by \code{\link[=plot.verify_sdbuildR]{plot.verify_sdbuildR()}}.}
 \item{n}{Number of simulations run per condition.}
 \item{n_conditions}{Number of unique simulation conditions.}
 \item{test_indices}{Integer vector of the original 1-based test numbers that
 were run (as shown by \code{\link[=unit_tests]{unit_tests()}}). Equal to \code{seq_along(results)} when
-\code{nr = NULL} (all tests run).}
+\code{test = NULL} (all tests run).}
 }
 }
 \description{
@@ -48,11 +44,10 @@ Run all active unit tests defined on a stock-and-flow model. Use
 \details{
 Calling \code{verify()} on a \code{sdbuildR} model will first simulate the model, then
 run all tests — including those that require re-simulation under alternative
-\link[=unit_test]{conditions}.
+\link[=unit_test]{conditions}. Simulations are always retained in the returned
+object so that \code{\link[=plot.verify_sdbuildR]{plot.verify_sdbuildR()}} works without any extra arguments.
 
-Setting \code{n > 1} runs an ensemble of \code{n} simulations per condition (robustness
-testing). Each test is evaluated against all \code{n} runs. The test passes only
-if all \code{n} runs pass.
+For repeated-run robustness testing use \code{\link[=ensemble]{ensemble()}} instead.
 }
 \examples{
 sfm <- sdbuildR("SIR") |>

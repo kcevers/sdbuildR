@@ -65,4 +65,3 @@ simulate_r <- function(object,
 
   sim
 }
-

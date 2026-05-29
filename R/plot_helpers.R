@@ -10,6 +10,7 @@
 #' @param font_family Character, font family name.
 #' @param font_size Numeric, font size in points.
 #' @param wrap_width Integer, text wrap width for labels.
+#' @param label_subplots Logical, whether to label subplots with condition names.
 #'
 #' @returns Invisibly returns a list of validation results. Throws cli errors if validation fails.
 #' @noRd
@@ -20,7 +21,8 @@ validate_plot_params <- function(showlegend = NULL,
                                  colors = NULL,
                                  font_family = NULL,
                                  font_size = NULL,
-                                 wrap_width = NULL) {
+                                 wrap_width = NULL,
+                                 label_subplots = NULL) {
   if (!is.null(showlegend) && !is.logical(showlegend)) {
     cli::cli_abort(c(
       "x" = "Invalid {.arg showlegend} argument.",
@@ -80,6 +82,13 @@ validate_plot_params <- function(showlegend = NULL,
     cli::cli_abort(c(
       "x" = "Invalid {.arg wrap_width} argument.",
       ">" = "The {.arg wrap_width} argument must be a positive integer."
+    ))
+  }
+
+  if (!is.null(label_subplots) && !is.logical(label_subplots)) {
+    cli::cli_abort(c(
+      "x" = "Invalid {.arg label_subplots} argument.",
+      "i" = "The {.arg label_subplots} argument must be {.cls logical}."
     ))
   }
 
@@ -265,12 +274,15 @@ validate_vars_in_model <- function(vars, names_df, df = NULL, context = "model")
     idx <- !(vars %in% df[["variable"]])
     if (any(idx)) {
       cli::cli_abort(
-        c("x" = paste0(
-        paste0(vars[idx], collapse = ", "),
-        ifelse(sum(idx) == 1, " is", " are"),
-        " in the model, but not in the simulated data frame."), 
-        ">" = "Run simulate() with only_stocks = FALSE."
-      ))
+        c(
+          "x" = paste0(
+            paste0(vars[idx], collapse = ", "),
+            ifelse(sum(idx) == 1, " is", " are"),
+            " in the model, but not in the simulated data frame."
+          ),
+          ">" = "Run simulate() with only_stocks = FALSE."
+        )
+      )
     }
   }
 
@@ -298,12 +310,25 @@ generate_colors <- function(n_vars, colors = NULL, palette = "Dark 2") {
         ">" = "Provide at least {.val {n_vars}} colors or use {.arg palette} instead."
       ))
     }
-    return(colors[seq_len(n_vars)])
+    # Normalize provided colors to canonical hex (#RRGGBB)
+    norm <- vapply(colors[seq_len(n_vars)], function(col) {
+      # Try col2rgb for names/hex/rgb; fall back to original string
+      rgb_val <- tryCatch(grDevices::col2rgb(col), error = function(e) NULL)
+      if (!is.null(rgb_val)) {
+        grDevices::rgb(rgb_val[1, 1], rgb_val[2, 1], rgb_val[3, 1], maxColorValue = 255)
+      } else {
+        toupper(as.character(col))
+      }
+    }, character(1))
+    return(norm)
   }
 
   # Ensure minimum of 3 colors for palette generation
   n_colors <- max(n_vars, 3)
   generated <- grDevices::hcl.colors(n = n_colors, palette = palette)
+
+  # hcl.colors returns hex strings; normalize to uppercase #RRGGBB
+  generated <- toupper(substr(generated, 1, 7))
 
   generated[seq_len(n_vars)]
 }
@@ -317,12 +342,11 @@ generate_colors <- function(n_vars, colors = NULL, palette = "Dark 2") {
 #' @param vars Character vector of variable names to keep.
 #' @param names_df Data frame with "name" and "type" columns.
 #' @param df Data frame with "variable" column (simulation data).
-#' @param type_sim Character, either "sim" or "ensemble" (affects error messages).
 #'
 #' @returns List with elements $names_df and $df, filtered to only include vars.
 #' @noRd
 #'
-filter_variables <- function(vars, names_df, df, type_sim = "sim") {
+filter_variables <- function(vars, names_df, df) {
   # Check whether specified variables are in the model
   validate_vars_in_model(vars, names_df, NULL, context = "model")
 
@@ -359,7 +383,7 @@ filter_variables <- function(vars, names_df, df, type_sim = "sim") {
 #' @param df Data frame with "variable" and "time" columns (simulation data).
 #' @param constants Named list (for sim) or data frame (for ensemble) of constants.
 #' @param names_df Data frame with variable metadata.
-#' @param type_sim Character, either "sim" or "ensemble".
+#' @param type_sim Character, either "sim", "ensemble", or "verify".
 #'
 #' @returns List with elements $df (updated data frame) and $names_df (updated metadata,
 #'   with non-function constants removed).
@@ -394,6 +418,11 @@ prep_constants <- function(df, constants, names_df, type_sim = "sim") {
     }
   } else if (type_sim == "ensemble") {
     # For ensemble, constants is a data frame with time already included
+    if (nrow(constants) > 0) {
+      df <- bind_rows_(df, constants)
+    }
+  } else if (type_sim == "verify") {
+    # For verify, constants is a data frame with time already included
     if (nrow(constants) > 0) {
       df <- bind_rows_(df, constants)
     }
@@ -476,6 +505,34 @@ add_trace_pair <- function(pl,
                            split = NULL,
                            visible_highlight = TRUE,
                            visible_nonhighlight = "legendonly") {
+  # Build an explicit variable->color mapping for variables actually present in
+  # this trace pair. This avoids Plotly domain warnings when factor levels or
+  # wrapped labels differ across traces.
+  vars_nonhighlight <- if (!is.null(df_nonhighlight) && nrow(df_nonhighlight) > 0) {
+    as.character(df_nonhighlight[["variable"]])
+  } else {
+    character(0)
+  }
+  vars_highlight <- if (!is.null(df_highlight) && nrow(df_highlight) > 0) {
+    as.character(df_highlight[["variable"]])
+  } else {
+    character(0)
+  }
+
+  vars_present <- unique(c(vars_nonhighlight, vars_highlight))
+  vars_present <- vars_present[!is.na(vars_present) & nzchar(vars_present)]
+
+  if (!is.null(colors) && length(vars_present) > 0) {
+    if (length(colors) < length(vars_present)) {
+      cli::cli_abort(c(
+        "x" = "Insufficient colors provided for traces.",
+        "i" = "Need {.val {length(vars_present)}} colors for plotted variables but got {.val {length(colors)}}."
+      ))
+    }
+    colors <- unname(colors[seq_along(vars_present)])
+    names(colors) <- vars_present
+  }
+
   # Add nonhighlight traces first (will be hidden behind highlight traces)
   if (!is.null(df_nonhighlight) && nrow(df_nonhighlight) > 0) {
     if (is.null(split)) {

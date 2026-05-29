@@ -30,7 +30,7 @@ test_that("ensemble() validates quantiles argument", {
 test_that("ensemble() validates logical arguments", {
   sfm <- make_ensemble_error_sfm()
   expect_error(ensemble(sfm, cross = "yes"), "must be.*TRUE.*FALSE")
-  expect_error(ensemble(sfm, return_sims = 1), "must be.*TRUE.*FALSE")
+  expect_error(ensemble(sfm, save_sims = 1), "must be.*TRUE.*FALSE")
   expect_error(ensemble(sfm, only_stocks = "all"), "must be.*TRUE.*FALSE")
 })
 
@@ -73,7 +73,7 @@ test_that("ensemble() rejects flows and auxiliaries in conditions", {
   sfm <- make_ensemble_error_sfm()
   expect_error(
     ensemble(sfm, conditions = list("Flow1" = c(1, 2))),
-    "Cannot vary flows or auxiliaries"
+    "Flows or auxiliaries cannot be varied"
   )
 })
 
@@ -104,7 +104,7 @@ test_that("ensemble() returns correct structure", {
   skip_if_julia_not_ready()
   sfm <- make_jl_ensemble_sfm()
 
-  sims <- silence(ensemble(sfm, n = 3, return_sims = TRUE))
+  sims <- silence(ensemble(sfm, n = 3, save_sims = TRUE))
 
   expected_fields <- c(
     "success", "df", "summary", "n", "n_total",
@@ -124,17 +124,17 @@ test_that("ensemble() handles models with no constants", {
   sfm <- make_basic_sfm() |>
     sim_settings(language = "jl", start = 0, stop = 10, dt = 0.1, save_at = 1)
 
-  sims <- silence(ensemble(sfm, n = 3, return_sims = TRUE, verbose = FALSE))
+  sims <- silence(ensemble(sfm, n = 3, save_sims = TRUE, verbose = FALSE))
 
   expect_true(sims[["success"]])
   expect_equal(nrow(sims[["constants"]][["df"]]), 0)
   expect_equal(nrow(sims[["constants"]][["summary"]]), 0)
   expect_equal(
     sort(names(sims[["constants"]][["df"]])),
-    c("i", "j", "value", "variable")
+    c("condition", "sim", "value", "variable")
   )
   expect_true(
-    all(c("j", "variable", "mean") %in%
+    all(c("condition", "variable", "mean") %in%
       names(sims[["constants"]][["summary"]]))
   )
 })
@@ -147,7 +147,7 @@ test_that("ensemble() of model with only stocks", {
     stock("Stock2", eqn = 50) |>
     sim_settings(language = "Julia", start = 0, stop = 10, dt = 0.1, save_at = 1)
 
-  sims <- silence(ensemble(sfm, n = 3, only_stocks = TRUE, return_sims = TRUE, verbose = FALSE))
+  sims <- silence(ensemble(sfm, n = 3, only_stocks = TRUE, save_sims = TRUE, verbose = FALSE))
   expect_true(sims[["success"]])
   expect_equal(
     sort(unique(sims[["summary"]][["variable"]])),
@@ -164,7 +164,7 @@ test_that("ensemble() respects only_stocks = TRUE", {
 
   sims <- silence(ensemble(sfm,
     n = 3,
-    only_stocks = TRUE, return_sims = FALSE
+    only_stocks = TRUE, save_sims = FALSE
   ))
   expect_true(sims[["success"]])
   expect_equal(
@@ -180,7 +180,7 @@ test_that("ensemble() returns all variables with only_stocks = FALSE", {
   df <- as.data.frame(sfm, properties = "eqn")
   n_all <- nrow(df[df[["type"]] %in% c("stock", "flow", "aux"), ])
 
-  sims <- silence(ensemble(sfm, n = 3, only_stocks = FALSE, return_sims = TRUE))
+  sims <- silence(ensemble(sfm, n = 3, only_stocks = FALSE, save_sims = TRUE))
   expect_true(sims[["success"]])
   expect_false(is.null(sims[["summary"]]))
   expect_false(is.null(sims[["df"]]))
@@ -196,7 +196,7 @@ test_that("ensemble() with Julia filters outputs to vars", {
   sfm <- make_jl_ensemble_sfm() |>
     sim_settings(vars = c("Food_intake", "Hunger"))
 
-  sims <- silence(ensemble(sfm, n = 3, return_sims = TRUE))
+  sims <- silence(ensemble(sfm, n = 3, save_sims = TRUE))
 
   expect_true(sims[["success"]])
   expect_equal(sort(unique(sims[["summary"]][["variable"]])), c("Food_intake", "Hunger"))
@@ -209,7 +209,7 @@ test_that("ensemble() with Julia vars overrides only_stocks", {
   sfm <- make_jl_ensemble_sfm() |>
     sim_settings(only_stocks = TRUE, vars = c("Satiety"))
 
-  sims <- silence(ensemble(sfm, n = 3, return_sims = TRUE))
+  sims <- silence(ensemble(sfm, n = 3, save_sims = TRUE))
 
   expect_true(sims[["success"]])
   expect_equal(unique(sims[["summary"]][["variable"]]), "Satiety")
@@ -233,14 +233,14 @@ test_that("ensemble() returns correct n properties", {
   nr_sims <- 3
   sfm <- make_jl_ensemble_sfm()
 
-  sims <- silence(ensemble(sfm, n = nr_sims, return_sims = TRUE))
+  sims <- silence(ensemble(sfm, n = nr_sims, save_sims = TRUE))
 
   expect_equal(sims[["n"]], nr_sims)
   expect_equal(sims[["n_total"]], nr_sims)
   expect_equal(sims[["n_conditions"]], 1)
-  expect_equal(sort(unique(sims[["df"]][["i"]])), 1:nr_sims)
-  expect_equal(sort(unique(sims[["df"]][["j"]])), 1)
-  expect_equal(sort(unique(sims[["summary"]][["j"]])), 1)
+  expect_equal(sort(unique(sims[["df"]][["sim"]])), 1:nr_sims)
+  expect_equal(sort(unique(sims[["df"]][["condition"]])), 1)
+  expect_equal(sort(unique(sims[["summary"]][["condition"]])), 1)
 })
 
 test_that("ensemble() returns constants and init summaries", {
@@ -249,7 +249,7 @@ test_that("ensemble() returns constants and init summaries", {
   nr_sims <- 3
   sfm <- make_jl_ensemble_sfm()
 
-  sims <- silence(ensemble(sfm, n = nr_sims, return_sims = TRUE))
+  sims <- silence(ensemble(sfm, n = nr_sims, save_sims = TRUE))
 
   expect_equal(
     sort(unique(sims[["constants"]][["summary"]][["variable"]])),
@@ -260,16 +260,16 @@ test_that("ensemble() returns constants and init summaries", {
     c("Compensatory_behaviour", "Food_intake", "Hunger")
   )
   expect_equal(
-    max(as.numeric(sims[["constants"]][["df"]][["i"]])),
+    max(as.numeric(sims[["constants"]][["df"]][["sim"]])),
     nr_sims
   )
   expect_equal(
-    max(as.numeric(sims[["init"]][["df"]][["i"]])),
+    max(as.numeric(sims[["init"]][["df"]][["sim"]])),
     nr_sims
   )
 })
 
-test_that("ensemble() only_stocks = FALSE returns full i coverage across variable classes", {
+test_that("ensemble() only_stocks = FALSE returns full sim coverage across variable classes", {
   skip_if_julia_not_ready()
 
   nr_sims <- 5
@@ -279,7 +279,7 @@ test_that("ensemble() only_stocks = FALSE returns full i coverage across variabl
     sfm,
     n = nr_sims,
     only_stocks = FALSE,
-    return_sims = TRUE
+    save_sims = TRUE
   ))
 
   expect_true(sims[["success"]])
@@ -292,23 +292,23 @@ test_that("ensemble() only_stocks = FALSE returns full i coverage across variabl
   stock_names <- stock_names[stock_names[["type"]] == "stock", "name", drop = TRUE]
   non_stock_names <- setdiff(unique(df[["variable"]]), stock_names)
 
-  expect_equal(sort(unique(df[["i"]])), seq_len(nr_sims))
-  expect_equal(sort(unique(constants_df[["i"]])), seq_len(nr_sims))
-  expect_equal(sort(unique(init_df[["i"]])), seq_len(nr_sims))
+  expect_equal(sort(unique(df[["sim"]])), seq_len(nr_sims))
+  expect_equal(sort(unique(constants_df[["sim"]])), seq_len(nr_sims))
+  expect_equal(sort(unique(init_df[["sim"]])), seq_len(nr_sims))
 
   for (nm in stock_names) {
-    i_vals <- sort(unique(df[df[["variable"]] == nm, "i", drop = TRUE]))
+    i_vals <- sort(unique(df[df[["variable"]] == nm, "sim", drop = TRUE]))
     expect_equal(i_vals, seq_len(nr_sims))
   }
 
   expect_true(length(non_stock_names) > 0)
   for (nm in non_stock_names) {
-    i_vals <- sort(unique(df[df[["variable"]] == nm, "i", drop = TRUE]))
+    i_vals <- sort(unique(df[df[["variable"]] == nm, "sim", drop = TRUE]))
     expect_equal(i_vals, seq_len(nr_sims))
   }
 })
 
-test_that("ensemble() only_stocks = TRUE keeps full i coverage for stocks constants and init", {
+test_that("ensemble() only_stocks = TRUE keeps full sim coverage for stocks constants and init", {
   skip_if_julia_not_ready()
 
   nr_sims <- 5
@@ -318,7 +318,7 @@ test_that("ensemble() only_stocks = TRUE keeps full i coverage for stocks consta
     sfm,
     n = nr_sims,
     only_stocks = TRUE,
-    return_sims = TRUE
+    save_sims = TRUE
   ))
 
   expect_true(sims[["success"]])
@@ -331,12 +331,12 @@ test_that("ensemble() only_stocks = TRUE keeps full i coverage for stocks consta
   stock_names <- stock_names[stock_names[["type"]] == "stock", "name", drop = TRUE]
 
   expect_equal(sort(unique(df[["variable"]])), sort(stock_names))
-  expect_equal(sort(unique(df[["i"]])), seq_len(nr_sims))
-  expect_equal(sort(unique(constants_df[["i"]])), seq_len(nr_sims))
-  expect_equal(sort(unique(init_df[["i"]])), seq_len(nr_sims))
+  expect_equal(sort(unique(df[["sim"]])), seq_len(nr_sims))
+  expect_equal(sort(unique(constants_df[["sim"]])), seq_len(nr_sims))
+  expect_equal(sort(unique(init_df[["sim"]])), seq_len(nr_sims))
 
   for (nm in stock_names) {
-    i_vals <- sort(unique(df[df[["variable"]] == nm, "i", drop = TRUE]))
+    i_vals <- sort(unique(df[df[["variable"]] == nm, "sim", drop = TRUE]))
     expect_equal(i_vals, seq_len(nr_sims))
   }
 })
@@ -378,13 +378,13 @@ test_that("ensemble() crossed design computes correct conditions", {
       "a1" = c(1.1, 1.2, 1.3),
       "a2" = c(1.2, 1.3, 1.4)
     ),
-    cross = TRUE, n = n, return_sims = FALSE
+    cross = TRUE, n = n, save_sims = FALSE
   ))
   expect_true(sims[["success"]])
   expect_equal(sims[["n"]], n)
   expect_equal(sims[["n_total"]], n * 9)
   expect_equal(sims[["n_conditions"]], 9)
-  expect_equal(sort(unique(sims[["summary"]][["j"]])), 1:9)
+  expect_equal(sort(unique(sims[["summary"]][["condition"]])), 1:9)
 })
 
 test_that("ensemble() non-crossed design pairs values", {
@@ -399,14 +399,14 @@ test_that("ensemble() non-crossed design pairs values", {
       "a1" = c(1.1, 1.2, 1.3),
       "a2" = c(1.2, 1.3, 1.4)
     ),
-    cross = FALSE, n = nr_sims, return_sims = TRUE
+    cross = FALSE, n = nr_sims, save_sims = TRUE
   ))
   expect_true(sims[["success"]])
   expect_equal(sims[["n"]], nr_sims)
   expect_equal(sims[["n_total"]], nr_sims * nr_cond)
-  expect_equal(sort(unique(sims[["df"]][["i"]])), 1:nr_sims)
-  expect_equal(sort(unique(sims[["df"]][["j"]])), 1:nr_cond)
-  expect_equal(sort(unique(sims[["summary"]][["j"]])), 1:nr_cond)
+  expect_equal(sort(unique(sims[["df"]][["sim"]])), 1:nr_sims)
+  expect_equal(sort(unique(sims[["df"]][["condition"]])), 1:nr_cond)
+  expect_equal(sort(unique(sims[["summary"]][["condition"]])), 1:nr_cond)
 })
 
 test_that("ensemble() non-crossed design conditions data frame", {
@@ -420,17 +420,17 @@ test_that("ensemble() non-crossed design conditions data frame", {
       "a2" = c(0.2, 0.3, 0.4),
       "a1" = c(1.3, 1.4, 1.5)
     ),
-    cross = FALSE, n = n, return_sims = TRUE
+    cross = FALSE, n = n, save_sims = TRUE
   ))
   expect_true(sims[["success"]])
 
   cond_df <- as.data.frame(sims[["conditions"]])
-  expect_equal(cond_df[["j"]], 1:3)
+  expect_equal(cond_df[["condition"]], 1:3)
   # Conditions are alphabetically sorted, so a1 comes before a2
   expect_equal(cond_df[["a1"]], c(1.3, 1.4, 1.5))
   expect_equal(cond_df[["a2"]], c(0.2, 0.3, 0.4))
-  expect_equal(unique(sims[["constants"]][["df"]][["i"]]), 1:n)
-  expect_equal(unique(sims[["constants"]][["df"]][["j"]]), 1:3)
+  expect_equal(unique(sims[["constants"]][["df"]][["sim"]]), 1:n)
+  expect_equal(unique(sims[["constants"]][["df"]][["condition"]]), 1:3)
 })
 
 test_that("ensemble() conditions parameters are alphabetically sorted", {
@@ -458,7 +458,7 @@ test_that("ensemble() conditions parameters are alphabetically sorted", {
     )
 
   sims <- silence(ensemble(sfm,
-    n = 3, return_sims = TRUE,
+    n = 3, save_sims = TRUE,
     conditions = list(
       "work_growth" = c(1.5),
       "necessary_sleep" = c(8)
@@ -490,7 +490,7 @@ test_that("ensemble() with mixed stock and constant in conditions", {
       "prey" = c(40, 50, 60),
       "delta" = seq(0.015, 0.03, by = 0.005)
     ),
-    cross = TRUE, n = nr_sims, return_sims = TRUE,
+    cross = TRUE, n = nr_sims, save_sims = TRUE,
     only_stocks = TRUE
   ))
   expect_true(sims[["success"]])
@@ -501,9 +501,9 @@ test_that("ensemble() with mixed stock and constant in conditions", {
   nr_cond <- 3 * 4
   expect_equal(sims[["n"]], nr_sims)
   expect_equal(sims[["n_total"]], nr_cond * nr_sims)
-  expect_equal(sort(unique(sims[["df"]][["i"]])), 1:nr_sims)
-  expect_equal(sort(unique(sims[["df"]][["j"]])), 1:nr_cond)
-  expect_equal(sort(unique(sims[["summary"]][["j"]])), 1:nr_cond)
+  expect_equal(sort(unique(sims[["df"]][["sim"]])), 1:nr_sims)
+  expect_equal(sort(unique(sims[["df"]][["condition"]])), 1:nr_cond)
+  expect_equal(sort(unique(sims[["summary"]][["condition"]])), 1:nr_cond)
 })
 
 
@@ -520,8 +520,8 @@ test_that("ensemble() is reproducible with seed", {
     ) |>
     update(c("predator", "prey"), eqn = "runif(1)")
 
-  sims1 <- silence(ensemble(sfm, n = 3, return_sims = TRUE))
-  sims2 <- silence(ensemble(sfm, n = 3, return_sims = TRUE))
+  sims1 <- silence(ensemble(sfm, n = 3, save_sims = TRUE))
+  sims2 <- silence(ensemble(sfm, n = 3, save_sims = TRUE))
 
   expect_equal(sims1[["df"]], sims2[["df"]])
   expect_equal(sims1[["summary"]], sims2[["summary"]])
@@ -546,8 +546,8 @@ test_that("ensemble() works with single time point", {
   expect_equal(length(unique(sims[["summary"]][["time"]])), 1)
   expect_silent(plot(sims))
 
-  # Also works with return_sims
-  sims <- silence(ensemble(sfm, n = 3, return_sims = TRUE))
+  # Also works with save_sims
+  sims <- silence(ensemble(sfm, n = 3, save_sims = TRUE))
   expect_true(sims[["success"]])
   expect_silent(plot(sims))
   expect_silent(plot(sims, which = "sims"))
@@ -593,126 +593,10 @@ test_that("ensemble() prints simulation count", {
         "a2" = c(1.2, 1.3, 1.4)
       ),
       cross = TRUE, n = 3, verbose = TRUE,
-      return_sims = TRUE
+      save_sims = TRUE
     ),
     "conditions"
   )
-})
-
-
-# plot.ensemble_sdbuildR() --------------------------------
-
-test_that("plot.ensemble_sdbuildR() renders summary plot", {
-  skip_if_julia_not_ready()
-
-  sfm <- make_jl_ensemble_sfm()
-
-  sims <- silence(ensemble(sfm, n = 3))
-
-  expect_no_error(expect_no_message(plot(sims)))
-  expect_no_error(plot(sims, j = 1))
-})
-
-test_that("plot.ensemble_sdbuildR() rejects invalid ...", {
-  skip_if_julia_not_ready()
-
-  sfm <- make_jl_ensemble_sfm()
-
-  sims <- silence(ensemble(sfm, n = 3))
-
-  expect_error(plot(sims, which = "NA"), "ust be.*summary.*sims")
-
-  expect_no_error(plot(sims, central_tendency = "median"))
-  expect_error(
-    plot(sims, central_tendency = "medians"),
-    "must be.*mean.*median.*FALSE"
-  )
-
-  # plot.ensemble_sdbuildR() validates j index with single condition
-  expect_error(
-    plot(sims, j = c(3, 6, 9)),
-    "only one condition"
-  )
-})
-
-
-test_that("plot.ensemble_sdbuildR() informs when i used with summary", {
-  skip_if_julia_not_ready()
-
-  sfm <- make_jl_ensemble_sfm()
-
-  sims <- silence(ensemble(sfm, n = 3, return_sims = TRUE))
-
-  expect_message(
-    plot(sims, i = 5),
-    "i.*argument is ignored"
-  )
-})
-
-
-test_that("plot.ensemble_sdbuildR() validates j index with multiple conditions", {
-  skip_if_julia_not_ready()
-
-  sfm <- make_jl_ensemble_sfm()
-
-  nr_cond <- 3
-  sims <- silence(ensemble(sfm,
-    conditions = list(
-      "a1" = c(1.1, 1.2, 1.3),
-      "a2" = c(1.2, 1.3, 1.4)
-    ),
-    cross = FALSE, n = 3, return_sims = TRUE
-  ))
-
-  expect_error(
-    plot(sims, j = nr_cond + 1),
-    "be integers between"
-  )
-})
-
-test_that("plot.ensemble_sdbuildR() requires return_sims for which = 'sims'", {
-  skip_if_julia_not_ready()
-
-  sfm <- make_jl_ensemble_sfm()
-
-  sims <- silence(ensemble(sfm, n = 3, return_sims = FALSE))
-
-  expect_error(
-    plot(sims, which = "sims"),
-    "Individual simulation data is required"
-  )
-})
-
-test_that("plot.ensemble_sdbuildR() renders sims plot", {
-  skip_if_julia_not_ready()
-
-  sfm <- make_jl_ensemble_sfm()
-
-  nr_sims <- 3
-  sims <- silence(ensemble(sfm, n = nr_sims, return_sims = TRUE))
-
-  expect_no_error(plot(sims, which = "sims", i = nr_sims - 1))
-  expect_no_error(plot(sims, which = "sims"))
-})
-
-test_that("plot.ensemble_sdbuildR() renders with specific j and i", {
-  skip_if_julia_not_ready()
-
-  sfm <- make_jl_ensemble_sfm()
-
-  sims <- silence(ensemble(sfm,
-    conditions = list(
-      "a1" = c(1.1, 1.2, 1.3),
-      "a2" = c(1.2, 1.3, 1.4)
-    ),
-    cross = TRUE, n = 3, return_sims = TRUE
-  ))
-
-  expect_no_error(expect_no_message(plot(sims)))
-  expect_no_error(plot(sims, j = c(3, 5, 8), nrows = 4))
-  expect_no_error(plot(sims, i = 1:3, j = 3:8, which = "summary"))
-  expect_no_error(expect_no_message(plot(sims, i = 1:2, which = "sims")))
-  expect_no_error(plot(sims, j = 1:3, which = "sims"))
 })
 
 
@@ -797,7 +681,7 @@ cli::test_that_cli(configs = "plain", "print() success with conditions lists cha
 
   sims <- silence(ensemble(sfm,
     n = 3,
-    return_sims = TRUE,
+    save_sims = TRUE,
     conditions = list(
       contact_rate = c(1.5, 2.5),
       infection_rate = c(1, 3)
@@ -871,32 +755,32 @@ test_that("as.data.frame() which = 'summary' returns summary df", {
 
 test_that("as.data.frame() which = 'sims' returns individual sims df", {
   skip_if_julia_not_ready()
-  sims <- silence(ensemble(make_jl_ensemble_sfm(), n = 3, return_sims = TRUE))
+  sims <- silence(ensemble(make_jl_ensemble_sfm(), n = 3, save_sims = TRUE))
   df <- as.data.frame(sims, which = "sims")
   expect_identical(df, sims[["df"]])
   expect_s3_class(df, "data.frame")
 })
 
-test_that("as.data.frame() which = 'sims' errors when return_sims = FALSE", {
+test_that("as.data.frame() which = 'sims' errors when save_sims = FALSE", {
   skip_if_julia_not_ready()
-  sims <- silence(ensemble(make_jl_ensemble_sfm(), n = 3, return_sims = FALSE))
-  expect_error(as.data.frame(sims, which = "sims"), "return_sims")
+  sims <- silence(ensemble(make_jl_ensemble_sfm(), n = 3, save_sims = FALSE))
+  expect_error(as.data.frame(sims, which = "sims"), "save_sims")
 })
 
 test_that("as.data.frame() summary has expected columns", {
   skip_if_julia_not_ready()
   sims <- silence(ensemble(make_jl_ensemble_sfm(), n = 3))
   df <- as.data.frame(sims)
-  expect_true(all(c("j", "variable", "time", "mean", "median") %in% names(df)))
+  expect_true(all(c("condition", "variable", "time", "mean", "median") %in% names(df)))
   q_cols <- grepl("^q", names(df))
   expect_gt(sum(q_cols), 0)
 })
 
 test_that("as.data.frame() individual sims df has expected columns", {
   skip_if_julia_not_ready()
-  sims <- silence(ensemble(make_jl_ensemble_sfm(), n = 3, return_sims = TRUE))
+  sims <- silence(ensemble(make_jl_ensemble_sfm(), n = 3, save_sims = TRUE))
   df <- as.data.frame(sims, which = "sims")
-  expect_true(all(c("i", "j", "variable", "time", "value") %in% names(df)))
+  expect_true(all(c("sim", "condition", "variable", "time", "value") %in% names(df)))
 })
 
 test_that("as.data.frame() direction = 'wide' widens summary", {
@@ -904,23 +788,23 @@ test_that("as.data.frame() direction = 'wide' widens summary", {
   sims <- silence(ensemble(make_jl_ensemble_sfm(), n = 3))
   df_long <- as.data.frame(sims, direction = "long")
   df_wide <- as.data.frame(sims, direction = "wide")
-  # Wide has fewer rows (one per j+time, not per j+time+variable)
+  # Wide has fewer rows (one per condition+time, not per condition+time+variable)
   expect_lt(nrow(df_wide), nrow(df_long))
   # 'variable' column should be absorbed into column names
   expect_false("variable" %in% names(df_wide))
-  # j and time remain as id columns
-  expect_true("j" %in% names(df_wide))
+  # condition and time remain as id columns
+  expect_true("condition" %in% names(df_wide))
   expect_true("time" %in% names(df_wide))
 })
 
 test_that("as.data.frame() direction = 'wide' widens individual sims", {
   skip_if_julia_not_ready()
-  sims <- silence(ensemble(make_jl_ensemble_sfm(), n = 3, return_sims = TRUE))
+  sims <- silence(ensemble(make_jl_ensemble_sfm(), n = 3, save_sims = TRUE))
   df_long <- as.data.frame(sims, which = "sims", direction = "long")
   df_wide <- as.data.frame(sims, which = "sims", direction = "wide")
   expect_lt(nrow(df_wide), nrow(df_long))
   expect_false("variable" %in% names(df_wide))
-  expect_true(all(c("i", "j", "time") %in% names(df_wide)))
+  expect_true(all(c("sim", "condition", "time") %in% names(df_wide)))
   # Variable names appear as columns (there are stocks in Crielaard2022)
   stock_names <- unique(df_long[["variable"]])
   expect_true(any(stock_names %in% names(df_wide)))
@@ -957,7 +841,7 @@ test_that("as.data.frame() preserves all conditions with multiple conditions", {
     n = 3
   ))
   df <- as.data.frame(sims)
-  expect_equal(sort(unique(df[["j"]])), seq_len(n_cond))
+  expect_equal(sort(unique(df[["condition"]])), seq_len(n_cond))
 })
 
 
@@ -983,7 +867,7 @@ test_that("head() and tail() return a data.frame with correct number of rows fro
 
 test_that("head() and tail() pass which = 'sims' through to individual sims", {
   skip_if_julia_not_ready()
-  sims <- silence(ensemble(make_jl_ensemble_sfm(), n = 3, return_sims = TRUE))
+  sims <- silence(ensemble(make_jl_ensemble_sfm(), n = 3, save_sims = TRUE))
   h <- head(sims, n = 3L, which = "sims")
   expect_equal(h, head(sims[["df"]], 3L))
 
@@ -1019,7 +903,7 @@ test_that("summary() result has expected columns", {
   skip_if_julia_not_ready()
   sims <- silence(ensemble(make_jl_ensemble_sfm(), n = 3))
   s <- summary(sims)
-  expect_true(all(c("j", "variable", "time", "mean", "median") %in% names(s)))
+  expect_true(all(c("condition", "variable", "time", "mean", "median") %in% names(s)))
   q_cols <- grep("^q", names(s), value = TRUE)
   expect_gt(length(q_cols), 0)
 })

@@ -2,19 +2,19 @@
 #'
 #' Run large-scale (i.e., ensemble) simulations of stock-and-flow models, varying initial
 #' conditions and/or constants specified in `conditions`.
-#' 
+#'
 #' It is strongly recommended to reduce the size of the simulation output by
-#' saving fewer values with `save_at` or `save_n` in [sim_settings()]. 
-#' 
+#' saving fewer values with `save_at` or `save_n` in [sim_settings()].
+#'
 #' By default, only summary statistics across simulations are returned.
-#' To return individual simulations, set `return_sims = TRUE` in [sim_settings()] or
-#' pass `return_sims = TRUE` via `...` in [ensemble()]. 
+#' To return individual simulations, set `save_sims = TRUE` in [sim_settings()] or
+#' pass `save_sims = TRUE` via `...` in [ensemble()].
 #' Note that returning individual simulations can consume a lot of memory for large ensembles.
-#' 
+#'
 #' For simulations in Julia, the ensemble can be run in parallel using multiple threads
 #' by setting `nthreads` in [use_julia()]. For simulations in R, use
 #' [future::plan()] to control parallel execution.
-#' 
+#'
 #' To create a reproducible ensemble simulation, set a seed using [sim_settings()].
 #' Currently, reproducibility for threaded simulations is not supported.
 #'
@@ -57,22 +57,22 @@
 #'    failed.}
 #'
 #'  \item{error_message}{If success is `FALSE`, contains the error message.}
-#'  \item{df}{data.frame with simulation results in long format, if return_sims
-#'    is `TRUE`. The iteration number is indicated by column "i". If conditions
-#'    was specified, the condition is indicated by column "j".}
+#'  \item{df}{data.frame with simulation results in long format, if save_sims
+#'    is `TRUE`. The iteration number is indicated by column "sim". If conditions
+#'    was specified, the condition is indicated by column "condition".}
 #'  \item{summary}{data.frame with summary statistics of the ensemble,
 #'    including quantiles specified in quantiles. If conditions was specified,
-#'    summary statistics are calculated for each condition (j) in the ensemble.}
-#'  \item{n}{Number of simulations run in the ensemble (per condition j if
+#'    summary statistics are calculated for each condition in the ensemble.}
+#'  \item{n}{Number of simulations run in the ensemble (per condition if
 #'    conditions is specified).}
 #'  \item{n_total}{Total number of simulations run in the ensemble (across all
 #'    conditions if conditions is specified).}
 #'  \item{n_conditions}{Total number of conditions.}
 #'  \item{conditions}{data.frame with the conditions used in the ensemble, if
 #'    conditions was specified.}
-#'  \item{init}{List with df (if return_sims = TRUE) and summary, containing
+#'  \item{init}{List with df (if save_sims = TRUE) and summary, containing
 #'    data.frame with the initial values of the stocks used in the ensemble.}
-#'  \item{constants}{List with df (if return_sims = TRUE) and summary,
+#'  \item{constants}{List with df (if save_sims = TRUE) and summary,
 #'    containing data.frame with the constant parameters used in the ensemble.}
 #'  \item{script}{Script used for the ensemble simulation.}
 #'  \item{duration}{Duration of the simulation in seconds.}
@@ -101,13 +101,13 @@
 #' sims <- ensemble(sfm, n = 10)
 #' plot(sims)
 #'
-#' # To plot individual trajectories, rerun the ensemble with return_sims = TRUE.
+#' # To plot individual trajectories, rerun the ensemble with save_sims = TRUE.
 #' # Note that this can consume a lot of memory for large simulations.
-#' sims <- ensemble(sfm, n = 10, return_sims = TRUE)
+#' sims <- ensemble(sfm, n = 10, save_sims = TRUE)
 #' plot(sims, which = "sims")
 #'
 #' # Specify which trajectories to plot
-#' plot(sims, which = "sims", i = 1)
+#' plot(sims, which = "sims", sim = 1)
 #'
 #' # Plot the median with lighter individual trajectories
 #' plot(sims, central_tendency = "median", which = "sims", alpha = 0.1)
@@ -133,7 +133,7 @@
 #'
 #' # By default, a maximum of nine conditions is plotted.
 #' # Plot specific conditions:
-#' plot(sims, j = c(1, 3), nrows = 1)
+#' plot(sims, condition = c(1, 3), nrows = 1)
 #'
 #' # Generate a non-crossed design, where the length of each conditions vector
 #' # needs to be equal:
@@ -169,8 +169,8 @@ ensemble <- function(object,
   only_stocks <- object[["sim_settings"]][["only_stocks"]]
   vars <- object[["sim_settings"]][["vars"]]
 
-  # Persistent meta-setting: read return_sims from sim_settings AFTER applying varargs
-  return_sims <- isTRUE(object[["sim_settings"]][["return_sims"]])
+  # Persistent meta-setting: read save_sims from sim_settings AFTER applying varargs
+  save_sims <- isTRUE(object[["sim_settings"]][["save_sims"]])
 
   if (!is.null(vars)) {
     vars <- validate_sim_vars(object, vars)
@@ -271,9 +271,8 @@ ensemble <- function(object,
     if (any(!idx)) {
       missing_names <- names_conditions[!idx]
       cli::cli_abort(c(
-        "Unknown parameters in {.arg conditions}.",
-        "x" = "The following parameters do not exist in the model: {paste0('{.code ', missing_names, '}', collapse = ', ')}.",
-        "i" = "Check spelling and ensure parameters are defined in the model.",
+        "x" = "Unknown parameters in {.arg conditions}.",
+        "i" = "The following parameters do not exist in the model: {paste0('{.code ', missing_names, '}', collapse = ', ')}.",
         ">" = "Available variables to vary: {paste0(allowed_names, collapse = ', ')}"
       ))
     }
@@ -283,8 +282,8 @@ ensemble <- function(object,
     if (any(!idx)) {
       invalid_names <- names_conditions[!idx]
       cli::cli_abort(c(
-        "Cannot vary flows or auxiliaries, only stocks and constants.",
-        "!" = "Cannot vary: {paste0('{.code ', invalid_names, '}', collapse = ', ')}.",
+        "x" = "Flows or auxiliaries cannot be varied, only stocks and constants.",
+        "i" = "Cannot vary: {paste0('{.code ', invalid_names, '}', collapse = ', ')}.",
         ">" = "Available variables to vary: {paste0(allowed_names, collapse = ', ')}"
       ))
     }
@@ -294,8 +293,8 @@ ensemble <- function(object,
     if (!cross) {
       if (length(unique(conditions_lengths)) != 1) {
         cli::cli_abort(c(
-          "Mismatched conditions lengths with {.arg cross = FALSE}.",
-          "x" = "When {.arg cross = FALSE}, all conditions vectors must have equal length.",
+          "x" = "Mismatched conditions lengths with {.arg cross = FALSE}.",
+          "i" = "When {.arg cross = FALSE}, all conditions vectors must have equal length.",
           "i" = "Found lengths: {paste0(unique(conditions_lengths), collapse = ', ')} for parameters {paste0(names(conditions), collapse = ', ')}.",
           ">" = "Either use {.code cross = TRUE} or equalize all conditions vectors."
         ))
@@ -318,13 +317,13 @@ ensemble <- function(object,
     sim_word <- ifelse(total_sims == 1, "simulation", "simulations")
     if (is.null(conditions)) {
       msg <- c(
-        "Starting ensemble simulation with {.val {total_sims}} {sim_word}."
+        "Starting ensemble simulation in {.val {stringr::str_to_title(language)}} with {.val {total_sims}} {sim_word}."
       )
     } else {
       cond_word <- ifelse(n_conditions == 1, "condition", "conditions")
       sim_per_word <- ifelse(n == 1, "simulation", "simulations")
       msg <- c(
-        "Starting ensemble simulation with {.val {total_sims}} {sim_word} in total.",
+        "Starting ensemble simulation in {.val {stringr::str_to_title(language)}} with {.val {total_sims}} {sim_word} in total.",
         "i" = "{.val {n_conditions}} {cond_word} x {.val {n}} {sim_per_word} per condition."
       )
     }
@@ -334,14 +333,14 @@ ensemble <- function(object,
   # Dispatch to language-specific backend
   if (language == "julia") {
     return(ensemble_julia(
-      object = object, n = n, return_sims = return_sims,
+      object = object, n = n, save_sims = save_sims,
       conditions = conditions, cross = cross, quantiles = quantiles,
       only_stocks = only_stocks, vars = vars, verbose = verbose,
       n_conditions = n_conditions, total_sims = total_sims
     ))
   } else if (language == "r") {
     return(ensemble_r(
-      object = object, n = n, return_sims = return_sims,
+      object = object, n = n, save_sims = save_sims,
       conditions = conditions, cross = cross, quantiles = quantiles,
       only_stocks = only_stocks, vars = vars, verbose = verbose,
       n_conditions = n_conditions, total_sims = total_sims
@@ -431,7 +430,7 @@ print.ensemble_sdbuildR <- function(x, ...) {
     cli::cli_alert_success("Completed in {round(as.numeric(x[['duration']]), 4)} seconds")
 
     if (!is.null(x[["conditions"]])) {
-      changed_pars <- setdiff(colnames(x[["conditions"]]), "j")
+      changed_pars <- setdiff(colnames(x[["conditions"]]), "condition")
       if (length(changed_pars) > 0) {
         cli::cli_inform(c(
           "i" = "Parameters changed across conditions: {paste0(changed_pars, collapse = ', ')}"
@@ -469,13 +468,15 @@ print.ensemble_sdbuildR <- function(x, ...) {
 #' @export
 #' @concept ensemble
 #' @method as.data.frame ensemble_sdbuildR
-as.data.frame.ensemble_sdbuildR <- function(x, row.names = NULL,
-optional = FALSE,
-                                            which = c("summary", "sims")[1],
-                                            direction = "long",
-                                            i = NULL,
-                                            j = NULL,
-                                            ...) {
+as.data.frame.ensemble_sdbuildR <- function(
+  x, row.names = NULL,
+  optional = FALSE,
+  which = c("summary", "sims")[1],
+  direction = "long",
+  sim = NULL,
+  condition = NULL,
+  ...
+) {
   check_ensemble_sdbuildR(x)
 
   which <- .clean_which(which)
@@ -488,56 +489,56 @@ optional = FALSE,
     ))
   }
 
-  # Validate j
-  if (!is.null(j)) {
-    .check_j_index(j, x[["n_conditions"]])
+  # Validate condition
+  if (!is.null(condition)) {
+    .check_condition_index(condition, x[["n_conditions"]])
   }
 
   if (which == "sims") {
     if (is.null(x[["df"]])) {
       cli::cli_abort(c(
         "No individual simulation data available.",
-        "!" = "Re-run {.fn ensemble} with {.code return_sims = TRUE}."
+        "!" = "Re-run {.fn ensemble} with {.code save_sims = TRUE}."
       ))
     }
     df <- x[["df"]]
 
-    # Validate and apply i filter
-    if (!is.null(i)) {
-      .check_i_index(i, x[["n"]])
-      df <- df[df[["i"]] %in% i, , drop = FALSE]
+    # Validate and apply sim filter
+    if (!is.null(sim)) {
+      .check_sim_index(sim, x[["n"]])
+      df <- df[df[["sim"]] %in% sim, , drop = FALSE]
     }
 
-    # Apply j filter
-    if (!is.null(j)) {
-      df <- df[df[["j"]] %in% j, , drop = FALSE]
+    # Apply condition filter
+    if (!is.null(condition)) {
+      df <- df[df[["condition"]] %in% condition, , drop = FALSE]
     }
 
     if (direction == "wide") {
       df <- stats::reshape(df,
-        timevar = "variable", idvar = c("j", "i", "time"),
+        timevar = "variable", idvar = c("condition", "sim", "time"),
         direction = "wide"
       )
       names(df) <- sub("^value\\.", "", names(df))
       rownames(df) <- NULL
     }
   } else if (which == "summary") {
-    if (!is.null(i)) {
+    if (!is.null(sim)) {
       cli::cli_inform(c(
-        "i" = "The {.arg i} argument is ignored for {.code which = 'summary'}.",
+        "sim" = "The {.arg sim} argument is ignored for {.code which = 'summary'}.",
         ">" = "Set {.code which = 'sims'} to filter by individual trajectory."
       ))
     }
     df <- x[["summary"]]
 
-    # Apply j filter
-    if (!is.null(j)) {
-      df <- df[df[["j"]] %in% j, , drop = FALSE]
+    # Apply condition filter
+    if (!is.null(condition)) {
+      df <- df[df[["condition"]] %in% condition, , drop = FALSE]
     }
 
     if (direction == "wide") {
       df <- stats::reshape(df,
-        timevar = "variable", idvar = c("j", "time"),
+        timevar = "variable", idvar = c("condition", "time"),
         direction = "wide"
       )
       rownames(df) <- NULL
@@ -647,7 +648,7 @@ validate_ensemble_sdbuildR <- function(x) {
 
   if (x[["success"]]) {
     # Validate summary structure
-    expected_summary_cols <- c("j", "variable", "time", "mean", "median")
+    expected_summary_cols <- c("condition", "variable", "time", "mean", "median")
     missing_summary_cols <- setdiff(expected_summary_cols, names(x[["summary"]]))
     if (length(missing_summary_cols) > 0) {
       cli::cli_warn(c(
@@ -666,7 +667,7 @@ validate_ensemble_sdbuildR <- function(x) {
 
     # Validate individual sims df structure (if present)
     if (!is.null(x[["df"]])) {
-      expected_df_cols <- c("i", "j", "variable", "time", "value")
+      expected_df_cols <- c("sim", "condition", "variable", "time", "value")
       missing_df_cols <- setdiff(expected_df_cols, names(x[["df"]]))
       if (length(missing_df_cols) > 0) {
         cli::cli_warn(c(

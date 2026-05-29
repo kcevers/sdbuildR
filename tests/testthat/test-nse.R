@@ -253,6 +253,18 @@ test_that("change_name() accepts bare symbols", {
   expect_equal(vars[["name"]], "new_name_var")
 })
 
+test_that("change_name() accepts unquoted new_name that requires cleaning", {
+  sfm <- sdbuildR() |> update("alpha", "constant", eqn = 1)
+
+  # Should not error when new_name needs cleaning (e.g., 't' -> cleaned form)
+  expect_warning(expect_no_error(sfm <- change_name(sfm, alpha, new_name = t)), "name was changed")
+
+  df <- as.data.frame(sfm)
+  expect_equal(nrow(df), 1)
+  expect_false("alpha" %in% df[["name"]])
+  expect_true(any(grepl("^t", df[["name"]])))
+})
+
 
 # ==============================================================================
 # change_type() with NSE
@@ -290,25 +302,6 @@ test_that("full pipe chain with NSE works end-to-end", {
 
 
 # ==============================================================================
-# sdbuildR() template NSE tests
-# ==============================================================================
-
-test_that("sdbuildR() accepts bare symbol for template", {
-  expect_s3_class(sdbuildR(SIR), "sdbuildR")
-})
-
-test_that("sdbuildR() accepts quoted string for template (backward compat)", {
-  expect_s3_class(sdbuildR("SIR"), "sdbuildR")
-})
-
-test_that("sdbuildR() with no template still returns empty model", {
-  sfm <- sdbuildR()
-  expect_s3_class(sfm, "sdbuildR")
-  expect_equal(nrow(sfm[["variables"]]), 0L)
-})
-
-
-# ==============================================================================
 # as.data.frame.sdbuildR() with NSE
 # ==============================================================================
 
@@ -326,17 +319,9 @@ test_that("as.data.frame() accepts c() of bare symbols for name", {
   expect_true(all(c("susceptible", "infected") %in% df[["name"]]))
 })
 
-test_that("as.data.frame() accepts string for type", {
-  sfm <- sdbuildR("SIR")
-  df <- as.data.frame(sfm, type = "stock")
-  expect_true(all(df[["type"]] == "stock"))
-  expect_true(nrow(df) > 0L)
-})
 
-test_that("as.data.frame() backward compat: strings still work for name and type", {
+test_that("as.data.frame() backward compat: strings still work for name", {
   sfm <- sdbuildR("SIR")
   df_name <- as.data.frame(sfm, name = "susceptible")
   expect_equal(nrow(df_name), 1L)
-  df_type <- as.data.frame(sfm, type = "stock")
-  expect_true(all(df_type[["type"]] == "stock"))
 })

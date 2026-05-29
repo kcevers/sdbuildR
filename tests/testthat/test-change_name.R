@@ -101,3 +101,32 @@ test_that("change_name() errors when model object passed as name", {
   sfm <- sdbuildR() |> update("A", type = "constant")
   expect_error(change_name(sfm, sfm, new_name = "B"), "passed where a variable name")
 })
+
+test_that("change_name() errors on missing source variable (symbol and string)", {
+  sfm <- sdbuildR()
+
+  # Bare symbol missing
+  expect_error(
+    change_name(sfm, recovery_rate, new_name = t),
+    regexp = "not found in model"
+  )
+
+  # String name missing
+  expect_error(
+    change_name(sfm, "no_such_var", new_name = "t"),
+    regexp = "not found in model"
+  )
+})
+
+test_that("change_name() errors when one of multiple names is missing and leaves model unchanged", {
+  sfm <- sdbuildR() |> update("S", type = "stock")
+
+  expect_error(
+    sfm <- change_name(sfm, c("S", "missing_var"), new_name = c("Stock", "M")),
+    regexp = "not found in model"
+  )
+
+  # Original model should be unchanged
+  vars <- as.data.frame(sfm)
+  expect_true("S" %in% vars[["name"]])
+})

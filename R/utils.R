@@ -3,13 +3,28 @@
   which <- trimws(tolower(which))
   switch(which,
     sims = ,
-    sim  = "sims",
+    sim = "sims",
     summary = ,
-    summ    = ,
-    sum     = "summary",
+    summ = ,
+    sum = "summary",
     cli::cli_abort(c(
       "Invalid {.arg which} value.",
       "x" = "Must be {.code 'summary'} or {.code 'sims'}, not {.val {which}}."
+    ))
+  )
+}
+
+#' @noRd
+.clean_which_verify <- function(which) {
+  which <- trimws(tolower(which))
+  switch(which,
+    tests = ,
+    test = "tests",
+    sims = ,
+    sim = "sims",
+    cli::cli_abort(c(
+      "Invalid {.arg which} value.",
+      "x" = "Must be {.code 'tests'} or {.code 'sims'}, not {.val {which}}."
     ))
   )
 }
@@ -364,7 +379,6 @@ ensure_length <- function(arg, target, arg_name = NULL, target_name = NULL) {
       "x" = "Invalid length of {.arg {arg_name}}.",
       "i" = "Received length {.val {length(arg)}} for {.arg {arg_name}} and length {.val {length(target)}} for {.arg {target_name}}.",
       ">" = "Length must be either 1 or equal to the length of {.arg {target_name}}."
-
     ))
   } else if (length(arg) < length(target)) {
     arg <- rep(arg, length.out = length(target)) # Repeat to match the target length
@@ -470,10 +484,10 @@ clean_status <- function(status) {
 
   s <- trimws(tolower(status))
 
-  s[s == "passed"]                    <- "pass"
-  s[s == "failed"]                    <- "fail"
-  s[s == "errors" | s == "errored"]   <- "error"
-  s[s == "skipped"]                   <- "skip"
+  s[s == "passed"] <- "pass"
+  s[s == "failed"] <- "fail"
+  s[s == "errors" | s == "errored"] <- "error"
+  s[s == "skipped"] <- "skip"
 
   canonical <- c("pass", "fail", "error", "skip")
   bad <- s[!s %in% canonical]
@@ -485,6 +499,38 @@ clean_status <- function(status) {
   }
   s
 }
+
+#' Clean a vars argument
+#'
+#' Trims whitespace, removes blank strings, and deduplicates a character vector
+#' of variable names. Does not validate names against any model.
+#'
+#' @param vars Character vector of variable names supplied by the user.
+#' @returns Cleaned character vector.
+#' @noRd
+clean_vars <- function(vars) {
+  if (!is.character(vars) || length(vars) == 0L) {
+    cli::cli_abort(c(
+      "x" = "Invalid {.arg vars} argument.",
+      "i" = "Must be a non-empty {.cls character} vector."
+    ))
+  }
+
+  vars <- trimws(vars)
+  vars <- vars[nzchar(vars)]
+  vars <- unique(vars)
+
+  if (length(vars) == 0L) {
+    cli::cli_abort(c(
+      "x" = "Invalid {.arg vars} argument.",
+      "i" = "Cannot be empty after trimming whitespace.",
+      ">" = "Provide one or more variable names."
+    ))
+  }
+
+  vars
+}
+
 
 #' Clean variable name(s)
 #'
@@ -503,7 +549,6 @@ clean_status <- function(status) {
 #' clean_name("predator", as.data.frame(sfm)[["name"]])
 #'
 clean_name <- function(new, protected = NULL) {
-
   # Make syntactically valid and unique names out of character vectors; Insight Maker allows names to be double, so make unique
   protected_names_complete <- c(protected_names, as.character(stats::na.omit(protected)))
   new_names <- make.names(c(protected_names_complete, trimws(new)), unique = TRUE)
@@ -585,24 +630,7 @@ validate_sim_vars <- function(object, vars) {
     return(NULL)
   }
 
-  if (!is.character(vars)) {
-    cli::cli_abort(c(
-      "x"= "Invalid {.arg vars} argument.",
-      "i" = "The {.arg vars} argument must be a {.cls character} vector."
-    ))
-  }
-
-  vars <- trimws(vars)
-  vars <- vars[nzchar(vars)]
-  vars <- unique(vars)
-
-  if (length(vars) == 0) {
-    cli::cli_abort(c(
-      "x" = "Invalid {.arg vars} argument.",
-      "i" = "The {.arg vars} argument cannot be empty.",
-      ">" = "Provide one or more variable names, e.g., {.code vars = c('S', 'I')}"
-    ))
-  }
+  vars <- clean_vars(vars)
 
   # Check that all vars are in model variables
   model_vars <- get_model_var(object)
@@ -746,7 +774,7 @@ sort_args <- function(arg, func_name, default_arg = NULL, var_names = NULL) {
       bad_args <- names_arg[idx]
       allowed <- names(default_arg)
       cli::cli_abort(c(
-        "x"= "{cli::qty(length(bad_args))}Invalid argument{?s} for {.fn {func_name}}.",
+        "x" = "{cli::qty(length(bad_args))}Invalid argument{?s} for {.fn {func_name}}.",
         "i" = "{.code {bad_args}} {?is/are} not allowed.",
         ">" = "Allowed arguments: {.code {allowed}}."
       ))
@@ -1502,32 +1530,32 @@ fmt <- function(template, replacements, fixed = TRUE) {
 # INDEX VALIDATION HELPERS (shared by verify and ensemble methods)
 # ==============================================================================
 
-#' Validate j (condition) indices
-#' @noRd
-.check_j_index <- function(j, n_conditions) {
-  if (length(j) == 0) {
+ #' Validate condition indices
+ #' @noRd
+.check_condition_index <- function(condition, n_conditions) {
+  if (length(condition) == 0) {
     cli::cli_abort(c(
-      "x" = "Empty {.arg j} vector.",
+      "x" = "Empty {.arg condition} vector.",
       ">" = "Provide at least one condition index."
     ))
   }
-  if (!is.numeric(j)) {
+  if (!is.numeric(condition)) {
     cli::cli_abort(c(
-      "x" = "Invalid {.arg j} type.",
-      "i" = "Got: {.cls {typeof(j)}}.",
-      ">" = "The {.arg j} argument must be {.cls numeric}."
+      "x" = "Invalid {.arg condition} type.",
+      "i" = "Got: {.cls {typeof(condition)}}.",
+      ">" = "The {.arg condition} argument must be {.cls numeric}."
     ))
   }
-  if (any(j < 1 | j > n_conditions)) {
+  if (any(condition < 1 | condition > n_conditions)) {
     if (n_conditions == 1L) {
       cli::cli_abort(c(
-        "x" = "Invalid {.arg j} index.",
+        "x" = "Invalid {.arg condition} index.",
         "i" = "There is only one condition.",
-        ">" = "Set {.code j = 1}."
+        ">" = "Set {.code condition = 1}."
       ))
     } else {
       cli::cli_abort(c(
-        "x" = "Invalid {.arg j} indices.",
+        "x" = "Invalid {.arg condition} indices.",
         ">" = "Must be integers between {.val {1}} and {.val {as.numeric(n_conditions)}}."
       ))
     }
@@ -1536,32 +1564,32 @@ fmt <- function(template, replacements, fixed = TRUE) {
 }
 
 
-#' Validate i (trajectory) indices
-#' @noRd
-.check_i_index <- function(i, n) {
-  if (length(i) == 0) {
+ #' Validate simulation indices
+ #' @noRd
+.check_sim_index <- function(sim, n) {
+  if (length(sim) == 0) {
     cli::cli_abort(c(
-      "x" = "Empty {.arg i} vector.",
+      "x" = "Empty {.arg sim} vector.",
       ">" = "Provide at least one simulation index."
     ))
   }
-  if (!is.numeric(i)) {
+  if (!is.numeric(sim)) {
     cli::cli_abort(c(
-      "x"= "Invalid {.arg i} type.",
-      "i" = "Got: {.cls {typeof(i)}}.",
-      ">" = "The {.arg i} argument must be {.cls numeric}."
+      "x" = "Invalid {.arg sim} type.",
+      "i" = "Got: {.cls {typeof(sim)}}.",
+      ">" = "The {.arg sim} argument must be {.cls numeric}."
     ))
   }
-  if (any(i < 1 | i > n)) {
+  if (any(sim < 1 | sim > n)) {
     if (n == 1L) {
       cli::cli_abort(c(
-        "x" = "Invalid {.arg i} index.",
+        "x" = "Invalid {.arg sim} index.",
         "i" = "There is only one simulation.",
-        ">" = "Set {.code i = 1}."
+        ">" = "Set {.code sim = 1}."
       ))
     } else {
       cli::cli_abort(c(
-        "x" = "Invalid {.arg i} indices.",
+        "x" = "Invalid {.arg sim} indices.",
         ">" = "Must be integers between {.val {1}} and {.val {as.numeric(n)}}."
       ))
     }
@@ -1571,30 +1599,30 @@ fmt <- function(template, replacements, fixed = TRUE) {
 
 
 #' @noRd
-.check_nr_index <- function(nr, n_tests) {
-  if (length(nr) == 0) {
+.check_test_index <- function(test, n_tests) {
+  if (length(test) == 0) {
     cli::cli_abort(c(
-      "x" = "Empty {.arg nr} vector.",
+      "x" = "Empty {.arg test} vector.",
       ">" = "Provide at least one test number."
     ))
   }
-  if (!is.numeric(nr)) {
+  if (!is.numeric(test)) {
     cli::cli_abort(c(
-      "x" = "Invalid {.arg nr} type.",
-      "i" = "Got: {.cls {typeof(nr)}}.",
-      ">" = "The {.arg nr} argument must be {.cls numeric}."
+      "x" = "Invalid {.arg test} type.",
+      "i" = "Got: {.cls {typeof(test)}}.",
+      ">" = "The {.arg test} argument must be {.cls numeric}."
     ))
   }
-  if (any(nr < 1 | nr > n_tests)) {
+  if (any(test < 1 | test > n_tests)) {
     if (n_tests == 1L) {
       cli::cli_abort(c(
-        "x" = "Invalid {.arg nr} index.",
+        "x" = "Invalid {.arg test} index.",
         "i" = "There is only one test.",
-        ">" = "Set {.code nr = 1}."
+        ">" = "Set {.code test = 1}."
       ))
     } else {
       cli::cli_abort(c(
-        "x" = "Invalid {.arg nr} indices.",
+        "x" = "Invalid {.arg test} indices.",
         ">" = "Must be integers between {.val {1}} and {.val {as.numeric(n_tests)}}."
       ))
     }

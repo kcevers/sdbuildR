@@ -4,14 +4,14 @@
 \alias{unit_test}
 \title{Add or modify unit tests}
 \usage{
-unit_test(object, nr, expr, label, conditions = list(), active = TRUE)
+unit_test(object, test, expr, label, conditions = list(), active = TRUE)
 }
 \arguments{
 \item{object}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
 
-\item{nr}{Integer number of the test to modify. Must be a positive integer
+\item{test}{Integer number of the test to modify. Must be a positive integer
 (a warning is issued and the value rounded when a non-integer is
-supplied). When \code{nr} exceeds the current number of tests a warning is
+supplied). When \code{test} exceeds the current number of tests a warning is
 issued and a new test is appended instead. Can be omitted when adding a
 new test.}
 
@@ -43,13 +43,9 @@ evaluated with \code{\link[=verify]{verify()}}. All unit tests can be displayed 
 \code{unit_tests()}.
 }
 \details{
-The \code{expr} argument accepts either a plain logical expression or a
-\code{testthat} expectation:
+The \code{expr} argument accepts a plain logical expression:
 \itemize{
-\item \strong{Logical}: \code{all(S >= 0)}, \code{cor(D, C) < -.5} — wrapped in
-\code{expect_true()} internally.
-\item \strong{testthat expectation}: \code{expect_lt(max(D), 100)}, \code{expect_gt(tail(R, 1), 0)}
-— evaluated as-is for richer failure messages.
+\item \strong{Logical}: \code{all(S >= 0)}, \code{cor(D, C) < -.5}.
 }
 
 When \code{label} is omitted, a human-readable label is generated automatically
@@ -59,11 +55,11 @@ by parsing the expression (e.g., \code{all(S >= 0)} →
 \section{Adding vs. modifying}{
 
 \itemize{
-\item \strong{Add} a new test: omit \code{nr} (and provide a \code{label} that does not match
+\item \strong{Add} a new test: omit \code{test} (and provide a \code{label} that does not match
 any existing test, or omit \code{label} to auto-generate one).
-\item \strong{Modify} an existing test by number: supply \code{nr} (integer).
+\item \strong{Modify} an existing test by number: supply \code{test} (integer).
 \item \strong{Modify} an existing test by label: supply a \code{label} that matches an
-existing test (without specifying \code{nr}).
+existing test (without specifying \code{test}).
 }
 
 When modifying, only the arguments you explicitly supply are changed; all
@@ -102,8 +98,8 @@ verify(sfm)
 # View all tests
 unit_tests(sfm)
 
-# Deactivate test nr. 1
-sfm <- unit_test(sfm, nr = 1, active = FALSE)
+# Deactivate test test 1
+sfm <- unit_test(sfm, test = 1, active = FALSE)
 verify(sfm)
 
 # Modify test by label, e.g., to change the expression
