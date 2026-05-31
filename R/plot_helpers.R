@@ -7,6 +7,7 @@
 #' @param vars Character vector of variable names to plot, or NULL.
 #' @param palette Character, color palette name.
 #' @param colors Character vector of colors, or NULL.
+#' @param alpha Numeric, transparency.
 #' @param font_family Character, font family name.
 #' @param font_size Numeric, font size in points.
 #' @param wrap_width Integer, text wrap width for labels.
@@ -19,6 +20,7 @@ validate_plot_params <- function(showlegend = NULL,
                                  vars = NULL,
                                  palette = NULL,
                                  colors = NULL,
+                                 alpha = NULL,
                                  font_family = NULL,
                                  font_size = NULL,
                                  wrap_width = NULL,
@@ -61,6 +63,22 @@ validate_plot_params <- function(showlegend = NULL,
       "x" = "Invalid {.arg colors} argument.",
       "i" = "The {.arg colors} argument must be {.cls character}.",
       ">" = "Provide a character vector of valid color names or hex codes."
+    ))
+  }
+
+  if (!is.null(alpha) && !is.numeric(alpha)) {
+    cli::cli_abort(c(
+      "x" = "Invalid {.arg alpha} argument.",
+      "i" = "The {.arg alpha} argument must be {.cls numeric}.",
+      ">" = "Provide a numeric value between 0 and 1."
+    ))
+  }
+
+  if (!is.null(alpha) && (alpha < 0 | alpha > 1)) {
+    cli::cli_abort(c(
+      "x" = "Invalid {.arg alpha} argument.",
+      "i" = "The {.arg alpha} argument must be between 0 and 1.",
+      ">" = "Provide a numeric value between 0 and 1."
     ))
   }
 
@@ -390,6 +408,10 @@ filter_variables <- function(vars, names_df, df) {
 #' @noRd
 #'
 prep_constants <- function(df, constants, names_df, type_sim = "sim") {
+  
+  # Find time vector from first variable
+  times <- df[df[["variable"]] == df[["variable"]][1], "time"]
+
   if (type_sim == "sim") {
     # Ensure functions are not added
     idx_func <- vapply(constants, is.function, logical(1), USE.NAMES = FALSE)
@@ -402,8 +424,6 @@ prep_constants <- function(df, constants, names_df, type_sim = "sim") {
 
     # Duplicate long format for each constant
     if (length(constants) > 0) {
-      # Find time vector from first variable
-      times <- df[df[["variable"]] == df[["variable"]][1], "time"]
       temp <- lapply(names(constants), function(y) {
         data.frame(
           time = times,
@@ -416,19 +436,23 @@ prep_constants <- function(df, constants, names_df, type_sim = "sim") {
       df <- bind_rows_(df, temp)
       rm(temp)
     }
-  } else if (type_sim == "ensemble") {
-    # For ensemble, constants is a data frame with time already included
+  } else if (type_sim %in% c("ensemble", "verify")) {
+    # Constants is a data frame
     if (nrow(constants) > 0) {
-      df <- bind_rows_(df, constants)
-    }
-  } else if (type_sim == "verify") {
-    # For verify, constants is a data frame with time already included
-    if (nrow(constants) > 0) {
-      df <- bind_rows_(df, constants)
-    }
-  }
+      # df <- bind_rows_(df, constants)
+      constant_names <- constants[["variable"]]
+      n_times <- length(times)
 
-  return(list(df = df, names_df = names_df))
+      constants_repeated <- constants[rep(seq_len(nrow(constants)), times = n_times), ]
+      row.names(constants_repeated) <- NULL
+      rep_times <- rep(times, each = length(constant_names))
+
+      df <- bind_rows_(df, cbind(data.frame(time = rep_times), constants_repeated))
+
+    }
+  } 
+
+  list(df = df, names_df = names_df)
 }
 
 

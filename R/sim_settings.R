@@ -406,7 +406,7 @@ sim_settings <- function(object,
           "{.arg stop} ({.val {eff_stop}}) may not appear in output ",
           "({.arg stop} is not a multiple of {.arg save_at} = {.val {val}})."
         ),
-        ">" = "If {.arg stop} should be included, specify {.arg save_n} instead of {.arg save_at}, or specify explicit save times with a vector {.arg save_at}."
+        ">" = "If {.arg stop} should be included, specify {.arg save_n} instead of {.arg save_at}, or specify explicit time points to save with a vector {.arg save_at}."
       ))
     }
 

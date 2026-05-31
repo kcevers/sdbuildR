@@ -20,7 +20,8 @@ ensemble_julia <- function(object, n, save_sims, conditions, cross,
     n = n,
     quantiles = quantiles,
     save_sims = save_sims,
-    conditions = conditions, cross = cross
+    conditions = conditions, 
+    cross = cross
   )
 
   ensemble_pars[["threaded"]] <- .sdbuildR_env[["jl"]][["use_threads"]]
@@ -94,7 +95,7 @@ ensemble_julia <- function(object, n, save_sims, conditions, cross,
           paste0("Matrix(hcat(", P[["ensemble_pars"]], "...)')")
         )
         colnames(cond_matrix) <- names(conditions)
-        cond_matrix <- cbind(j = seq_len(nrow(cond_matrix)), cond_matrix)
+        cond_matrix <- cbind(condition = seq_len(nrow(cond_matrix)), cond_matrix)
       } else {
         cond_matrix <- NULL
       }

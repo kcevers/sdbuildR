@@ -15,12 +15,28 @@ test_that("plot.verify_sdbuildR returns plotly for single condition, n=1", {
   res <- make_verify_model()
   pl <- plot(res, test = 1L)
   expect_plotly(pl)
+
+  df <- as.data.frame(res, which = "sims", direction = "long")
+  names_df <- as.data.frame(res[["object"]])
+  var_names <- unique(df$variable)
+  label_names <- names_df$label[match(var_names, names_df$name)]
+
+  # Object-level expectations
+  traces <- plotly_trace_summary(pl)
+  expect_setequal(traces[["name"]], label_names)
+  # At least one legend item expected by default
+  expect_true(any(traces$showlegend))
 })
 
 test_that("plot.verify_sdbuildR returns plotly for two conditions", {
   res <- make_verify_model(n_tests = 2)
   pl <- plot(res)
   expect_plotly(pl)
+  # Object-level expectations for subplot with multiple conditions
+  traces <- plotly_trace_summary(pl)
+  expect_true(nrow(traces) > 0)
+  # Should expose legend items across subplot traces
+  expect_true(any(traces$showlegend))
 })
 
 
@@ -184,22 +200,38 @@ test_that("plot() filtered j selects one condition from two", {
 
 test_that("plot() showlegend = FALSE hides legend", {
   res <- make_verify_model()
-  expect_snapshot_plot("verify-showlegend-false", plot(res, showlegend = FALSE))
+  # Object-level expectation: no legend items when disabled
+  pl <- plot(res, showlegend = FALSE)
+  expect_plotly(pl)
+  expect_equal(nrow(plotly_legend_items(pl)), 0)
+
+  # Snapshot last
+  expect_snapshot_plot("verify-showlegend-false", pl)
 })
 
 test_that("plot() nrows = 1 forces single-row layout", {
   res <- make_verify_model(n_tests = 2)
-  expect_snapshot_plot("verify-nrows-1", plot(res, nrows = 1L))
+  pl <- plot(res, nrows = 1L)
+  expect_plotly(pl)
+
+  # Snapshots last
+  expect_snapshot_plot("verify-nrows-1", pl)
 })
 
 test_that("plot() shareX = FALSE gives independent x axes", {
   res <- make_verify_model(n_tests = 2)
-  expect_snapshot_plot("verify-sharex-false", plot(res, shareX = FALSE))
+  pl <- plot(res, shareX = FALSE)
+
+  # Snapshots last
+  expect_snapshot_plot("verify-sharex-false", pl)
 })
 
 test_that("plot() shareY = FALSE gives independent y axes", {
   res <- make_verify_model(n_tests = 2)
-  expect_snapshot_plot("verify-sharey-false", plot(res, shareY = FALSE))
+  pl <- plot(res, shareY = FALSE)
+
+  # Snapshots last
+  expect_snapshot_plot("verify-sharey-false", pl)
 })
 
 
@@ -244,12 +276,22 @@ test_that("plot() custom colors vector overrides palette", {
 
 test_that("plot() custom font_family changes annotation font", {
   res <- make_verify_model()
-  expect_snapshot_plot("verify-custom-font-family", plot(res, font_family = "Arial"))
+  pl <- plot(res, font_family = "Arial")
+  layout <- plotly_layout_attrs(pl)
+  expect_equal(layout$font$family, "Arial")
+
+  # Snapshots last
+  expect_snapshot_plot("verify-custom-font-family", pl)
 })
 
 test_that("plot() custom font_size changes annotation font", {
   res <- make_verify_model()
-  expect_snapshot_plot("verify-custom-font-size", plot(res, font_size = 20))
+  pl <- plot(res, font_size = 20)
+  layout <- plotly_layout_attrs(pl)
+  expect_equal(layout$font$size, 20)
+
+  # Snapshots last
+  expect_snapshot_plot("verify-custom-font-size", pl)
 })
 
 test_that("plot() narrow wrap_width wraps long labels", {

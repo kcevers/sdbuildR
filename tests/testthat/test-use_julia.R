@@ -89,6 +89,7 @@ test_that("use_julia() with threads works", {
 test_that("install_julia_env() works", {
   skip_if_julia_not_ready()
   skip_if(interactive())
+  skip_if_no_internet()
 
   manifest_exists <- function() {
     file.exists(system.file("Manifest.toml", package = "sdbuildR"))

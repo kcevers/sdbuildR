@@ -86,7 +86,7 @@
 #' @examples
 #' # Ensemble simulation in R (no parallelization)
 #' # Load example
-#' sfm <- sdbuildR(predator_prey)
+#' sfm <- sdbuildR("predator_prey")
 #'
 #' # Set random initial conditions
 #' sfm <- update(sfm, c(predator, prey),
@@ -365,39 +365,38 @@ ensemble <- function(object,
 check_ensemble_sdbuildR <- function(x) {
   if (!inherits(x, "ensemble_sdbuildR")) {
     cli::cli_abort(c(
-      "Invalid object type.",
-      "x" = "Expected object of class {.cls ensemble_sdbuildR}.",
-      "i" = "Use {.fn ensemble} to create a valid ensemble object."
+      "x" = "Invalid object type.",
+      "!" = "Expected object of class {.cls ensemble_sdbuildR}.",
+      ">" = "Use {.fn ensemble} to create a valid ensemble object."
     ))
   }
 
   if (!is.logical(x$success) || length(x$success) != 1) {
     cli::cli_abort(c(
-      "Invalid {.arg success} field.",
-      "x" = "The {.arg success} field must be a single {.cls logical} value.",
-      "i" = "Expected {.val {TRUE}} or {.val {FALSE}}."
+      "x" = "Invalid {.arg success} field.",
+      "!" = "The {.arg success} field must be a single {.cls logical} value.",
+      ">" = "Expected {.val {TRUE}} or {.val {FALSE}}."
     ))
   }
 
   if (x$success) {
     if (is.null(x$summary) || !is.data.frame(x$summary)) {
       cli::cli_abort(c(
-        "Missing or invalid summary data.",
-        "x" = "Successful ensemble must have a {.cls data.frame} in {.arg summary}.",
-        "i" = "This field is populated by {.fn ensemble} with summary statistics."
+        "x" = "Missing or invalid summary data.",
+        "i" = "Successful ensemble must have a {.cls data.frame} in {.arg summary}."
       ))
     }
     if (is.null(x$duration)) {
       cli::cli_abort(c(
-        "Missing simulation duration.",
-        "x" = "Successful ensemble must have {.arg duration}."
+        "x" = "Missing simulation duration.",
+        "i" = "Successful ensemble must have {.arg duration}."
       ))
     }
   } else {
     if (is.null(x$error_message) || !nzchar(x$error_message)) {
       cli::cli_abort(c(
-        "Missing error message.",
-        "x" = "Failed ensemble must have a non-empty {.arg error_message}."
+        "x" = "Missing error message.",
+        "i" = "Failed ensemble must have a non-empty {.arg error_message}."
       ))
     }
   }

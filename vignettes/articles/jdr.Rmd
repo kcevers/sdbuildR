@@ -34,7 +34,7 @@ library(kableExtra)
 ```
 
 ```{r include=FALSE}
-# Set this to TRUE to recreate the figures in the paper
+# Set recreate_figs <- TRUE to reproduce the figures in the paper
 recreate_figs <- TRUE
 ```
 
@@ -44,7 +44,7 @@ sprintf_arg <- function(template, values) {
   for (nm in names(values)) {
     template <- gsub(paste0("%\\(", nm, "\\)s"), values[[nm]], template)
   }
-  return(template)
+  template
 }
 font_family <- "Times New Roman"
 
@@ -68,7 +68,6 @@ if (recreate_figs) {
   stock_col <- adjustcolor(COLORS[1], alpha.f = .75)
   flow_col <- COLORS[6]
 
-
   health_path <- adjustcolor(COLORS[4], alpha.f = .75)
   motivation_path <- adjustcolor(COLORS[1], alpha.f = .85)
   health_path_fill <- adjustcolor(COLORS[4], alpha.f = .25)
@@ -88,6 +87,8 @@ if (recreate_figs) {
   # Annotation template
   annot <- list(xanchor = "center", yanchor = "middle", showarrow = FALSE, xref = "paper", yref = "paper", font = list(size = font_size_subplot, family = font_family))
   annot_font <- list(family = font_family, size = font_size)
+
+  # Default legend
   annot_legend <- list(
     orientation = "h", # orientation
     x = 0.5, # Center horizontally
@@ -99,6 +100,8 @@ if (recreate_figs) {
     # itemwidth = 15,
     font = list(size = font_size_legend)
   )
+
+  # Default x label annotation
   annot_xlab <- list(
     text = xlab,
     font = list(
@@ -113,6 +116,7 @@ if (recreate_figs) {
     showarrow = FALSE
   )
 
+  # Remove axis grid from plotly ploy
   rm_grid <- function(pl) {
     plotly::layout(pl,
       xaxis = list(showgrid = FALSE, showline = TRUE),
@@ -254,8 +258,7 @@ sfm <- sfm |>
 Both stocks should remain static.
 
 ```{r, fig.width = 1, fig.height = 3}
-sim <- simulate(sfm)
-plot(sim)
+simulate(sfm) |> plot()
 ```
 
 With both stocks in place, we next define their inflows. Because resources and engagement mutually affect each other's inflows, each inflow requires a **functional form** specifying how one stock influences the other's rate of change. Verbal theories rarely constrain this choice. JD-R theory, for instance, postulates that resources motivate engagement but not the magnitude or shape of that effect.
@@ -654,7 +657,7 @@ if (recreate_figs) {
 
 
 
-A natural starting point is the simplest functional form: engagement increases resources, and resources increase engagement, each at a rate proportional to the other's current level. This linear functional form is illustrated in Figure \ref{fig:func_forms}A. We begin by adding an inflow to engagement:
+A natural starting point is the simplest functional form: engagement increases resources, and resources increase engagement, each at a rate proportional to the other's current level. This linear functional form is illustrated above. We begin by adding an inflow to engagement:
 
 ```{r, fig.width = 1, fig.height=1}
 sfm <- sfm |>
@@ -672,8 +675,7 @@ sfm <- sfm |>
     label = "Proactive behaviour"
   )
 
-sim <- simulate(sfm)
-plot(sim)
+simulate(sfm) |> plot()
 ```
 
 
@@ -716,9 +718,9 @@ if (recreate_figs) {
 }
 ```
 
-Resources and engagement still grow exponentially (Figure \ref{fig:func_forms}C). The decay processes are not strong enough to counter the inflows. Though we could increase the decay rates, this would only stabilize the system if growth and decay rates (`proactive_rate` and `resource_decay_rate` for resources; `motivation_rate` and `engagement_decay_rate` for engagement) are exactly equal. When the growth rate exceeds the decay rate, the stock explodes to infinity; when the decay rate exceeds the growth rate, the stock collapses to zero. A feedback loop that appears simple at first glance thus raises questions that are far from self-evident. Formalization forces one to specify assumptions that were unstated or omitted in the verbal theory, such that we may better evaluate the theory's plausibility [@vanRooij2021TheoryScience].
+Resources and engagement still grow exponentially (see above). The decay processes are not strong enough to counter the inflows. Though we could increase the decay rates, this would only stabilize the system if growth and decay rates (`proactive_rate` and `resource_decay_rate` for resources; `motivation_rate` and `engagement_decay_rate` for engagement) are exactly equal. When the growth rate exceeds the decay rate, the stock explodes to infinity; when the decay rate exceeds the growth rate, the stock collapses to zero. A feedback loop that appears simple at first glance thus raises questions that are far from self-evident. Formalization forces one to specify assumptions that were unstated or omitted in the verbal theory, such that we may better evaluate the theory's plausibility [@vanRooij2021TheoryScience].
 
-When a model displays implausible behaviour, it helps to revisit the theoretical propositions embedded in the equations. The inflows to resources and engagement imply that their mutually beneficial effects grow without limit as both stocks increase. However, these benefits may not increase indefinitely, but plateau at high levels. To capture this saturation, we replace the linear functional form with a Hill function (Figure \ref{fig:func_forms}D; @hill_possible_1910), a sigmoidal (S-shaped) curve defined by two parameters: the *midpoint*, at which the function reaches half its maximum value, and the *slope*, which controls how abruptly the function transitions from low to high values. A slope above 1 produces a sigmoidal shape.
+When a model displays implausible behaviour, it helps to revisit the theoretical propositions embedded in the equations. The inflows to resources and engagement imply that their mutually beneficial effects grow without limit as both stocks increase. However, these benefits may not increase indefinitely, but plateau at high levels. To capture this saturation, we replace the linear functional form with a Hill function (see functional forms figure above; @hill_possible_1910), a sigmoidal (S-shaped) curve defined by two parameters: the *midpoint*, at which the function reaches half its maximum value, and the *slope*, which controls how abruptly the function transitions from low to high values. A slope above 1 produces a sigmoidal shape.
 
 We use a medium slope:
 
@@ -736,8 +738,7 @@ sfm <- sfm |>
   # Update inflow to resources
   update(proactive, eqn = proactive_rate * hill(engagement, m_slope))
 
-sim <- simulate(sfm)
-plot(sim)
+simulate(sfm) |> plot()
 ```
 
 
@@ -747,13 +748,12 @@ if (recreate_figs) {
 }
 ```
 
-As shown in Figure \ref{fig:func_forms}F, resources and engagement now stabilize. Morever, unlike the linear case, stability is robust to variations in growth and decay rates rather than requiring exact equality between them. Note, however, that the Hill function alone does not ensure stability: it places a ceiling on the *effect* of resources on engagement and vice versa, but without outflows, both stocks still grow without bound: 
+As shown above, resources and engagement now stabilize. Morever, unlike the linear case, stability is robust to variations in growth and decay rates rather than requiring exact equality between them. Note, however, that the Hill function alone does not ensure stability: it places a ceiling on the *effect* of resources on engagement and vice versa, but without outflows, both stocks still grow without bound: 
 
 ```{r, fig.width = 1, fig.height=1}
 sfm2 <- discard(sfm, c(engagement_decay, resource_decay))
 
-sim <- simulate(sfm2)
-plot(sim)
+simulate(sfm) |> plot()
 ```
 
 Stability emerges from the combination of saturating inflows and proportional decay. Though the system has the same structure in both cases — the same stocks, inflows, outflows, and dependencies — the linear and Hill functional forms produce qualitatively different dynamical behaviour [@Robinaugh2021InvisibleHands].
@@ -925,8 +925,7 @@ sfm <- sfm |>
   stock(energy, eqn = .9, label = "Energy") |>
   aux(performance, eqn = engagement + energy, label = "Job Performance")
 
-sim <- simulate(sfm)
-plot(sim)
+simulate(sfm) |> plot()
 ```
 
 We next implement the buffer hypothesis, which states that decreases in energy are induced by job demands, but buffered by resources. Additionally, engaged employees optimize job demands, so the effect of demands on energy should be smaller when engagement is higher. In our implementation, these effects are multiplied by energy to avoid depleting energy past zero.
@@ -963,8 +962,7 @@ sfm <- sfm |>
   flow(resource_decay, eqn = resource_decay_rate * resources / (1 + energy)) |>
   flow(engagement_decay, eqn = engagement_decay_rate * engagement / (1 + energy))
 
-sim <- simulate(sfm)
-plot(sim, vars = vars)
+simulate(sfm) |> plot(vars = vars)
 ```
   
 
@@ -979,8 +977,7 @@ sfm <- sfm |>
     to = energy, label = "Recovery"
   )
 
-sim <- simulate(sfm)
-plot(sim, vars = vars)
+simulate(sfm) |> plot(vars = vars)
 ```
 
 
@@ -994,8 +991,7 @@ sfm <- sfm |>
     from = demands, label = "Work"
   )
 
-sim <- simulate(sfm)
-plot(sim, vars = vars)
+simulate(sfm) |> plot(vars = vars)
 ```
 
 Job demands are increased by self-undermining behaviour. We similarly implement self-undermining as a steep Ricker function: it is zero when energy is zero (some energy is needed to self-undermine), increases steeply at low levels of energy where self-undermining is highest, and drops off quickly to represent the idea that only exhausted individuals self-undermine. The effect is independent of demands because self-undermining behaviour creates new demands even when there are no existing demands.
@@ -1009,8 +1005,7 @@ sfm <- sfm |>
     to = demands, label = "Self-undermining"
   )
 
-sim <- simulate(sfm)
-plot(sim, vars = vars)
+simulate(sfm) |> plot(vars = vars)
 ```
 
 As of now, job resources are only cultivated through proactive behaviour, and job demands are only created by self-undermining behaviour. However, JD-R theory implies that both job resources and demands are partially exogenously driven. Both are defined as "physical, psychological, social, or organizational aspects of the job" [@bakker_job_2023]. We capture these exogenous drivers with a new inflow to job resources and demands. Here, exogenously provided resources drop off exponentially at higher levels of resources, reflecting the idea that employers are less likely to provide resources when employees are already well-resourced:
@@ -1023,8 +1018,7 @@ sfm <- sfm |>
     to = resources, label = "Exogenous support"
   )
 
-sim <- simulate(sfm)
-plot(sim, vars = vars)
+simulate(sfm) |> plot(vars = vars)
 ```
 
 In the absence of more information about the functional form of exogenous demands, we use the same functional form as for exogenous resources. Exogenously provided demands drop off exponentially at higher levels of demands, reflecting the idea that employers are less likely to assign new tasks when employees are already at high workloads:
@@ -1042,8 +1036,7 @@ sfm <- sfm |>
 Simulating the model reproduces our target phenomenon:
 
 ```{r}
-sim <- simulate(sfm)
-plot(sim, vars = vars)
+simulate(sfm) |> plot(vars = vars)
 ```
 
 
@@ -1187,7 +1180,7 @@ pl <- plotly::subplot(pl1, pl2, pl3, nrows = 1)
 pl
 ```
 
-As shown above, multiple variables can be updated at the same time. Simulating the model several times, we observe that although with differing speeds and peak magnitudes, the system reliably ends in a burnout state (Figure \ref{fig:sfm_JDR}B). A more systematic approach of varying initial conditions and parameters will be demonstrated in a later section.
+As shown above, multiple variables can be updated at the same time. Simulating the model several times, we observe that although with differing speeds and peak magnitudes, the system reliably ends in a burnout state. A more systematic approach of varying initial conditions and parameters will be demonstrated in a later section.
 
 To make our simulations reproducible, a seed can be specified:
 
@@ -1521,7 +1514,7 @@ if (recreate_figs) {
 }
 ```
 
-As shown in Figure \ref{fig:noise}, job demands now exhibit autocorrelated fluctuations, which in turn create variability in job performance. Intrinsic variability in one variable may thus propagate to other variables, even when the latter are strictly deterministically formulated.
+As shown above, job demands now exhibit autocorrelated fluctuations, which in turn create variability in job performance. Intrinsic variability in one variable may thus propagate to other variables, even when the latter are strictly deterministically formulated.
 
 
 ### Removing Variables
@@ -1737,12 +1730,12 @@ print(future_time)
 print(julia_time)
 ```
 
-The mean and 95\% confidence interval across all simulations is shown in Figure \ref{fig:learning_JDR}A, plotting only engagement and demands for simplicity. The burnout phenomenon appears robust to variations in initial conditions, as all simulations eventually converge to the same stable state of high job demands and zero work engagement.
+The mean and 95\% confidence interval across all simulations is shown above, **plotting only engagement and demands for simplicity. The burnout phenomenon appears robust to variations in initial conditions, as all simulations eventually converge to the same stable state of high job demands and zero work engagement.
 
 Parameters (i.e., constants) are often of greater theoretical interest than initial conditions, as their variation can for instance represent individual differences, contextual factors, or uncertainty in the theory's assumptions. Parameters in ensemble simulations can be varied by redefining their `eqn` to draw from a distribution, or by passing a set of values to vary. For example, we can simulate three values of `motivation_rate`, the rate at which resources increase engagement. 
 
 ```{r, fig.height = 8}
-# Define values of motivation_rate to vary
+# Define values to vary
 conditions <- list(motivation_rate = c(0.2, 0.7, 4))
 
 # Retain individual simulations
@@ -1795,8 +1788,7 @@ sfm <- sfm |>
 Run a single simulation:
 
 ```{r}
-sim <- simulate(sfm)
-plot(sim)
+simulate(sfm) |> plot()
 ```
 
 Run an ensemble simulation:
@@ -2269,8 +2261,7 @@ sfm <- sdbuildR() |>
 sfm <- sfm |>
   stock(energy, eqn = .3, label = "Energy")
 
-sim <- simulate(sfm)
-plot(sim)
+simulate(sfm) |> plot()
 ```
 
 
@@ -2298,8 +2289,7 @@ sfm <- flow(sfm, work,
   from = energy, label = "Depletion from work"
 )
 
-sim <- simulate(sfm)
-plot(sim)
+simulate(sfm) |> plot()
 ```
 
 
@@ -2313,8 +2303,7 @@ if (recreate_figs) {
 ```{r}
 sfm <- update(sfm, work, eqn = work_rate * energy)
 
-sim <- simulate(sfm)
-plot(sim)
+simulate(sfm) |> plot()
 ```
 
 
@@ -2329,8 +2318,7 @@ if (recreate_figs) {
 sfm <- constant(sfm, recovery_rate, eqn = .3, label = "Recovery Rate") |>
   flow(recovery, eqn = recovery_rate, to = energy, label = "Recovery")
 
-sim <- simulate(sfm)
-plot(sim)
+simulate(sfm) |> plot()
 ```
 
 
@@ -2355,8 +2343,7 @@ sfm <- flow(sfm, erosion,
   from = recovery_rate, label = "Recovery Erosion"
 )
 
-sim <- simulate(sfm)
-plot(sim)
+simulate(sfm) |> plot()
 ```
 
 
@@ -2368,8 +2355,7 @@ sfm <- aux(sfm, net_change,
   label = "Net change in energy"
 )
 
-sim <- simulate(sfm)
-plot(sim)
+simulate(sfm) |> plot()
 ```
 
 

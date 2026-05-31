@@ -417,8 +417,8 @@ test_that("ensemble() non-crossed design conditions data frame", {
   n <- 3
   sims <- silence(ensemble(sfm,
     conditions = list(
-      "a2" = c(0.2, 0.3, 0.4),
-      "a1" = c(1.3, 1.4, 1.5)
+      a2 = c(0.2, 0.3, 0.4),
+      a1 = c(1.3, 1.4, 1.5)
     ),
     cross = FALSE, n = n, save_sims = TRUE
   ))

@@ -717,6 +717,7 @@ plot.sdbuildR <- function(x,
 #'
 prep_plot <- function(object, type_sim, df, constants, 
 add_constants, vars, palette, colors, wrap_width) {
+  
   # Get names of stocks and non-stock variables
   names_df <- get_names(object)
 
@@ -983,6 +984,7 @@ plot.simulate_sdbuildR <- function(x,
 #' @param shareY If `TRUE`, share the y-axis across subplots. Defaults to `TRUE`.
 #' @param palette Colour palette. Must be one of hcl.pals().
 #' @param colors Vector of colours. If NULL, the color palette will be used. If specified, will override palette. The number of colours must be equal to the number of variables in the simulation data frame. Defaults to NULL.
+#' @param alpha Trajectory opacity. Defaults to `1`.
 #' @param font_family Font family. Defaults to "Times New Roman".
 #' @param font_size Font size. Defaults to 16.
 #' @param wrap_width Width of text wrapping for labels. Must be an integer. Defaults to 25.
@@ -1049,12 +1051,12 @@ plot.ensemble_sdbuildR <- function(x,
     vars = vars,
     palette = palette,
     colors = colors,
+    alpha = alpha,
     font_family = font_family,
     font_size = font_size,
     wrap_width = wrap_width,
     label_subplots = label_subplots
   )
-
 
   which <- .clean_which(which)
 
@@ -1650,11 +1652,11 @@ plot_ensemble_helper <- function(subplot_label,
 #' @param wrap_width Label wrap width. Defaults to `25`.
 #' @param showlegend Whether to show the legend. Defaults to `TRUE`.
 #' @param label_subplots Whether to plot labels indicating the test number of the subplot.
-#' @param alpha Trajectory opacity. Defaults to `1`.
 #' @param ... Additional arguments passed to [plot.simulate_sdbuildR()].
 #' @inheritParams as.data.frame.verify_sdbuildR
 #' @inheritParams plot.simulate_sdbuildR
-#'
+#' @inheritParams plot.ensemble_sdbuildR
+#' 
 #' @returns A plotly object.
 #' @export
 #' @concept unitTest
@@ -1717,6 +1719,7 @@ if (missing(x)) {
     vars = vars,
     palette = palette,
     colors = colors,
+    alpha = alpha,
     font_family = font_family,
     font_size = font_size,
     wrap_width = wrap_width,
@@ -1725,13 +1728,12 @@ if (missing(x)) {
 
   # Get passed arguments
   passed_arg <- names(as.list(match.call())[-1])
-
   dots <- list(...)
 
   # Filter simulations based on test, label, status, and condition
   df <- as.data.frame(x, which = "sims", 
   # Pass on filtering arguments to as.data.frame() to filter the simulations before plotting
-  sim = sim, test = test, label = label,
+   test = test, label = label,
    ignore_case = ignore_case, status = status, condition = condition)
   
   # Add sim column for plot_ensemble_helper() if not already present (e.g., when which = "summary")

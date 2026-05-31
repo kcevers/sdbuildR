@@ -356,7 +356,7 @@ test_that("verify() returns sims as nested list and j as named int vector", {
   expect_equal(length(result[["sims"]]), 1L)
   # sims[[j]][[i]] structure
   expect_true(is.list(result[["sims"]][[1]]))
-  expect_s3_class(result[["sims"]][[1]][[1]], "simulate_sdbuildR")
+  expect_s3_class(result[["sims"]][[1]], "simulate_sdbuildR")
   expect_equal(result[["condition"]], c("S non-negative" = 1L))
 })
 
@@ -391,7 +391,7 @@ test_that("verify() deduplicates sims: two tests sharing conditions map to the s
   # All sims are nested simulate_sdbuildR objects
   for (sim_list in result[["sims"]]) {
     expect_true(is.list(sim_list))
-    expect_s3_class(sim_list[[1]], "simulate_sdbuildR")
+    expect_s3_class(sim_list, "simulate_sdbuildR")
   }
 })
 
@@ -929,7 +929,7 @@ test_that("verify(): constant-only condition is present in sim", {
     unit_test(label = "x", expr = all(S >= 0), conditions = list(rate = 0))
   result <- silence(verify(sfm))
   condition_idx <- result[["condition"]][[1]]
-  sim <- result[["sims"]][[condition_idx]][[1]]
+  sim <- result[["sims"]][[condition_idx]]
   expect_equal(sim[["constants"]][["rate"]], 0)
 })
 
@@ -938,7 +938,7 @@ test_that("verify(): stock initial-value condition is present in sim", {
     unit_test(label = "x", expr = all(S >= 0), conditions = list(S = 50))
   result <- silence(verify(sfm))
   condition_idx <- result[["condition"]][[1]]
-  sim <- result[["sims"]][[condition_idx]][[1]]
+  sim <- result[["sims"]][[condition_idx]]
   expect_equal(sim[["init"]][["S"]], 50)
 })
 
@@ -947,7 +947,7 @@ test_that("verify(): mixed conditions are both present in sim", {
     unit_test(label = "x", expr = all(S >= 0), conditions = list(S = 50, rate = 0))
   result <- silence(verify(sfm))
   condition_idx <- result[["condition"]][[1]]
-  sim <- result[["sims"]][[condition_idx]][[1]]
+  sim <- result[["sims"]][[condition_idx]]
   expect_equal(sim[["constants"]][["rate"]], 0)
   expect_equal(sim[["init"]][["S"]], 50)
 })
@@ -1023,17 +1023,17 @@ test_that("verify(): constant-only condition is present in Julia sim", {
     unit_test(label = "x", expr = all(S >= 0), conditions = list(rate = 0))
   result <- silence(verify(sfm))
   condition_idx <- result[["condition"]][[1]]
-  sim <- result[["sims"]][[condition_idx]][[1]]
+  sim <- result[["sims"]][[condition_idx]]
   expect_equal(sim[["constants"]][["rate"]], 0)
 })
 
 test_that("verify(): stock initial-value condition is present in Julia sim", {
   skip_if_julia_not_ready()
   sfm <- make_verifiable_sfm(language = "Julia") |>
-    unit_test(label = "x", expr = all(S >= 0), conditions = list(S = 50))
+    unit_test(label = "x", expr = all(S >= 0), conditions = list(S = 50)) 
   result <- silence(verify(sfm))
   condition_idx <- result[["condition"]][[1]]
-  sim <- result[["sims"]][[condition_idx]][[1]]
+  sim <- result[["sims"]][[condition_idx]]
   expect_equal(sim[["init"]][["S"]], 50)
 })
 
@@ -1043,7 +1043,7 @@ test_that("verify(): mixed conditions are both present in Julia sim", {
     unit_test(label = "x", expr = all(S >= 0), conditions = list(S = 50, rate = 0))
   result <- silence(verify(sfm))
   condition_idx <- result[["condition"]][[1]]
-  sim <- result[["sims"]][[condition_idx]][[1]]
+  sim <- result[["sims"]][[condition_idx]]
   expect_equal(sim[["constants"]][["rate"]], 0)
   expect_equal(sim[["init"]][["S"]], 50)
 })
@@ -1060,7 +1060,7 @@ test_that("verify() augments sfm vars with test refs (fixes vars/only_stocks con
   res <- silence(verify(sfm2, verbose = FALSE))
 
   # Simulation data for the first condition must contain 'drain'
-  sims_j1 <- res$sims[[1]][[1]]
+  sims_j1 <- res$sims[[1]]
   expect_true("variable" %in% colnames(sims_j1$df))
   expect_true(any(sims_j1$df$variable == "drain"))
 })

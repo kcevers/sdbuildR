@@ -61,8 +61,11 @@ expect_snapshot_plot <- function(name, code, fileext = NULL, width = 4, height =
     )
   }
 
-  return(invisible())
+  invisible()
 }
+
+
+
 
 
 #' Helper to skip test if Julia is not ready
@@ -152,11 +155,9 @@ make_basic_sfm <- function() {
 # Skip tests if internet not available or on CRAN
 skip_if_no_internet <- function() {
   if (!has_internet()) {
-    testthat::skip("No internet connection")
+    skip("No internet connection")
   }
-  if (Sys.getenv("NOT_CRAN") != "true") {
-    testthat::skip("Not run on CRAN")
-  }
+  skip_on_cran()
 }
 
 
@@ -237,4 +238,158 @@ make_r_ens <- function(n = 5, save_sims = FALSE, conditions = NULL, ...) {
 
 make_r_ens_2cond <- function(n = 3, ...) {
   make_r_ens(n = n, conditions = list("contact_rate" = c(1.5, 2.5)), ...)
+}
+
+##### Plotly attribute helpers #####
+plotly_traces <- function(pl) {
+  plotly::plotly_build(pl)[["x"]][["data"]]
+}
+
+# `%||%` <- function(x, y) {
+#   if (is.null(x)) y else x
+# }
+
+trace_group <- function(trace) {
+  group <- trace[["legendgroup"]]
+  if (is.null(group) || !nzchar(as.character(group)[1L])) {
+    return(NA_character_)
+  }
+  as.character(group)[1L]
+}
+
+trace_name <- function(trace) {
+  name <- trace[["name"]]
+  if (is.null(name) || !nzchar(as.character(name)[1L])) {
+    return(NA_character_)
+  }
+  as.character(name)[1L]
+}
+
+trace_visible <- function(trace) {
+  visible <- trace[["visible"]]
+  if (is.null(visible)) {
+    return("TRUE")
+  }
+  if (is.logical(visible)) {
+    return(if (isTRUE(visible[1L])) "TRUE" else "FALSE")
+  }
+  as.character(visible)[1L]
+}
+
+trace_showlegend <- function(trace) {
+  showlegend <- trace[["showlegend"]]
+  if (is.null(showlegend)) {
+    return(FALSE)
+  }
+  isTRUE(showlegend)
+}
+
+trace_color <- function(trace) {
+  color <- NULL
+
+  if (!is.null(trace[["line"]])) {
+    color <- trace[["line"]][["color"]]
+  }
+  if (is.null(color) && !is.null(trace[["marker"]])) {
+    color <- trace[["marker"]][["color"]]
+  }
+  if (is.null(color) && !is.null(trace[["fillcolor"]])) {
+    color <- trace[["fillcolor"]]
+  }
+
+  if (is.null(color) || !nzchar(as.character(color)[1L])) {
+    return(NA_character_)
+  }
+
+  as.character(color)[1L]
+}
+
+
+#' Normalize a Plotly color string to #RRGGBB uppercase when possible
+#'
+#' Accepts hex (#RRGGBB), rgba()/rgb() and named R colours; returns uppercase
+#' #RRGGBB or NA_character_. Used by tests to compare colours robustly.
+normalize_color_string <- function(col) {
+  if (is.null(col)) return(NA_character_)
+  col_chr <- as.character(col)
+  if (!nzchar(col_chr)) return(NA_character_)
+
+  # rgba(...) or rgb(...)
+  if (grepl("^rgba?\\(", col_chr)) {
+    nums <- as.numeric(strsplit(gsub("rgba?\\(|\\)", "", col_chr), ",")[[1L]])
+    if (length(nums) >= 3) {
+      r <- nums[1]
+      g <- nums[2]
+      b <- nums[3]
+      if (max(nums, na.rm = TRUE) <= 1) {
+        r <- round(r * 255)
+        g <- round(g * 255)
+        b <- round(b * 255)
+      }
+      return(toupper(grDevices::rgb(r, g, b, maxColorValue = 255)))
+    }
+  }
+
+  # Hex (#RRGGBB or #RRGGBBAA) -> strip alpha if present
+  if (grepl("^#", col_chr)) {
+    if (nchar(col_chr) >= 7) {
+      return(toupper(substr(col_chr, 1, 7)))
+    }
+    return(toupper(col_chr))
+  }
+
+  # Named colours via col2rgb
+  rgb_val <- tryCatch(grDevices::col2rgb(col_chr), error = function(e) NULL)
+  if (!is.null(rgb_val)) {
+    return(toupper(grDevices::rgb(rgb_val[1, 1], rgb_val[2, 1], rgb_val[3, 1], maxColorValue = 255)))
+  }
+
+  NA_character_
+}
+
+plotly_trace_summary <- function(pl) {
+  traces <- plotly_traces(pl)
+
+  if (!length(traces)) {
+    return(data.frame())
+  }
+
+  data.frame(
+    trace = seq_along(traces),
+    name = vapply(traces, trace_name, character(1)),
+    legendgroup = vapply(traces, trace_group, character(1)),
+    showlegend = vapply(traces, trace_showlegend, logical(1)),
+    visible = vapply(traces, trace_visible, character(1)),
+    color = vapply(traces, trace_color, character(1)),
+    stringsAsFactors = FALSE
+  )
+}
+
+plotly_legend_items <- function(pl) {
+  out <- plotly_trace_summary(pl)
+  out[out$showlegend, c("trace", "name", "legendgroup", "visible", "color")]
+}
+
+plotly_visible_legend_items <- function(pl) {
+  out <- plotly_legend_items(pl)
+  out[out$visible != "legendonly", , drop = FALSE]
+}
+
+plotly_legendonly_items <- function(pl) {
+  out <- plotly_legend_items(pl)
+  out[out$visible == "legendonly", , drop = FALSE]
+}
+
+plotly_layout_attrs <- function(pl) {
+  # plotly::plotly_build(pl)[["x"]][["layoutAttrs"]]
+  plotly::plotly_build(pl)[["x"]][["layout"]]
+}
+
+is_subplot <- function(pl){
+  check <- plotly::plotly_build(pl)[["x"]][["subplot"]]
+  if (is.null(check)){
+    FALSE
+  } else {
+    check
+  } 
 }

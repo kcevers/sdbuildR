@@ -2,6 +2,17 @@ test_that("plot() creates a basic plot for simulation", {
   sim <- sir_sim()
   result <- plot(sim)
   expect_plotly(result)
+  sfm <- sim[["object"]]
+  df <- as.data.frame(sfm, properties = c("label"))
+  stock_labels <- df$label[df$type == "stock"]
+  n_stocks <- length(stock_labels)
+
+  # Default is show only stocks and showlegend = TRUE
+  trace_info <- plotly_trace_summary(result)
+  expect_setequal(trace_info[["name"]], stock_labels)
+  expect_true(all(trace_info[["showlegend"]]))
+  legend_items <- plotly_legend_items(result)
+  expect_setequal(legend_items[["name"]], stock_labels)
 })
 
 test_that("plot() method exists for simulate_sdbuildR objects", {
@@ -143,16 +154,37 @@ test_that("plot() creates standard line plot for SIR simulation", {
 
 test_that("plot() respects showlegend", {
   sim <- sir_sim()
+  # Object-level expectations: legend toggles should reflect in built Plotly object
+  pl_true <- plot(sim, showlegend = TRUE)
+  pl_false <- plot(sim, showlegend = FALSE)
+  expect_plotly(pl_true)
+  expect_plotly(pl_false)
+  expect_true(nrow(plotly_legend_items(pl_true)) > 0)
+  expect_equal(nrow(plotly_legend_items(pl_false)), 0)
 
-  expect_snapshot_plot("sim-showlegend-true", plot(sim, showlegend = TRUE))
-  expect_snapshot_plot("sim-showlegend-false", plot(sim, showlegend = FALSE))
+  # Snapshots last
+  expect_snapshot_plot("sim-showlegend-true", pl_true)
+  expect_snapshot_plot("sim-showlegend-false", pl_false)
 })
 
 test_that("plot() respects vars argument", {
   sim <- sir_sim()
+  # Object-level expectations: vars filtering should limit plotted trace names
+  sfm <- sim[["object"]]
+  names_df <- as.data.frame(sfm, properties = c("label"))
+  sus_label <- names_df$label[names_df$name == "susceptible"]
+  pl_single <- plot(sim, vars = "susceptible")
+  trace_names <- plotly_trace_summary(pl_single)$name
+  expect_setequal(trace_names, sus_label)
 
-  expect_snapshot_plot("sim-single-variable", plot(sim, vars = "susceptible"))
-  expect_snapshot_plot("sim-filtered-vars", plot(sim, vars = c("susceptible", "infected")))
+  sus_infected_labels <- names_df$label[names_df$name %in% c("susceptible", "infected")]
+  pl_filtered <- plot(sim, vars = c("susceptible", "infected"))
+  trace_names_filtered <- plotly_trace_summary(pl_filtered)$name
+  expect_setequal(trace_names_filtered, sus_infected_labels)
+
+  # Snapshots last
+  expect_snapshot_plot("sim-single-variable", pl_single)
+  expect_snapshot_plot("sim-filtered-vars", pl_filtered)
 })
 
 test_that("plot() with custom palette", {
@@ -165,8 +197,18 @@ test_that("plot() with custom colors vector", {
   sim <- sir_sim()
 
   custom_colors <- c("#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A")
+  # Object-level expectation: legend trace colors should match provided palette
+  pl_colors <- plot(sim, colors = custom_colors)
+  legend_items <- plotly_legend_items(pl_colors)
+  if (nrow(legend_items) > 0) {
+    # Normalize plotly colours to compare robustly (rgba vs named/hex)
+    got <- vapply(legend_items$color, normalize_color_string, character(1))
+    want <- vapply(custom_colors, normalize_color_string, character(1))
+    expect_true(all(got %in% want))
+  }
 
-  expect_snapshot_plot("sim-custom-colors", plot(sim, colors = custom_colors))
+  # Snapshot last
+  expect_snapshot_plot("sim-custom-colors", pl_colors)
 })
 
 test_that("plot() with custom font family", {

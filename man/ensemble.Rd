@@ -53,11 +53,11 @@ failed.}
 \item{error_message}{If success is \code{FALSE}, contains the error message.}
 \item{df}{data.frame with simulation results in long format, if save_sims
 is \code{TRUE}. The iteration number is indicated by column "sim". If conditions
-was specified, the condition is indicated by column "j".}
+was specified, the condition is indicated by column "condition".}
 \item{summary}{data.frame with summary statistics of the ensemble,
 including quantiles specified in quantiles. If conditions was specified,
-summary statistics are calculated for each condition (j) in the ensemble.}
-\item{n}{Number of simulations run in the ensemble (per condition j if
+summary statistics are calculated for each condition in the ensemble.}
+\item{n}{Number of simulations run in the ensemble (per condition if
 conditions is specified).}
 \item{n_total}{Total number of simulations run in the ensemble (across all
 conditions if conditions is specified).}
@@ -102,7 +102,7 @@ other model elements (see examples).
 \examples{
 # Ensemble simulation in R (no parallelization)
 # Load example
-sfm <- sdbuildR(predator_prey)
+sfm <- sdbuildR("predator_prey")
 
 # Set random initial conditions
 sfm <- update(sfm, c(predator, prey),
@@ -123,7 +123,7 @@ sims <- ensemble(sfm, n = 10, save_sims = TRUE)
 plot(sims, which = "sims")
 
 # Specify which trajectories to plot
-plot(sims, which = "sims", i = 1)
+plot(sims, which = "sims", sim = 1)
 
 # Plot the median with lighter individual trajectories
 plot(sims, central_tendency = "median", which = "sims", alpha = 0.1)
@@ -149,7 +149,7 @@ plot(sims)
 
 # By default, a maximum of nine conditions is plotted.
 # Plot specific conditions:
-plot(sims, j = c(1, 3), nrows = 1)
+plot(sims, condition = c(1, 3), nrows = 1)
 
 # Generate a non-crossed design, where the length of each conditions vector
 # needs to be equal:
