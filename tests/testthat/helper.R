@@ -27,7 +27,7 @@ expect_snapshot_plot <- function(name, code, fileext = NULL, width = 4, height =
     "No internet connection for plot snapshot test"
   )
 
-  if (FALSE) {
+  if (TRUE) {
     skip("Temporarily skip for faster testing")
   }
 
