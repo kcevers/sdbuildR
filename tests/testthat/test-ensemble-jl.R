@@ -98,15 +98,9 @@ test_that("ensemble() runs successfully", {
   sims <- silence(ensemble(sfm, n = 3))
   expect_true(sims[["success"]])
   expect_false(is.null(sims[["summary"]]))
-})
 
-test_that("ensemble() returns correct structure", {
-  skip_if_julia_not_ready()
-  sfm <- make_jl_ensemble_sfm()
-
-  sims <- silence(ensemble(sfm, n = 3, save_sims = TRUE))
-
-  expected_fields <- c(
+ # correct structure
+    expected_fields <- c(
     "success", "df", "summary", "n", "n_total",
     "n_conditions", "conditions", "init", "constants",
     "script", "duration"
@@ -118,6 +112,7 @@ test_that("ensemble() returns correct structure", {
     )
   }
 })
+
 
 test_that("ensemble() handles models with no constants", {
   skip_if_julia_not_ready()
@@ -241,16 +236,9 @@ test_that("ensemble() returns correct n properties", {
   expect_equal(sort(unique(sims[["df"]][["sim"]])), 1:nr_sims)
   expect_equal(sort(unique(sims[["df"]][["condition"]])), 1)
   expect_equal(sort(unique(sims[["summary"]][["condition"]])), 1)
-})
 
-test_that("ensemble() returns constants and init summaries", {
-  skip_if_julia_not_ready()
 
-  nr_sims <- 3
-  sfm <- make_jl_ensemble_sfm()
-
-  sims <- silence(ensemble(sfm, n = nr_sims, save_sims = TRUE))
-
+ # ensemble() returns constants and init summaries
   expect_equal(
     sort(unique(sims[["constants"]][["summary"]][["variable"]])),
     c("a0", "a1", "a2")

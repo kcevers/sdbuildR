@@ -323,6 +323,8 @@ export_plotly <- function(pl, file, format, width, height) {
 #' @param show_constants If TRUE, show constants. Defaults to FALSE.
 #' @param show_aux If TRUE, show auxiliary variables. Defaults to TRUE.
 #' @param minlen Minimum length of edges; must be an integer. Defaults to 2.
+#' @param pad Padding around the graph. Defaults to 0.1.
+#' @param nodesep Minimum distance between nodes. Defaults to 0.3.
 #' @param ... Optional arguments
 #'
 #' @returns Stock-and-flow diagram
@@ -354,6 +356,8 @@ plot.sdbuildR <- function(x,
                           show_constants = FALSE,
                           show_aux = TRUE,
                           minlen = 2,
+                          pad = 0.1,
+                          nodesep = 0.3,
                           ...) {
   sfm <- x
   rm(x)
@@ -443,8 +447,6 @@ plot.sdbuildR <- function(x,
 
   # Prepare stock nodes
   if (length(stock_names) > 0) {
-    # Repeat stock_col if needed
-    # stock_cols <- rep_len(stock_col, length(stock_names))
     style_stock <- sprintf("node [shape=box,style=filled,fillcolor='%s']", 
       stock_col)
 
@@ -461,8 +463,8 @@ plot.sdbuildR <- function(x,
 
   # Prepare auxiliary nodes
   if (length(aux_names) > 0) {
-    style_aux <- sprintf("node [shape=circle,fontsize=%s,fontname='%s', width=0.15, height=0.15, fixedsize=true, style=filled, fillcolor='grey90']",
-      font_size - 2, font_family)
+    style_aux <- sprintf("node [shape=circle,fontsize=%s, width=0.15, height=0.15, fixedsize=true, style=filled, fillcolor='grey90']",
+      font_size - 2)
 
     aux_nodes <- sprintf(
       "%s [id=%s,xlabel='%s',label='',tooltip = 'eqn = %s']",
@@ -605,14 +607,14 @@ plot.sdbuildR <- function(x,
     flow_edges_to_destination <- c()
 
     style_flow_edges_from_source <- sprintf(
-      "edge [style = '', arrowhead='none', color='%s', penwidth=1.1, minlen=%s, splines=false]",
+      "edge [style = '', arrowhead='none', color='%s', penwidth=1.1, minlen=%s, splines=false, tailport='e', headport='w']",
       paste0(
           "black:", flow_col, ":black"
         ),
         minlen
     )
     style_flow_edges_to_destination <- sprintf(
-      "edge [style = '', arrowhead='normal', color='%s', arrowsize=1.5, penwidth=1.1, minlen=%s, splines=ortho]",
+      "edge [style = '', arrowhead='normal', color='%s', arrowsize=1.5, penwidth=1.1, minlen=%s, splines=ortho, tailport='e', headport='w']",
       paste0(
           "black:", flow_col, ":black"
         ),
@@ -648,7 +650,7 @@ plot.sdbuildR <- function(x,
   style_dependency <- dependency_edges <- ""
   if (show_dependencies) {
 
-    style_dependency <- sprintf("edge [style = '', color='%s', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']",
+    style_dependency <- sprintf("edge [style = '', color='%s', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport = '_', headport='_']",
       dependency_col)
 
     # Only keep dependencies in plot_var
@@ -679,7 +681,7 @@ plot.sdbuildR <- function(x,
     "
     digraph sfm {
 
-      graph [layout = dot, rankdir = LR, center=true, outputorder='edgesfirst', pad=.1, nodesep= .3]
+      graph [layout = dot, rankdir = LR, center=true, outputorder='edgesfirst', pad=%s, nodesep= %s]
 
       # Shared across all nodes (persists until overridden)
       %s
@@ -722,9 +724,12 @@ plot.sdbuildR <- function(x,
 
     }
           ",
+          pad = as.character(pad),
+          nodesep = as.character(nodesep),
     style_node,
     style_stock,
-    stock_nodes |> rev() |> paste0(collapse = "\n\t"),
+    stock_nodes |> paste0(collapse = "\n\t"),
+    # stock_nodes |> rev() |> paste0(collapse = "\n\t"),
     style_flow_node,
     flow_nodes |> paste0(collapse = "\n\t"),
     style_cloud,

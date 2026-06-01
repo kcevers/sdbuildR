@@ -12,6 +12,7 @@ jobs:
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       NOT_CRAN: "true"
+      AUTO_INSTALL_JULIA_ENV: "true"
     steps:
       - uses: actions/checkout@v4
       - uses: r-lib/actions/setup-r@v2
@@ -34,17 +35,6 @@ jobs:
           echo "PATH: $PATH"
           which julia
           julia --version
-        shell: bash
-
-      - name: Prepare isolated JULIA_DEPOT_PATH
-        run: |
-          mkdir -p "${{ runner.temp }}/julia_depot"
-          echo "JULIA_DEPOT_PATH=${{ runner.temp }}/julia_depot" >> $GITHUB_ENV
-        shell: bash
-
-      - name: Run Julia setup script
-        run: |
-          julia --project=inst inst/setup.jl
         shell: bash
 
       - name: Test coverage

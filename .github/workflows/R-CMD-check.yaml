@@ -29,6 +29,7 @@ jobs:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       R_KEEP_PKG_SOURCE: yes
       NOT_CRAN: "true"
+      AUTO_INSTALL_JULIA_ENV: "true"
 
     steps:
       - uses: actions/checkout@v4
@@ -59,18 +60,6 @@ jobs:
           echo "PATH: $PATH"
           which julia
           julia --version
-        shell: bash
-
-      # Ubuntu runners have a default Julia depot that can cause conflicts (e.g., segfault); use an isolated depot for all OSes to ensure consistency
-      - name: Prepare isolated JULIA_DEPOT_PATH
-        run: |
-          mkdir -p "${{ runner.temp }}/julia_depot"
-          echo "JULIA_DEPOT_PATH=${{ runner.temp }}/julia_depot" >> $GITHUB_ENV
-        shell: bash
-
-      - name: Run Julia setup script
-        run: |
-          julia --project=inst inst/setup.jl
         shell: bash
 
       - uses: r-lib/actions/check-r-package@v2

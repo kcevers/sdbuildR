@@ -1045,11 +1045,15 @@ As shown above, job demands rise to an excessive degree, rapidly depleting energ
 
 ```{r include=FALSE}
 if (recreate_figs) {
-  # pl <- plot(sfm, minlen = 1.5, font_size = 20, font_family = font_family, show_constants = FALSE, show_aux = TRUE, show_dependencies = TRUE)
+  # pl <- plot(sfm, minlen = 1.5, font_size = 20, font_family = font_family, show_constants = FALSE, show_aux = TRUE, show_dependencies = TRUE, stock_col = stock_col, flow_col = flow_col, pad = .1, nodesep = .5)
   # cat(pl[["x"]][["diagram"]])
   # at bottom, add:
+      #   "invisnode1" [id="invisnode1",label="Invisible Node",shape=box,style=invis,fontsize=12, width=.2, height=.1, fixedsize=true]
+      # "invisnode2" [id="invisnode2",label="Invisible Node",shape=box,style=invis,fontsize=12, width=.2, height=.1, fixedsize=true]
+
+
       #  # Rank groupings
-      #  {rank=same; engagement; performance; energy; resources; demands}
+      #  {rank=same; engagement; invisnode1; performance; invisnode2; energy; resources; demands}
 
       #  # Enforce top-to-bottom order
       #  engagement -> performance -> energy -> resources -> demands [style=invis]
@@ -1057,19 +1061,23 @@ if (recreate_figs) {
 
     viz_str <- '
     
+   
     digraph sfm {
 
-      graph [layout = dot, rankdir = LR, center=true, outputorder="edgesfirst", pad=.1, nodesep= .3]
+      graph [layout = dot, rankdir = LR, center=true, outputorder="edgesfirst", pad=0.1, nodesep= 0.3, overlap = false]
 
       # Shared across all nodes (persists until overridden)
       node [fontsize=20,fontname="Times New Roman"]
 
       # Define stock nodes
-      node [shape=box,style=filled,fillcolor="#83d3d4"]
-      "resources" [id="resources",label="Job Resources",tooltip = "eqn = 0.5"]
-        "engagement" [id="engagement",label="Work Engagement",tooltip = "eqn = 0.7"]
+      node [shape=box,style=filled,fillcolor="#09B0ACBF"]
+      "demands" [id="demands",label="Job Demands",tooltip = "eqn = 0.2"]
         "energy" [id="energy",label="Energy",tooltip = "eqn = 0.9"]
-        "demands" [id="demands",label="Job Demands",tooltip = "eqn = 0.2"]
+        "engagement" [id="engagement",label="Work Engagement",tooltip = "eqn = 0.7"]
+        "resources" [id="resources",label="Job Resources",tooltip = "eqn = 0.5"]
+
+        "invisnode1" [id="invisnode1",label="Invisible Node",shape=box,style=invis, width=.01, height=.01, fixedsize=true]
+      "invisnode2" [id="invisnode2",label="Invisible Node",shape=box,style=invis, width=.01, height=.01, fixedsize=true]
 
       # Define flow nodes (intermediate nodes for flows)
       node [style = "",shape=plaintext, fontsize=18, width=0.6, height=0.3]
@@ -1098,21 +1106,21 @@ if (recreate_figs) {
         "Cloud10" [label="", tooltip = "Unspecified sink"]
 
       # Define auxiliary nodes
-      node [shape=circle,fontsize=18,fontname="Times New Roman", width=0.15, height=0.15, fixedsize=true, style=filled, fillcolor="grey90"]
+      node [shape=circle,fontsize=18, width=0.15, height=0.15, fixedsize=true, style=filled, fillcolor="grey90"]
       "performance" [id="performance",xlabel="Job Performance",label="",tooltip = "eqn = engagement + energy"]
 
       # Define constant nodes
       
-       
        # Rank groupings
-       {rank=same; engagement; performance; energy; resources; demands}
+       {rank=same; engagement; invisnode1; performance; invisnode2; energy; resources; demands}
 
        # Enforce top-to-bottom order
-       engagement -> performance -> energy -> resources -> demands [style=invis]
+       engagement -> invisnode1 -> performance -> invisnode2 -> energy -> resources -> demands [style=invis]
+
       
 
       # Define flow edges (stock -> flow_node)
-      edge [style = "", arrowhead="none", color="black:#f48153:black", penwidth=1.1, minlen=1.5, splines=false]
+      edge [style = "", arrowhead="none", color="black:#CCC568:black", penwidth=1.1, minlen=1.5, splines=false, tailport="e", headport="w"]
       "energy" -> "effort"
         "engagement" -> "engagement_decay"
         "Cloud5" -> "exo_demands"
@@ -1125,7 +1133,7 @@ if (recreate_figs) {
         "demands" -> "work"
 
       # Define flow edges (flow_node -> stock)
-      edge [style = "", arrowhead="normal", color="black:#f48153:black", arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
+      edge [style = "", arrowhead="normal", color="black:#CCC568:black", arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho, tailport="e", headport="w"]
       "effort" -> "Cloud1"
         "engagement_decay" -> "Cloud2"
         "exo_demands" -> "demands"
@@ -1138,7 +1146,7 @@ if (recreate_figs) {
         "work" -> "Cloud4"
 
       # Define dependency edges
-      edge [style = "", color="#999999", arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport="_"]
+      edge [style = "", color="#999999", arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport = "_", headport="_"]
       "engagement" -> "effort"
         "energy" -> "effort"
         "demands" -> "effort"
@@ -1161,107 +1169,112 @@ if (recreate_figs) {
         "engagement" -> "performance"
         "energy" -> "performance"
 
-     
+      
+    }
+    '
 
-    }'
+  }
 
-    # viz_str <- "
+{
+    viz_str2 <- "
 
-    # digraph sfm {
+    digraph sfm {
 
-    #   graph [layout = dot, rankdir = LR, center=true, outputorder='edgesfirst', pad=.1, nodesep= .3]
+      graph [layout = dot, rankdir = LR, center=true, outputorder='edgesfirst', pad=.1, nodesep= .3]
 
-    #   # Rank groupings
-    #   {rank=same; E; P; X; R; D}
+      # Rank groupings
+      {rank=same; E; P; X; R; D}
 
-    #   # Enforce top-to-bottom order
-    #   E -> P -> X -> R -> D [style=invis]
+      # Enforce top-to-bottom order
+      E -> P -> X -> R -> D [style=invis]
 
-    #   # Define stock + auxiliary nodes
-    #    'R' [id='R',label='Job Resources',tooltip = 'eqn = runif(1, 0.01, 2)',shape=box,style=filled,fillcolor='#35B7ADBF',fontsize=18,fontname='Times New Roman']
-    #    'D' [id='D',label='Job Demands',tooltip = 'eqn = runif(1, 0.01, 2)',shape=box,style=filled,fillcolor='#35B7ADBF',fontsize=18,fontname='Times New Roman']
-    #    'P' [id='P',label='Job Performance',tooltip = 'eqn = E + X',shape=plaintext,fontsize=16,fontname='Times New Roman', width=0.6, height=0.3]
-    #    'X' [id='X',label='Energy',tooltip = 'eqn = runif(1, 0.01, 2)',shape=box,style=filled,fillcolor='#35B7ADBF',fontsize=18,fontname='Times New Roman']
-    #   'E' [id='E',label='Engagement',tooltip = 'eqn = runif(1, 0.01, 2)',shape=box,style=filled,fillcolor='#35B7ADBF',fontsize=18,fontname='Times New Roman']
+      # Define stock + auxiliary nodes
+       'R' [id='R',label='Job Resources',tooltip = 'eqn = runif(1, 0.01, 2)',shape=box,style=filled,fillcolor='#35B7ADBF',fontsize=18,fontname='Times New Roman']
+       'D' [id='D',label='Job Demands',tooltip = 'eqn = runif(1, 0.01, 2)',shape=box,style=filled,fillcolor='#35B7ADBF',fontsize=18,fontname='Times New Roman']
+       'P' [id='P',label='Job Performance',tooltip = 'eqn = E + X',shape=plaintext,fontsize=16,fontname='Times New Roman', width=0.6, height=0.3]
+       'X' [id='X',label='Energy',tooltip = 'eqn = runif(1, 0.01, 2)',shape=box,style=filled,fillcolor='#35B7ADBF',fontsize=18,fontname='Times New Roman']
+      'E' [id='E',label='Engagement',tooltip = 'eqn = runif(1, 0.01, 2)',shape=box,style=filled,fillcolor='#35B7ADBF',fontsize=18,fontname='Times New Roman']
 
-    #   'E' -> 'P' [color='#999999', arrowsize=0.8, penwidth=1, splines=false, constraint=false, tailport='_']
-    #   'X' -> 'P' [color='#999999', arrowsize=0.8, penwidth=1, splines=false, constraint=false, tailport='_']
+      'E' -> 'P' [color='#999999', arrowsize=0.8, penwidth=1, splines=false, constraint=false, tailport='_']
+      'X' -> 'P' [color='#999999', arrowsize=0.8, penwidth=1, splines=false, constraint=false, tailport='_']
 
 
-    #   # Define flow nodes (intermediate nodes for flows)
-    #   'motivation' [id='motivation',label='Motivation', tooltip = 'eqn = motivation_rate * X * hill(R, m_slope) * D', shape = plaintext, fontsize=16, fontname='Times New Roman', width=0.6, height=0.3]
-    #   'proactive' [id='proactive',label='Proactive behaviour', tooltip = 'eqn = proactive_rate * hill(E, m_slope)', shape = plaintext, fontsize=16, fontname='Times New Roman', width=0.6, height=0.3]
-    #   'engagement_decay' [id='engagement_decay',label='Decay', tooltip = 'eqn = engagement_decay_rate * E / (1 + X)', shape = plaintext, fontsize=16, fontname='Times New Roman', width=0.6, height=0.3]
-    #   'resource_decay' [id='resource_decay',label='Decay', tooltip = 'eqn = resource_decay_rate * R / (1 + X)', shape = plaintext, fontsize=16, fontname='Times New Roman', width=0.6, height=0.3]
-    #   'effort' [id='effort',label='Effort', tooltip = 'eqn = effort_rate / (1 + E) * X * D / (1 + R)', shape = plaintext, fontsize=16, fontname='Times New Roman', width=0.6, height=0.3]
-    #   'X_X' [id='X_X',label='Recovery', tooltip = 'eqn = r_X_X * X * exp(-s_slope * X)', shape = plaintext, fontsize=16, fontname='Times New Roman', width=0.6, height=0.3]
-    #   'work' [id='work',label='Work', tooltip = 'eqn = r_D_E * X * D * (1 + E)', shape = plaintext, fontsize=16, fontname='Times New Roman', width=0.6, height=0.3]
-    #   'U' [id='U',label='Self-undermining', tooltip = 'eqn = r_U * X * exp(-e_slope * X)', shape = plaintext, fontsize=16, fontname='Times New Roman', width=0.6, height=0.3]
-    #   'R_R' [id='R_R',label='Exogenous support', tooltip = 'eqn = r_R_new * exp(-s_slope * R)', shape = plaintext, fontsize=16, fontname='Times New Roman', width=0.6, height=0.3]
-    #   'D_D' [id='D_D',label='Exogenous tasks', tooltip = 'eqn = r_D * exp(-s_slope * D)', shape = plaintext, fontsize=16, fontname='Times New Roman', width=0.6, height=0.3]
+      # Define flow nodes (intermediate nodes for flows)
+      'motivation' [id='motivation',label='Motivation', tooltip = 'eqn = motivation_rate * X * hill(R, m_slope) * D', shape = plaintext, fontsize=16, fontname='Times New Roman', width=0.6, height=0.3]
+      'proactive' [id='proactive',label='Proactive behaviour', tooltip = 'eqn = proactive_rate * hill(E, m_slope)', shape = plaintext, fontsize=16, fontname='Times New Roman', width=0.6, height=0.3]
+      'engagement_decay' [id='engagement_decay',label='Decay', tooltip = 'eqn = engagement_decay_rate * E / (1 + X)', shape = plaintext, fontsize=16, fontname='Times New Roman', width=0.6, height=0.3]
+      'resource_decay' [id='resource_decay',label='Decay', tooltip = 'eqn = resource_decay_rate * R / (1 + X)', shape = plaintext, fontsize=16, fontname='Times New Roman', width=0.6, height=0.3]
+      'effort' [id='effort',label='Effort', tooltip = 'eqn = effort_rate / (1 + E) * X * D / (1 + R)', shape = plaintext, fontsize=16, fontname='Times New Roman', width=0.6, height=0.3]
+      'X_X' [id='X_X',label='Recovery', tooltip = 'eqn = r_X_X * X * exp(-s_slope * X)', shape = plaintext, fontsize=16, fontname='Times New Roman', width=0.6, height=0.3]
+      'work' [id='work',label='Work', tooltip = 'eqn = r_D_E * X * D * (1 + E)', shape = plaintext, fontsize=16, fontname='Times New Roman', width=0.6, height=0.3]
+      'U' [id='U',label='Self-undermining', tooltip = 'eqn = r_U * X * exp(-e_slope * X)', shape = plaintext, fontsize=16, fontname='Times New Roman', width=0.6, height=0.3]
+      'R_R' [id='R_R',label='Exogenous support', tooltip = 'eqn = r_R_new * exp(-s_slope * R)', shape = plaintext, fontsize=16, fontname='Times New Roman', width=0.6, height=0.3]
+      'D_D' [id='D_D',label='Exogenous tasks', tooltip = 'eqn = r_D * exp(-s_slope * D)', shape = plaintext, fontsize=16, fontname='Times New Roman', width=0.6, height=0.3]
 
-    #   # Define external cloud nodes
-    #   'Cloud1' [label='', tooltip = 'Unspecified source',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
-    #   'Cloud2' [label='', tooltip = 'Unspecified source',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
-    #   'Cloud3' [label='', tooltip = 'Unspecified source',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
-    #   'Cloud4' [label='', tooltip = 'Unspecified source',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
-    #   'Cloud5' [label='', tooltip = 'Unspecified sink',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
-    #   'Cloud6' [label='', tooltip = 'Unspecified sink',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
-    #   'Cloud7' [label='', tooltip = 'Unspecified sink',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
-    #   'Cloud8' [label='', tooltip = 'Unspecified sink',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
-    #   'Cloud9' [label='', tooltip = 'Unspecified sink',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
-    #   'Cloud10' [label='', tooltip = 'Unspecified sink',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
+      # Define external cloud nodes
+      'Cloud1' [label='', tooltip = 'Unspecified source',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
+      'Cloud2' [label='', tooltip = 'Unspecified source',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
+      'Cloud3' [label='', tooltip = 'Unspecified source',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
+      'Cloud4' [label='', tooltip = 'Unspecified source',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
+      'Cloud5' [label='', tooltip = 'Unspecified sink',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
+      'Cloud6' [label='', tooltip = 'Unspecified sink',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
+      'Cloud7' [label='', tooltip = 'Unspecified sink',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
+      'Cloud8' [label='', tooltip = 'Unspecified sink',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
+      'Cloud9' [label='', tooltip = 'Unspecified sink',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
+      'Cloud10' [label='', tooltip = 'Unspecified sink',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
 
-    #   # Define flow edges (stock -> flow_node -> stock)
-    #   'Cloud5' -> 'motivation' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
-    #   'motivation' -> 'E' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
-    #   'Cloud6' -> 'proactive' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
-    #   'proactive' -> 'R' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
-    #   'E' -> 'engagement_decay' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
-    #   'engagement_decay' -> 'Cloud1' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
-    #   'R' -> 'resource_decay' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
-    #   'resource_decay' -> 'Cloud2' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
-    #   'X' -> 'effort' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
-    #   'effort' -> 'Cloud3' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
-    #   'Cloud7' -> 'X_X' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
-    #   'X_X' -> 'X' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
-    #   'D' -> 'work' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
-    #   'work' -> 'Cloud4' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
-    #   'Cloud8' -> 'U' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
-    #   'U' -> 'D' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
-    #   'Cloud9' -> 'R_R' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
-    #   'R_R' -> 'R' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
-    #   'Cloud10' -> 'D_D' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
-    #   'D_D' -> 'D' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
+      # Define flow edges (stock -> flow_node -> stock)
+      'Cloud5' -> 'motivation' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
+      'motivation' -> 'E' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
+      'Cloud6' -> 'proactive' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
+      'proactive' -> 'R' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
+      'E' -> 'engagement_decay' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
+      'engagement_decay' -> 'Cloud1' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
+      'R' -> 'resource_decay' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
+      'resource_decay' -> 'Cloud2' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
+      'X' -> 'effort' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
+      'effort' -> 'Cloud3' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
+      'Cloud7' -> 'X_X' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
+      'X_X' -> 'X' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
+      'D' -> 'work' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
+      'work' -> 'Cloud4' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
+      'Cloud8' -> 'U' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
+      'U' -> 'D' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
+      'Cloud9' -> 'R_R' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
+      'R_R' -> 'R' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
+      'Cloud10' -> 'D_D' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1.5, splines=false]
+      'D_D' -> 'D' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho]
 
-    #   # Define dependency edges
-    #   'X' -> 'motivation' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-    #   'R' -> 'motivation' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-    #   'D' -> 'motivation' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-    #   'E' -> 'proactive' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-    #   'E' -> 'engagement_decay' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-    #   'X' -> 'engagement_decay' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-    #   'R' -> 'resource_decay' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-    #   'X' -> 'resource_decay' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      # Define dependency edges
+      'X' -> 'motivation' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'R' -> 'motivation' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'D' -> 'motivation' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'E' -> 'proactive' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'E' -> 'engagement_decay' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'X' -> 'engagement_decay' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'R' -> 'resource_decay' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'X' -> 'resource_decay' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
 
-    #   'E' -> 'effort' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-    #   'X' -> 'effort' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-    #   'D' -> 'effort' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-    #   'R' -> 'effort' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-    #   'X' -> 'X_X' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-    #   'X' -> 'work' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-    #   'D' -> 'work' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-    #   'E' -> 'work' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-    #   'X' -> 'U' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-    #   'R' -> 'R_R' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-    #   'D' -> 'D_D' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'E' -> 'effort' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'X' -> 'effort' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'D' -> 'effort' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'R' -> 'effort' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'X' -> 'X_X' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'X' -> 'work' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'D' -> 'work' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'E' -> 'work' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'X' -> 'U' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'R' -> 'R_R' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+      'D' -> 'D_D' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
 
-    # }
-    # "
+    }
+    "
+}
+    pl <- DiagrammeR::grViz(viz_str2)
 
 
     pl <- DiagrammeR::grViz(viz_str)
-  }
+  
 
   export_plot(pl, file.path(filepath_figs, "sfm_JDR_full.pdf"))
 }
@@ -1978,7 +1991,7 @@ if (recreate_figs) {
   # Parameter variation
   sims <- ensemble(sfm,
     n = n_ens_par,
-    conditions = list(motivation_rate = motivation_rates),
+    conditions = conditions,
     save_sims = TRUE
   )
 
@@ -2358,303 +2371,4 @@ sessionInfo()
 ## References
 
 
-
-
-
-## Remove:
-
-
-## Stock-and-Flow Models
-
-### Single stock example
-
-```{r}
-sfm <- sdbuildR() |>
-  meta(name = "Burnout") |>
-  sim_settings(stop = 16, time_units = "weeks", only_stocks = FALSE)
-```
-
-```{r}
-sfm <- sfm |>
-  stock(energy, eqn = .3, label = "Energy")
-
-simulate(sfm) |> plot()
-```
-
-
-```{r include=FALSE}
-if (recreate_figs) {
-  sfm_list <- list()
-  sfm_list[["A"]] <- sfm
-}
-```
-
-
-
-```{r}
-print(sfm)
-```
-
-
-```{r}
-sfm <- constant(sfm, work_rate, eqn = .5)
-```
-
-```{r}
-sfm <- flow(sfm, work,
-  eqn = work_rate,
-  from = energy, label = "Depletion from work"
-)
-
-simulate(sfm) |> plot()
-```
-
-
-```{r include=FALSE}
-if (recreate_figs) {
-  sfm_list[["B"]] <- sfm
-}
-```
-
-
-```{r}
-sfm <- update(sfm, work, eqn = work_rate * energy)
-
-simulate(sfm) |> plot()
-```
-
-
-
-```{r include=FALSE}
-if (recreate_figs) {
-  sfm_list[["C"]] <- sfm
-}
-```
-
-```{r}
-sfm <- constant(sfm, recovery_rate, eqn = .3, label = "Recovery Rate") |>
-  flow(recovery, eqn = recovery_rate, to = energy, label = "Recovery")
-
-simulate(sfm) |> plot()
-```
-
-
-
-```{r include=FALSE}
-if (recreate_figs) {
-  sfm_list[["D"]] <- sfm
-}
-```
-
-What if the ability to recover is not static, but erodes over time?
-
-```{r}
-sfm <- change_type(sfm, recovery_rate, new_type = "stock") |>
-  update(recovery_rate, eqn = 1)
-```
-
-
-```{r}
-sfm <- flow(sfm, erosion,
-  eqn = recovery_rate * work,
-  from = recovery_rate, label = "Recovery Erosion"
-)
-
-simulate(sfm) |> plot()
-```
-
-
-Counterintuitively, as recovery capacity erodes, energy first increases. This is because recovery first still exceeds energy depletion from work. 
-
-```{r}
-sfm <- aux(sfm, net_change,
-  eqn = recovery - work,
-  label = "Net change in energy"
-)
-
-simulate(sfm) |> plot()
-```
-
-
-```{r include=FALSE}
-if (recreate_figs) {
-  sfm_list[["E"]] <- sfm
-}
-```
-
-
-
-```{r include=FALSE}
-if (recreate_figs) {
-  # Create subplot figure
-  pl_list <- list()
-  max_letter <- max(names(sfm_list))
-  VARS_example <- c("energy", "work", "recovery", "recovery_rate", "net_change")
-
-  VARS_example <- c("energy", "work", "recovery", "net_change")
-
-  # Recovery = recovery_rate so plot as one line
-  sfm_list[["E"]] <- sfm_list[["E"]] |>
-    update(recovery, label = "Recovery / recovery rate")
-
-  COLORS_example <- COLORS[seq_along(VARS_example)]
-
-  titles <- paste0(
-    paste0(
-      "<i>", LETTERS[seq_along(sfm_list)], ". ",
-      c(
-        "Static Stock",
-        "Constant Outflow",
-        "Stock-Dependent<br>Outflow",
-        "Constant Inflow",
-        "Erosion of Recovery Rate"
-      ), "</i>"
-    )
-  )
-  titles <- stats::setNames(titles, names(sfm_list))
-
-  for (letter in names(sfm_list)) {
-    sim <- simulate(sfm_list[[letter]],
-      save_at = .01, only_stocks = FALSE
-    )
-
-    vars_in_sim <- unique(sim$df$variable)
-
-    vars_ <- VARS_example[VARS_example %in% vars_in_sim] |> rev()
-    colors_ <- COLORS_example[VARS_example %in% vars_in_sim] |> rev()
-    colors_ <- adjustcolor(colors_, alpha.f = .9)
-
-    pl_list[[letter]] <- plot(sim,
-      vars = vars_,
-      colors = colors_,
-      main = "",
-      showlegend = (letter == max_letter)
-    ) |>
-      rm_grid() |>
-      plotly::layout(yaxis = list(
-        nticks = 3
-      ), xaxis = list(
-        tickvals = list(0, 7.5, 15)
-      ))
-  }
-
-  x1 <- 0.1
-  x2 <- 0.37
-  x3 <- .78
-  y1 <- 1.06
-  y2 <- 0.48
-  # y3 <- 0.45
-
-  annot_ <- utils::modifyList(annot, list(
-    font = list(size = font_size_subplot + 4, family = font_family)
-  ))
-
-  pl <- plotly::subplot(
-    plotly::subplot(pl_list[1:4],
-      nrows = 2,
-      shareX = TRUE,
-      shareY = FALSE,
-      titleY = FALSE,
-      titleX = FALSE,
-      margin = 0.075
-    ), plotly::subplot(pl_list[5]),
-    nrows = 1,
-    margin = 0.03
-  ) |>
-    plotly::layout(
-      yaxis4 = list(range = c(0, 1)),
-      yaxis2 = list(range = c(0, .4)),
-      font = annot_font,
-      legend = utils::modifyList(annot_legend, list(
-        y = -.16,
-        font = list(size = font_size_legend)
-      )),
-      annotations = list(
-        utils::modifyList(annot_xlab, list(x = 0.5, y = -0.075))
-      )
-    ) |>
-    plotly::layout(annotations = list(
-      utils::modifyList(annot_, list(x = x1, y = y1, text = titles[["A"]])),
-      utils::modifyList(annot_, list(x = x2, y = y1, text = titles[["B"]])),
-      utils::modifyList(annot_, list(x = x1, y = y2 - .005, text = titles[["C"]])),
-      utils::modifyList(annot_, list(x = x2, y = y2 + .005, text = titles[["D"]])),
-      utils::modifyList(annot_, list(x = x3, y = y1, text = titles[["E"]]))
-    ))
-
-  pl
-
-  export_plot(pl, file.path(filepath_figs, "build_sfm.pdf"),
-    width = 7, height = 4
-  )
-}
-```
-
-
-```{r}
-if (recreate_figs) {
-  # copy cat(viz_str) from plot.sdbuildR() with minlen=1.5
-  {
-    viz_str <- "
-
-    digraph sfm {
-
-      graph [layout = dot, rankdir = LR, center=true, outputorder='edgesfirst', pad=.1, nodesep= .15]
-
-      # Rank groupings
-      {rank=same; 'net_change1'; 'net_change'; 'invisnode1'; 'energy'; 'invisnode2'; 'recovery_rate'}
-
-      # Invisible edge to fix order
-      'net_change1' -> 'net_change' -> 'invisnode1' -> 'energy' -> 'invisnode2' -> 'recovery_rate' [style=invis]
-
-      # Define stock nodes
-      'recovery_rate' [id='recovery_rate',label='Recovery Rate',tooltip = 'eqn = 1',shape=box,style=filled,fillcolor='#09B0ACBF',fontsize=18,fontname='Times New Roman']
-
-     # Define invisible node
-      'invisnode1' [id='invisnode1',label='Invisible Node',shape=box,style=invis,fontsize=12,fontname='Times New Roman', width=.2, height=.1, fixedsize=true]
-      'invisnode2' [id='invisnode2',label='Invisible Node',shape=box,style=invis,fontsize=12,fontname='Times New Roman', width=.2, height=.1, fixedsize=true]
-
-      'energy' [id='energy',label='Energy',tooltip = 'eqn = 0.3',shape=box,style=filled,fillcolor='#09B0ACBF',fontsize=18,fontname='Times New Roman']
-
-      # Define flow nodes (intermediate nodes for flows)
-      'work' [id='work',label='Depletion from work', tooltip = 'eqn = work_rate * energy', shape = plaintext, fontsize=16, fontname='Times New Roman', width=0.6, height=0.3]
-                'recovery' [id='recovery',label='Recovery', tooltip = 'eqn = recovery_rate', shape = plaintext, fontsize=16, fontname='Times New Roman', width=0.6, height=0.3]
-                'erosion' [id='erosion',label='Erosion', tooltip = 'eqn = recovery_rate * work', shape = plaintext, fontsize=16, fontname='Times New Roman', width=0.6, height=0.3]
-
-      # Define external cloud nodes
-      'Cloud1' [label='', tooltip = 'Unspecified source',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
-                'Cloud2' [label='', tooltip = 'Unspecified source',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
-                'Cloud3' [label='', tooltip = 'Unspecified sink',shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
-
-      # Define flow edges (stock -> flow_node -> stock)
-      'energy' -> 'work' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1, splines=false]
-      'work' -> 'Cloud1' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1, splines=ortho]
-      'Cloud3' -> 'recovery' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1, splines=false]
-      'recovery' -> 'energy' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1, splines=ortho]
-      'recovery_rate' -> 'erosion' [arrowhead='none', color='black:#CCC568:black', penwidth=1.1, minlen=1, splines=false]
-      'erosion' -> 'Cloud2' [arrowhead='normal', color='black:#CCC568:black', arrowsize=1.5, penwidth=1.1, minlen=1, splines=ortho]
-
-      # Define dependency edges
-      'energy' -> 'work' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-      'recovery_rate' -> 'recovery' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-      'recovery_rate' -> 'erosion' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-      'work' -> 'erosion' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-      'recovery' -> 'net_change' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-      'work' -> 'net_change' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-
-      # Define auxiliary nodes
-      # 'net_change' [id='net_change',xlabel='',label='',tooltip = 'eqn = recovery - work',shape=circle,fontsize=16,fontname='Times New Roman', width=0.15, height=0.15, fixedsize=true, style=filled, fillcolor='grey90']
-      'net_change' [id='net_change',xlabel='',label='',tooltip = 'eqn = recovery - work',shape=circle,fontsize=16,fontname='Times New Roman', width=0.15, height=0.15, fixedsize=true, style=filled, fillcolor='grey90']
-      'net_change1' [id='net_change1',label='Net change in energy',tooltip = 'eqn = recovery - work',shape=plaintext,fontsize=16,fontname='Times New Roman', width=0.6, height=0.2, fixedsize=true]
-
-    }
-    "
-
-
-    pl <- DiagrammeR::grViz(viz_str)
-    pl
-  }
-
-  export_plot(pl, file.path(filepath_figs, "sfm_burnout_simple.pdf"))
-}
-```
 

@@ -18,6 +18,8 @@
   show_constants = FALSE,
   show_aux = TRUE,
   minlen = 2,
+  pad = 0.1,
+  nodesep = 0.3,
   ...
 )
 }
@@ -47,6 +49,10 @@
 \item{show_aux}{If TRUE, show auxiliary variables. Defaults to TRUE.}
 
 \item{minlen}{Minimum length of edges; must be an integer. Defaults to 2.}
+
+\item{pad}{Padding around the graph. Defaults to 0.1.}
+
+\item{nodesep}{Minimum distance between nodes. Defaults to 0.3.}
 
 \item{...}{Optional arguments}
 }
