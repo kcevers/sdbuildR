@@ -21,7 +21,7 @@ expect_snapshot_plot <- function(name, code, fileext = NULL, width = 4, height =
   announce_snapshot_file(name = name)
 
   skip_on_cran()
-  # skip_on_os("mac")
+  skip_on_os("mac") # floating point differences cause snapshot failures on GitHub Actions macOS runners
   skip_if(
     plotly_object && !has_internet(),
     "No internet connection for plot snapshot test"

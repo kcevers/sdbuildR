@@ -62,14 +62,16 @@ jobs:
           julia --version
         shell: bash
 
-      - name: Set up Julia environment
+      - name: Prepare isolated JULIA_DEPOT_PATH
         run: |
-          stopifnot(file.exists("inst/setup.jl"))
-          status <- system2("julia", "inst/setup.jl")
-          if (status != 0) {
-            stop("Julia environment setup failed.")
-          }
-        shell: Rscript {0}
+          mkdir -p "${{ runner.temp }}/julia_depot"
+          echo "JULIA_DEPOT_PATH=${{ runner.temp }}/julia_depot" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Run Julia setup script
+        run: |
+          julia --project=inst inst/setup.jl
+        shell: bash
 
       - uses: r-lib/actions/check-r-package@v2
         with:
