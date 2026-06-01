@@ -6,6 +6,7 @@ test_that("has_internet() returns logical", {
   expect_length(result, 1)
 })
 
+
 test_that("last() returns last element", {
   expect_equal(last(c(1, 2, 3)), 3)
   expect_equal(last(c("a", "b", "c")), "c")

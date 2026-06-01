@@ -4,7 +4,7 @@
 # Test stocks with no flows
 test_that("stocks with no flows work correctly", {
   sfm <- sdbuildR() |>
-    update(name = "IsolatedStock", type = "stock", eqn = "50")
+    update(name = "IsolatedStock", type = "stock", eqn = 50)
 
   sfm_r <- sim_settings(sfm, language = "R", stop = 5)
   sfm_r <- prep_stock_change(sfm_r)
@@ -26,7 +26,7 @@ test_that("stocks with no flows work correctly", {
 # Test empty list columns
 test_that("empty list columns handled correctly", {
   sfm <- sdbuildR() |>
-    update(name = "S", type = "stock", eqn = "100")
+    update(name = "S", type = "stock", eqn = 100)
 
   sfm <- prep_stock_change(sfm)
 

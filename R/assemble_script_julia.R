@@ -23,6 +23,17 @@ simulate_julia <- function(object,
   script <- result$script
   object <- result$object # Get updated object with cache populated
 
+  on.exit(
+    {
+      # Ensure files are deleted even if an error occurs
+      if (file.exists(filepath)) {
+          file.remove(filepath)
+      }
+      
+    },
+    add = TRUE
+  )
+
   write_script(script, filepath)
   script <- paste0(readLines(filepath), collapse = "\n")
 
@@ -82,9 +93,6 @@ simulate_julia <- function(object,
       )
     }
   )
-
-  # Clean up temporary file
-  file.remove(filepath)
 
   sim
 }

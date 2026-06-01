@@ -4,7 +4,7 @@ test_that("R script components are pre-cached in sfm after sim_settings", {
 
   # Check that all standard fields exist
   expect_equal(length(sfm$assemble), length(empty_assemble()))
-  expect_equal(sort(names(sfm$assemble)), sort(names(empty_assemble())))
+  expect_setequal(names(sfm$assemble), names(empty_assemble()))
 
   # Check that components are already cached in sfm BEFORE simulate
   expect_true(!is.null(sfm$assemble$language))
@@ -29,7 +29,7 @@ test_that("R script components persist through simulation", {
 
   # Check that NO NEW fields were added during simulate
   fields_after <- names(sim$object$assemble)
-  expect_equal(sort(fields_before), sort(fields_after))
+  expect_setequal(fields_before, fields_after)
   expect_equal(length(fields_after), length(empty_assemble()))
 
   # Check that components still exist in sim$object
@@ -39,7 +39,7 @@ test_that("R script components persist through simulation", {
     expect_false(is.null(sim$object$assemble[[name]]))
   }
 
-  expect_equal(sim$success, TRUE)
+  expect_true(sim$success)
 })
 
 
@@ -73,7 +73,7 @@ test_that("Julia script components are pre-cached after sim_settings", {
 
   # Check that all standard fields exist (same as R)
   expect_equal(length(sfm$assemble), length(empty_assemble()))
-  expect_equal(sort(names(sfm$assemble)), sort(names(empty_assemble())))
+  expect_setequal(names(sfm$assemble), names(empty_assemble()))
 })
 
 test_that("Julia script components persist through simulation", {

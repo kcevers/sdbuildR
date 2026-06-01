@@ -101,14 +101,20 @@ url_to_insightmaker <- function(URL, file = NULL) {
   } else {
     delete_after <- FALSE
   }
-  writeLines(xml_str, file)
-  read_file <- xml2::read_xml(file)
 
   # If no file path was specified before, delete file
   if (delete_after) {
-    file.remove(file)
-    file <- NULL
+    on.exit({
+      if (file.exists(file)) {
+        file.remove(file)
+      }
+    }, add = TRUE)
   }
+
+  writeLines(xml_str, file)
+  read_file <- xml2::read_xml(file)
+
+
 
   read_file
 }

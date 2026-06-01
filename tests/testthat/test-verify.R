@@ -1030,7 +1030,7 @@ test_that("verify(): constant-only condition is present in Julia sim", {
 test_that("verify(): stock initial-value condition is present in Julia sim", {
   skip_if_julia_not_ready()
   sfm <- make_verifiable_sfm(language = "Julia") |>
-    unit_test(label = "x", expr = all(S >= 0), conditions = list(S = 50)) 
+    unit_test(label = "x", expr = all(S >= 0), conditions = list(S = 50))
   result <- silence(verify(sfm))
   condition_idx <- result[["condition"]][[1]]
   sim <- result[["sims"]][[condition_idx]]

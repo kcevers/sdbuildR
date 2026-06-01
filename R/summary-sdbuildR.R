@@ -432,9 +432,9 @@ detect_undefined_var <- function(object) {
     unknown_expr <- .ut_expr_vars(test[["expr_str"]], model_names)[["unknown"]]
     if (length(unknown_expr) > 0L) {
       refs <- c(refs, list(list(
-        test        = idx,
-        label     = test[["label"]],
-        prop      = "expr",
+        test = idx,
+        label = test[["label"]],
+        prop = "expr",
         undefined = unknown_expr
       )))
     }
@@ -443,9 +443,9 @@ detect_undefined_var <- function(object) {
     bad_cond <- setdiff(names(test[["conditions"]]), model_names)
     if (length(bad_cond) > 0L) {
       refs <- c(refs, list(list(
-        test        = idx,
-        label     = test[["label"]],
-        prop      = "conditions",
+        test = idx,
+        label = test[["label"]],
+        prop = "conditions",
         undefined = bad_cond
       )))
     }

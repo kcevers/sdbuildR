@@ -150,7 +150,6 @@ test_that("print.sdbuildR() snapshot: default name not shown as title", {
 })
 
 
-
 # ============================================================================
 # as.data.frame.sdbuildR() — filtering behaviour
 # ============================================================================

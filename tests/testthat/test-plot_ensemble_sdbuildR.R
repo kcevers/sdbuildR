@@ -7,9 +7,6 @@ test_that("plot.ensemble_sdbuildR method exists", {
 })
 
 
-
-
-
 # ============================================================================
 # PARAMETER VALIDATION
 # ============================================================================
@@ -77,14 +74,18 @@ test_that("plot() filtered condition shows single condition", {
 
 test_that("plot() central_tendency = 'median'", {
   sims <- make_r_ens()
-  expect_snapshot_plot("ens-central-tendency-median", 
-  plot(sims, central_tendency = "median"))
+  expect_snapshot_plot(
+    "ens-central-tendency-median",
+    plot(sims, central_tendency = "median")
+  )
 })
 
 test_that("plot() central_tendency = FALSE (no central line)", {
   sims <- make_r_ens()
-  expect_snapshot_plot("ens-central-tendency-false", 
-  plot(sims, central_tendency = FALSE))
+  expect_snapshot_plot(
+    "ens-central-tendency-false",
+    plot(sims, central_tendency = FALSE)
+  )
 })
 
 test_that("plot() showlegend = FALSE", {
@@ -216,11 +217,10 @@ test_that("plot() narrow wrap_width wraps long labels", {
 })
 
 
-
 test_that("plot() ensemble with add_constants = TRUE", {
   sims <- make_r_ens()
   pl <- plot(sims, add_constants = TRUE)
-  
+
   expect_plotly(pl)
   traces <- plotly_trace_summary(pl)
   # expect_true(nrow()) > 0)

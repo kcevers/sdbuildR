@@ -715,9 +715,10 @@ plot.sdbuildR <- function(x,
 #' @returns List
 #' @noRd
 #'
-prep_plot <- function(object, type_sim, df, constants, 
-add_constants, vars, palette, colors, wrap_width) {
-  
+prep_plot <- function(
+  object, type_sim, df, constants,
+  add_constants, vars, palette, colors, wrap_width
+) {
   # Get names of stocks and non-stock variables
   names_df <- get_names(object)
 
@@ -1319,7 +1320,7 @@ plot.ensemble_sdbuildR <- function(x,
 #' @param main Main title of the plot. Defaults to the name of the stock-and-flow model and the number of simulations.
 #' @param xlab Label on x-axis.
 #' @param ylab Label on y-axis.
-#' @param alpha Opacity of the confidence bands or individual trajectories. 
+#' @param alpha Opacity of the confidence bands or individual trajectories.
 #' @inheritParams plot.ensemble_sdbuildR
 #'
 #' @returns Plotly object
@@ -1337,18 +1338,15 @@ plot_ensemble_helper <- function(subplot_label,
                                  colors, showlegend, dots,
                                  main, xlab, ylab,
                                  font_family, font_size, alpha) {
-
-                                  if (which == "sims"){
-
-  plot_highlight <- nrow(df_highlight) > 0
-  plot_nonhighlight <- nrow(df_nonhighlight) > 0
-  multiple_sim <- length(unique(df_highlight[["sim"]])) > 1 || length(unique(df_nonhighlight[["sim"]])) > 1
-                                  } else if (which == "summary") {
-
-  plot_highlight <- nrow(summary_df_highlight) > 0
-  plot_nonhighlight <- nrow(summary_df_nonhighlight) > 0
-  multiple_sim <- FALSE
-                                  }
+  if (which == "sims") {
+    plot_highlight <- nrow(df_highlight) > 0
+    plot_nonhighlight <- nrow(df_nonhighlight) > 0
+    multiple_sim <- length(unique(df_highlight[["sim"]])) > 1 || length(unique(df_nonhighlight[["sim"]])) > 1
+  } else if (which == "summary") {
+    plot_highlight <- nrow(summary_df_highlight) > 0
+    plot_nonhighlight <- nrow(summary_df_nonhighlight) > 0
+    multiple_sim <- FALSE
+  }
   plot_summary <- (nrow(summary_df_highlight) > 0) || (nrow(summary_df_nonhighlight) > 0)
 
   nr_var <- length(colors)
@@ -1635,7 +1633,7 @@ plot_ensemble_helper <- function(subplot_label,
 #' unconditionally retains them.
 #'
 #' @param x Output of [verify()].
-#' @param test Integer vector of test numbers to plot. 
+#' @param test Integer vector of test numbers to plot.
 #' Combines with `label` and `status` as AND intersection.
 #' @param label Character vector of regex patterns for partial, case-insensitive
 #'   label matching. A test is included if its label matches any pattern.
@@ -1656,7 +1654,7 @@ plot_ensemble_helper <- function(subplot_label,
 #' @inheritParams as.data.frame.verify_sdbuildR
 #' @inheritParams plot.simulate_sdbuildR
 #' @inheritParams plot.ensemble_sdbuildR
-#' 
+#'
 #' @returns A plotly object.
 #' @export
 #' @concept unitTest
@@ -1668,7 +1666,7 @@ plot_ensemble_helper <- function(subplot_label,
 #'   unit_test(expr = all(susceptible >= 0))
 #' res <- verify(sfm)
 #' plot(res)
-plot.verify_sdbuildR <- function(x,                                                                 
+plot.verify_sdbuildR <- function(x,
                                  test = NULL,
                                  vars = NULL,
                                  add_constants = FALSE,
@@ -1685,12 +1683,11 @@ plot.verify_sdbuildR <- function(x,
                                  font_size = 16,
                                  wrap_width = 25,
                                  showlegend = TRUE,
-                                  label_subplots = TRUE,
-                                  alpha = 1,
-                                  margin = .05,
+                                 label_subplots = TRUE,
+                                 alpha = 1,
+                                 margin = .05,
                                  ...) {
-
-if (missing(x)) {
+  if (missing(x)) {
     cli::cli_abort(c(
       "x" = "No simulation data available.",
       ">" = "Generate a unit test run first with {.fn verify}."
@@ -1731,11 +1728,13 @@ if (missing(x)) {
   dots <- list(...)
 
   # Filter simulations based on test, label, status, and condition
-  df <- as.data.frame(x, which = "sims", 
-  # Pass on filtering arguments to as.data.frame() to filter the simulations before plotting
-   test = test, label = label,
-   ignore_case = ignore_case, status = status, condition = condition)
-  
+  df <- as.data.frame(x,
+    which = "sims",
+    # Pass on filtering arguments to as.data.frame() to filter the simulations before plotting
+    test = test, label = label,
+    ignore_case = ignore_case, status = status, condition = condition
+  )
+
   # Add sim column for plot_ensemble_helper() if not already present (e.g., when which = "summary")
   if (!"sim" %in% colnames(df)) {
     df[["sim"]] <- 1
@@ -1745,7 +1744,10 @@ if (missing(x)) {
   test_column <- paste0(unique(df[["test"]]), collapse = ", ")
 
   # Test numbers are stored as 1, 2, 3
-  test_nrs <- strsplit(test_column, ", ")|> unlist() |> trimws() |> as.integer()
+  test_nrs <- strsplit(test_column, ", ") |>
+    unlist() |>
+    trimws() |>
+    as.integer()
   n_tests <- length(test_nrs)
   condition_nrs <- unique(df[["condition"]])
   n_conditions <- length(condition_nrs)
@@ -1757,12 +1759,13 @@ if (missing(x)) {
   create_subplots <- n_conditions > 1
 
   # Extract constants from verify object to pass to prep_plot()
-  constants <-  lapply(condition_nrs, function(y){
+  constants <- lapply(condition_nrs, function(y) {
     const <- x[["sims"]][[y]][["constants"]]
     data.frame(
       # For verify(), sim = 1
-      sim = 1, 
-      condition = y, variable = names(const), value = unlist(unname(const)))
+      sim = 1,
+      condition = y, variable = names(const), value = unlist(unname(const))
+    )
   })
   constants <- as.data.frame(do.call(rbind, constants))
 
@@ -1911,5 +1914,4 @@ if (missing(x)) {
   }
 
   pl
-
 }

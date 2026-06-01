@@ -35,7 +35,7 @@ library(kableExtra)
 
 ```{r include=FALSE}
 # Set recreate_figs <- TRUE to reproduce the figures in the paper
-recreate_figs <- TRUE
+recreate_figs <- FALSE
 ```
 
 ```{r include=FALSE}
@@ -1250,8 +1250,8 @@ if (recreate_figs) {
           tickvals = list(0, 150),
           showticklabels = FALSE
         )) |>
-        rm_grid()  |>
-    plotly::layout(yaxis = list(range = c(0, 2.25)))
+        rm_grid() |>
+        plotly::layout(yaxis = list(range = c(0, 2.25)))
     }
   }
 

@@ -408,7 +408,6 @@ filter_variables <- function(vars, names_df, df) {
 #' @noRd
 #'
 prep_constants <- function(df, constants, names_df, type_sim = "sim") {
-  
   # Find time vector from first variable
   times <- df[df[["variable"]] == df[["variable"]][1], "time"]
 
@@ -448,9 +447,8 @@ prep_constants <- function(df, constants, names_df, type_sim = "sim") {
       rep_times <- rep(times, each = length(constant_names))
 
       df <- bind_rows_(df, cbind(data.frame(time = rep_times), constants_repeated))
-
     }
-  } 
+  }
 
   list(df = df, names_df = names_df)
 }

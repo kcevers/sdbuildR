@@ -20,7 +20,7 @@ ensemble_julia <- function(object, n, save_sims, conditions, cross,
     n = n,
     quantiles = quantiles,
     save_sims = save_sims,
-    conditions = conditions, 
+    conditions = conditions,
     cross = cross
   )
 

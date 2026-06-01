@@ -27,7 +27,7 @@ expect_snapshot_plot <- function(name, code, fileext = NULL, width = 4, height =
     "No internet connection for plot snapshot test"
   )
 
-  if (TRUE){
+  if (FALSE) {
     skip("Temporarily skip for faster testing")
   }
 
@@ -63,9 +63,6 @@ expect_snapshot_plot <- function(name, code, fileext = NULL, width = 4, height =
 
   invisible()
 }
-
-
-
 
 
 #' Helper to skip test if Julia is not ready
@@ -310,9 +307,13 @@ trace_color <- function(trace) {
 #' Accepts hex (#RRGGBB), rgba()/rgb() and named R colours; returns uppercase
 #' #RRGGBB or NA_character_. Used by tests to compare colours robustly.
 normalize_color_string <- function(col) {
-  if (is.null(col)) return(NA_character_)
+  if (is.null(col)) {
+    return(NA_character_)
+  }
   col_chr <- as.character(col)
-  if (!nzchar(col_chr)) return(NA_character_)
+  if (!nzchar(col_chr)) {
+    return(NA_character_)
+  }
 
   # rgba(...) or rgb(...)
   if (grepl("^rgba?\\(", col_chr)) {
@@ -385,11 +386,11 @@ plotly_layout_attrs <- function(pl) {
   plotly::plotly_build(pl)[["x"]][["layout"]]
 }
 
-is_subplot <- function(pl){
+is_subplot <- function(pl) {
   check <- plotly::plotly_build(pl)[["x"]][["subplot"]]
-  if (is.null(check)){
+  if (is.null(check)) {
     FALSE
   } else {
     check
-  } 
+  }
 }

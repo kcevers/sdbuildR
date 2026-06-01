@@ -27,10 +27,9 @@ jobs:
 
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
-      AUTO_JULIA_INSTALL: true
+      # AUTO_JULIA_INSTALL: true
       R_KEEP_PKG_SOURCE: yes
       NOT_CRAN: "true"
-      AUTO_INSTALL_JULIA_ENV: "true"
 
     steps:
       - uses: actions/checkout@v4
@@ -52,7 +51,7 @@ jobs:
       - name: Set up Julia
         uses: julia-actions/setup-julia@v2
         with:
-          version: '1.12.1'  # Pin specific version for stability
+          version: '1.12.6'  # Pin specific version for stability
 
       # Print Julia environment variables
       - name: Print Julia environment
@@ -62,6 +61,15 @@ jobs:
           which julia
           julia --version
         shell: bash
+
+      - name: Set up Julia environment
+        run: |
+          stopifnot(file.exists("inst/setup.jl"))
+          status <- system2("julia", "inst/setup.jl")
+          if (status != 0) {
+            stop("Julia environment setup failed.")
+          }
+        shell: Rscript {0}
 
       - uses: r-lib/actions/check-r-package@v2
         with:

@@ -111,7 +111,7 @@ test_that("update() vectorized with bare symbols in c()", {
   expect_equal(vars[vars[["name"]] == "b", "eqn"], "2")
 })
 
-test_that("update() backward compat: strings still work", {
+test_that("update(): strings still work", {
   sfm <- sdbuildR()
   sfm <- update(sfm, "population", "stock", eqn = "100")
   vars <- as.data.frame(sfm)
@@ -120,7 +120,50 @@ test_that("update() backward compat: strings still work", {
   expect_equal(vars[["eqn"]], "100")
 })
 
-test_that("update() backward compat: do.call still works", {
+test_that("eqn with functions as strings", {
+  sfm <- sdbuildR()
+  sfm <- custom_func(sfm, a,
+    eqn = "function(x, midpoint, slope) {x^slope / (midpoint^slope + x^slope)}"
+  )
+
+  vars <- as.data.frame(sfm)
+  expect_equal(vars[["name"]], "a")
+  expect_equal(vars[["type"]], "func")
+  expect_equal(vars[["eqn"]], "function(x, midpoint, slope) {x^slope / (midpoint^slope + x^slope)}")
+})
+
+
+test_that("eqn with NSE functions", {
+  sfm <- sdbuildR()
+  sfm <- custom_func(sfm, a,
+    eqn = function(x, midpoint, slope) {
+      x^slope / (midpoint^slope + x^slope)
+    }
+  )
+
+  vars <- as.data.frame(sfm)
+  expect_equal(vars[["name"]], "a")
+  expect_equal(vars[["type"]], "func")
+  expect_equal(gsub("\\n| ", "", vars[["eqn"]]), "function(x,midpoint,slope){x^slope/(midpoint^slope+x^slope)}")
+})
+
+
+test_that("eqn with NSE functions specified with variable", {
+  sfm <- sdbuildR()
+  f <- function(x, midpoint, slope) {
+    x^slope / (midpoint^slope + x^slope)
+  }
+  sfm <- custom_func(sfm, a,
+    eqn = !!f
+  )
+
+  vars <- as.data.frame(sfm)
+  expect_equal(vars[["name"]], "a")
+  expect_equal(vars[["type"]], "func")
+  expect_equal(gsub("\\n| ", "", vars[["eqn"]]), "function(x,midpoint,slope){x^slope/(midpoint^slope+x^slope)}")
+})
+
+test_that("update(): do.call still works", {
   sfm <- sdbuildR()
   sfm <- do.call(update.sdbuildR, list(object = sfm, name = "x", type = "stock", eqn = "10"))
   vars <- as.data.frame(sfm)

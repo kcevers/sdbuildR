@@ -1,0 +1,214 @@
+{
+  "data": [
+    {
+      "x": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+      "y": [10, 9.0438207500880434, 8.1790693759723094, 7.3970037338828041, 6.6897175856968039, 6.0500606713753653, 5.4715664239076132, 4.948386596002071, 4.4752321376381072, 4.0473197267832388, 3.6603234127322937],
+      "legendgroup": "S",
+      "type": "scatter",
+      "mode": "lines",
+      "opacity": 1,
+      "showlegend": true,
+      "visible": true,
+      "name": "S",
+      "marker": {
+        "color": "rgba(200,122,138,1)",
+        "line": {
+          "color": "rgba(200,122,138,1)"
+        }
+      },
+      "textfont": {
+        "color": "rgba(200,122,138,1)"
+      },
+      "error_y": {
+        "color": "rgba(200,122,138,1)"
+      },
+      "error_x": {
+        "color": "rgba(200,122,138,1)"
+      },
+      "line": {
+        "color": "rgba(200,122,138,1)"
+      },
+      "xaxis": "x",
+      "yaxis": "y",
+      "frame": null
+    },
+    {
+      "x": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+      "y": [10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10],
+      "legendgroup": "S",
+      "type": "scatter",
+      "mode": "lines",
+      "opacity": 1,
+      "showlegend": true,
+      "visible": true,
+      "name": "S",
+      "marker": {
+        "color": "rgba(200,122,138,1)",
+        "line": {
+          "color": "rgba(200,122,138,1)"
+        }
+      },
+      "textfont": {
+        "color": "rgba(200,122,138,1)"
+      },
+      "error_y": {
+        "color": "rgba(200,122,138,1)"
+      },
+      "error_x": {
+        "color": "rgba(200,122,138,1)"
+      },
+      "line": {
+        "color": "rgba(200,122,138,1)"
+      },
+      "xaxis": "x",
+      "yaxis": "y2",
+      "frame": null
+    }
+  ],
+  "layout": {
+    "xaxis": {
+      "domain": [0, 1],
+      "automargin": true,
+      "anchor": "y2"
+    },
+    "yaxis2": {
+      "domain": [0, 0.45000000000000001],
+      "automargin": true,
+      "anchor": "x"
+    },
+    "yaxis": {
+      "domain": [0.55000000000000004, 1],
+      "automargin": true,
+      "anchor": "x",
+      "title": {
+        "text": ""
+      }
+    },
+    "annotations": [
+      {
+        "text": "Condition 1",
+        "font": {
+          "family": "Times New Roman",
+          "size": 12
+        },
+        "bgcolor": "white",
+        "xref": "paper",
+        "yref": "paper",
+        "xanchor": "center",
+        "yanchor": "top",
+        "x": 0.5,
+        "y": 1,
+        "showarrow": false
+      },
+      {
+        "text": "Condition 2",
+        "font": {
+          "family": "Times New Roman",
+          "size": 12
+        },
+        "bgcolor": "white",
+        "xref": "paper",
+        "yref": "paper",
+        "xanchor": "center",
+        "yanchor": "top",
+        "x": 0.5,
+        "y": 0.45000000000000001,
+        "showarrow": false
+      },
+      {
+        "text": "Time (seconds)",
+        "font": {
+          "family": "Times New Roman"
+        },
+        "xref": "paper",
+        "yref": "paper",
+        "xanchor": "center",
+        "yanchor": "top",
+        "x": 0.5,
+        "y": -0.10000000000000001,
+        "showarrow": false
+      }
+    ],
+    "shapes": [],
+    "images": [],
+    "margin": {
+      "b": 50,
+      "l": 50,
+      "t": 100,
+      "r": 50
+    },
+    "legend": {
+      "traceorder": "reversed",
+      "font": {
+        "size": 14
+      },
+      "orientation": "h",
+      "x": 0.5,
+      "y": -0.20000000000000001,
+      "xanchor": "center",
+      "yanchor": "top"
+    },
+    "showlegend": true,
+    "hovermode": "closest",
+    "title": {
+      "text": "Unit Tests of My Model<br /><span style='font-size:16px;'>2 tests; 2 conditions<\/span>"
+    },
+    "font": {
+      "family": "Times New Roman",
+      "size": 16
+    }
+  },
+  "attrs": {
+    "ID": {
+      "alpha_stroke": 1,
+      "sizes": [10, 100],
+      "spans": [1, 20],
+      "x": {},
+      "y": {},
+      "color": {},
+      "legendgroup": {},
+      "type": "scatter",
+      "mode": "lines",
+      "opacity": 1,
+      "colors": "#C87A8A",
+      "showlegend": true,
+      "visible": true,
+      "inherit": true
+    },
+    "ID": {
+      "alpha_stroke": 1,
+      "sizes": [10, 100],
+      "spans": [1, 20],
+      "x": {},
+      "y": {},
+      "color": {},
+      "legendgroup": {},
+      "type": "scatter",
+      "mode": "lines",
+      "opacity": 1,
+      "colors": "#C87A8A",
+      "showlegend": true,
+      "visible": true,
+      "inherit": true
+    }
+  },
+  "source": "A",
+  "config": {
+    "modeBarButtonsToAdd": ["hoverclosest", "hovercompare"],
+    "showSendToCloud": false
+  },
+  "highlight": {
+    "on": "plotly_click",
+    "persistent": false,
+    "dynamic": false,
+    "selectize": false,
+    "opacityDim": 0.20000000000000001,
+    "selected": {
+      "opacity": 1
+    },
+    "debounce": 0
+  },
+  "subplot": true,
+  "shinyEvents": ["plotly_hover", "plotly_click", "plotly_selected", "plotly_relayout", "plotly_brushed", "plotly_brushing", "plotly_clickannotation", "plotly_doubleclick", "plotly_deselect", "plotly_afterplot", "plotly_sunburstclick"],
+  "base_url": "https://plot.ly"
+}

@@ -57,13 +57,16 @@ missing_arg <- function(arg_name) {
 #' has_internet()
 #'
 has_internet <- function() {
-  tryCatch(
-    {
-      con <- url("https://www.r-project.org")
-      close(con)
-      TRUE
-    },
-    error = function(e) FALSE
+  suppressWarnings(
+    tryCatch(
+      {
+        con <- url("https://www.r-project.org", open = "rb")
+        on.exit(close(con), add = TRUE)
+        readBin(con, what = "raw", n = 1L)
+        TRUE
+      },
+      error = function(e) FALSE
+    )
   )
 }
 
@@ -297,27 +300,32 @@ is_defined <- function(x) {
 #' @returns List with extracted entries
 #' @noRd
 list_extract <- function(nested_list, entry, keep_entry_name = FALSE) {
-  result <- list()
+traverse <- function(x) {
+    if (!is.list(x)) return(list())
 
-  # Helper function to traverse the list
-  traverse <- function(x) {
-    if (is.list(x)) {
-      for (name in names(x)) {
-        if (name == entry) {
-          if (keep_entry_name) {
-            result <<- c(result, stats::setNames(list(x[[name]]), name))
-          } else {
-            result <<- c(result, x[[name]])
-          }
+    out <- list()
+    for (nm in names(x)) {
+      if (nm == entry) {
+        val <- x[[nm]]
+        if (keep_entry_name) {
+          out <- c(out, stats::setNames(list(val), nm))
         } else {
-          traverse(x[[name]])
+          # If value is a list (and not a data.frame), append its elements;
+          # otherwise append the value as a single list element.
+          if (is.list(val) && !inherits(val, "data.frame")) {
+            out <- c(out, val)
+          } else {
+            out <- c(out, list(val))
+          }
         }
+      } else {
+        out <- c(out, traverse(x[[nm]]))
       }
     }
+    out
   }
 
   traverse(nested_list)
-  return(result)
 }
 
 
@@ -1530,8 +1538,8 @@ fmt <- function(template, replacements, fixed = TRUE) {
 # INDEX VALIDATION HELPERS (shared by verify and ensemble methods)
 # ==============================================================================
 
- #' Validate condition indices
- #' @noRd
+#' Validate condition indices
+#' @noRd
 .check_condition_index <- function(condition, n_conditions) {
   if (length(condition) == 0) {
     cli::cli_abort(c(
@@ -1564,8 +1572,8 @@ fmt <- function(template, replacements, fixed = TRUE) {
 }
 
 
- #' Validate simulation indices
- #' @noRd
+#' Validate simulation indices
+#' @noRd
 .check_sim_index <- function(sim, n) {
   if (length(sim) == 0) {
     cli::cli_abort(c(

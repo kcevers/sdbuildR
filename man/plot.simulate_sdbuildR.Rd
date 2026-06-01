@@ -10,7 +10,6 @@
   vars = NULL,
   palette = "Dark 2",
   colors = NULL,
-  alpha = 1,
   font_family = "Times New Roman",
   font_size = 16,
   wrap_width = 25,
@@ -28,8 +27,6 @@
 \item{palette}{Colour palette. Must be one of hcl.pals().}
 
 \item{colors}{Vector of colours. If NULL, the color palette will be used. If specified, will override palette. The number of colours must be equal to the number of variables in the simulation data frame. Defaults to NULL.}
-
-\item{alpha}{Trajectory opacity. Defaults to \code{1}.}
 
 \item{font_family}{Font family. Defaults to "Times New Roman".}
 

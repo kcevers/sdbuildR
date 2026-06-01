@@ -800,5 +800,7 @@ protected_names <- c(
 ) |> unique()
 
 ##### Save internal variables for global access throughout the package #####
-usethis::use_data(syntax_IM, syntax_julia, P, 
-protected_names, internal = TRUE, overwrite = TRUE)
+usethis::use_data(syntax_IM, syntax_julia, P,
+  protected_names,
+  internal = TRUE, overwrite = TRUE
+)

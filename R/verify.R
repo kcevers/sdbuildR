@@ -83,9 +83,11 @@ verify.sdbuildR <- function(object, verbose = TRUE, test = NULL, ...) {
       "x" = "No unit tests defined.",
       ">" = "Add tests with {.fn unit_test}."
     ))
-    return(invisible(new_verify_sdbuildR(success = FALSE, 
-    error_message = "No unit tests defined.", 
-    results = list(), object = object)))
+    return(invisible(new_verify_sdbuildR(
+      success = FALSE,
+      error_message = "No unit tests defined.",
+      results = list(), object = object
+    )))
   }
 
   # Subset tests if test supplied
@@ -105,7 +107,8 @@ verify.sdbuildR <- function(object, verbose = TRUE, test = NULL, ...) {
       return(.BASELINE)
     }
     paste(names(t[["conditions"]]), unlist(t[["conditions"]]),
-     sep = "=", collapse = ";")
+      sep = "=", collapse = ";"
+    )
   }, character(1))
 
   unique_keys <- unique(condition_keys)
@@ -128,11 +131,11 @@ verify.sdbuildR <- function(object, verbose = TRUE, test = NULL, ...) {
   # 1) If user provided `vars` explicitly -> include those + test refs
   if (!is.null(vars)) {
     sim_vars <- sort(unique(c(vars, all_refs)))
-  # 2) Else if user set only_stocks = FALSE -> simulate all model variables
+    # 2) Else if user set only_stocks = FALSE -> simulate all model variables
   } else if (!only_stocks) {
     all_model_vars <- get_model_var(object)
     sim_vars <- sort(all_model_vars)
-  # 3) Else (user did not specify vars, and only_stocks = TRUE) -> default to stocks + test refs
+    # 3) Else (user did not specify vars, and only_stocks = TRUE) -> default to stocks + test refs
   } else {
     df <- get_names(object)
     all_stock_names <- df[df[["type"]] == "stock", "name"]
@@ -481,7 +484,7 @@ unit_test <- function(object, test, expr, label, conditions = list(), active = T
   if (!modifying && label_missing && label %in% existing_labels) {
     dup_pos <- match(label, existing_labels)
     cli::cli_abort(c(
-      "x"= "Auto-generated label {.val {label}} already exists ([{dup_pos}]).",
+      "x" = "Auto-generated label {.val {label}} already exists ([{dup_pos}]).",
       ">" = "Provide a unique {.arg label} explicitly."
     ))
   }
@@ -567,8 +570,8 @@ unit_test <- function(object, test, expr, label, conditions = list(), active = T
   # --- Validate active ---
   if (!is.logical(active) || length(active) != 1L || is.na(active)) {
     cli::cli_abort(c(
-       "x" = "Invalid {.arg active} argument.",
-       "!" = "{.arg active} must be {.val TRUE} or {.val FALSE}."
+      "x" = "Invalid {.arg active} argument.",
+      "!" = "{.arg active} must be {.val TRUE} or {.val FALSE}."
     ))
   }
 
@@ -808,14 +811,14 @@ print.unit_tests_sdbuildR <- function(x, ...) {
 
 #' @noRd
 new_verify_sdbuildR <- function(success = FALSE,
-                                  error_message = NULL,
-                                  results, object, sims = NULL, condition = NULL,
+                                error_message = NULL,
+                                results, object, sims = NULL, condition = NULL,
                                 n_conditions = 1L, test_indices = NULL) {
   if (is.null(test_indices)) test_indices <- seq_along(results)
   structure(
     list(
-        success = success,
-        error_message = error_message,
+      success = success,
+      error_message = error_message,
       results = results, object = object, sims = sims, condition = condition,
       n_conditions = n_conditions,
       test_indices = as.integer(test_indices)
@@ -973,7 +976,7 @@ as.data.frame.verify_sdbuildR <- function(x, row.names = NULL, optional = FALSE,
                                           which = c("tests", "sims")[1],
                                           direction = "long",
                                           test = NULL, label = NULL, ignore_case = TRUE,
-                                          status = c("pass", "fail", "error", "skip"), 
+                                          status = c("pass", "fail", "error", "skip"),
                                           condition = NULL,
                                           ...) {
   which <- .clean_which_verify(which)
@@ -1097,7 +1100,7 @@ as.data.frame.verify_sdbuildR <- function(x, row.names = NULL, optional = FALSE,
 
     if (length(sims_dfs) == 0) {
       df <- data.frame(
-        test = character(0), 
+        test = character(0),
         condition = numeric(0),
         conditions = character(0),
         time = numeric(0), variable = character(0), value = numeric(0),

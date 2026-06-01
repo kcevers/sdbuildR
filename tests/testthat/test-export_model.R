@@ -76,8 +76,6 @@ test_that("export_model(format='psychomodels') include_latex = FALSE", {
 })
 
 
-
-
 # ---- sdbuildR format ----
 
 test_that("export_model(format='sdbuildR') returns character string with sdbuildR code", {

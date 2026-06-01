@@ -21,7 +21,6 @@ jobs:
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       NOT_CRAN: "true"
-      AUTO_INSTALL_JULIA_ENV: "true"
     permissions:
       contents: write
     steps:
@@ -42,7 +41,7 @@ jobs:
       - name: Set up Julia
         uses: julia-actions/setup-julia@v2
         with:
-          version: '1.12.1'
+          version: '1.12.6'
 
       # Print Julia environment variables
       - name: Print Julia environment
@@ -52,6 +51,15 @@ jobs:
           which julia
           julia --version
         shell: bash
+
+      - name: Set up Julia environment
+        run: |
+          stopifnot(file.exists("inst/setup.jl"))
+          status <- system2("julia", "inst/setup.jl")
+          if (status != 0) {
+            stop("Julia environment setup failed.")
+          }
+        shell: Rscript {0}
 
       - name: Build site
         run: pkgdown::build_site_github_pages(new_process = FALSE, install = FALSE)

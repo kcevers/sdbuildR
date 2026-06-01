@@ -104,7 +104,7 @@ install_julia_env <- function(remove = FALSE) {
 
     # Run the setup script
     setup_script <- system.file("setup.jl", package = "sdbuildR")
-    julia_eval(sprintf('include("%s")', jl_path(setup_script)))
+    julia_eval(paste0('include("', jl_path(setup_script), '")'))
     status <- is_julia_env_setup(force = TRUE, error = TRUE)
 
     if (isTRUE(status)) {
@@ -589,7 +589,7 @@ run_init_julia_env <- function() {
 
   # Source the init.jl script
   init_file <- system.file("init.jl", package = "sdbuildR")
-  julia_cmd <- sprintf("include(\"%s\")", jl_path(init_file))
+  julia_cmd <- paste0('include("', jl_path(init_file), '")')
   julia_eval(julia_cmd)
 
   invisible(NULL)
