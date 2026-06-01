@@ -30,6 +30,7 @@ library(sdbuildR)
 ```
 
 ```{r, echo = FALSE}
+# Check if the Julia environment is set up, and if not, install it (for local pkgdown::build_site())
 if (!nzchar(system.file("Manifest.toml", package = "sdbuildR"))) {
   install_julia_env()
 }

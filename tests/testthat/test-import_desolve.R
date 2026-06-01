@@ -1,24 +1,5 @@
 # Tests for import_desolve()
 
-# Helper models used across tests
-.logistic_model <- function(t, state, parameters) {
-  with(as.list(c(state, parameters)), {
-    dN <- r * N * (1 - N / K)
-    list(c(dN))
-  })
-}
-
-.sir_model <- function(t, state, parameters) {
-  with(as.list(c(state, parameters)), {
-    SI <- beta * S * I / N
-    IR <- gamma * I
-    dS <- -SI
-    dI <- SI - IR
-    dR <- IR
-    list(c(dS, dI, dR))
-  })
-}
-
 
 # ---- input validation ----
 
@@ -46,7 +27,7 @@ test_that("import_desolve() errors on wrong function arguments", {
 
 test_that("import_desolve() errors on unnamed params", {
   expect_error(
-    import_desolve(.logistic_model, c(0.5, 100), c(N = 10), seq(0, 10)),
+    import_desolve(logistic_model_deSolve, c(0.5, 100), c(N = 10), seq(0, 10)),
     class = "rlang_error"
   )
 })
@@ -54,7 +35,7 @@ test_that("import_desolve() errors on unnamed params", {
 
 test_that("import_desolve() errors on unnamed init", {
   expect_error(
-    import_desolve(.logistic_model, c(r = 0.5, K = 100), c(10), seq(0, 10)),
+    import_desolve(logistic_model_deSolve, c(r = 0.5, K = 100), c(10), seq(0, 10)),
     class = "rlang_error"
   )
 })
@@ -63,7 +44,7 @@ test_that("import_desolve() errors on unnamed init", {
 test_that("import_desolve() errors on non-numeric times", {
   expect_error(
     import_desolve(
-      .logistic_model, c(r = 0.5, K = 100), c(N = 10),
+      logistic_model_deSolve, c(r = 0.5, K = 100), c(N = 10),
       c("0", "1", "2")
     ),
     class = "rlang_error"
@@ -74,7 +55,7 @@ test_that("import_desolve() errors on non-numeric times", {
 test_that("import_desolve() errors on unevenly spaced times", {
   expect_error(
     import_desolve(
-      .logistic_model, c(r = 0.5, K = 100), c(N = 10),
+      logistic_model_deSolve, c(r = 0.5, K = 100), c(N = 10),
       c(0, 1, 3, 6)
     ), # uneven gaps
     class = "rlang_error"
@@ -114,7 +95,7 @@ test_that("import_desolve() errors on missing derivative for a state variable", 
 
 test_that("import_desolve() logistic growth: returns sdbuildR object", {
   sfm <- import_desolve(
-    model  = .logistic_model,
+    model  = logistic_model_deSolve,
     params = c(r = 0.3, K = 100),
     init   = c(N = 10),
     times  = seq(0, 50, by = 0.1),
@@ -126,7 +107,7 @@ test_that("import_desolve() logistic growth: returns sdbuildR object", {
 
 test_that("import_desolve() logistic growth: meta name is set", {
   sfm <- import_desolve(
-    model  = .logistic_model,
+    model  = logistic_model_deSolve,
     params = c(r = 0.3, K = 100),
     init   = c(N = 10),
     times  = seq(0, 50, by = 0.1),
@@ -138,7 +119,7 @@ test_that("import_desolve() logistic growth: meta name is set", {
 
 test_that("import_desolve() logistic growth: sim_settings are correct", {
   sfm <- import_desolve(
-    model  = .logistic_model,
+    model  = logistic_model_deSolve,
     params = c(r = 0.3, K = 100),
     init   = c(N = 10),
     times  = seq(0, 50, by = 0.1)
@@ -151,7 +132,7 @@ test_that("import_desolve() logistic growth: sim_settings are correct", {
 
 test_that("import_desolve() logistic growth: method is stored", {
   sfm <- import_desolve(
-    model  = .logistic_model,
+    model  = logistic_model_deSolve,
     params = c(r = 0.3, K = 100),
     init   = c(N = 10),
     times  = seq(0, 50, by = 0.1),
@@ -163,7 +144,7 @@ test_that("import_desolve() logistic growth: method is stored", {
 
 test_that("import_desolve() logistic growth: variables have correct types", {
   sfm <- import_desolve(
-    model  = .logistic_model,
+    model  = logistic_model_deSolve,
     params = c(r = 0.3, K = 100),
     init   = c(N = 10),
     times  = seq(0, 50, by = 0.1)
@@ -180,7 +161,7 @@ test_that("import_desolve() logistic growth: variables have correct types", {
 
 test_that("import_desolve() SIR: aux variables created correctly", {
   sfm <- import_desolve(
-    model  = .sir_model,
+    model  = sir_model_deSolve,
     params = c(beta = 0.3, gamma = 0.1, N = 1000),
     init   = c(S = 990, I = 10, R = 0),
     times  = seq(0, 100, by = 0.1)
@@ -210,7 +191,7 @@ test_that("import_desolve() model using = assignment parses correctly", {
 
 test_that("import_desolve() produces a simulatable model (logistic)", {
   sfm <- import_desolve(
-    model  = .logistic_model,
+    model  = logistic_model_deSolve,
     params = c(r = 0.3, K = 100),
     init   = c(N = 10),
     times  = seq(0, 10, by = 0.1)
@@ -223,7 +204,7 @@ test_that("import_desolve() produces a simulatable model (logistic)", {
 
 test_that("import_desolve() produces a simulatable model (SIR)", {
   sfm <- import_desolve(
-    model  = .sir_model,
+    model  = sir_model_deSolve,
     params = c(beta = 0.3, gamma = 0.1, N = 1000),
     init   = c(S = 990, I = 10, R = 0),
     times  = seq(0, 50, by = 0.1)

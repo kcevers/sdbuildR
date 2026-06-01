@@ -323,7 +323,7 @@ test_that("plot() with vars = constant automatically enables add_constants", {
 # ============================================================================
 
 test_that("plot() uses default titles", {
-  sfm <- sir_model()
+  sfm <- sdbuildR("SIR")
   sfm$meta$name <- "My Model"
   sim <- simulate(sfm)
 

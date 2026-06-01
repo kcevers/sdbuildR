@@ -27,7 +27,6 @@ jobs:
 
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
-      # AUTO_JULIA_INSTALL: true
       R_KEEP_PKG_SOURCE: yes
       NOT_CRAN: "true"
 
@@ -62,6 +61,7 @@ jobs:
           julia --version
         shell: bash
 
+      # Ubuntu runners have a default Julia depot that can cause conflicts (e.g., segfault); use an isolated depot for all OSes to ensure consistency
       - name: Prepare isolated JULIA_DEPOT_PATH
         run: |
           mkdir -p "${{ runner.temp }}/julia_depot"

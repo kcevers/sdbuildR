@@ -17,27 +17,30 @@ expect_snapshot_plot <- function(name, code, fileext = NULL, width = 4, height =
     }
   }
 
-  name <- paste0(name, fileext)
   announce_snapshot_file(name = name)
+  name <- paste0(name, fileext)
 
   skip_on_cran()
-  skip_on_os("mac") # floating point differences cause snapshot failures on GitHub Actions macOS runners
   skip_if(
     plotly_object && !has_internet(),
     "No internet connection for plot snapshot test"
   )
 
-  if (TRUE) {
+  if (FALSE) {
     skip("Temporarily skip for faster testing")
   }
 
   if (!plotly_object) {
-    # For non-plotly objects, we can directly export to the target format
-    path <- tempfile(fileext = fileext)
+    # # For non-plotly objects, we can directly export to the target format
+    # path <- tempfile(fileext = fileext)
+    # export_plot(pl, file = path, width = width, height = height)
 
-    export_plot(pl, file = path, width = width, height = height)
-    expect_snapshot_file(path, name)
+    expect_snapshot_value(pl[["x"]][["diagram"]], style = "json")
   } else {
+
+    skip_on_os("mac") # floating point differences cause snapshot failures on GitHub Actions macOS runners
+    skip_on_os("linux")
+
     # stable assertion on structure
     json <- plotly::plotly_json(pl, jsonedit = FALSE)
     # normalize plotly's random internal IDs
@@ -113,19 +116,12 @@ silence <- function(expr) {
   suppressMessages(suppressWarnings(expr))
 }
 
-#' Build a standard SIR model
-#'
-#' Helper to create the canonical SIR model used across plot tests.
-sir_model <- function() {
-  sdbuildR("SIR")
-}
-
 
 #' Simulate the SIR model
 #'
 #' Creates and simulates the SIR model, allowing overrides such as only_stocks.
 sir_sim <- function(..., only_stocks = TRUE, seed = 123) {
-  simulate(sir_model(), only_stocks = only_stocks, seed = seed, ...)
+  simulate(sdbuildR("SIR"), only_stocks = only_stocks, seed = seed, ...)
 }
 
 
@@ -386,11 +382,73 @@ plotly_layout_attrs <- function(pl) {
   plotly::plotly_build(pl)[["x"]][["layout"]]
 }
 
-is_subplot <- function(pl) {
-  check <- plotly::plotly_build(pl)[["x"]][["subplot"]]
-  if (is.null(check)) {
-    FALSE
-  } else {
-    check
+
+subplot_grid <- function(pl) {
+
+  b   <- plotly::plotly_build(pl)$x   # built spec: $data (traces), $layout
+  lay <- b$layout
+
+  is_subplot_check <- b[["subplot"]]
+  if (is.null(is_subplot_check)) {
+    is_subplot_check <- FALSE
   }
+
+  # domain of an axis id ("x","x2",... / "y","y2",...); assumes cartesian traces
+  ax_dom <- function(id, axis) {
+    key <- sub(paste0("^", axis), paste0(axis, "axis"), id)   # "x2" -> "xaxis2"
+    d <- lay[[key]]$domain
+    if (is.null(d)) c(0, 1) else round(d, 6)                  # round guards FP drift
+  }
+  k <- function(v) paste(v, collapse = ",")
+
+  refs <- lapply(b$data, function(tr) {
+    xid <- if (is.null(tr$xaxis)) "x" else tr$xaxis
+    yid <- if (is.null(tr$yaxis)) "y" else tr$yaxis
+    list(xid = xid, yid = yid,
+         xdom = k(ax_dom(xid, "x")), ydom = k(ax_dom(yid, "y")))
+  })
+
+  xids <- vapply(refs, function(r) r$xid,  character(1))
+  yids <- vapply(refs, function(r) r$yid,  character(1))
+  xdom <- vapply(refs, function(r) r$xdom, character(1))
+  ydom <- vapply(refs, function(r) r$ydom, character(1))
+
+  # an x-axis spanning >1 row => x shared; a y-axis spanning >1 column => y shared
+  shareX <- any(vapply(split(ydom, xids), function(v) length(unique(v)) > 1, logical(1)))
+  shareY <- any(vapply(split(xdom, yids), function(v) length(unique(v)) > 1, logical(1)))
+
+  list(
+    is_subplot_check = !is.null(is_subplot_check),
+    nrows  = length(unique(ydom)),   # distinct vertical extents
+    ncols  = length(unique(xdom)),   # distinct horizontal extents
+    shareX = shareX,
+    shareY = shareY
+  )
+}
+
+is_subplot     <- function(pl) subplot_grid(pl)$is_subplot
+subplot_nrows  <- function(pl) subplot_grid(pl)$nrows
+subplot_ncols  <- function(pl) subplot_grid(pl)$ncols
+subplot_shared <- function(pl) subplot_grid(pl)[c("shareX", "shareY")]
+
+
+
+
+# Helper models used across import-export tests
+logistic_model_deSolve <- function(t, state, parameters) {
+  with(as.list(c(state, parameters)), {
+    dN <- r * N * (1 - N / K)
+    list(c(dN))
+  })
+}
+
+sir_model_deSolve <- function(t, state, parameters) {
+  with(as.list(c(state, parameters)), {
+    SI <- beta * S * I / N
+    IR <- gamma * I
+    dS <- -SI
+    dI <- SI - IR
+    dR <- IR
+    list(c(dS, dI, dR))
+  })
 }

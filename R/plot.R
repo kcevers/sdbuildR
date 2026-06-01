@@ -438,6 +438,415 @@ plot.sdbuildR <- function(x,
     plot_var <- c(plot_var, aux_names)
   }
 
+  # Shared node style
+  style_node <- sprintf("node [fontsize=%s,fontname='%s']", font_size, font_family)
+
+  # Prepare stock nodes
+  if (length(stock_names) > 0) {
+    # Repeat stock_col if needed
+    # stock_cols <- rep_len(stock_col, length(stock_names))
+    style_stock <- sprintf("node [shape=box,style=filled,fillcolor='%s']", 
+      stock_col)
+
+    stock_nodes <- sprintf(
+      "%s [id=%s,label='%s',tooltip = 'eqn = %s']",
+      paste0("'", stock_names, "'"),
+      paste0("'", stock_names, "'"),
+      dict[stock_names],
+      dict_eqn[stock_names]
+    )
+  } else {
+    style_stock <- stock_nodes <- ""
+  }
+
+  # Prepare auxiliary nodes
+  if (length(aux_names) > 0) {
+    style_aux <- sprintf("node [shape=circle,fontsize=%s,fontname='%s', width=0.15, height=0.15, fixedsize=true, style=filled, fillcolor='grey90']",
+      font_size - 2, font_family)
+
+    aux_nodes <- sprintf(
+      "%s [id=%s,xlabel='%s',label='',tooltip = 'eqn = %s']",
+      paste0("'", aux_names, "'"),
+      paste0("'", aux_names, "'"),
+      dict[aux_names],
+      dict_eqn[aux_names]
+    )
+  } else {
+    style_aux <- aux_nodes <- ""
+  }
+
+  # Prepare constant nodes (italic font)
+  if (length(const_names) > 0) {
+    # Format labels: convert \n to <BR/> and add italics
+    formatted_labels <- vapply(dict[const_names], function(label) {
+      label_with_html_breaks <- gsub("\n", "<BR/>", label, fixed = TRUE)
+      paste0("<I>", label_with_html_breaks, "</I>")
+    }, character(1), USE.NAMES = FALSE)
+
+    style_const <- sprintf("node [shape=diamond,fontsize=%s,width=0.15, height=0.15, fixedsize=true, style=filled, fillcolor='grey90']",
+      font_size - 2)
+
+    const_nodes <- sprintf(
+      "%s [id=%s,xlabel=<%s>,label='', tooltip = 'eqn = %s']",
+      paste0("'", const_names, "'"),
+      paste0("'", const_names, "'"),
+      formatted_labels,
+      dict_eqn[const_names]
+    )
+  } else {
+    style_const <- const_nodes <- ""
+  }
+
+
+  # Create rank groupings based on dependencies
+  rank_groups <- list()
+
+  # Reverse dependencies, because we want to couple constants/aux with the first variable that depends on them
+  dep_rev <- reverse_dep(dep)
+
+  # Helper function
+  get_first_dep <- function(var_names, dep_rev, plot_var) {
+    if (length(var_names) == 0) {
+      return(list())
+    }
+
+    dep_var <- dep_rev[var_names]
+
+    # Only keep those in plot_var
+    dep_var <- lapply(dep_var, function(x) {
+      intersect(x, plot_var)
+    })
+
+    dep_var <- dep_var[lengths(dep_var) != 0]
+
+    if (length(dep_var) > 0) {
+      lapply(dep_var, `[[`, 1)
+    } else {
+      list()
+    }
+  }
+
+  if (length(const_names) > 0) {
+    dep_var <- get_first_dep(const_names, dep_rev, plot_var)
+    rank_groups <- append(rank_groups, dep_var)
+  }
+
+  if (length(aux_names) > 0) {
+    dep_var <- get_first_dep(aux_names, dep_rev, plot_var)
+    rank_groups <- append(rank_groups, dep_var)
+  }
+
+
+  # Create rank statements
+  rank_statements <- ""
+  if (length(rank_groups) > 0) {
+    rank_statements <- vapply(names(rank_groups), function(rank_node) {
+      vars_in_rank <- rank_groups[[rank_node]]
+      sprintf(
+        "      {rank=same; %s }",
+        paste0("'", c(rank_node, vars_in_rank), "'", collapse = "; ")
+      )
+    }, character(1), USE.NAMES = FALSE)
+    rank_statements <- paste(rank_statements, collapse = "\n")
+  }
+
+  cloud_nodes <- flow_edges_from_source <- flow_edges_to_destination <- flow_nodes <- dependency_edges <- ""
+  style_cloud <- style_flow_node <- style_flow_edges_from_source <- style_flow_edges_to_destination <- ""
+
+  if (length(flow_names) > 0) {
+    # If the flow is to a stock that doesn't exist, remove
+    flow_df[["from"]] <- ifelse(flow_df[["from"]] %in% stock_names,
+      flow_df[["from"]], ""
+    )
+    flow_df[["to"]] <- ifelse(flow_df[["to"]] %in% stock_names,
+      flow_df[["to"]], ""
+    )
+    flow_df <- as.matrix(flow_df)
+
+    # Fill in NA in flow_df with numbered clouds
+    idxs <- which(flow_df == "")
+    cloud_names <- character(0)
+    if (length(idxs) > 0) {
+      cloud_names <- paste0("Cloud", seq_along(idxs))
+      flow_df[idxs] <- cloud_names
+
+      # Find whether cloud is a source or a sink
+      # flow_df has three columns; idxs are row-based
+      labels <- cloud_names
+      labels[idxs <= (nrow(flow_df) * 2)] <- "Unspecified source"
+      labels[idxs > (nrow(flow_df) * 2)] <- "Unspecified sink"
+
+      # Style for cloud nodes
+      style_cloud <- sprintf("node [shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]")
+
+      # External environment is represented as a cloud
+      cloud_nodes <- sprintf(
+        "%s [label='', tooltip = %s]",
+        paste0("'", cloud_names, "'"),
+        paste0("'", labels, "'")
+      )
+    }
+
+    # Flow node style
+    style_flow_node <- sprintf("node [style = '',shape=plaintext, fontsize=%s, width=0.6, height=0.3]",
+      font_size - 2)
+
+    # Create intermediate flow nodes (small nodes that flows pass through)
+    flow_nodes <- sprintf(
+      "%s [id=%s,label='%s', tooltip = 'eqn = %s']",
+      paste0("'", flow_names, "'"),
+      paste0("'", flow_names, "'"),
+      dict[flow_names],
+      dict_eqn[flow_names]
+    )
+
+    # Create edges: from -> flow_node -> to
+    flow_edges_from_source <- c()
+    flow_edges_to_destination <- c()
+
+    style_flow_edges_from_source <- sprintf(
+      "edge [style = '', arrowhead='none', color='%s', penwidth=1.1, minlen=%s, splines=false]",
+      paste0(
+          "black:", flow_col, ":black"
+        ),
+        minlen
+    )
+    style_flow_edges_to_destination <- sprintf(
+      "edge [style = '', arrowhead='normal', color='%s', arrowsize=1.5, penwidth=1.1, minlen=%s, splines=ortho]",
+      paste0(
+          "black:", flow_col, ":black"
+        ),
+        minlen
+    )
+
+    # # Recycle flow_col if needed
+    # flow_cols <- rep_len(flow_col, nrow(flow_df))
+
+    for (i in seq_len(nrow(flow_df))) {
+      flow_name <- flow_df[i, "name"]
+      flow_node <- flow_name
+      from_node <- flow_df[i, "from"]
+      to_node <- flow_df[i, "to"]
+
+      # Edge from source to flow node
+      flow_edges_from_source <- c(flow_edges_from_source, sprintf(
+        "%s -> %s",
+        paste0("'", from_node, "'"),
+        paste0("'", flow_node, "'")
+      ))
+
+      # Edge from flow node to destination
+      flow_edges_to_destination <- c(flow_edges_to_destination, sprintf(
+        "%s -> %s",
+        paste0("'", flow_node, "'"),
+        paste0("'", to_node, "'")
+      ))
+    }
+  }
+
+  # Add dependency arrows if requested
+  style_dependency <- dependency_edges <- ""
+  if (show_dependencies) {
+
+    style_dependency <- sprintf("edge [style = '', color='%s', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']",
+      dependency_col)
+
+    # Only keep dependencies in plot_var
+    dep <- lapply(dep, function(x) {
+      intersect(x, plot_var)
+    })
+
+    # Only keep entries in plot_var
+    dep <- dep[names(dep) %in% plot_var]
+
+    if (length(dep) > 0) {
+      dependency_edges <- unlist(lapply(names(dep), function(x) {
+        if (length(dep[[x]]) > 0) {
+          vapply(dep[[x]], function(y) {
+            sprintf(
+              "%s -> %s",
+              paste0("'", y, "'"),
+              paste0("'", x, "'")
+            )
+          }, character(1), USE.NAMES = FALSE)
+        }
+      }))
+    }
+  }
+
+  # Compile string for diagram
+  viz_str <- sprintf(
+    "
+    digraph sfm {
+
+      graph [layout = dot, rankdir = LR, center=true, outputorder='edgesfirst', pad=.1, nodesep= .3]
+
+      # Shared across all nodes (persists until overridden)
+      %s
+
+      # Define stock nodes
+      %s
+      %s
+
+      # Define flow nodes (intermediate nodes for flows)
+      %s
+      %s
+
+      # Define external cloud nodes
+      %s
+      %s
+
+      # Define auxiliary nodes
+      %s
+      %s
+
+      # Define constant nodes
+      %s
+      %s
+
+      # Define flow edges (stock -> flow_node)
+      %s
+      %s
+
+      # Define flow edges (flow_node -> stock)
+      %s
+      %s
+
+      # Define dependency edges
+      %s
+      %s
+
+      
+      # Rank groupings
+      %s
+
+    }
+          ",
+    style_node,
+    style_stock,
+    stock_nodes |> rev() |> paste0(collapse = "\n\t"),
+    style_flow_node,
+    flow_nodes |> paste0(collapse = "\n\t"),
+    style_cloud,
+    cloud_nodes |> paste0(collapse = "\n\t"),
+    style_aux,
+    aux_nodes |> paste0(collapse = "\n\t"),
+    style_const,
+    const_nodes |> paste0(collapse = "\n\t"),
+    style_flow_edges_from_source,
+    flow_edges_from_source |> paste0(collapse = "\n\t"),
+    style_flow_edges_to_destination,
+    flow_edges_to_destination |> paste0(collapse = "\n\t"),
+    style_dependency,
+    dependency_edges |> paste0(collapse = "\n\t"),
+    rank_statements
+
+  )
+
+  pl <- DiagrammeR::grViz(viz_str)
+
+  pl
+}
+
+
+
+.plot_sdbuildR_old <- function(x,
+                          vars = NULL,
+                          format_label = TRUE,
+                          wrap_width = 20,
+                          font_size = 18,
+                          font_family = "Times New Roman",
+                          stock_col = "#83d3d4",
+                          flow_col = "#f48153",
+                          dependency_col = "#999999",
+                          show_dependencies = TRUE,
+                          show_constants = FALSE,
+                          show_aux = TRUE,
+                          minlen = 2,
+                          ...) {
+  sfm <- x
+  rm(x)
+  check_sdbuildR(sfm)
+
+  # Get property dataframe
+  df <- as.data.frame(sfm, properties = c("type", "name", "label", "eqn"))
+
+  # Check whether there are any variables
+  if (nrow(df) == 0) {
+    cli::cli_warn(c(
+      "i" = "Model contains no variables.",
+      ">" = "Add variables using {.fn stock}, {.fn flow}, {.fn constant}, and {.fn aux}."
+    ))
+    return(invisible(NULL))
+  }
+
+  # Get dependencies
+  dep <- dependencies(sfm)
+  flow_df <- get_flow_df(sfm)
+
+  if (!is.null(vars)) {
+    vars <- clean_vars(vars)
+
+    # Check whether specified variables are in the model
+    validate_vars_in_model(vars, df, context = "model")
+
+    # Only keep these variables in flow_df, dep, and df
+    df <- df[df[["name"]] %in% vars, , drop = FALSE]
+    dep <- dep[names(dep) %in% vars]
+    flow_df <- flow_df[flow_df[["name"]] %in% vars, , drop = FALSE]
+
+    # Set stocks not in vars to ''
+    flow_df[["to"]][!flow_df[["to"]] %in% vars] <- ""
+    flow_df[["from"]][!flow_df[["from"]] %in% vars] <- ""
+
+    # Set show_aux to TRUE if any variables are aux
+    if (any(vars %in% df[df[["type"]] == "aux", "name"])) {
+      show_aux <- TRUE
+    }
+
+    # Set show_constants to TRUE if any variables are constants
+    if (any(vars %in% df[df[["type"]] == "constant", "name"])) {
+      show_constants <- TRUE
+    }
+  }
+
+  if (format_label) {
+    df[["label"]] <- ifelse(df[["name"]] == df[["label"]],
+      stringr::str_replace_all(
+        df[["label"]],
+        c("_" = " ", "\\." = " ", "  " = " ")
+      ), df[["label"]]
+    )
+  }
+
+  # Prepare and format labels using centralized helper
+  df <- prepare_labels(df, wrap_width = wrap_width, format_label = FALSE, deduplicate = FALSE)
+  dict <- stats::setNames(df[["label"]], df[["name"]])
+
+  # Get equations and remove quotation marks from unit strings
+  dict_eqn <- stats::setNames(stringr::str_replace_all(
+    df[["eqn"]],
+    c("'" = "", "\"" = "")
+  ), df[["name"]])
+
+  # Categorize variables by type
+  stock_names <- df[df[["type"]] == "stock", "name"]
+  flow_names <- df[df[["type"]] == "flow", "name"]
+  aux_names <- df[df[["type"]] == "aux", "name"]
+  const_names <- df[df[["type"]] == "constant", "name"]
+
+  # Filter based on show parameters
+  if (!show_constants) const_names <- character(0)
+  if (!show_aux) aux_names <- character(0)
+
+  plot_var <- c(stock_names, flow_names)
+  if (show_constants) {
+    plot_var <- c(plot_var, const_names)
+  }
+  if (show_aux) {
+    plot_var <- c(plot_var, aux_names)
+  }
+
   # Prepare stock nodes
   if (length(stock_names) > 0) {
     # Recycle stock_col if needed

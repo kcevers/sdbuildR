@@ -15,9 +15,9 @@
 ^vignettes/articles$
 ^cran-comments\.md$
 ^data-raw$
-^tests/testthat/testdata/insightmaker/validation$
-^tests/testthat/testdata/insightmaker/delay$
-^tests/testthat/testdata/insightmaker/fix$
-^tests/testthat/testdata/insightmaker/extra$
+^tests/testthat/testdata/insightmaker/validation/
+^tests/testthat/testdata/insightmaker/delay/
+^tests/testthat/testdata/insightmaker/fix/
+^tests/testthat/testdata/insightmaker/extra/
 ^CRAN-SUBMISSION$
 ^\.claude/

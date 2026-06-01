@@ -20,7 +20,7 @@
 #' @seealso [use_julia()]
 #' @concept julia
 #'
-#' @examplesIf Sys.getenv("NOT_CRAN") == "true" && Sys.getenv("AUTO_INSTALL_JULIA_ENV") == "true"
+#' @examplesIf Sys.getenv("NOT_CRAN") == "true"
 #' \dontrun{
 #' install_julia_env()
 #'
@@ -133,7 +133,7 @@ install_julia_env <- function(remove = FALSE) {
 #' @seealso [install_julia_env()]
 #' @concept julia
 #'
-#' @examplesIf Sys.getenv("NOT_CRAN") == "true" && Sys.getenv("AUTO_INSTALL_JULIA_ENV") == "true"
+#' @examplesIf Sys.getenv("NOT_CRAN") == "true"
 #' # Start a Julia session and activate the Julia environment for sdbuildR
 #' use_julia()
 #'
