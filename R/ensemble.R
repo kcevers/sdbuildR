@@ -169,6 +169,8 @@ ensemble <- function(object,
   only_stocks <- object[["sim_settings"]][["only_stocks"]]
   vars <- object[["sim_settings"]][["vars"]]
 
+  check_summary_diagnostics(object)
+
   # Persistent meta-setting: read save_sims from sim_settings AFTER applying varargs
   save_sims <- isTRUE(object[["sim_settings"]][["save_sims"]])
 

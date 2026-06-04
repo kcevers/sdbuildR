@@ -68,14 +68,14 @@ verify <- function(object, ...) {
 #' verify(sfm)
 verify.sdbuildR <- function(object, verbose = TRUE, test = NULL, ...) {
   check_sdbuildR(object)
-  # Not yet implemented:
-  # rlang::check_installed("testthat", reason = "to run unit tests with {.fn verify}")
 
   # Override sim_settings with any arguments passed via ...
   varargs <- list(...)
   if (length(varargs) > 0) {
     object <- do.call(sim_settings, c(list(object), varargs))
   }
+
+  check_summary_diagnostics(object)
 
   tests <- object[["unit_tests"]]
   if (length(tests) == 0) {
@@ -142,12 +142,10 @@ verify.sdbuildR <- function(object, verbose = TRUE, test = NULL, ...) {
     sim_vars <- sort(unique(c(all_stock_names, all_refs)))
   }
 
-  # Set sim_vars in simulation specifications
+  # Set sim_vars in simulation specifications. Each simulate() call receives the same centrally-computed `sim_vars` so all conditions return consistent variable sets.
   object <- sim_settings(object, vars = sim_vars)
 
-  # Run one simulation per unique condition set. Each simulate() call receives
-  # the same centrally-computed `sim_vars` so all conditions return consistent
-  # variable sets.
+  # Run one simulation per unique condition set. 
   sim_cache <- vector("list", n_conditions)
   for (j_idx in seq_along(unique_keys)) {
     key <- unique_keys[[j_idx]]
@@ -164,6 +162,7 @@ verify.sdbuildR <- function(object, verbose = TRUE, test = NULL, ...) {
       }
     }
 
+    # simulate() takes care of seed handling internally, so we don't need to do anything special here for reproducibility
     sim_cache[[j_idx]] <- simulate(obj_for_cond)
   }
 

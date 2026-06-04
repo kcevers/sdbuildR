@@ -52,8 +52,8 @@ attributes(%(sim_df_name)s)$valroot
 
     # -- compile_prep_script ---------------------------------------------------
 
-    prep_seed_r = "# Ensure reproducibility across runs in case of random elements\nset.seed(%(seed)s)",
-    prep_seed_julia = "# Ensure reproducibility across runs in case of random elements\nRandom.seed!(%(seed)s)\n",
+    # prep_seed_r = "# Ensure reproducibility across runs in case of random elements\nset.seed(%(seed)s)",
+    # prep_seed_julia = "# Ensure reproducibility across runs in case of random elements\nRandom.seed!(%(seed)s)\n",
 
     # -- compile_funcs ----------------------------------------------------------
 
@@ -199,9 +199,11 @@ Nothing",
 
 # Define ensemble problem
 function %(ensemble_func_name)s(prob, %(ensemble_ctx)s)
+  %(use_with_rng_open)s
   %(ensemble_iter)s = %(ensemble_ctx)s.sim_id
   %(static_str)s%(intermediaries_callback)s
   remake(prob, u0 = %(model_setup_name)s.%(initial_value_name)s, p = %(model_setup_name)s.%(parameter_name)s%(intermediaries_remake)s)
+  %(use_with_rng_close)s
 end
 
 # Define ensemble output function to save parameters, initial conditions, and intermediaries along with solution

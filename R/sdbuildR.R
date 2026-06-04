@@ -313,6 +313,32 @@ check_sdbuildR <- function(object) {
 }
 
 
+#' Check summary diagnostics for errors
+#' 
+#' Checks the summary diagnostics for any errors and aborts with a message if any are found. Called before simulation and unit testing to ensure the model is in a valid state.
+#' @inheritParams update.sdbuildR
+#' @returns Invisibly returns TRUE if no errors are found, otherwise aborts with a message.
+#' @noRd
+check_summary_diagnostics <- function(object) {
+
+  if (is.null(object[["assemble"]][["summary"]])) {
+    object[["assemble"]][["summary"]] <- summary(object)
+  }
+  debug_result <- object[["assemble"]][["summary"]]
+  errors <- Filter(function(c) c$problem == "error", debug_result)
+  if (length(errors) > 0) {
+    n <- length(errors)
+    labels <- vapply(names(errors), .problem_label, character(1))
+    names(labels) <- rep("x", n)
+    cli::cli_abort(c(
+      "{cli::qty(n)}Model has {n} problem{?s}. Run {.fn summary} for details.",
+      labels
+    ))
+  }
+
+  invisible(TRUE)
+}
+
 #' Validate sdbuildR class
 #'
 #' Pure structural validator for stock-and-flow models. Checks that the object

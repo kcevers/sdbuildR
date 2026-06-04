@@ -53,6 +53,7 @@ ensemble_julia <- function(object, n, save_sims, conditions, cross,
 
   script <- result$script
   object <- result$object # Get updated object with cache populated
+  seed_nr <- object[["sim_settings"]][["seed"]]
 
   write_script(script, filepath)
   script <- paste0(readLines(filepath), collapse = "\n")
@@ -74,9 +75,16 @@ ensemble_julia <- function(object, n, save_sims, conditions, cross,
   sim <- tryCatch(
     {
 
+      if (!is.null(seed_nr)) {
+        command <- paste0('with_rng(", seed_nr, ") do\n\tinclude("', jl_path(filepath), '")\nend')
+
+      } else {
+        command <- paste0('include("', jl_path(filepath), '")')
+      }
+
       # Wrap in invisible and capture.output to keep Julia output quiet
       invisible(utils::capture.output(
-        julia_eval(paste0('include("', jl_path(filepath), '")'))
+        julia_eval(command)
       ))
 
       end_t <- Sys.time()

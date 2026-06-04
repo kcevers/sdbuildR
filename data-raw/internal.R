@@ -8,8 +8,7 @@ P <- list(
   # jl_pkg_name = "SystemDynamicsBuildR",
   # jl_pkg_version = "0.2.5", # required version SystemDynamicsBuildR
   jl_pkg_name = "StockFlowRSupport",
-  jl_pkg_version_github_release = "0.0.4", # required version StockFlowRSupport
-  # jl_required_version = "1.10", # required minimum version of Julia
+  jl_pkg_version_github_release = "0.0.5", # required version StockFlowRSupport
   model_setup_name = "model_setup",
   func_name = "func",
   initial_value_name = "init",

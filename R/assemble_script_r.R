@@ -16,16 +16,23 @@ simulate_r <- function(object,
   )
   script <- result$script
   object <- result$object # Get updated object with cache populated
+  seed_nr <- object[["sim_settings"]][["seed"]]
+
 
   # Evaluate script
   sim <- tryCatch(
     {
-      # Create a new environment to collect variables
-      envir <- new.env()
       start_t <- Sys.time()
 
+      # Create a new environment to collect variables
+      envir <- new.env()
+
       # Evaluate script
-      eval(parse(text = script), envir = envir)
+      do_run <- function() {
+        eval(parse(text = script), envir = envir)
+      }
+
+     if (is.null(seed_nr)) do_run() else withr::with_seed(as.numeric(seed_nr), do_run())
 
       end_t <- Sys.time()
 

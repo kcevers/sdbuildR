@@ -261,9 +261,57 @@ test_that("ensemble() R works with conditions and n = 1", {
 })
 
 test_that("ensemble() in R respects seed", {
-  sfm <- make_r_ensemble_random_sfm()
+  sfm <- make_r_ensemble_random_sfm() |> sim_settings(seed = 123)
+
+  # Should not modify global seed state
+  orig_seed <- .Random.seed
+
   sims1 <- silence(ensemble(sfm, n = 3, verbose = FALSE, save_sims = TRUE))
   sims2 <- silence(ensemble(sfm, n = 3, verbose = FALSE, save_sims = TRUE))
+
+  new_seed <- .Random.seed
+  expect_equal(orig_seed, new_seed)
+
+  expect_equal(sims1[["summary"]], sims2[["summary"]])
+  expect_equal(sims1[["df"]], sims2[["df"]])
+
+  # Each simulation within an ensemble should be different
+  cols <- c("time", "value")
+  tol <- 1e-5
+  df1a <- as.data.frame(sims1, which = "sims", sim = 1)
+  df1b <- as.data.frame(sims1, which = "sims", sim = 2)
+  df1c <- as.data.frame(sims1, which = "sims", sim = 3)
+  expect_true(abs(sum(df1a[, cols] - df1b[, cols])) > tol)
+  expect_true(abs(sum(df1a[, cols] - df1c[, cols])) > tol)
+  expect_true(abs(sum(df1b[, cols] - df1c[, cols])) > tol)
+
+  df2a <- as.data.frame(sims2, which = "sims", sim = 1)
+  df2b <- as.data.frame(sims2, which = "sims", sim = 2)
+  df2c <- as.data.frame(sims2, which = "sims", sim = 3)
+  expect_true(abs(sum(df2a[, cols] - df2b[, cols])) > tol)
+  expect_true(abs(sum(df2a[, cols] - df2c[, cols])) > tol)
+  expect_true(abs(sum(df2b[, cols] - df2c[, cols])) > tol)
+})
+
+
+test_that("ensemble() in R with parallel execution respects seed", {
+  skip_if_not_installed("future")
+  skip_on_cran()
+
+  sfm <- make_r_ensemble_random_sfm() |> sim_settings(seed = 123)
+  
+  future::plan(future::multisession, workers = 2)
+  on.exit(future::plan(future::sequential), add = TRUE)
+
+  # Should not modify global seed state
+  orig_seed <- .Random.seed
+
+  sims1 <- silence(ensemble(sfm, n = 3, verbose = FALSE, save_sims = TRUE))
+  sims2 <- silence(ensemble(sfm, n = 3, verbose = FALSE, save_sims = TRUE))
+
+  new_seed <- .Random.seed
+  expect_equal(orig_seed, new_seed)
+
   expect_equal(sims1[["summary"]], sims2[["summary"]])
   expect_equal(sims1[["df"]], sims2[["df"]])
 

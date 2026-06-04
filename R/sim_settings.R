@@ -196,7 +196,12 @@ sim_settings <- function(object,
 
   # Seed must be NULL or an integer
   if (!missing(seed) && !is.null(seed)) {
-    if (nzchar(seed)) {
+
+    if (is.na(seed)) {
+      seed <- NULL
+    } else if (isFALSE(seed)) {
+      seed <- NULL
+    } else if (nzchar(seed)) {
       seed <- strtoi(seed)
       if (is.na(seed)) {
         cli::cli_abort(c(
@@ -258,7 +263,7 @@ sim_settings <- function(object,
   # Selectively invalidate based on what changed
   time_related <- c(
     "start", "stop", "dt", "save_at", "save_n", "save_type",
-    "time_units", "method", "seed"
+    "time_units", "method"#, "seed"
   )
   if (all(names(argg) %in% c("language", time_related))) {
     object <- invalidate_assemble(object, "times")

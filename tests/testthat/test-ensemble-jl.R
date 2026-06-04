@@ -463,7 +463,7 @@ test_that("ensemble() with mixed stock and constant in conditions", {
 
 # Reproducibility ----------------------------------------
 
-test_that("ensemble() is reproducible with seed", {
+test_that("ensemble in Julia is reproducible with seed", {
   skip_if_julia_not_ready()
 
   sfm <- sdbuildR("predator_prey") |>
@@ -474,8 +474,14 @@ test_that("ensemble() is reproducible with seed", {
     ) |>
     update(c("predator", "prey"), eqn = "runif(1)")
 
+  # Should not modify global seed state
+  orig_seed <- .Random.seed
+
   sims1 <- silence(ensemble(sfm, n = 3, save_sims = TRUE))
   sims2 <- silence(ensemble(sfm, n = 3, save_sims = TRUE))
+
+  new_seed <- .Random.seed
+  expect_equal(orig_seed, new_seed)
 
   expect_equal(sims1[["summary"]], sims2[["summary"]])
   expect_equal(sims1[["df"]], sims2[["df"]])
@@ -500,7 +506,53 @@ test_that("ensemble() is reproducible with seed", {
 })
 
 
-test_that("ensemble() in Julia without seed", {
+test_that("ensemble in Julia with threads is reproducible with seed", {
+  skip_if_julia_not_ready()
+  use_julia(nthreads = 2)
+  on.exit(use_julia(stop = TRUE))
+
+  sfm <- sdbuildR("predator_prey") |>
+    sim_settings(
+      language = "Julia",
+      start = 0, stop = 10, dt = 0.1,
+      seed = 123
+    ) |>
+    update(c("predator", "prey"), eqn = "runif(1)")
+
+  # Should not modify global seed state
+  orig_seed <- .Random.seed
+
+  sims1 <- silence(ensemble(sfm, n = 3, save_sims = TRUE))
+  sims2 <- silence(ensemble(sfm, n = 3, save_sims = TRUE))
+
+  new_seed <- .Random.seed
+  expect_equal(orig_seed, new_seed)
+
+  expect_equal(sims1[["summary"]], sims2[["summary"]])
+  expect_equal(sims1[["df"]], sims2[["df"]])
+
+  # Each simulation within an ensemble should be different
+  cols <- c("time", "value")
+  tol <- 1e-5
+  df1a <- as.data.frame(sims1, which = "sims", sim = 1)
+  df1b <- as.data.frame(sims1, which = "sims", sim = 2)
+  df1c <- as.data.frame(sims1, which = "sims", sim = 3)
+  expect_true(abs(sum(df1a[, cols] - df1b[, cols])) > tol)
+  expect_true(abs(sum(df1a[, cols] - df1c[, cols])) > tol)
+  expect_true(abs(sum(df1b[, cols] - df1c[, cols])) > tol)
+
+  df2a <- as.data.frame(sims2, which = "sims", sim = 1)
+  df2b <- as.data.frame(sims2, which = "sims", sim = 2)
+  df2c <- as.data.frame(sims2, which = "sims", sim = 3)
+  expect_true(abs(sum(df2a[, cols] - df2b[, cols])) > tol)
+  expect_true(abs(sum(df2a[, cols] - df2c[, cols])) > tol)
+  expect_true(abs(sum(df2b[, cols] - df2c[, cols])) > tol)
+
+})
+
+
+
+test_that("ensemble in Julia without seed", {
   skip_if_julia_not_ready()
 
   sfm <- sdbuildR("predator_prey") |>

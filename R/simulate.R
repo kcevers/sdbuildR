@@ -47,22 +47,6 @@ simulate.sdbuildR <- function(
 ) {
   check_sdbuildR(object)
 
-  # First assess whether the model is valid
-  if (is.null(object[["assemble"]][["summary"]])) {
-    object[["assemble"]][["summary"]] <- summary(object)
-  }
-  debug_result <- object[["assemble"]][["summary"]]
-  errors <- Filter(function(c) c$problem == "error", debug_result)
-  if (length(errors) > 0) {
-    n <- length(errors)
-    labels <- vapply(names(errors), .problem_label, character(1))
-    names(labels) <- rep("x", n)
-    cli::cli_abort(c(
-      "{cli::qty(n)}Model has {n} problem{?s}. Run {.fn summary} for details.",
-      labels
-    ))
-  }
-
   # Override sim_settings with any arguments passed via ...
   varargs <- list(...)
   # Add seed if seed was passed
@@ -72,6 +56,8 @@ simulate.sdbuildR <- function(
   if (length(varargs) > 0) {
     object <- do.call(sim_settings, c(list(object), varargs))
   }
+
+  check_summary_diagnostics(object)
 
   only_stocks <- object[["sim_settings"]][["only_stocks"]]
   vars <- object[["sim_settings"]][["vars"]]

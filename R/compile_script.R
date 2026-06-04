@@ -118,15 +118,15 @@ compile <- function(object, only_stocks = FALSE,
     vars = vars
   )
 
-  # --- Build seed string -----------------------------------------------------
-  seed <- object[["sim_settings"]][["seed"]]
-  seed_str <- if (is_defined(seed)) fmt_script("prep_seed", language, seed = seed) else ""
+  # # --- Build seed string -----------------------------------------------------
+  # seed <- object[["sim_settings"]][["seed"]]
+  # seed_str <- if (is_defined(seed)) fmt_script("prep_seed", language, seed = seed) else ""
 
   # --- Assemble final script -------------------------------------------------
   if (language == "R") {
     script <- paste0(c(
       "# Load packages\nlibrary(sdbuildR)",
-      seed_str,
+      # seed_str,
       object[["assemble"]][["times"]],
       object[["assemble"]][["funcs"]],
       object[["assemble"]][["nonneg_stocks"]][["func_def"]],
@@ -137,7 +137,7 @@ compile <- function(object, only_stocks = FALSE,
     ), collapse = "\n")
   } else {
     script <- paste0(c(
-      seed_str,
+      # seed_str,
       object[["assemble"]][["times"]],
       object[["assemble"]][["funcs"]],
       ode,
@@ -591,12 +591,12 @@ compile_ensemble <- function(object, ensemble_pars, only_stocks = TRUE) {
   run_ode <- compile_run_ode_ensemble(object, ensemble_pars, static_ens, only_stocks)
   post <- compile_post_ensemble(object, ensemble_pars)
 
-  # Seed string
-  seed <- object[["sim_settings"]][["seed"]]
-  seed_str <- if (is_defined(seed)) fmt_script("prep_seed", language, seed = seed) else ""
+  # # Seed string
+  # seed <- object[["sim_settings"]][["seed"]]
+  # seed_str <- if (is_defined(seed)) fmt_script("prep_seed", language, seed = seed) else ""
 
   script <- paste0(c(
-    seed_str,
+    # seed_str,
     object[["assemble"]][["times"]],
     object[["assemble"]][["funcs"]],
     ode,

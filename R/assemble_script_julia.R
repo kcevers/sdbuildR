@@ -350,10 +350,15 @@ compile_run_ode_ensemble <- function(object, ensemble_pars, static, only_stocks)
     )
   }
 
+  # Determine whether to wrap solve in with_rng for reproducible seeding based on sim_settings seed value
+  use_with_rng_open <- use_with_rng_close <- ""
+  if (!is.null(object[["sim_settings"]][["seed"]])) {
+    use_with_rng_open <- paste0("with_rng(", P[["ensemble_ctx"]], ".", "rng",  ") do\n\t")
+    use_with_rng_close <- "\nend"
+  }
+
   # When using EnsembleThreads(), add a warm-up solve to force JIT compilation
-
   # of all solver code paths before threads are spawned. This prevents a known
-
   # Julia GC crash (EXCEPTION_ACCESS_VIOLATION in jl_gc_small_alloc) caused by
   # concurrent JIT compilation during threaded ensemble solving.
   if (ensemble_pars[["threaded"]]) {
@@ -378,7 +383,9 @@ compile_run_ode_ensemble <- function(object, ensemble_pars, static, only_stocks)
     intermediaries_remake = intermediaries_remake,
     method = object[["sim_settings"]][["method"]],
     threaded_str = ifelse(ensemble_pars[["threaded"]], ", EnsembleThreads()", ""),
-    warmup_str = warmup_str
+    warmup_str = warmup_str,
+    use_with_rng_open = use_with_rng_open,
+    use_with_rng_close = use_with_rng_close
   )
 }
 

@@ -15,7 +15,7 @@ export_plot(
 )
 }
 \arguments{
-\item{pl}{Plot object.}
+\item{pl}{Plot object. Can be a \code{grViz} object from the DiagrammeR package (for stock-and-flow diagrams) or a \code{plotly} object from the plotly package (for (ensemble) simulation results).}
 
 \item{file}{File path to save plot to, including a file extension. For plotting a stock-and-flow model, the file extension can be one of png, pdf, svg, ps, eps, webp. For plotting a simulation, the file extension can be one of png, pdf, jpg, jpeg, webp. For plotting a qgraph graph, the file extension can be one of png, pdf, svg, ps, eps, jpg, jpeg, tiff, bmp. If no file extension is specified, it will default to png.}
 

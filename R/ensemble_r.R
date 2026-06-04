@@ -81,12 +81,13 @@ ensemble_r <- function(object, n, save_sims, conditions, cross,
                        quantiles, only_stocks, vars = NULL, verbose,
                        n_conditions, total_sims) {
 
-  # Specify seed if specified
+  # Find seed if specified
   has_seed <- !is.null(object[["sim_settings"]][["seed"]])
-  seed_nr <- object[["sim_settings"]][["seed"]]
   if (has_seed) {
-    withr::local_seed(seed_nr)
-    object <- sim_settings(object, seed = NULL)  # clear seed so it doesn't affect individual sims
+    # withr::local_seed(seed_nr)
+    seed_nr <- as.numeric(object[["sim_settings"]][["seed"]])
+  } else {
+    seed_nr <- TRUE
   }
 
   start_t <- Sys.time()
@@ -161,14 +162,19 @@ ensemble_r <- function(object, n, save_sims, conditions, cross,
             parsed_expr = parsed_scripts[[task[["condition"]]]],
             condition = task[["condition"]], sim = task[["sim"]]
           )
-        }, future.seed = TRUE, future.packages = "sdbuildR")
+        }, future.seed = seed_nr, future.packages = "sdbuildR")
       } else {
-        lapply(tasks, function(task) {
+        do_run <- function() {
+          lapply(tasks, function(task) {
           eval_sim_script_r(
             parsed_expr = parsed_scripts[[task[["condition"]]]],
             condition = task[["condition"]], sim = task[["sim"]]
           )
         })
+        }
+
+       if (has_seed) do_run() else withr::with_seed(seed_nr, do_run())
+
       }
     },
     error = function(e) {
@@ -181,11 +187,6 @@ ensemble_r <- function(object, n, save_sims, conditions, cross,
   )
 
   end_t <- Sys.time()
-
-  # Restore seed if specified
-  if (has_seed) {
-    object <- sim_settings(object, seed = seed_nr)
-  }
 
   if (length(sim_results) == 0L) {
     err_msg <- attr(sim_results, "error_message") %||%
@@ -269,60 +270,6 @@ eval_sim_script_r <- function(parsed_expr, condition, sim) {
         condition = condition, sim = sim
       )
     }
-  )
-}
-
-
-#' Run a single R simulation for the ensemble (legacy)
-#'
-#' Kept for reference. Prefer eval_sim_script_r() which avoids redundant
-#' compilation by accepting a pre-compiled script.
-#'
-#' @param object Stock-and-flow model
-#' @param task List with condition (condition index) and sim (simulation index)
-#' @param conditions Named list of conditions or NULL
-#' @param cond_grid Data frame of condition combinations or NULL
-#' @param only_stocks Logical; only keep stock variables
-#'
-#' @returns List with success, df, init, constants, condition, sim
-#' @noRd
-run_single_sim_r <- function(object, task, conditions, cond_grid,
-                             only_stocks) {
-  j_idx <- task[["condition"]]
-  i_idx <- task[["sim"]]
-
-  # Apply conditions for this condition index
-  if (!is.null(cond_grid)) {
-    obj_mod <- object
-    for (nm in names(cond_grid)) {
-      val <- cond_grid[j_idx, nm]
-      obj_mod <- update(obj_mod, !!nm, eqn = !!val)
-    }
-  } else {
-    obj_mod <- object
-  }
-
-  # Clear assembled cache so compile() re-evaluates with new parameters
-  obj_mod[["assemble"]] <- empty_assemble()
-
-  # Use simulate() to run the model
-  sim <- simulate(obj_mod, only_stocks = only_stocks, verbose = FALSE)
-
-  if (!sim[["success"]]) {
-    return(list(
-      success = FALSE,
-      error_message = sim[["error_message"]],
-      condition = j_idx, sim = i_idx
-    ))
-  }
-
-  list(
-    success = TRUE,
-    df = sim[["df"]],
-    init = sim[["init"]],
-    constants = sim[["constants"]],
-    condition = j_idx,
-    sim = i_idx
   )
 }
 

@@ -188,8 +188,9 @@ export_desolve_ <- function(object) {
 
   run_ode <- compile_run_ode(object, only_stocks = only_stocks, language = "R")
 
-  seed <- object[["sim_settings"]][["seed"]]
-  seed_str <- if (is_defined(seed)) fmt_script("prep_seed", "R", seed = seed) else ""
+  # seed <- object[["sim_settings"]][["seed"]]
+  # seed_str <- if (is_defined(seed)) fmt_script("prep_seed", "R", seed = seed) else ""
+  seed_str <- if (is_defined(seed)) paste0("set.seed(", seed, ")") else ""
 
   paste0(c(
     "library(deSolve)",
