@@ -4,7 +4,7 @@
 # Basic R ensemble --------------------------------------------------------
 
 test_that("ensemble() runs in R", {
-  sfm <- make_r_ensemble_sfm()
+  sfm <- make_r_ensemble_random_sfm()
   sims <- silence(ensemble(sfm, n = 3, verbose = FALSE))
   expect_s3_class(sims, "ensemble_sdbuildR")
   expect_true(sims[["success"]])
@@ -240,7 +240,7 @@ test_that("ensemble() R prints simulation count", {
 # Edge cases --------------------------------------------------------------
 
 test_that("ensemble() R works with n = 1", {
-  sfm <- make_r_ensemble_sfm()
+  sfm <- make_r_ensemble_random_sfm()
   sims <- silence(ensemble(sfm, n = 1, verbose = FALSE))
   expect_true(sims[["success"]])
   expect_equal(sims[["n"]], 1)
@@ -248,7 +248,7 @@ test_that("ensemble() R works with n = 1", {
 })
 
 test_that("ensemble() R works with conditions and n = 1", {
-  sfm <- make_r_ensemble_sfm()
+  sfm <- make_r_ensemble_random_sfm()
   sims <- silence(ensemble(sfm,
     n = 1,
     conditions = list("contact_rate" = c(1.5, 2.5)),
@@ -260,6 +260,49 @@ test_that("ensemble() R works with conditions and n = 1", {
   expect_equal(sims[["n_conditions"]], 2)
 })
 
+test_that("ensemble() in R respects seed", {
+  sfm <- make_r_ensemble_random_sfm()
+  sims1 <- silence(ensemble(sfm, n = 3, verbose = FALSE, save_sims = TRUE))
+  sims2 <- silence(ensemble(sfm, n = 3, verbose = FALSE, save_sims = TRUE))
+  expect_equal(sims1[["summary"]], sims2[["summary"]])
+  expect_equal(sims1[["df"]], sims2[["df"]])
+
+  # Each simulation within an ensemble should be different
+  cols <- c("time", "value")
+  tol <- 1e-5
+  df1a <- as.data.frame(sims1, which = "sims", sim = 1)
+  df1b <- as.data.frame(sims1, which = "sims", sim = 2)
+  df1c <- as.data.frame(sims1, which = "sims", sim = 3)
+  expect_true(abs(sum(df1a[, cols] - df1b[, cols])) > tol)
+  expect_true(abs(sum(df1a[, cols] - df1c[, cols])) > tol)
+  expect_true(abs(sum(df1b[, cols] - df1c[, cols])) > tol)
+
+  df2a <- as.data.frame(sims2, which = "sims", sim = 1)
+  df2b <- as.data.frame(sims2, which = "sims", sim = 2)
+  df2c <- as.data.frame(sims2, which = "sims", sim = 3)
+  expect_true(abs(sum(df2a[, cols] - df2b[, cols])) > tol)
+  expect_true(abs(sum(df2a[, cols] - df2c[, cols])) > tol)
+  expect_true(abs(sum(df2b[, cols] - df2c[, cols])) > tol)
+})
+
+
+test_that("ensemble() in R without seed", {
+  sfm <- make_r_ensemble_random_sfm() |> sim_settings(seed = NULL)
+  sims1 <- silence(ensemble(sfm, n = 3, verbose = FALSE, save_sims = TRUE))
+  sims2 <- silence(ensemble(sfm, n = 3, verbose = FALSE, save_sims = TRUE))
+  
+  tol <- 1e-5
+  df1 <- as.data.frame(sims1, which = "summary")
+  df2 <- as.data.frame(sims2, which = "summary")
+  cols <- setdiff(colnames(df1), "variable")
+
+  expect_true(abs(sum(df1[, cols] - df2[, cols])) > tol)
+  cols <- c("time", "value")
+  df1 <- as.data.frame(sims1, which = "sims")
+  df2 <- as.data.frame(sims2, which = "sims")
+  expect_true(abs(sum(df1[, cols] - df2[, cols])) > tol)
+
+})
 
 # Parallel execution via user-managed future plan -------------------------
 
@@ -269,7 +312,7 @@ test_that("ensemble() R runs sequentially with future::sequential plan", {
   future::plan(future::sequential)
   on.exit(future::plan(future::sequential), add = TRUE)
 
-  sfm <- make_r_ensemble_sfm()
+  sfm <- make_r_ensemble_random_sfm()
   sims <- silence(ensemble(sfm, n = 3, verbose = FALSE))
 
   expect_true(sims[["success"]])
@@ -283,13 +326,11 @@ test_that("ensemble() R uses parallel path when future plan has multiple workers
   future::plan(future::multisession, workers = 2)
   on.exit(future::plan(future::sequential), add = TRUE)
 
-  sfm <- sdbuildR("SIR") |>
-    update("susceptible", eqn = "runif(1, 900, 1100)") |>
-    sim_settings(language = "R", start = 0, stop = 10, dt = 0.1, save_at = 1)
-
-  sims <- silence(ensemble(sfm, n = 4, verbose = FALSE))
+  n <- 4
+  sfm <- make_r_ensemble_random_sfm()
+  sims <- silence(ensemble(sfm, n = n, verbose = FALSE))
 
   expect_true(sims[["success"]])
-  expect_equal(sims[["n"]], 4)
+  expect_equal(sims[["n"]], n)
   expect_gt(future::nbrOfWorkers(), 1L)
 })

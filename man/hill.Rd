@@ -33,4 +33,4 @@ hill(0)
 hill(0, slope = 5, midpoint = 0.5, upper = 10)
 
 }
-\concept{custom}
+\concept{convenience}

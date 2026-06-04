@@ -35,6 +35,10 @@ library(kableExtra)
 ```{r include=FALSE}
 # Set this to TRUE to recreate the figures in the paper
 recreate_figs <- TRUE
+
+# if (!has_internet()) {
+#   recreate_figs <- FALSE
+# }
 ```
 
 ```{r include=FALSE}
@@ -422,7 +426,7 @@ The plot shows how the erosion of the ability to recover produces a characterist
 
 ```{r}
 # Add auxiliary to keep track of net change in energy (inflow - outflow)
-sfm <- aux(sfm, net_change, eqn = recovery - work)
+sfm <- aux(sfm, net_change, eqn = recovery - work, label = "Net change in energy")
 simulate(sfm) |> plot()
 ```
 
@@ -881,9 +885,9 @@ functions_table <- data.frame(
     "Time step of the simulation"
   ),
   Use.case = c(
-    "Use in equations, e.g., pulse(times, 5, width = dt)",
-    "Use in equations, e.g., input(t)",
-    "Use in equations, e.g., pulse(times, 5, width = dt)"
+    "Use in equations, e.g., `pulse(times, 5, width = dt)`",
+    "Use in equations, e.g., `input(t)`",
+    "Use in equations, e.g., `pulse(times, 5, width = dt)`"
   )
 )
 

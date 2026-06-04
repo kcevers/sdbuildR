@@ -185,20 +185,21 @@ use_julia <- function(
 
       # Find current thread setting to restore it after Julia session is started (this won't affect the new Julia session)
       .sdbuildR_env[["jl"]][["use_threads"]] <- TRUE
-      old_threads <- Sys.getenv("JULIA_NUM_THREADS")
-      on.exit(
-        {
-          if (old_threads == "") {
-            Sys.unsetenv("JULIA_NUM_THREADS")
-          } else {
-            Sys.setenv(JULIA_NUM_THREADS = old_threads)
-          }
-        },
-        add = TRUE
-      )
+      withr::local_envvar(JULIA_NUM_THREADS = nthreads)
+      # old_threads <- Sys.getenv("JULIA_NUM_THREADS")
+      # on.exit(
+      #   {
+      #     if (old_threads == "") {
+      #       Sys.unsetenv("JULIA_NUM_THREADS")
+      #     } else {
+      #       Sys.setenv(JULIA_NUM_THREADS = old_threads)
+      #     }
+      #   },
+      #   add = TRUE
+      # )
 
-      # Set JULIA_NUM_THREADS for this session
-      Sys.setenv(JULIA_NUM_THREADS = nthreads)
+      # # Set JULIA_NUM_THREADS for this session
+      # Sys.setenv(JULIA_NUM_THREADS = nthreads)
     }
   }
 

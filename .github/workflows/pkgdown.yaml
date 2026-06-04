@@ -21,7 +21,9 @@ jobs:
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       NOT_CRAN: "true"
-      AUTO_INSTALL_JULIA_ENV: "true"
+      SDBUILDR_INSTALL_JULIA_ENV: "true"
+      SDBUILDR_CREATE_TEST_FIGS: "true"
+
     permissions:
       contents: write
     steps:

@@ -18,4 +18,4 @@ Logit function
 \examples{
 logit(.1)
 }
-\concept{custom}
+\concept{convenience}

@@ -47,4 +47,4 @@ legend("topleft",
   col = c("black", "blue", "red"), lty = 1
 )
 }
-\concept{custom}
+\concept{convenience}

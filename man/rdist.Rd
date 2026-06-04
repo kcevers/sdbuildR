@@ -20,4 +20,4 @@ Equivalent of RandDist() in Insight Maker
 \examples{
 rdist(c(1, 2, 3), c(.5, .25, .25))
 }
-\concept{custom}
+\concept{convenience}

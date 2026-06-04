@@ -8,11 +8,9 @@ test_that("plot() creates a basic plot for simulation", {
   n_stocks <- length(stock_labels)
 
   # Default is show only stocks and showlegend = TRUE
-  trace_info <- plotly_trace_summary(result)
+  trace_info <- plotly_traces(result)
   expect_setequal(trace_info[["name"]], stock_labels)
   expect_true(all(trace_info[["showlegend"]]))
-  legend_items <- plotly_legend_items(result)
-  expect_setequal(legend_items[["name"]], stock_labels)
 })
 
 test_that("plot() method exists for simulate_sdbuildR objects", {
@@ -148,38 +146,51 @@ test_that("plot() validates colors as character vector", {
 
 test_that("plot() creates standard line plot for SIR simulation", {
   sim <- sir_sim()
+  pl <- plot(sim)
+  expect_plotly(pl)
 
-  expect_snapshot_plot("sim-sir-default", plot(sim))
+  sfm <- sim[["object"]]
+  df <- as.data.frame(sfm, properties = c("label", "type"))
+  stock_labels <- df$label[df$type == "stock"]
+  trace_info <- plotly_traces(pl)
+  expect_setequal(trace_info[["name"]], stock_labels)
+  expect_true(all(trace_info$showlegend))
+
+  expect_snapshot_plot("sim-sir-default", pl)
 })
 
-test_that("plot() respects showlegend", {
+test_that("plot.simulate_sdbuildR() respects showlegend", {
   sim <- sir_sim()
   # Object-level expectations: legend toggles should reflect in built Plotly object
   pl_true <- plot(sim, showlegend = TRUE)
   pl_false <- plot(sim, showlegend = FALSE)
   expect_plotly(pl_true)
   expect_plotly(pl_false)
-  expect_true(nrow(plotly_legend_items(pl_true)) > 0)
-  expect_equal(nrow(plotly_legend_items(pl_false)), 0)
+  traces_true <- plotly_traces(pl_true)
+  traces_false <- plotly_traces(pl_false)
+  expect_true(nrow(traces_true) > 0)
+  expect_true(all(traces_true$showlegend))
+  expect_true(nrow(traces_false) > 0)
+  expect_true(all(!(traces_false$showlegend)))
 
   # Snapshots last
   expect_snapshot_plot("sim-showlegend-true", pl_true)
   expect_snapshot_plot("sim-showlegend-false", pl_false)
 })
 
-test_that("plot() respects vars argument", {
+test_that("plot.simulate_sdbuildR() respects vars argument", {
   sim <- sir_sim()
   # Object-level expectations: vars filtering should limit plotted trace names
   sfm <- sim[["object"]]
   names_df <- as.data.frame(sfm, properties = c("label"))
   sus_label <- names_df$label[names_df$name == "susceptible"]
   pl_single <- plot(sim, vars = "susceptible")
-  trace_names <- plotly_trace_summary(pl_single)$name
+  trace_names <- plotly_traces(pl_single)$name
   expect_setequal(trace_names, sus_label)
 
   sus_infected_labels <- names_df$label[names_df$name %in% c("susceptible", "infected")]
   pl_filtered <- plot(sim, vars = c("susceptible", "infected"))
-  trace_names_filtered <- plotly_trace_summary(pl_filtered)$name
+  trace_names_filtered <- plotly_traces(pl_filtered)$name
   expect_setequal(trace_names_filtered, sus_infected_labels)
 
   # Snapshots last
@@ -187,43 +198,62 @@ test_that("plot() respects vars argument", {
   expect_snapshot_plot("sim-filtered-vars", pl_filtered)
 })
 
-test_that("plot() with custom palette", {
+test_that("plot.simulate_sdbuildR() with custom palette", {
   sim <- sir_sim()
+  sfm <- sim[["object"]]
+  stock_labels <- as.data.frame(sfm, properties = c("label", "type"))$label
+  pl <- plot(sim, palette = "Set 2")
+  expect_plotly(pl)
+  traces <- plotly_traces(pl)
+  expect_true(nrow(traces) > 0)
 
-  expect_snapshot_plot("sim-custom-palette", plot(sim, palette = "Set 2"))
+  # Unique colors should be assigned across traces when a palette is used
+  expect_true(length(unique(traces$color)) == nrow(traces))
+
+  expect_snapshot_plot("sim-custom-palette", pl)
 })
 
-test_that("plot() with custom colors vector", {
+test_that("plot.simulate_sdbuildR() with custom colors vector", {
   sim <- sir_sim()
+  # Object-level expectation: legend trace colors reflect custom palette when exposed
+  df <- as.data.frame(sim, direction = "long")
+  vars <- unique(df$variable)
+  names_df <- as.data.frame(sim[["object"]])
+  label_names <- names_df$label[match(vars, names_df$name)]
+  custom_colors <- stats::setNames(rainbow(length(label_names)), label_names)
 
-  custom_colors <- c("#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A")
-  # Object-level expectation: legend trace colors should match provided palette
-  pl_colors <- plot(sim, colors = custom_colors)
-  legend_items <- plotly_legend_items(pl_colors)
-  if (nrow(legend_items) > 0) {
-    # Normalize plotly colours to compare robustly (rgba vs named/hex)
-    got <- vapply(legend_items$color, normalize_color_string, character(1))
-    want <- vapply(custom_colors, normalize_color_string, character(1))
-    expect_true(all(got %in% want))
-  }
+  pl_colors <- plot(sim, colors = custom_colors, alpha = 1)
+  expect_plotly(pl_colors)
+  traces <- plotly_traces(pl_colors)
+  expect_equal(length(traces[["name"]]), length(label_names))
+  legend_check <- plotly_check_legend_colors(pl_colors, expected = custom_colors)
+  expect_true(nrow(legend_check) > 0)
+  expect_true(all(legend_check$ok))
+  expect_true(all(legend_check$matches_expected))
 
   # Snapshot last
   expect_snapshot_plot("sim-custom-colors", pl_colors)
 })
 
-test_that("plot() with custom font family", {
+test_that("plot.simulate_sdbuildR() with custom font family", {
   sim <- sir_sim()
+  pl <- plot(sim, font_family = "Courier New")
+  layout <- plotly_layout(pl)
+  expect_equal(layout$font$family, "Courier New")
 
-  expect_snapshot_plot("sim-custom-font-family", plot(sim, font_family = "Arial"))
+  expect_snapshot_plot("sim-custom-font-family", pl)
 })
 
-test_that("plot() with custom font size", {
+test_that("plot.simulate_sdbuildR() with custom font size", {
   sim <- sir_sim()
+  pl <- plot(sim, font_size = 20)
+  layout <- plotly_layout(pl)
+  expect_equal(layout$font$size, 20)
 
-  expect_snapshot_plot("sim-large-font-size", plot(sim, font_size = 20))
+  expect_snapshot_plot("sim-large-font-size", pl)
 })
 
-test_that("plot() with custom wrap width", {
+test_that("plot.simulate_sdbuildR() with custom wrap width", {
   sfm <- sdbuildR()
   sfm <- update(sfm,
     name = "a",
@@ -236,61 +266,94 @@ test_that("plot() with custom wrap width", {
     from = !!stock_name_clean
   )
   sim <- simulate(sfm, only_stocks = FALSE)
+  pl <- plot(sim, wrap_width = 10)
+  expect_plotly(pl)
+  traces <- plotly_traces(pl)
+  expect_true(all(grepl("<br", traces[["name"]])))
 
-  expect_snapshot_plot("sim-wrap-width-narrow", plot(sim, wrap_width = 10))
+  expect_snapshot_plot("sim-wrap-width-narrow", pl)
 })
 
-test_that("plot() with custom title, axis labels, and limits", {
+test_that("plot.simulate_sdbuildR() with custom title, axis labels, and limits", {
   sim <- sir_sim()
-
-  expect_snapshot_plot(
-    "sim-custom-title-axes-limits",
-    plot(sim,
-      main = "Custom Simulation Title",
-      xlab = "Custom X", ylab = "Custom Y", xlim = c(0, 50), ylim = c(0, 800)
-    )
+  pl <- plot(sim,
+    main = "Custom Simulation Title",
+    xlab = "Custom X", ylab = "Custom Y", xlim = c(0, 50), ylim = c(0, 800)
   )
+  layout <- plotly_layout(pl)
+  expect_equal(layout$title, "Custom Simulation Title")
+  expect_equal(layout$xaxis$title, "Custom X")
+  expect_equal(layout$yaxis$title, "Custom Y")
+  expect_equal(layout$xaxis$range, c(0, 50))
+  expect_equal(layout$yaxis$range, c(0, 800))
+
+  expect_snapshot_plot("sim-custom-title-axes-limits", pl)
 })
 
-test_that("plot() respects add_constants", {
+test_that("plot.simulate_sdbuildR() respects show_constants", {
   sfm <- sdbuildR()
   sfm <- update(sfm, "Stock1", type = "stock")
   sfm <- update(sfm, "const_val", type = "constant", eqn = "100")
   sim <- simulate(sfm)
+  
+  constants <- as.data.frame(sim[["object"]], type = "constants", properties = "label")
+  const_label <- constants$label[constants$name == "const_val"]
+  pl_with_constants <- plot(sim, show_constants = TRUE)
+  expect_plotly(pl_with_constants)
+  traces <- plotly_traces(pl_with_constants)
+  expect_true(all(const_label %in% traces[["name"]]))
 
-  expect_snapshot_plot("sim-with-constants", plot(sim, add_constants = TRUE))
-  expect_snapshot_plot("sim-without-constants", plot(sim, add_constants = FALSE))
+  pl_without_constants <- plot(sim, show_constants = FALSE)
+  expect_plotly(pl_without_constants)
+  traces_no_const <- plotly_traces(pl_without_constants)
+  expect_true(all(!(const_label %in% traces_no_const[["name"]])))
+
+  expect_snapshot_plot("sim-with-constants", pl_with_constants)
+  expect_snapshot_plot("sim-without-constants", pl_without_constants)
 })
 
 # ============================================================================
 # EDGE CASES AND COMPLEX SCENARIOS
 # ============================================================================
 
-test_that("plot() shows legend for single-variable plot", {
+test_that("plot.simulate_sdbuildR() shows legend for single-variable plot", {
   sfm <- sdbuildR()
   sfm <- update(sfm, "Stock1", type = "stock")
   sim <- simulate(sfm)
-
-  expect_snapshot_plot("sim-single-var-legend", plot(sim, showlegend = TRUE))
+  pl <- plot(sim, showlegend = TRUE)
+  expect_plotly(pl)
+  trace_info <- plotly_traces(pl)
+  expect_equal(nrow(trace_info), 1L)
+  expect_equal(trace_info$name, "Stock1")
+  expect_true(all(trace_info$showlegend))
+  expect_snapshot_plot("sim-single-var-legend", pl)
 })
 
-test_that("plot() works with both stocks and flow variables", {
+test_that("plot.simulate_sdbuildR() works with both stocks and flow variables", {
   # SIR has susceptible (stock), infected (stock), recovered (stock)
   sim <- sir_sim(only_stocks = FALSE)
+  df <- as.data.frame(sim, direction = "long")
+  var_names <- unique(df$variable)
+  pl <- plot(sim, showlegend = TRUE)
+  expect_plotly(pl)
+  trace_info <- plotly_traces(pl)
+  expect_equal(nrow(trace_info), length(var_names))
+  expect_true(all(trace_info$showlegend))
 
-  expect_snapshot_plot("sim-only-stocks-false", plot(sim, showlegend = TRUE))
+  expect_snapshot_plot("sim-only-stocks-false", pl)
 })
 
-test_that("plot() handles variables with duplicate display labels", {
+test_that("plot.simulate_sdbuildR() handles variables with duplicate display labels", {
   sfm <- sdbuildR()
   sfm <- update(sfm, "var1", type = "stock", label = "Same")
   sfm <- update(sfm, "var2", type = "stock", label = "Same")
   sim <- simulate(sfm)
-
-  expect_snapshot_plot("sim-duplicate-labels", plot(sim))
+  pl <- plot(sim)
+  traces <- plotly_traces(pl)
+  expect_setequal(traces$name, c("Same (var1)", "Same (var2)"))
 })
 
-test_that("plot() respects vars filtering for constants", {
+test_that("plot.simulate_sdbuildR() respects vars filtering for constants", {
   sfm <- sdbuildR()
   sfm <- update(sfm, "S", type = "stock")
   sfm <- update(sfm, "I", type = "stock")
@@ -299,40 +362,41 @@ test_that("plot() respects vars filtering for constants", {
   sim <- simulate(sfm)
 
   # Request only S and const1
-  expect_snapshot_plot(
-    "sim-constants-filtered-vars",
-    plot(sim, vars = c("S", "const1"), add_constants = TRUE)
-  )
+  pl <- plot(sim, vars = c("S", "const1"), show_constants = TRUE)
+  expect_plotly(pl)
+  traces <- plotly_traces(pl)
+  constants <- as.data.frame(sim[["object"]], type = "constants", properties = "label")
+  const_label <- constants$label[constants$name == "const1"]
+  expect_true(sum(const_label == traces[["name"]]) == 1)
+  expect_snapshot_plot("sim-constants-filtered-vars", pl)
 })
 
-test_that("plot() with vars = constant automatically enables add_constants", {
+test_that("plot.simulate_sdbuildR() with vars = constant automatically enables show_constants", {
   sfm <- sdbuildR()
   sfm <- update(sfm, "Stock1", type = "stock")
   sfm <- update(sfm, "const_val", type = "constant", eqn = "75")
   sim <- simulate(sfm)
 
-  # Even without add_constants = TRUE, specifying a constant in vars should include it
-  expect_snapshot_plot(
-    "sim-vars-constant-add-constants",
-    plot(sim, vars = c("Stock1", "const_val"), add_constants = FALSE)
-  )
+  # Even without show_constants = TRUE, specifying a constant in vars should include it
+  pl <- plot(sim, vars = c("Stock1", "const_val"), show_constants = FALSE)
+  expect_plotly(pl)
+  traces <- plotly_traces(pl)
+  expect_true(sum("const_val" == traces[["name"]]) == 1)
+  expect_snapshot_plot("sim-vars-constant-show-constants", pl)
 })
 
 # ============================================================================
 # DEFAULT BEHAVIOR TESTS
 # ============================================================================
 
-test_that("plot() uses default titles", {
-  sfm <- sdbuildR("SIR")
-  sfm$meta$name <- "My Model"
+test_that("plot.simulate_sdbuildR() uses default titles", {
+  sfm <- sdbuildR("SIR") |> meta(name = "My Model")
   sim <- simulate(sfm)
 
-  result <- plot(sim)
-  layout <- result$x$layoutAttrs[[1]]
+  pl <- plot(sim)
+  layout <- plotly_layout(pl)
   expect_equal(layout$title, sfm$meta$name)
   expect_true(grepl("^Time", layout$xaxis$title))
   expect_equal(layout$yaxis$title, "")
-
-  # Should produce a plot object without error
-  expect_plotly(result)
+  expect_plotly(pl)
 })

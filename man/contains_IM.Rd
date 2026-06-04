@@ -2,7 +2,7 @@
 % Please edit documentation in R/sdbuildR_custom_func.R
 \name{contains_IM}
 \alias{contains_IM}
-\title{Check if needle is in haystack}
+\title{Check whether value is in vector or string}
 \usage{
 contains_IM(haystack, needle)
 }
@@ -15,10 +15,10 @@ contains_IM(haystack, needle)
 Logical value
 }
 \description{
-Check whether value is in vector or string. Equivalent of .Contains() in Insight Maker.
+Equivalent of .Contains() in Insight Maker.
 }
 \examples{
 contains_IM(c("a", "b", "c"), "d") # FALSE
 contains_IM(c("abcdef"), "bc") # TRUE
 }
-\concept{custom}
+\concept{convenience}

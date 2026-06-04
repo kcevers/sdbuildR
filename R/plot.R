@@ -2,7 +2,7 @@
 #'
 #' Save a plot of a stock-and-flow diagram or a simulation to a specified file path. Note that saving plots requires additional packages to be installed (see below).
 #'
-#' @param pl Plot object.
+#' @param pl Plot object. Can be a `grViz` object from the DiagrammeR package (for stock-and-flow diagrams) or a `plotly` object from the plotly package (for (ensemble) simulation results).
 #' @param file File path to save plot to, including a file extension. For plotting a stock-and-flow model, the file extension can be one of png, pdf, svg, ps, eps, webp. For plotting a simulation, the file extension can be one of png, pdf, jpg, jpeg, webp. For plotting a qgraph graph, the file extension can be one of png, pdf, svg, ps, eps, jpg, jpeg, tiff, bmp. If no file extension is specified, it will default to png.
 #' @param width Width of image in units.
 #' @param height Height of image in units.
@@ -13,7 +13,7 @@
 #'
 #' @returns Returns `NULL` invisibly, called for side effects.
 #' @export
-#' @concept simulate
+#' @concept convenience
 #'
 #' @examples
 #'
@@ -73,14 +73,6 @@ export_plot <- function(pl, file, width = 3, height = 4, units = "cm", dpi = 300
       format = format,
       width = width_px, height = height_px
     )
-  } else if ("qgraph" %in% class(pl) || is.function(pl)) {
-    export_qgraph(pl, file,
-      format = format,
-      width = width_px,
-      height = height_px,
-      dpi = dpi,
-      font_family = font_family
-    )
   } else {
     cli::cli_abort(c(
       "x" = "Unsupported plot object class.",
@@ -90,102 +82,6 @@ export_plot <- function(pl, file, width = 3, height = 4, units = "cm", dpi = 300
   }
 
   invisible(file)
-}
-
-
-#' Export qgraph object
-#'
-#' @inheritParams export_plot
-#' @param format Output format.
-#'
-#' @returns Returns `NULL` invisibly.
-#' @noRd
-#'
-export_qgraph <- function(pl, file, format, width, height, dpi, font_family = "") {
-  rlang::check_installed("qgraph", reason = "to export qgraph visualizations to image files.")
-
-  width_in <- width / dpi
-  height_in <- height / dpi
-  family <- trimws(font_family)
-
-  resolve_pdf_ps_family <- function(family_name) {
-    if (!nzchar(family_name)) {
-      return("")
-    }
-
-    if (family_name %in% names(grDevices::pdfFonts())) {
-      return(family_name)
-    }
-
-    if (identical(family_name, "Times New Roman")) {
-      return("Times")
-    }
-
-    return("")
-  }
-
-  if (format == "png") {
-    grDevices::png(file, width = width, height = height, units = "px", res = dpi)
-  } else if (format %in% c("jpg", "jpeg")) {
-    grDevices::jpeg(file, width = width, height = height, units = "px", res = dpi)
-  } else if (format == "tiff") {
-    grDevices::tiff(file, width = width, height = height, units = "px", res = dpi)
-  } else if (format == "bmp") {
-    grDevices::bmp(file, width = width, height = height, units = "px", res = dpi)
-  } else if (format == "pdf") {
-    if (capabilities("cairo")) {
-      if (nzchar(family)) {
-        grDevices::cairo_pdf(file, width = width_in, height = height_in, family = family)
-      } else {
-        grDevices::cairo_pdf(file, width = width_in, height = height_in)
-      }
-    } else {
-      pdf_family <- resolve_pdf_ps_family(family)
-      if (nzchar(pdf_family)) {
-        grDevices::pdf(file, width = width_in, height = height_in, family = pdf_family)
-      } else {
-        grDevices::pdf(file, width = width_in, height = height_in)
-      }
-    }
-  } else if (format == "svg") {
-    grDevices::svg(file, width = width_in, height = height_in)
-  } else if (format == "ps") {
-    ps_family <- resolve_pdf_ps_family(family)
-    if (nzchar(ps_family)) {
-      grDevices::postscript(file, width = width_in, height = height_in, horizontal = FALSE, family = ps_family)
-    } else {
-      grDevices::postscript(file, width = width_in, height = height_in, horizontal = FALSE)
-    }
-  } else if (format == "eps") {
-    ps_family <- resolve_pdf_ps_family(family)
-    if (nzchar(ps_family)) {
-      grDevices::postscript(file,
-        width = width_in, height = height_in,
-        horizontal = FALSE, onefile = FALSE, paper = "special", family = ps_family
-      )
-    } else {
-      grDevices::postscript(file,
-        width = width_in, height = height_in,
-        horizontal = FALSE, onefile = FALSE, paper = "special"
-      )
-    }
-  } else {
-    cli::cli_abort(c(
-      "x" = "Unsupported {.arg format} value.",
-      "i" = "The format {.val {format}} is not supported for qgraph export.",
-      ">" = "Use one of: {.code c('png', 'pdf', 'svg', 'ps', 'eps', 'jpg', 'jpeg', 'tiff', 'bmp')}."
-    ))
-  }
-
-  on.exit(grDevices::dev.off(), add = TRUE)
-
-  if (is.function(pl)) {
-    pl()
-  } else {
-    plot(pl)
-  }
-
-  invisible()
 }
 
 
@@ -224,7 +120,7 @@ export_diagram <- function(pl, file, format, width, height) {
     ))
   }
 
-  invisible()
+  invisible(file)
 }
 
 
@@ -302,7 +198,7 @@ export_plotly <- function(pl, file, format, width, height) {
     }
   )
 
-  invisible()
+  invisible(file)
 }
 
 
@@ -1131,7 +1027,7 @@ plot.sdbuildR <- function(x,
 #'
 prep_plot <- function(
   object, type_sim, df, constants,
-  add_constants, vars, palette, colors, wrap_width
+  show_constants, vars, palette, colors, wrap_width
 ) {
   # Get names of stocks and non-stock variables
   names_df <- get_names(object)
@@ -1143,7 +1039,7 @@ prep_plot <- function(
     vars <- clean_vars(vars)
   }
 
-  # If vars is specified and contains constants, enable add_constants
+  # If vars is specified and contains constants, enable show_constants
   if (!is.null(vars)) {
     constant_names <- names_df[
       names_df[["type"]] %in% c("constant", "lookup"),
@@ -1152,9 +1048,9 @@ prep_plot <- function(
     vars_constants <- intersect(constant_names, vars)
     constants_not_in_vars <- setdiff(constant_names, vars_constants)
 
-    add_constants <- length(vars_constants) > 0
+    show_constants <- length(vars_constants) > 0
 
-    if (add_constants) {
+    if (show_constants) {
       # Remove non-selected constants from names_df
       names_df <- names_df[!(names_df[["name"]] %in% constants_not_in_vars), ,
         drop = FALSE
@@ -1176,7 +1072,7 @@ prep_plot <- function(
   }
 
   # Add constants to dataframe if requested
-  if (add_constants && length(constants) > 0) {
+  if (show_constants && length(constants) > 0) {
     result <- prep_constants(df, constants, names_df, type_sim = type_sim)
     df <- result$df
     names_df <- result$names_df
@@ -1242,7 +1138,7 @@ prep_plot <- function(
 #' Visualize simulation results of a stock-and-flow model. Plot the evolution of stocks over time, with the option of also showing other model variables.
 #'
 #' @param x Output of [`simulate()`][simulate.sdbuildR()].
-#' @param add_constants If TRUE, include constants in plot. Defaults to FALSE.
+#' @param show_constants If TRUE, include constants in plot. Defaults to FALSE.
 #' @param vars Variables to plot. Defaults to NULL to plot all variables.
 #' @param palette Colour palette. Must be one of hcl.pals().
 #' @param colors Vector of colours. If NULL, the color palette will be used. If specified, will override palette. The number of colours must be equal to the number of variables in the simulation data frame. Defaults to NULL.
@@ -1267,10 +1163,10 @@ prep_plot <- function(
 #' plot(sim, main = "Simulated trajectory", xlab = "Time", ylab = "Value")
 #'
 #' # Add constants to the plot
-#' plot(sim, add_constants = TRUE)
+#' plot(sim, show_constants = TRUE)
 #'
 plot.simulate_sdbuildR <- function(x,
-                                   add_constants = FALSE,
+                                   show_constants = FALSE,
                                    vars = NULL,
                                    palette = "Dark 2",
                                    colors = NULL,
@@ -1324,7 +1220,7 @@ plot.simulate_sdbuildR <- function(x,
   ylab <- params$ylab
 
   out <- prep_plot(
-    x[["object"]], "sim", x[["df"]], x[["constants"]], add_constants,
+    x[["object"]], "sim", x[["df"]], x[["constants"]], show_constants,
     vars, palette, colors, wrap_width
   )
   highlight_names <- out[["highlight_names"]]
@@ -1421,7 +1317,7 @@ plot.ensemble_sdbuildR <- function(x,
                                    sim = seq(1, min(c(x[["n"]], 10))),
                                    condition = seq(1, min(c(x[["n_conditions"]], 9))),
                                    vars = NULL,
-                                   add_constants = FALSE,
+                                   show_constants = FALSE,
                                    nrows = ceiling(sqrt(max(condition))),
                                    margin = .05,
                                    shareX = TRUE,
@@ -1453,7 +1349,7 @@ plot.ensemble_sdbuildR <- function(x,
     ))
   }
 
-  if (isFALSE(x[["success"]])) {
+  if (!x[["success"]]) {
     cli::cli_abort(c(
       "x" = "Ensemble simulation failed.",
       ">" = "Check your model specification and try again."
@@ -1495,8 +1391,8 @@ plot.ensemble_sdbuildR <- function(x,
   default_sub <- if (which == "summary") {
     paste0(
       ifelse(isFALSE(central_tendency), "",
-        stringr::str_to_title(central_tendency)
-      ), " with [",
+        paste0(stringr::str_to_title(central_tendency), " with ")
+      ), "[",
       min(x[["quantiles"]]), ", ", max(x[["quantiles"]]),
       "] confidence interval of ", x[["n"]], " simulation",
       ifelse(x[["n"]] == 1, "", "s")
@@ -1504,9 +1400,9 @@ plot.ensemble_sdbuildR <- function(x,
   } else if (which == "sims") {
     paste0(
       ifelse(isFALSE(central_tendency), "",
-        stringr::str_to_title(central_tendency)
+        paste0(stringr::str_to_title(central_tendency), " with ")
       ),
-      " with ", length(sim), "/", x[["n"]], " simulation",
+      length(sim), "/", x[["n"]], " simulation",
       ifelse(x[["n"]] == 1, "", "s")
     )
   }
@@ -1527,7 +1423,7 @@ plot.ensemble_sdbuildR <- function(x,
   alpha <- params$alpha
 
   # Append subtitle to main title
-  main <- paste0(main, "\n<span style='font-size:", font_size, "px;'>", sub, "</span>")
+  main <- paste0(main, "<span style='font-size:", font_size, "px;'>\n", sub, "</span>")
 
   if (!is.null(x[["summary"]])) {
     summary_df <- x[["summary"]]
@@ -1541,6 +1437,11 @@ plot.ensemble_sdbuildR <- function(x,
   if ("condition" %in% passed_arg) {
     .check_condition_index(condition, x[["n_conditions"]])
   }
+
+  # Filter to the selected condition(s). This is a no-op for the default (all
+  # conditions); without it, selecting a single condition would still draw every
+  # condition's summary overlaid in one plot.
+  summary_df <- summary_df[summary_df[["condition"]] %in% condition, , drop = FALSE]
 
   # Ensure there aren't more rows than condition
   nrows <- min(nrows, length(condition))
@@ -1558,8 +1459,8 @@ plot.ensemble_sdbuildR <- function(x,
         .check_sim_index(sim, x[["n"]])
       }
 
-      # Filter by simulation index
-      df <- df[df[["sim"]] %in% sim, , drop = FALSE]
+      # Filter by simulation index and selected condition(s)
+      df <- df[df[["sim"]] %in% sim & df[["condition"]] %in% condition, , drop = FALSE]
     } else {
       cli::cli_abort(c(
         "x" = "No simulation data available.",
@@ -1580,7 +1481,7 @@ plot.ensemble_sdbuildR <- function(x,
 
   # Prepare for plotting
   out <- prep_plot(x[["object"]], "ensemble", summary_df,
-    constants = x[["constants"]][["summary"]], add_constants = add_constants,
+    constants = x[["constants"]][["summary"]], show_constants = show_constants,
     vars = vars, palette = palette, colors = colors, wrap_width = wrap_width
   )
   summary_df_highlight <- out[["df_highlight"]]
@@ -1589,7 +1490,7 @@ plot.ensemble_sdbuildR <- function(x,
 
   if (which == "sims") {
     out <- prep_plot(x[["object"]], "ensemble", df,
-      constants = x[["constants"]][["df"]], add_constants = add_constants,
+      constants = x[["constants"]][["df"]], show_constants = show_constants,
       vars = vars, palette = palette, colors = colors, wrap_width = wrap_width
     )
     df_highlight <- out[["df_highlight"]]
@@ -1606,6 +1507,9 @@ plot.ensemble_sdbuildR <- function(x,
 
   # Check whether there are multiple time points
   mode <- ifelse(length(unique(summary_df[["time"]])) == 1, "markers", "lines")
+
+  # Per-subplot theme is invariant across conditions; compute once.
+  subplot_theme <- plotly_theme(font_family = font_family, font_size = font_size)
 
   # Plot
   if (!create_subplots) {
@@ -1631,9 +1535,17 @@ plot.ensemble_sdbuildR <- function(x,
       xlab = xlab, ylab = ylab,
       font_family = font_family,
       font_size = font_size,
-      alpha = alpha
+      alpha = alpha,
+      theme = subplot_theme
     )
   } else {
+    # Pre-split every condition-filtered frame once instead of re-scanning the
+    # full frame with a `condition == j_name` filter on every iteration.
+    hl_by <- split_by_cond(df_highlight)
+    nhl_by <- split_by_cond(df_nonhighlight)
+    shl_by <- split_by_cond(summary_df_highlight)
+    snhl_by <- split_by_cond(summary_df_nonhighlight)
+
     # Create a list of plotly objects for each condition
     pl_list <- list()
     for (j_idx in seq_along(condition)) {
@@ -1643,10 +1555,10 @@ plot.ensemble_sdbuildR <- function(x,
         subplot_label = ifelse(label_subplots, paste0("Condition ", j_name), ""),
         which = which,
         create_subplots = create_subplots,
-        summary_df_highlight = summary_df_highlight[summary_df_highlight[["condition"]] == j_name, , drop = FALSE],
-        summary_df_nonhighlight = summary_df_nonhighlight[summary_df_nonhighlight[["condition"]] == j_name, , drop = FALSE],
-        df_highlight = df_highlight[df_highlight[["condition"]] == j_name, , drop = FALSE],
-        df_nonhighlight = df_nonhighlight[df_nonhighlight[["condition"]] == j_name, , drop = FALSE],
+        summary_df_highlight = get_cond(shl_by, j_name, summary_df_highlight),
+        summary_df_nonhighlight = get_cond(snhl_by, j_name, summary_df_nonhighlight),
+        df_highlight = get_cond(hl_by, j_name, df_highlight),
+        df_nonhighlight = get_cond(nhl_by, j_name, df_nonhighlight),
         central_tendency = central_tendency,
         central_tendency_width = central_tendency_width,
         q_low = q_low,
@@ -1660,7 +1572,8 @@ plot.ensemble_sdbuildR <- function(x,
         xlab = xlab, ylab = ylab,
         font_family = font_family,
         font_size = font_size,
-        alpha = alpha
+        alpha = alpha,
+        theme = subplot_theme
       )
     }
 
@@ -1717,6 +1630,100 @@ plot.ensemble_sdbuildR <- function(x,
 }
 
 
+#' Order rows by sim then time and insert a spacer row between sims
+#'
+#' This lets a single scatter trace render each simulation as a separate line:
+#' the spacer row carries NA in the x and y columns (so the line breaks between
+#' simulations instead of connecting them) while keeping every other column,
+#' notably the grouping/colour column, intact. This is applied per variable so
+#' that `color = ~variable` still splits the data into one trace per variable
+#' and the spacers stay within each variable's group.
+#'
+#' @param d data.frame for a single variable.
+#' @param group Column(s) identifying a single trajectory. A trajectory is one
+#'   `(condition, sim)` pair, so multiple columns may be supplied. Defaults to
+#'   "sim".
+#' @param x Column mapped to the x aesthetic. Defaults to "time".
+#' @param y Column mapped to the y aesthetic. Defaults to "value".
+#'
+#' @returns data.frame with NA spacer rows inserted between trajectories.
+#' @noRd
+break_by_sim <- function(d, group = "sim", x = "time", y = "value") {
+  if (nrow(d) == 0) return(d)
+  # Composite key over the grouping columns so e.g. the same sim index in
+  # different conditions counts as two distinct trajectories.
+  key <- interaction(d[, group, drop = FALSE], drop = TRUE, lex.order = TRUE)
+  ord <- order(key, d[[x]])
+  d <- d[ord, , drop = FALSE]
+  parts <- split(d, key[ord], drop = TRUE)
+  if (length(parts) <= 1L) return(d) # nothing to separate
+  spacer <- d[1, , drop = FALSE]
+  spacer[[x]] <- NA # NA in x and y breaks the line; keep grouping columns
+  spacer[[y]] <- NA
+  out <- vector("list", 2L * length(parts) - 1L)
+  out[seq(1L, length(out), by = 2L)] <- parts
+  out[seq(2L, length(out), by = 2L)] <- rep(list(spacer), length(parts) - 1L)
+  do.call(rbind, out)
+}
+
+
+#' Insert NA spacers between simulations within each variable
+#'
+#' Applies break_by_sim() to each variable level present so that a single
+#' `color = ~variable` scatter trace renders each simulation as a separate
+#' line. Returns the recombined data.frame (variable order preserved).
+#'
+#' @param d data.frame with a factor "variable" column.
+#' @returns data.frame with NA spacer rows inserted between simulations.
+#' @noRd
+break_sims_by_variable <- function(d) {
+  if (nrow(d) == 0) return(d)
+  # A trajectory is one (condition, sim) pair; fall back to "sim" alone if no
+  # condition column is present.
+  group <- intersect(c("condition", "sim"), colnames(d))
+  if (length(group) == 0L) group <- "sim"
+  parts <- lapply(
+    levels(droplevels(d[["variable"]])),
+    function(v) break_by_sim(d[d[["variable"]] == v, , drop = FALSE], group = group)
+  )
+  do.call(rbind, parts)
+}
+
+
+#' Split a data.frame by its "condition" column
+#'
+#' Pre-splitting once before the subplot loop avoids re-scanning the full frame
+#' with a `condition == j_name` filter on every iteration. List names are
+#' `as.character()` of the condition values.
+#'
+#' @param d data.frame with a "condition" column, or NULL.
+#' @returns Named list of per-condition data.frames, or NULL if `d` is NULL.
+#' @noRd
+split_by_cond <- function(d) {
+  if (is.null(d)) return(NULL)
+  split(d, d[["condition"]])
+}
+
+
+#' Retrieve one condition's rows from a pre-split list
+#'
+#' Returns an empty-but-correctly-typed frame (same columns and factor levels as
+#' `template`) for conditions with no rows, so behaviour matches the old
+#' `d[d[["condition"]] == key, ]` filter exactly.
+#'
+#' @param lst Named list produced by split_by_cond(), or NULL.
+#' @param key Condition value to look up.
+#' @param template Full data.frame to use as a 0-row template when absent, or
+#'   NULL (in which case NULL is returned, matching the old `NULL[...]` filter).
+#' @returns data.frame of rows for `key`, or NULL.
+#' @noRd
+get_cond <- function(lst, key, template) {
+  if (is.null(template)) return(NULL)
+  d <- lst[[as.character(key)]]
+  if (is.null(d)) template[0, , drop = FALSE] else d
+}
+
+
 #' Helper function to plot ensemble simulation results
 #'
 #' @param subplot_label Label for the subplot. Only used if create_subplots = TRUE.
@@ -1735,6 +1742,8 @@ plot.ensemble_sdbuildR <- function(x,
 #' @param xlab Label on x-axis.
 #' @param ylab Label on y-axis.
 #' @param alpha Opacity of the confidence bands or individual trajectories.
+#' @param theme List of styling parameters from plotly_theme(). Invariant
+#'   across conditions, so computed once by the caller and passed in.
 #' @inheritParams plot.ensemble_sdbuildR
 #'
 #' @returns Plotly object
@@ -1751,15 +1760,13 @@ plot_ensemble_helper <- function(subplot_label,
                                  mode,
                                  colors, showlegend, dots,
                                  main, xlab, ylab,
-                                 font_family, font_size, alpha) {
+                                 font_family, font_size, alpha, theme) {
   if (which == "sims") {
     plot_highlight <- nrow(df_highlight) > 0
     plot_nonhighlight <- nrow(df_nonhighlight) > 0
-    multiple_sim <- length(unique(df_highlight[["sim"]])) > 1 || length(unique(df_nonhighlight[["sim"]])) > 1
   } else if (which == "summary") {
     plot_highlight <- nrow(summary_df_highlight) > 0
     plot_nonhighlight <- nrow(summary_df_nonhighlight) > 0
-    multiple_sim <- FALSE
   }
   plot_summary <- (nrow(summary_df_highlight) > 0) || (nrow(summary_df_nonhighlight) > 0)
 
@@ -1810,10 +1817,17 @@ plot_ensemble_helper <- function(subplot_label,
       }
     }
   } else if (which == "sims") {
+    # Draw one scatter trace per variable instead of one per (variable, sim).
+    # break_sims_by_variable() inserts an NA spacer row between simulations so a
+    # single trace renders each simulation as a separate line (connectgaps =
+    # FALSE keeps the NA gaps from being bridged). Keeping color = ~variable /
+    # colors = colors means the colour mapping is identical to the summary
+    # traces, while plotly still splits the data into one trace per variable.
+
     # Add traces for non-stock variables (visible = "legendonly")
     if (plot_nonhighlight) {
       pl <- plotly::add_trace(pl,
-        data = df_nonhighlight,
+        data = break_sims_by_variable(df_nonhighlight),
         x = ~time,
         y = ~value,
         color = ~variable,
@@ -1822,15 +1836,15 @@ plot_ensemble_helper <- function(subplot_label,
         mode = mode,
         opacity = alpha,
         colors = colors,
-        split = if (multiple_sim) ~ interaction(variable, sim) else NULL, # ensures each line is treated separately
         showlegend = if (plot_summary) FALSE else showlegend, # only show legend if summary is not plotted, otherwise it will be duplicated with the summary traces
+        connectgaps = FALSE, # required: NA must break the line, not bridge it
         visible = "legendonly"
       )
     }
 
     if (plot_highlight) {
       pl <- plotly::add_trace(pl,
-        data = df_highlight,
+        data = break_sims_by_variable(df_highlight),
         x = ~time,
         y = ~value,
         color = ~variable,
@@ -1839,8 +1853,8 @@ plot_ensemble_helper <- function(subplot_label,
         mode = mode,
         opacity = alpha,
         colors = colors,
-        # split = if (multiple_sim) ~ interaction(variable, sim) else NULL, # ensures each line is treated separately
         showlegend = if (plot_summary) FALSE else showlegend, # only show legend if summary is not plotted, otherwise it will be duplicated with the summary traces
+        connectgaps = FALSE, # required: NA must break the line, not bridge it
         # Add traces for stock variables (visible = TRUE)
         visible = TRUE
       )
@@ -1978,12 +1992,7 @@ plot_ensemble_helper <- function(subplot_label,
     }
   }
 
-  # Customize layout
-  theme <- plotly_theme(
-    font_family = font_family,
-    font_size = font_size
-  )
-
+  # Customize layout (theme is invariant across conditions, computed by caller)
   pl <- plotly::layout(pl,
     margin = theme$margin,
     legend = theme$legend
@@ -2083,7 +2092,7 @@ plot_ensemble_helper <- function(subplot_label,
 plot.verify_sdbuildR <- function(x,
                                  test = NULL,
                                  vars = NULL,
-                                 add_constants = FALSE,
+                                 show_constants = FALSE,
                                  label = NULL,
                                  ignore_case = TRUE,
                                  status = c("pass", "fail", "error", "skip"),
@@ -2117,7 +2126,7 @@ plot.verify_sdbuildR <- function(x,
     ))
   }
 
-  if (isFALSE(x[["success"]])) {
+  if (!x[["success"]]) {
     cli::cli_abort(c(
       "x" = "Unit test run failed.",
       ">" = "Check your model specification and try again."
@@ -2184,7 +2193,7 @@ plot.verify_sdbuildR <- function(x,
   constants <- as.data.frame(do.call(rbind, constants))
 
   # Build default subtitle
-  default_sub <- paste0(n_tests, " tests; ", n_conditions, " conditions") # To do
+  default_sub <- paste0(n_tests, " test", ifelse(n_tests > 1, "s", ""), "; ", n_conditions, " condition", ifelse(n_conditions > 1, "s", ""))
 
   # Extract optional parameters with defaults
   sfm <- x[["object"]]
@@ -2203,11 +2212,11 @@ plot.verify_sdbuildR <- function(x,
   alpha <- params$alpha
 
   # Append subtitle to main title
-  main <- paste0(main, "\n<span style='font-size:", font_size, "px;'>", sub, "</span>")
+  main <- paste0(main, "<span style='font-size:", font_size, "px;'>\n", sub, "</span>")
 
   # Prepare for plotting
   out <- prep_plot(sfm, "verify", df,
-    constants = constants, add_constants = add_constants,
+    constants = constants, show_constants = show_constants,
     vars = vars, palette = palette, colors = colors, wrap_width = wrap_width
   )
   df_highlight <- out[["df_highlight"]]
@@ -2222,6 +2231,9 @@ plot.verify_sdbuildR <- function(x,
   summary_df_highlight <- summary_df_nonhighlight <- data.frame()
   central_tendency_width <- q_low <- q_high <- NULL
   central_tendency <- FALSE
+
+  # Per-subplot theme is invariant across conditions; compute once.
+  subplot_theme <- plotly_theme(font_family = font_family, font_size = font_size)
 
   if (!create_subplots) {
     j_idx <- 1
@@ -2246,9 +2258,15 @@ plot.verify_sdbuildR <- function(x,
       xlab = xlab, ylab = ylab,
       font_family = font_family,
       font_size = font_size,
-      alpha = alpha
+      alpha = alpha,
+      theme = subplot_theme
     )
   } else {
+    # Pre-split the condition-filtered frames once (summary frames are empty for
+    # verify, so they are passed through directly).
+    hl_by <- split_by_cond(df_highlight)
+    nhl_by <- split_by_cond(df_nonhighlight)
+
     # Create a list of plotly objects for each condition
     pl_list <- list()
     for (j_idx in seq_along(condition)) {
@@ -2260,21 +2278,23 @@ plot.verify_sdbuildR <- function(x,
         create_subplots = create_subplots,
         summary_df_highlight = summary_df_highlight,
         summary_df_nonhighlight = summary_df_nonhighlight,
-        df_highlight = df_highlight[df_highlight[["condition"]] == j_name, , drop = FALSE],
-        df_nonhighlight = df_nonhighlight[df_nonhighlight[["condition"]] == j_name, , drop = FALSE],
+        df_highlight = get_cond(hl_by, j_name, df_highlight),
+        df_nonhighlight = get_cond(nhl_by, j_name, df_nonhighlight),
         central_tendency = central_tendency,
         central_tendency_width = central_tendency_width,
         q_low = q_low,
         q_high = q_high,
         mode = mode,
         colors = colors,
-        showlegend = showlegend,
+        # Only show legend if it's the last subplot
+        showlegend = ifelse(j_idx != length(condition), FALSE, showlegend),
         dots = dots,
         main = main,
         xlab = xlab, ylab = ylab,
         font_family = font_family,
         font_size = font_size,
-        alpha = alpha
+        alpha = alpha,
+        theme = subplot_theme
       )
     }
 

@@ -65,4 +65,4 @@ if (requireNamespace("htmlwidgets", quietly = TRUE) &&
 }
 \dontshow{\}) # examplesIf}
 }
-\concept{simulate}
+\concept{convenience}

@@ -2,7 +2,7 @@
 % Please edit documentation in R/verify.R
 \name{verify}
 \alias{verify}
-\title{Verify model}
+\title{Verify model behavior with unit tests}
 \usage{
 verify(object, ...)
 }
@@ -12,6 +12,6 @@ verify(object, ...)
 \item{...}{Additional arguments passed to specific methods.}
 }
 \description{
-Verify model
+Verify model behavior with unit tests
 }
 \concept{unitTest}

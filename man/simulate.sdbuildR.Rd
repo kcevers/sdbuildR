@@ -43,7 +43,7 @@ plot(sim)
 
 # Obtain all model variables
 sim <- simulate(sim_settings(sfm, only_stocks = FALSE))
-plot(sim, add_constants = TRUE)
+plot(sim, show_constants = TRUE)
 
 }
 \seealso{

@@ -10,7 +10,7 @@
   sim = seq(1, min(c(x[["n"]], 10))),
   condition = seq(1, min(c(x[["n_conditions"]], 9))),
   vars = NULL,
-  add_constants = FALSE,
+  show_constants = FALSE,
   nrows = ceiling(sqrt(max(condition))),
   margin = 0.05,
   shareX = TRUE,
@@ -39,7 +39,7 @@
 
 \item{vars}{Variables to plot. Defaults to NULL to plot all variables.}
 
-\item{add_constants}{If TRUE, include constants in plot. Defaults to FALSE.}
+\item{show_constants}{If TRUE, include constants in plot. Defaults to FALSE.}
 
 \item{nrows}{Number of rows in the plot grid. Defaults to ceiling(sqrt(n_conditions)).}
 

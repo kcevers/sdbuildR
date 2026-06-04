@@ -6,7 +6,7 @@
 \usage{
 \method{plot}{simulate_sdbuildR}(
   x,
-  add_constants = FALSE,
+  show_constants = FALSE,
   vars = NULL,
   palette = "Dark 2",
   colors = NULL,
@@ -20,7 +20,7 @@
 \arguments{
 \item{x}{Output of \code{\link[=simulate.sdbuildR]{simulate()}}.}
 
-\item{add_constants}{If TRUE, include constants in plot. Defaults to FALSE.}
+\item{show_constants}{If TRUE, include constants in plot. Defaults to FALSE.}
 
 \item{vars}{Variables to plot. Defaults to NULL to plot all variables.}
 
@@ -53,7 +53,7 @@ plot(sim)
 plot(sim, main = "Simulated trajectory", xlab = "Time", ylab = "Value")
 
 # Add constants to the plot
-plot(sim, add_constants = TRUE)
+plot(sim, show_constants = TRUE)
 
 }
 \seealso{

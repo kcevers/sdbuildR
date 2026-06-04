@@ -54,69 +54,115 @@ test_that("plot.ensemble_sdbuildR() requires save_sims for which = 'sims'", {
 
 test_that("plot() default summary plot", {
   sims <- make_r_ens()
-  expect_snapshot_plot("ens-summary-default", plot(sims))
+  pl <- plot(sims)
+  expect_plotly(pl)
+  traces <- plotly_traces(pl)
+  expect_true(nrow(traces) > 0)
+  expect_snapshot_plot("ens-summary-default", pl)
 })
 
 test_that("plot() sims plot (individual trajectories)", {
   sims <- make_r_ens(save_sims = TRUE)
-  expect_snapshot_plot("ens-sims-default", plot(sims, which = "sims"))
+  pl <- plot(sims, which = "sims")
+  expect_plotly(pl)
+  traces <- plotly_traces(pl)
+  expect_true(nrow(traces) > 0)
+  expect_snapshot_plot("ens-sims-default", pl)
 })
 
 test_that("plot() two conditions subplot grid", {
   sims <- make_r_ens_2cond()
-  expect_snapshot_plot("ens-two-conditions", plot(sims))
+  pl <- plot(sims, nrows = 2L, shareX = TRUE, shareY = TRUE)
+  expect_plotly(pl)
+  info <- plotly_subplot_grid(pl)
+  expect_true(info$is_subplot)
+  expect_equal(info$n_panels, 2L)
+  expect_equal(info$nrows, 2L)
+  expect_equal(info$ncols, 1L)
+  expect_true(info$shareX)
+  expect_true(is.na(info$shareY)) # shareY applies within a row
+  expect_true(nrow(plotly_traces(pl)) > 0)
+
+  expect_snapshot_plot("ens-two-conditions", pl)
 })
 
-test_that("plot() filtered condition shows single condition", {
+test_that("plot.ensemble_sdbuildR() filtered condition shows single condition", {
   sims <- make_r_ens_2cond()
-  expect_snapshot_plot("ens-filtered-j2", plot(sims, condition = 2L))
+
+  pl <- plot(sims, condition = 2L)
+  expect_plotly(pl)
+  info <- plotly_subplot_grid(pl)
+  # expect_false(info$is_subplot) # Still a subplot grid, but with only one subplot
+  expect_equal(info$n_panels, 1L)
+  expect_equal(info$nrows, 1L)
+  expect_equal(info$ncols, 1L)
+  expect_true(nrow(plotly_traces(pl)) > 0)
+  expect_snapshot_plot("ens-filtered-condition-2", pl)
 })
 
-test_that("plot() central_tendency = 'median'", {
+test_that("plot.ensemble_sdbuildR() with too many nrows", {
+  sims <- make_r_ens_2cond()
+  pl <- plot(sims, nrows = 3L) # More rows than conditions should be gracefully handled
+  expect_plotly(pl)
+  info <- plotly_subplot_grid(pl)
+  # expect_false(info$is_subplot) # Still a subplot grid, but with only one subplot
+  expect_equal(info$n_panels, 2L)
+  expect_equal(info$nrows, 2L)
+  expect_equal(info$ncols, 1L)
+  expect_true(nrow(plotly_traces(pl)) > 0)
+  expect_snapshot_plot("ens-too-many-nrows", pl)
+})
+
+
+test_that("plot.ensemble_sdbuildR() central_tendency = 'median'", {
   sims <- make_r_ens()
-  expect_snapshot_plot(
-    "ens-central-tendency-median",
-    plot(sims, central_tendency = "median")
-  )
+  pl <- plot(sims, central_tendency = "median")
+  expect_plotly(pl)
+  expect_true(nrow(plotly_traces(pl)) > 0)
+  expect_snapshot_plot("ens-central-tendency-median", pl)
 })
 
-test_that("plot() central_tendency = FALSE (no central line)", {
+test_that("plot.ensemble_sdbuildR() central_tendency = FALSE (no central line)", {
   sims <- make_r_ens()
-  expect_snapshot_plot(
-    "ens-central-tendency-false",
-    plot(sims, central_tendency = FALSE)
-  )
+  pl <- plot(sims, central_tendency = FALSE)
+  expect_plotly(pl)
+  expect_true(nrow(plotly_traces(pl)) > 0)
+  expect_snapshot_plot("ens-central-tendency-false", pl)
 })
 
-test_that("plot() showlegend = FALSE", {
+test_that("plot.ensemble_sdbuildR() showlegend = FALSE", {
   sims <- make_r_ens()
   # Object-level expectation: no legend items when disabled
   pl_noleg <- plot(sims, showlegend = FALSE)
   expect_plotly(pl_noleg)
-  expect_equal(nrow(plotly_legend_items(pl_noleg)), 0)
+  traces <- plotly_traces(pl_noleg)
+  expect_true(nrow(traces) > 0)
+  expect_true(all(!(traces$showlegend)))
 
   # Snapshot last
   expect_snapshot_plot("ens-showlegend-false", pl_noleg)
 })
 
 
-test_that("plot() label_subplots = TRUE shows condition labels", {
+test_that("plot.ensemble_sdbuildR() label_subplots = TRUE shows condition labels", {
   sims <- make_r_ens_2cond()
   pl <- plot(sims, label_subplots = TRUE)
-  layout <- plotly_layout_attrs(pl)
+  expect_plotly(pl)
+  layout <- plotly_layout(pl)
   annot <- unlist(lapply(layout$annotations, `[[`, "text"))
   expect_true(length(annot) > 1)
-  expect_true(any(grepl("^Condition", annot)))
+  expect_true(sum(grepl("^Condition", annot)) == 2)
 
   # Snapshot last
   expect_snapshot_plot("ens-label-subplots-true", pl)
 })
 
 
-test_that("plot() label_subplots = FALSE hides condition labels", {
+test_that("plot.ensemble_sdbuildR() label_subplots = FALSE hides condition labels", {
   sims <- make_r_ens_2cond()
   pl <- plot(sims, label_subplots = FALSE)
-  layout <- plotly_layout_attrs(pl)
+  expect_plotly(pl)
+  layout <- plotly_layout(pl)
   annot <- unlist(lapply(layout$annotations, `[[`, "text"))
   expect_true(length(annot) == 1) # Only annotation for time label
   expect_false(any(grepl("^Condition", annot)))
@@ -125,64 +171,89 @@ test_that("plot() label_subplots = FALSE hides condition labels", {
   expect_snapshot_plot("ens-label-subplots-false", pl)
 })
 
-test_that("plot() nrows = 1 stacks conditions in one column", {
+test_that("plot.ensemble_sdbuildR() nrows works", {
   sims <- make_r_ens_2cond()
   pl <- plot(sims, nrows = 1L)
   expect_plotly(pl)
-  expect_true(is_subplot(pl))
 
-  # Snapshot last
-  expect_snapshot_plot("ens-nrows-1", pl)
+  info <- plotly_subplot_grid(pl)
+  expect_true(info$is_subplot)
+  expect_equal(info$nrows, 1L)
+  expect_equal(info$ncols, 2L)
+
+  pl <- plot(sims, nrows = 2L)
+  expect_plotly(pl)
+
+  info <- plotly_subplot_grid(pl)
+  expect_true(info$is_subplot)
+  expect_equal(info$nrows, 2L)
+  expect_equal(info$ncols, 1L)
+
+  expect_snapshot_plot("ens-nrows-1", plot(sims, nrows = 1L))
+  expect_snapshot_plot("ens-nrows-2", plot(sims, nrows = 2L))
 })
 
-test_that("plot() shareX = TRUE gives shared x axes", {
-  sims <- make_r_ens_2cond()
-  pl <- plot(sims, shareX = TRUE)
+test_that("plot.ensemble_sdbuildR() shareX and shareY works", {
+  # 4 conditions
+  n <- 3
+  nrows <- 2
+  sims <- make_r_ens(n = n, conditions = list("contact_rate" = c(1.5, 2.5),
+    "recovery_rate" = c(0.1, 0.2)
+    ), cross = TRUE)
+
+  pl <- plot(sims, shareX = TRUE, shareY = TRUE, nrows = nrows)
+  info <- plotly_subplot_grid(pl)
+  expect_true(info$shareX)
+  expect_true(info$shareY)
+
+  pl <- plot(sims, shareX = TRUE, shareY = FALSE, nrows = nrows)
+  info <- plotly_subplot_grid(pl)
+  expect_true(info$shareX)
+  expect_false(info$shareY)
+
+  pl <- plot(sims, shareX = FALSE, shareY = TRUE, nrows = nrows)
+  info <- plotly_subplot_grid(pl)
+  expect_false(info$shareX)
+  expect_true(info$shareY)
+
+  pl <- plot(sims, shareX = FALSE, shareY = FALSE, nrows = nrows)
+  info <- plotly_subplot_grid(pl)
+  expect_false(info$shareX)
+  expect_false(info$shareY)
 
   # Snapshot last
-  expect_snapshot_plot("ens-sharex-true", pl)
+  expect_snapshot_plot("ens-sharex-true-sharey-true", plot(sims, shareX = TRUE, shareY = TRUE, nrows = nrows))
+  expect_snapshot_plot("ens-sharex-true-sharey-false", plot(sims, shareX = TRUE, shareY = FALSE, nrows = nrows))
+  expect_snapshot_plot("ens-sharex-false-sharey-true", plot(sims, shareX = FALSE, shareY = TRUE, nrows = nrows))
+  expect_snapshot_plot("ens-sharex-false-sharey-false", plot(sims, shareX = FALSE, shareY = FALSE, nrows = nrows))
 })
 
 
-test_that("plot() shareX = FALSE gives independent x axes", {
-  sims <- make_r_ens_2cond()
-  pl <- plot(sims, shareX = FALSE)
-
-  # Snapshot last
-  expect_snapshot_plot("ens-sharex-false", pl)
-})
-
-test_that("plot() shareY = TRUE gives shared y axes", {
-  sims <- make_r_ens_2cond()
-  pl <- plot(sims, shareY = TRUE)
-
-  # Snapshot last
-  expect_snapshot_plot("ens-sharey-true", pl)
-})
-
-test_that("plot() shareY = FALSE gives independent y axes", {
-  sims <- make_r_ens_2cond()
-  pl <- plot(sims, shareY = FALSE)
-
-  # Snapshot last
-  expect_snapshot_plot("ens-sharey-false", pl)
-})
-
-test_that("plot() custom palette", {
+test_that("plot.ensemble_sdbuildR() custom palette", {
   sims <- make_r_ens()
-  expect_snapshot_plot("ens-custom-palette", plot(sims, palette = "Pastel 1"))
+  pl <- plot(sims, palette = "Pastel 1")
+  expect_plotly(pl)
+  expect_true(nrow(plotly_traces(pl)) > 0)
+  expect_snapshot_plot("ens-custom-palette", pl)
 })
 
 test_that("plot() custom colors vector", {
   sims <- make_r_ens()
   # Object-level expectation: legend trace colors reflect custom palette when exposed
-  pl_colors <- plot(sims, colors = c("steelblue", "coral", "green3"))
-  li <- plotly_legend_items(pl_colors)
-  if (nrow(li) > 0) {
-    got <- vapply(li$color, normalize_color_string, character(1))
-    want <- vapply(c("steelblue", "coral", "green3"), normalize_color_string, character(1))
-    expect_true(all(got %in% want))
-  }
+  df <- as.data.frame(sims, direction = "long")
+  vars <- unique(df$variable)
+  names_df <- as.data.frame(sims[["object"]])
+  label_names <- names_df$label[match(vars, names_df$name)]
+  custom_colors <- stats::setNames(rainbow(length(label_names)), label_names)
+
+  pl_colors <- plot(sims, colors = custom_colors, alpha = 1)
+  expect_plotly(pl_colors)
+  traces <- plotly_traces(pl_colors)
+  expect_equal(length(unique(traces[["name"]])), length(label_names))
+  legend_check <- plotly_check_legend_colors(pl_colors, expected = custom_colors)
+  expect_true(nrow(legend_check) > 0)
+  expect_true(all(legend_check$ok))
+  expect_true(all(legend_check$matches_expected))
 
   # Snapshot last
   expect_snapshot_plot(
@@ -194,7 +265,8 @@ test_that("plot() custom colors vector", {
 test_that("plot() custom font family", {
   sims <- make_r_ens()
   pl <- plot(sims, font_family = "Arial")
-  layout <- plotly_layout_attrs(pl)
+  expect_plotly(pl)
+  layout <- plotly_layout(pl)
   expect_equal(layout$font$family, "Arial")
 
   # Snapshot last
@@ -204,7 +276,8 @@ test_that("plot() custom font family", {
 test_that("plot() custom font size", {
   sims <- make_r_ens()
   pl <- plot(sims, font_size = 20)
-  layout <- plotly_layout_attrs(pl)
+  expect_plotly(pl)
+  layout <- plotly_layout(pl)
   expect_equal(layout$font$size, 20)
 
   # Snapshot last
@@ -213,18 +286,23 @@ test_that("plot() custom font size", {
 
 test_that("plot() narrow wrap_width wraps long labels", {
   sims <- make_r_ens()
-  expect_snapshot_plot("ens-wrap-width-narrow", plot(sims, wrap_width = 10))
+  pl <- plot(sims, wrap_width = 1, show_constants = TRUE)
+  expect_plotly(pl)
+  traces <- plotly_traces(pl)
+  expect_true(any(grepl("<br", traces$name, fixed = TRUE)))
+  expect_snapshot_plot("ens-wrap-width-narrow", pl)
 })
 
 
-test_that("plot() ensemble with add_constants = TRUE", {
+test_that("plot.ensemble_sdbuildR() with show_constants = TRUE", {
   sims <- make_r_ens()
-  pl <- plot(sims, add_constants = TRUE)
+  constants <- as.data.frame(sims[["object"]], type = "constants", properties = "label")
+  pl <- plot(sims, show_constants = TRUE)
 
   expect_plotly(pl)
-  traces <- plotly_trace_summary(pl)
-  # expect_true(nrow()) > 0)
+  traces <- plotly_traces(pl)
+  expect_true(all(constants[["label"]] %in% traces[["name"]]))
 
   # Snapshot last
-  expect_snapshot_plot("ens-add-constants", pl)
+  expect_snapshot_plot("ens-show-constants", pl)
 })

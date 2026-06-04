@@ -47,4 +47,4 @@ mod(a, b)
 # Alternative way of computing the remainder:
 a \%REM\% b
 }
-\concept{custom}
+\concept{convenience}

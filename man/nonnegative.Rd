@@ -2,7 +2,7 @@
 % Please edit documentation in R/sdbuildR_custom_func.R
 \name{nonnegative}
 \alias{nonnegative}
-\title{Safely check whether x is less than zero}
+\title{Check whether x is less than zero}
 \usage{
 nonnegative(x)
 }
@@ -13,7 +13,7 @@ nonnegative(x)
 x if x is greater than 0, 0 otherwise
 }
 \description{
-Safely check whether x is less than zero
+Check whether x is less than zero.
 }
 \examples{
 nonnegative(NA)

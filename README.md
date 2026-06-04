@@ -12,44 +12,40 @@ coverage](https://codecov.io/gh/KCEvers/sdbuildR/graph/badge.svg)](https://app.c
 status](https://www.r-pkg.org/badges/version/sdbuildR)](https://CRAN.R-project.org/package=sdbuildR)
 <!-- badges: end -->
 
-Stock-and-flow models are a powerful tool for understanding complex
-systems. Originating in the field of system dynamics, they represent
-processes as quantities (stocks) that accumulate or deplete over time
-and the processes (inflows and outflows) that change them. sdbuildR is
-an R package for building, simulating, and exploring stock-and-flow
-models. Get started at <https://kcevers.github.io/sdbuildR/>\!
+**sdbuildR** is an R package for building, simulating, and exploring
+stock-and-flow models. Originating in the field of system dynamics,
+stock-and-flow models represent processes as quantities (stocks) that
+accumulate or deplete over time and the processes (inflows and outflows)
+that change them. **sdbuildR** is designed to make stock-and-flow
+modelling accessible to a broad audience, requiring minimal mathematical
+or system dynamics background knowledge.
 
-## Features
+## Quick start
 
-  - **Accessibility**: Get started with stock-and-flow modelling with
-    limited knowledge.
-  - **Flexibility**: Easily modify models and use either R or Julia as a
-    simulation backend.
-  - **Rigour**: Use unit tests to verify that models behave as intended,
-    and run ensemble simulations to explore model behaviour across
-    parameter ranges and initial conditions.
+Load one of the dozens of models from the built-in library, such as the
+classic SIR (Susceptible-Infected-Recovered) epidemic model:
 
-All package capabilities are described in the vignettes:
+``` r
+library(sdbuildR)
 
-  - [Build](https://kcevers.github.io/sdbuildR/articles/build.html):
-    Build, modify, and simulate stock-and-flow
-    models.
-  - [Ensemble](https://kcevers.github.io/sdbuildR/articles/ensemble.html):
-    Explore a model’s behaviour across parameter ranges and initial
-    conditions.
-  - [Unit
-    tests](https://kcevers.github.io/sdbuildR/articles/unit-tests.html):
-    Verify models behave as intended with unit tests.
-  - [Job Demands-Resources
-    Theory](https://kcevers.github.io/sdbuildR/articles/jdr.html): An
-    example of formalizing psychological theory with sdbuildR.
-  - [Julia
-    setup](https://kcevers.github.io/sdbuildR/articles/julia-setup.html):
-    Speed up simulations with
-    Julia.
-  - [Import/Export](https://kcevers.github.io/sdbuildR/articles/import-export.html):
-    Import models from deSolve or Insight Maker, and export to other
-    formats.
+sfm <- sdbuildR("SIR")
+
+# View the stock-and-flow diagram
+plot(sfm)   
+```
+
+![](man/figures/README-sir-diagram.svg)
+
+``` r
+# Simulate and visualise the dynamics over time
+simulate(sfm) |> plot()
+```
+
+![](man/figures/README-sir-sim.pdf)
+
+`simulate()` produces an interactive timeseries plot. See it run — and
+build the same model from scratch — in the [**Get started
+guide**](https://kcevers.github.io/sdbuildR/articles/sdbuildR.html).
 
 ## Installation
 
@@ -66,49 +62,37 @@ if (!require("remotes")) install.packages("remotes")
 remotes::install_github("KCEvers/sdbuildR")
 ```
 
-## Citation
+## Overview of main features
 
-To cite sdbuildR, please use:
+sdbuildR is designed to support the iterative process of building,
+simulating, and testing stock-and-flow models. Models can flexibly be
+modified and simulated in either R or
+[Julia](https://kcevers.github.io/sdbuildR/articles/julia-setup.html)
+for a major speed-up on large or repeated runs. All package capabilities
+are described in the vignettes:
 
-``` r
-citation("sdbuildR")
-#> To cite package 'sdbuildR' in publications use:
-#> 
-#>   Evers K (2025). _sdbuildR: Easily Build, Simulate, and Visualise
-#>   Stock-and-Flow Models_. doi:10.32614/CRAN.package.sdbuildR
-#>   <https://doi.org/10.32614/CRAN.package.sdbuildR>, R package version
-#>   1.0.8.
-#> 
-#> A BibTeX entry for LaTeX users is
-#> 
-#>   @Manual{,
-#>     title = {sdbuildR: Easily Build, Simulate, and Visualise Stock-and-Flow Models},
-#>     author = {Kyra Caitlin Evers},
-#>     year = {2025},
-#>     note = {R package version 1.0.8},
-#>     doi = {10.32614/CRAN.package.sdbuildR},
-#>   }
-```
-
-## Limitations
-
-  - Unlike in other system dynamics software, sdbuildR provides only
-    minimal support for non-negative stocks and flows. Specifically,
-    setting stocks to non-negative will constrain the stocks to remain
-    non-negative, but will not adjust the corresponding flows. In any
-    case, enforcing either stocks or flows to be non-negative is not
-    recommended, as it may mask model misspecification. Stocks and flows
-    that logically cannot be negative (e.g., animals or deaths) should
-    ideally remain non-negative as a result of the model’s equations and
-    parameters, rather than by forcing them to be non-negative.
-
-  - sdbuildR does not support vectorized operations, destructuring
-    assignment, or minimum and maximum constraints for variables.
-
-  - sdbuildR does not support the Insight Maker functions Stop(),
-    Prompt(), Confirm(), Pause(), Fix(), Map(), Filter(), and Repeat(),
-    nor the delay and past functions. A message is issued if any of
-    these are detected. Units (e.g., kilograms) are also not supported.
+  - [Get
+    started](https://kcevers.github.io/sdbuildR/articles/sdbuildR.html):
+    A guided tour of the main features.
+  - [Build](https://kcevers.github.io/sdbuildR/articles/build.html):
+    Build, modify, and simulate stock-and-flow models.
+  - [Ensemble
+    simulations](https://kcevers.github.io/sdbuildR/articles/ensemble.html):
+    Explore a model’s behaviour across parameter ranges and initial
+    conditions.
+  - [Unit
+    tests](https://kcevers.github.io/sdbuildR/articles/unit-tests.html):
+    Verify models behave as intended with unit tests.
+  - [Job Demands-Resources
+    Theory](https://kcevers.github.io/sdbuildR/articles/jdr.html): An
+    example of formalizing psychological theory with sdbuildR.
+  - [Julia
+    setup](https://kcevers.github.io/sdbuildR/articles/julia-setup.html):
+    Speed up simulations with
+    Julia.
+  - [Import/Export](https://kcevers.github.io/sdbuildR/articles/import-export.html):
+    Import models from deSolve or Insight Maker, and export to other
+    formats.
 
 ## Other system dynamics software
 
@@ -133,3 +117,27 @@ encourage users to report [issues on
 GitHub](https://github.com/KCEvers/sdbuildR/issues) - your input helps
 the package improve\! Use `summary()` to run model diagnostics, and use
 the vignettes for guidance.
+
+## Citation
+
+To cite sdbuildR, please use:
+
+``` r
+citation("sdbuildR")
+#> To cite package 'sdbuildR' in publications use:
+#> 
+#>   Evers K (2025). _sdbuildR: Easily Build, Simulate, and Visualise
+#>   Stock-and-Flow Models_. doi:10.32614/CRAN.package.sdbuildR
+#>   <https://doi.org/10.32614/CRAN.package.sdbuildR>, R package version
+#>   1.0.8.
+#> 
+#> A BibTeX entry for LaTeX users is
+#> 
+#>   @Manual{,
+#>     title = {sdbuildR: Easily Build, Simulate, and Visualise Stock-and-Flow Models},
+#>     author = {Kyra Caitlin Evers},
+#>     year = {2025},
+#>     note = {R package version 1.0.8},
+#>     doi = {10.32614/CRAN.package.sdbuildR},
+#>   }
+```

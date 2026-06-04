@@ -2,7 +2,7 @@
 % Please edit documentation in R/sdbuildR_custom_func.R
 \name{round_IM}
 \alias{round_IM}
-\title{Round Half-Up (as in Insight Maker)}
+\title{Round values half-up (as in Insight Maker)}
 \usage{
 round_IM(x, digits = 0)
 }
@@ -25,4 +25,4 @@ round(-0.5) # 0
 round_IM(1.5) # 2
 round(1.5) # 2
 }
-\concept{custom}
+\concept{convenience}

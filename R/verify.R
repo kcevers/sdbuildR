@@ -2,7 +2,7 @@
 # VERIFY GENERIC
 # ==============================================================================
 
-#' Verify model
+#' Verify model behavior with unit tests
 #'
 #' @param object A model object to verify.
 #' @param ... Additional arguments passed to specific methods.

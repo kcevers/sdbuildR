@@ -18,9 +18,9 @@ knitr::opts_chunk$set(
 library(sdbuildR)
 ```
 
-sdbuildR is an R package for building, simulating, and testing stock-and-flow models. This page gives a quick overview of the main features — load a model, build one from scratch, run ensemble simulations, and verify model behaviour with unit tests.
+sdbuildR is an R package for building, simulating, and testing stock-and-flow models. This page gives a quick overview of its main features.
 
-### Load from the model library
+### Load models from the model library
 
 Dozens of example models can be loaded using `sdbuildR()`. Here we load the SIR (Susceptible-Infected-Recovered) model, a classic model in epidemiology:
 
@@ -108,12 +108,12 @@ Running multiple simulations (i.e., an ensemble) provides insight into a model's
 ```{r ensemble_setup}
 sfm_ens <- sdbuildR("SIR") |>
   update(c(susceptible, infected, recovered), eqn = runif(1, 1, 1000)) |>
-  # Save fewer values for computational speed
-  sim_settings(stop = 50, dt = 0.25, save_at = 1)
+  # Save fewer values for computational efficiency
+  sim_settings(stop = 50, save_at = 1)
 ```
 
 ```{r ensemble_plot, fig.width=8, fig.height=4}
-sims <- ensemble(sfm_ens, n = 20)
+sims <- ensemble(sfm_ens, n = 100)
 plot(sims)
 ```
 
@@ -141,7 +141,7 @@ See the [Unit tests](https://kcevers.github.io/sdbuildR/articles/unit-tests.html
 ## Learn more
 
 * [Build](https://kcevers.github.io/sdbuildR/articles/build.html): Build, modify, and simulate stock-and-flow models.
-* [Ensemble](https://kcevers.github.io/sdbuildR/articles/ensemble.html): Explore a model's behaviour across parameter ranges and initial conditions.
+* [Ensemble simulations](https://kcevers.github.io/sdbuildR/articles/ensemble.html): Explore a model's behaviour across parameter ranges and initial conditions.
 * [Unit tests](https://kcevers.github.io/sdbuildR/articles/unit-tests.html): Verify models behave as intended with unit tests.
 * [Job Demands-Resources Theory](https://kcevers.github.io/sdbuildR/articles/jdr.html): An example of formalizing psychological theory with sdbuildR.
 * [Julia setup](https://kcevers.github.io/sdbuildR/articles/julia-setup.html): Speed up simulations with Julia.

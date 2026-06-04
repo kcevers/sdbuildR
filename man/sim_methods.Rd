@@ -2,7 +2,7 @@
 % Please edit documentation in R/sim_methods.R
 \name{sim_methods}
 \alias{sim_methods}
-\title{Check or translate between deSolve and Julia DifferentialEquations sim_methods}
+\title{Translate between deSolve and DifferentialEquations.jl solver names}
 \usage{
 sim_methods(method, from = NULL, to = NULL)
 }
@@ -19,6 +19,19 @@ names when \code{method} is omitted, or a named list of solver names for both la
 with no arguments.
 }
 \description{
-Check or translate between deSolve and Julia DifferentialEquations sim_methods
+Translate between deSolve and DifferentialEquations.jl solver names, or validate that a given solver name is recognized in either language. This is used internally to allow users to specify familiar R solvers when using Julia for simulation, and to provide warnings when an exact equivalent is not available.
+}
+\examples{
+# List supported solvers
+sim_methods()
+
+# List supported R solvers
+sim_methods(from = "R")
+
+# List supported Julia solvers
+sim_methods(from = "Julia")
+
+# Validate or translate specific solvers
+sim_methods("rk4", from = "R", to = "Julia")
 }
 \concept{simulate}

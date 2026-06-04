@@ -214,7 +214,7 @@ test_that("prepare_labels escapes single quotes for Graphviz", {
 })
 
 # ============================================================================
-# plotly_theme TESTS
+# plotly_theme() tests
 # ============================================================================
 
 test_that("plotly_theme returns list with expected structure", {

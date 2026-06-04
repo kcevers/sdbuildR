@@ -80,6 +80,17 @@ summarise_by <- function(df, by, quantiles, q_names) {
 ensemble_r <- function(object, n, save_sims, conditions, cross,
                        quantiles, only_stocks, vars = NULL, verbose,
                        n_conditions, total_sims) {
+
+  # Specify seed if specified
+  has_seed <- !is.null(object[["sim_settings"]][["seed"]])
+  seed_nr <- object[["sim_settings"]][["seed"]]
+  if (has_seed) {
+    withr::local_seed(seed_nr)
+    object <- sim_settings(object, seed = NULL)  # clear seed so it doesn't affect individual sims
+  }
+
+  start_t <- Sys.time()
+
   # Build conditions grid
   if (!is.null(conditions)) {
     if (cross) {
@@ -136,7 +147,6 @@ ensemble_r <- function(object, n, save_sims, conditions, cross,
     }
   }
 
-  start_t <- Sys.time()
 
   # Capture internal function so future workers can serialize it as a closure
   # (eval_sim_script_r is not exported, so future.packages alone won't find it)
@@ -171,6 +181,11 @@ ensemble_r <- function(object, n, save_sims, conditions, cross,
   )
 
   end_t <- Sys.time()
+
+  # Restore seed if specified
+  if (has_seed) {
+    object <- sim_settings(object, seed = seed_nr)
+  }
 
   if (length(sim_results) == 0L) {
     err_msg <- attr(sim_results, "error_message") %||%

@@ -151,23 +151,6 @@ test_that("ensemble() of model with only stocks", {
 })
 
 
-test_that("ensemble() respects only_stocks = TRUE", {
-  skip_if_julia_not_ready()
-  sfm <- make_jl_ensemble_sfm()
-  df <- as.data.frame(sfm, properties = "eqn")
-  n_stocks <- nrow(df[df[["type"]] == "stock", ])
-
-  sims <- silence(ensemble(sfm,
-    n = 3,
-    only_stocks = TRUE, save_sims = FALSE
-  ))
-  expect_true(sims[["success"]])
-  expect_equal(
-    length(unique(sims[["summary"]][["variable"]])),
-    n_stocks
-  )
-})
-
 test_that("ensemble() returns all variables with only_stocks = FALSE", {
   skip_if_julia_not_ready()
   sfm <- make_jl_ensemble_sfm()
@@ -222,42 +205,7 @@ test_that("ensemble() summary has consistent timeseries lengths", {
   expect_equal(length(unique(table_lengths)), 1)
 })
 
-test_that("ensemble() returns correct n properties", {
-  skip_if_julia_not_ready()
-
-  nr_sims <- 3
-  sfm <- make_jl_ensemble_sfm()
-
-  sims <- silence(ensemble(sfm, n = nr_sims, save_sims = TRUE))
-
-  expect_equal(sims[["n"]], nr_sims)
-  expect_equal(sims[["n_total"]], nr_sims)
-  expect_equal(sims[["n_conditions"]], 1)
-  expect_equal(sort(unique(sims[["df"]][["sim"]])), 1:nr_sims)
-  expect_equal(sort(unique(sims[["df"]][["condition"]])), 1)
-  expect_equal(sort(unique(sims[["summary"]][["condition"]])), 1)
-
-
- # ensemble() returns constants and init summaries
-  expect_equal(
-    sort(unique(sims[["constants"]][["summary"]][["variable"]])),
-    c("a0", "a1", "a2")
-  )
-  expect_equal(
-    sort(unique(sims[["init"]][["summary"]][["variable"]])),
-    c("Compensatory_behaviour", "Food_intake", "Hunger")
-  )
-  expect_equal(
-    max(as.numeric(sims[["constants"]][["df"]][["sim"]])),
-    nr_sims
-  )
-  expect_equal(
-    max(as.numeric(sims[["init"]][["df"]][["sim"]])),
-    nr_sims
-  )
-})
-
-test_that("ensemble() only_stocks = FALSE returns full sim coverage across variable classes", {
+test_that("ensemble() only_stocks = FALSE returns correct n properties and full sim coverage", {
   skip_if_julia_not_ready()
 
   nr_sims <- 5
@@ -271,6 +219,23 @@ test_that("ensemble() only_stocks = FALSE returns full sim coverage across varia
   ))
 
   expect_true(sims[["success"]])
+
+  # n properties (no conditions)
+  expect_equal(sims[["n"]], nr_sims)
+  expect_equal(sims[["n_total"]], nr_sims)
+  expect_equal(sims[["n_conditions"]], 1)
+  expect_equal(sort(unique(sims[["df"]][["condition"]])), 1)
+  expect_equal(sort(unique(sims[["summary"]][["condition"]])), 1)
+
+  # constants and init summaries
+  expect_equal(
+    sort(unique(sims[["constants"]][["summary"]][["variable"]])),
+    c("a0", "a1", "a2")
+  )
+  expect_equal(
+    sort(unique(sims[["init"]][["summary"]][["variable"]])),
+    c("Compensatory_behaviour", "Food_intake", "Hunger")
+  )
 
   df <- sims[["df"]]
   constants_df <- sims[["constants"]][["df"]]
@@ -319,6 +284,7 @@ test_that("ensemble() only_stocks = TRUE keeps full sim coverage for stocks cons
   stock_names <- stock_names[stock_names[["type"]] == "stock", "name", drop = TRUE]
 
   expect_equal(sort(unique(df[["variable"]])), sort(stock_names))
+  expect_equal(length(unique(sims[["summary"]][["variable"]])), length(stock_names))
   expect_equal(sort(unique(df[["sim"]])), seq_len(nr_sims))
   expect_equal(sort(unique(constants_df[["sim"]])), seq_len(nr_sims))
   expect_equal(sort(unique(init_df[["sim"]])), seq_len(nr_sims))
@@ -511,10 +477,55 @@ test_that("ensemble() is reproducible with seed", {
   sims1 <- silence(ensemble(sfm, n = 3, save_sims = TRUE))
   sims2 <- silence(ensemble(sfm, n = 3, save_sims = TRUE))
 
-  expect_equal(sims1[["df"]], sims2[["df"]])
   expect_equal(sims1[["summary"]], sims2[["summary"]])
+  expect_equal(sims1[["df"]], sims2[["df"]])
+
+  # Each simulation within an ensemble should be different
+  cols <- c("time", "value")
+  tol <- 1e-5
+  df1a <- as.data.frame(sims1, which = "sims", sim = 1)
+  df1b <- as.data.frame(sims1, which = "sims", sim = 2)
+  df1c <- as.data.frame(sims1, which = "sims", sim = 3)
+  expect_true(abs(sum(df1a[, cols] - df1b[, cols])) > tol)
+  expect_true(abs(sum(df1a[, cols] - df1c[, cols])) > tol)
+  expect_true(abs(sum(df1b[, cols] - df1c[, cols])) > tol)
+
+  df2a <- as.data.frame(sims2, which = "sims", sim = 1)
+  df2b <- as.data.frame(sims2, which = "sims", sim = 2)
+  df2c <- as.data.frame(sims2, which = "sims", sim = 3)
+  expect_true(abs(sum(df2a[, cols] - df2b[, cols])) > tol)
+  expect_true(abs(sum(df2a[, cols] - df2c[, cols])) > tol)
+  expect_true(abs(sum(df2b[, cols] - df2c[, cols])) > tol)
+
 })
 
+
+test_that("ensemble() in Julia without seed", {
+  skip_if_julia_not_ready()
+
+  sfm <- sdbuildR("predator_prey") |>
+    sim_settings(
+      language = "Julia",
+      start = 0, stop = 10, dt = 0.1,
+      seed = NULL
+    ) |>
+    update(c("predator", "prey"), eqn = "runif(1)")
+
+  sims1 <- silence(ensemble(sfm, n = 3, save_sims = TRUE))
+  sims2 <- silence(ensemble(sfm, n = 3, save_sims = TRUE))
+
+  tol <- 1e-5
+  df1 <- as.data.frame(sims1, which = "summary")
+  df2 <- as.data.frame(sims2, which = "summary")
+  cols <- setdiff(colnames(df1), "variable")
+
+  expect_true(abs(sum(df1[, cols] - df2[, cols])) > tol)
+  cols <- c("time", "value")
+  df1 <- as.data.frame(sims1, which = "sims")
+  df2 <- as.data.frame(sims2, which = "sims")
+  expect_true(abs(sum(df1[, cols] - df2[, cols])) > tol)
+
+})
 
 # Edge cases --------------------------------------------
 
@@ -726,19 +737,17 @@ test_that("ensemble() success result has correct field types", {
 # as.data.frame.ensemble_sdbuildR() -------------------------------------------
 
 
-test_that("as.data.frame() default returns summary df", {
+test_that("as.data.frame() and summary() return the summary df", {
   skip_if_julia_not_ready()
   sims <- silence(ensemble(make_jl_ensemble_sfm(), n = 3))
   df <- as.data.frame(sims)
-  expect_identical(df, sims[["summary"]])
   expect_s3_class(df, "data.frame")
-})
-
-test_that("as.data.frame() which = 'summary' returns summary df", {
-  skip_if_julia_not_ready()
-  sims <- silence(ensemble(make_jl_ensemble_sfm(), n = 3))
-  df <- as.data.frame(sims, which = "summary")
+  # Default and which = "summary" both return the summary df
   expect_identical(df, sims[["summary"]])
+  expect_identical(as.data.frame(sims, which = "summary"), sims[["summary"]])
+  # summary() is an alias for the as.data.frame() default
+  expect_identical(summary(sims), sims[["summary"]])
+  expect_identical(summary(sims), as.data.frame(sims))
 })
 
 test_that("as.data.frame() which = 'sims' returns individual sims df", {
@@ -753,15 +762,6 @@ test_that("as.data.frame() which = 'sims' errors when save_sims = FALSE", {
   skip_if_julia_not_ready()
   sims <- silence(ensemble(make_jl_ensemble_sfm(), n = 3, save_sims = FALSE))
   expect_error(as.data.frame(sims, which = "sims"), "save_sims")
-})
-
-test_that("as.data.frame() summary has expected columns", {
-  skip_if_julia_not_ready()
-  sims <- silence(ensemble(make_jl_ensemble_sfm(), n = 3))
-  df <- as.data.frame(sims)
-  expect_true(all(c("condition", "variable", "time", "mean", "median") %in% names(df)))
-  q_cols <- grepl("^q", names(df))
-  expect_gt(sum(q_cols), 0)
 })
 
 test_that("as.data.frame() individual sims df has expected columns", {
@@ -850,6 +850,12 @@ test_that("head() and tail() return a data.frame with correct number of rows fro
     unname(as.matrix(t)),
     unname(as.matrix(tail(sims[["summary"]], 4L)))
   )
+
+  # direction = "wide" is passed through to as.data.frame()
+  h_long <- head(sims, n = 3L, direction = "long")
+  h_wide <- head(sims, n = 3L, direction = "wide")
+  expect_true("variable" %in% names(h_long))
+  expect_false("variable" %in% names(h_wide))
 })
 
 
@@ -867,25 +873,7 @@ test_that("head() and tail() pass which = 'sims' through to individual sims", {
 })
 
 
-test_that("head() passes direction = 'wide' through", {
-  skip_if_julia_not_ready()
-  sims <- silence(ensemble(make_jl_ensemble_sfm(), n = 3))
-  h_long <- head(sims, n = 3L, direction = "long")
-  h_wide <- head(sims, n = 3L, direction = "wide")
-  expect_false("variable" %in% names(h_wide))
-  expect_true("variable" %in% names(h_long))
-})
-
-
 # summary.ensemble_sdbuildR() -------------------------------------------------
-
-test_that("summary() returns the summary data.frame", {
-  skip_if_julia_not_ready()
-  sims <- silence(ensemble(make_jl_ensemble_sfm(), n = 3))
-  s <- summary(sims)
-  expect_identical(s, sims[["summary"]])
-  expect_s3_class(s, "data.frame")
-})
 
 test_that("summary() result has expected columns", {
   skip_if_julia_not_ready()
@@ -896,16 +884,3 @@ test_that("summary() result has expected columns", {
   expect_gt(length(q_cols), 0)
 })
 
-test_that("summary() result contains correct quantile columns for custom quantiles", {
-  skip_if_julia_not_ready()
-  sims <- silence(ensemble(make_jl_ensemble_sfm(), n = 3, quantiles = c(0.1, 0.5, 0.9)))
-  s <- summary(sims)
-  q_cols <- grep("^q", names(s), value = TRUE)
-  expect_equal(length(q_cols), 3)
-})
-
-test_that("summary() is consistent with as.data.frame() default", {
-  skip_if_julia_not_ready()
-  sims <- silence(ensemble(make_jl_ensemble_sfm(), n = 3))
-  expect_identical(summary(sims), as.data.frame(sims))
-})

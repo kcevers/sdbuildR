@@ -898,8 +898,15 @@ print.sdbuildR <- function(x, ...) {
     save_suffix <- ""
   }
 
+  seed <- ss[["seed"]]
+  if (!is.null(seed)) {
+    seed_suffix <- paste0(" \u2022 seed = ", seed)
+  } else {
+    seed_suffix <- ""
+  }
+
   cli::cli_text(
-    "  Time: {ss$start} to {ss$stop} {time_unit} (dt = {ss$dt}{save_suffix}) \u2022 {ss$method} \u2022 {ss$language}"
+    "  Time: {ss$start} to {ss$stop} {time_unit} (dt = {ss$dt}{save_suffix}) \u2022 {ss$method} \u2022 {ss$language}{seed_suffix}"
   )
 
   # Unit tests (only shown when at least one is defined)

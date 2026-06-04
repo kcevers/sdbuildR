@@ -12,7 +12,8 @@ jobs:
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       NOT_CRAN: "true"
-      AUTO_INSTALL_JULIA_ENV: "true"
+      SDBUILDR_INSTALL_JULIA_ENV: "true"
+      SDBUILDR_CREATE_TEST_FIGS: "true"
     steps:
       - uses: actions/checkout@v4
       - uses: r-lib/actions/setup-r@v2

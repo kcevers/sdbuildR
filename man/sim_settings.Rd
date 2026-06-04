@@ -101,6 +101,8 @@ head(as.data.frame(sim))
 
 # Save exactly 11 evenly-spaced time points (t=0, 5, 10, ..., 50)
 sfm <- sim_settings(sfm, save_n = 11)
+sim <- simulate(sfm)
+head(as.data.frame(sim))
 
 # Add stochastic initial condition but specify seed to obtain same result
 sfm <- sim_settings(sfm, seed = 1) |>

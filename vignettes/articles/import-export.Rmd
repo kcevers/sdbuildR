@@ -60,7 +60,20 @@ sim <- simulate(sfm)
 plot(sim)
 ```
 
-Note that some features of Insight Maker models are not supported by sdbuildR, such as units and arrays. Only stock-and-flow models are supported (not agent-based models or Causal Loop Diagrams). 
+
+### Limitations
+
+Note that some features of Insight Maker models are not supported by sdbuildR, and will be ignored during import. These include:
+
+* Vectorized operations, destructuring assignment, or minimum and maximum constraints for variables.
+
+* The Insight Maker functions Stop(), Prompt(), Confirm(), Pause(), Fix(), Map(), Filter(), and Repeat(), as well as the delay and past functions. A message is issued if any of these are detected. 
+
+* Units (e.g., kilograms) are also not supported.
+
+* Agent-based models or Causal Loop Diagrams. 
+
+* sdbuildR provides only minimal support for non-negative stocks and flows. Specifically, setting stocks to non-negative will constrain the stocks to remain non-negative, but will not adjust the corresponding flows. In any case, enforcing either stocks or flows to be non-negative is not recommended, as it may mask model misspecification. Stocks and flows that logically cannot be negative (e.g., animals or deaths) should ideally remain non-negative as a result of the model's equations and parameters, rather than by forcing them to be non-negative.
 
 ---
 

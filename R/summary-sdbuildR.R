@@ -1,4 +1,4 @@
-#' Run Model Diagnostics
+#' Run model diagnostics
 #'
 #' Check for common formulation problems in a stock-and-flow model.
 #'

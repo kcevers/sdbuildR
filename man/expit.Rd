@@ -18,4 +18,4 @@ Inverse of the logit function
 \examples{
 expit(1)
 }
-\concept{custom}
+\concept{convenience}

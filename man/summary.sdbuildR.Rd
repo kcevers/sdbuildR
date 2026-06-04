@@ -2,7 +2,7 @@
 % Please edit documentation in R/summary-sdbuildR.R
 \name{summary.sdbuildR}
 \alias{summary.sdbuildR}
-\title{Run Model Diagnostics}
+\title{Run model diagnostics}
 \usage{
 \method{summary}{sdbuildR}(object, ...)
 }

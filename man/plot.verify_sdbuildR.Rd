@@ -8,7 +8,7 @@
   x,
   test = NULL,
   vars = NULL,
-  add_constants = FALSE,
+  show_constants = FALSE,
   label = NULL,
   ignore_case = TRUE,
   status = c("pass", "fail", "error", "skip"),
@@ -36,7 +36,7 @@ Combines with \code{label} and \code{status} as AND intersection.}
 
 \item{vars}{Variables to plot. Defaults to NULL to plot all variables.}
 
-\item{add_constants}{If TRUE, include constants in plot. Defaults to FALSE.}
+\item{show_constants}{If TRUE, include constants in plot. Defaults to FALSE.}
 
 \item{label}{Character vector of regex patterns for partial, case-insensitive
 label matching. A test is included if its label matches any pattern.}

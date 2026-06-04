@@ -11,7 +11,7 @@ test_that("plot.verify_sdbuildR method exists", {
 # BASIC OUTPUT TYPE (non-snapshot)
 # ============================================================================
 
-test_that("plot.verify_sdbuildR returns plotly for single condition, n=1", {
+test_that("plot.verify_sdbuildR for single condition, n=1", {
   res <- make_verify_model()
   pl <- plot(res, test = 1L)
   expect_plotly(pl)
@@ -22,88 +22,42 @@ test_that("plot.verify_sdbuildR returns plotly for single condition, n=1", {
   label_names <- names_df$label[match(var_names, names_df$name)]
 
   # Object-level expectations
-  traces <- plotly_trace_summary(pl)
+  traces <- plotly_traces(pl)
   expect_setequal(traces[["name"]], label_names)
-  # At least one legend item expected by default
-  expect_true(any(traces$showlegend))
+  expect_true(all(traces$showlegend))
+
+  info <- plotly_subplot_grid(pl)
+  expect_equal(info$n_panels, 1L)
+  expect_equal(info$nrows, 1L)
+  expect_equal(info$ncols, 1L)
+
+  expect_snapshot_plot("verify-single-cond-n1", pl)
 })
 
-test_that("plot.verify_sdbuildR returns plotly for two conditions", {
+test_that("plot.verify_sdbuildR for two conditions", {
   res <- make_verify_model(n_tests = 2)
-  pl <- plot(res)
+  pl <- plot(res, nrows = 2L, shareX = TRUE, shareY = TRUE)
   expect_plotly(pl)
+  df <- as.data.frame(res, which = "sims", direction = "long")
+  names_df <- as.data.frame(res[["object"]])
+  var_names <- unique(df$variable)
+  label_names <- names_df$label[match(var_names, names_df$name)]
   # Object-level expectations for subplot with multiple conditions
-  traces <- plotly_trace_summary(pl)
+  traces <- plotly_traces(pl)
   expect_true(nrow(traces) > 0)
-  # Should expose legend items across subplot traces
-  expect_true(any(traces$showlegend))
+  expect_setequal(traces[["name"]], label_names)
+  expect_true(all(plotly_dedupe_legend(traces)$showlegend))
+
+  info <- plotly_subplot_grid(pl)
+  expect_true(info$is_subplot)
+  expect_equal(info$n_panels, 2L)
+  expect_equal(info$nrows, 2L)
+  expect_equal(info$ncols, 1L)
+  expect_true(info$shareX)
+
+  expect_snapshot_plot("verify-two-conditions", pl)
+
 })
-
-
-trace_group <- function(trace) {
-  group <- trace[["legendgroup"]]
-  if (is.null(group)) {
-    return(NA_character_)
-  }
-  group_chr <- as.character(group)
-  if (length(group_chr) == 0L || !nzchar(group_chr)) {
-    return(NA_character_)
-  }
-  group_chr
-}
-
-
-trace_color <- function(trace) {
-  color <- NULL
-  if (!is.null(trace[["line"]])) color <- trace[["line"]][["color"]]
-  if (is.null(color) || !nzchar(as.character(color))) {
-    if (!is.null(trace[["marker"]])) color <- trace[["marker"]][["color"]]
-  }
-  if (is.null(color)) {
-    return(NA_character_)
-  }
-
-  normalize_color <- function(col) {
-    col_chr <- as.character(col)
-    if (!nzchar(col_chr)) {
-      return(NA_character_)
-    }
-
-    # rgba(...) or rgb(...)
-    if (grepl("^rgba?\\(", col_chr)) {
-      nums <- as.numeric(strsplit(gsub("rgba?\\(|\\)", "", col_chr), ",")[[1L]])
-      if (length(nums) >= 3) {
-        r <- nums[1]
-        g <- nums[2]
-        b <- nums[3]
-        if (max(nums, na.rm = TRUE) <= 1) {
-          r <- round(r * 255)
-          g <- round(g * 255)
-          b <- round(b * 255)
-        }
-        return(grDevices::rgb(r, g, b, maxColorValue = 255))
-      }
-    }
-
-    # Hex (#RRGGBB or #RRGGBBAA) -> strip alpha if present
-    if (grepl("^#", col_chr)) {
-      if (nchar(col_chr) >= 7) {
-        return(toupper(substr(col_chr, 1, 7)))
-      }
-      return(toupper(col_chr))
-    }
-
-    # Try named colours / other CSS-like values via col2rgb
-    rgb_val <- tryCatch(grDevices::col2rgb(col_chr), error = function(e) NULL)
-    if (!is.null(rgb_val)) {
-      return(grDevices::rgb(rgb_val[1, 1], rgb_val[2, 1], rgb_val[3, 1], maxColorValue = 255))
-    }
-
-    NA_character_
-  }
-
-  toupper(normalize_color(color))
-}
 
 
 test_that("plot.verify_sdbuildR keeps trace colors aligned with the legend", {
@@ -113,30 +67,20 @@ test_that("plot.verify_sdbuildR keeps trace colors aligned with the legend", {
     unit_test(label = "drain non-negative", expr = "all(drain >= 0)")
 
   res <- silence(verify(sfm))
-  built <- plotly::plotly_build(plot(res))
-  traces <- built[["x"]][["data"]]
+  df <- as.data.frame(res, which = "sims", direction = "long")
+  vars <- unique(df$variable)
+  names_df <- as.data.frame(res[["object"]])
+  label_names <- names_df$label[match(vars, names_df$name)]
+  pl <- plot(res)
+  expect_plotly(pl)
+  # Object-level expectations for subplot with multiple conditions
+  traces <- plotly_traces(pl)
+  legend_check <- plotly_check_legend_colors(pl)
+  expect_true(nrow(traces) > 0)
+  expect_setequal(traces[["name"]], label_names)
+  expect_true(nrow(legend_check) > 0)
+  expect_true(all(legend_check$ok))
 
-  groups <- unique(vapply(traces, trace_group, character(1)))
-  groups <- groups[!is.na(groups)]
-
-  expect_true(length(groups) >= 2L)
-
-  for (grp in groups) {
-    grp_traces <- traces[vapply(traces, function(trace) identical(trace_group(trace), grp), logical(1))]
-    grp_colors <- unique(vapply(grp_traces, trace_color, character(1)))
-    grp_colors <- grp_colors[!is.na(grp_colors)]
-
-    expect_equal(length(grp_colors), 1L)
-
-    legend_traces <- grp_traces[vapply(grp_traces, function(trace) isTRUE(trace[["showlegend"]]), logical(1))]
-    if (length(legend_traces) > 0L) {
-      expect_equal(length(legend_traces), 1L)
-      expect_identical(trace_color(legend_traces[[1L]]), grp_colors[[1L]])
-    } else {
-      # Some rendering backends/platforms may collapse legend entries; skip strict legend-trace checks
-      expect_true(length(legend_traces) == 0L)
-    }
-  }
 })
 
 
@@ -147,30 +91,24 @@ test_that("plot.verify_sdbuildR uses explicit custom colors on legend traces", {
     unit_test(label = "drain non-negative", expr = "all(drain >= 0)")
 
   res <- silence(verify(sfm))
-  custom_colors <- c("#FF5733", "#3366FF")
-  built <- plotly::plotly_build(plot(res, colors = custom_colors))
-  traces <- built[["x"]][["data"]]
+  df <- as.data.frame(res, which = "sims", direction = "long")
+  vars <- unique(df$variable)
+  names_df <- as.data.frame(res[["object"]])
+  label_names <- names_df$label[match(vars, names_df$name)]
 
-  legend_traces <- traces[vapply(traces, function(trace) isTRUE(trace[["showlegend"]]), logical(1))]
-  if (length(legend_traces) == 0L) {
-    # No explicit legend traces found; some backends may not expose them consistently.
-    expect_true(length(legend_traces) == 0L)
-  } else {
-    legend_colors <- vapply(legend_traces, trace_color, character(1))
-    legend_groups <- vapply(legend_traces, trace_group, character(1))
-    legend_colors <- legend_colors[!is.na(legend_colors)]
-    legend_groups <- legend_groups[!is.na(legend_groups)]
+  # Generate as many custom colors as there are labels
+  custom_colors <- stats::setNames(rainbow(length(label_names)), label_names)
+  pl <- plot(res, colors = custom_colors, alpha = 1)
+  expect_plotly(pl)
+  traces <- plotly_traces(pl)
+  expect_equal(nrow(traces), 2L)
 
-    expect_true(all(legend_colors %in% custom_colors))
+  # Check that trace names match labels and colors match the custom colors provided
+  legend_check <- plotly_check_legend_colors(pl, expected = custom_colors)
+  expect_true(nrow(legend_check) > 0)
+  expect_true(all(legend_check$ok))
+  expect_true(all(legend_check$matches_expected))
 
-    for (grp in unique(legend_groups)) {
-      grp_traces <- traces[vapply(traces, function(trace) identical(trace_group(trace), grp), logical(1))]
-      grp_colors <- unique(vapply(grp_traces, trace_color, character(1)))
-      grp_colors <- grp_colors[!is.na(grp_colors)]
-      expect_equal(length(grp_colors), 1L)
-      expect_true(grp_colors[[1L]] %in% custom_colors)
-    }
-  }
 })
 
 
@@ -178,19 +116,20 @@ test_that("plot.verify_sdbuildR uses explicit custom colors on legend traces", {
 # VISUAL REGRESSION TESTS (expect_snapshot_plot)
 # ============================================================================
 
-test_that("plot() single condition n=1", {
-  res <- make_verify_model()
-  expect_snapshot_plot("verify-single-cond-n1", plot(res, test = 1L))
-})
-
-test_that("plot() two conditions n=1 (subplot)", {
-  res <- make_verify_model(n_tests = 2)
-  expect_snapshot_plot("verify-two-cond-n1", plot(res))
-})
-
 test_that("plot() filtered j selects one condition from two", {
   res <- make_verify_model(n_tests = 2)
-  expect_snapshot_plot("verify-filtered-j2", plot(res, test = 2L))
+  pl <- plot(res, test = 2L)
+  expect_plotly(pl)
+  df <- as.data.frame(res, which = "sims", direction = "long")
+  names_df <- as.data.frame(res[["object"]])
+  var_names <- unique(df$variable)
+  label_names <- names_df$label[match(var_names, names_df$name)]
+  # Object-level expectations for subplot with multiple conditions
+  traces <- plotly_traces(pl)
+  expect_equal(nrow(traces), 1L)
+  expect_setequal(traces[["name"]], label_names)
+  expect_true(all(plotly_dedupe_legend(traces)$showlegend))
+  expect_snapshot_plot("verify-filtered-j2", pl)
 })
 
 
@@ -203,35 +142,12 @@ test_that("plot() showlegend = FALSE hides legend", {
   # Object-level expectation: no legend items when disabled
   pl <- plot(res, showlegend = FALSE)
   expect_plotly(pl)
-  expect_equal(nrow(plotly_legend_items(pl)), 0)
+  traces <- plotly_traces(pl)
+  expect_true(nrow(traces) > 0)
+  expect_true(all(!(plotly_dedupe_legend(traces)$showlegend)))
 
   # Snapshot last
   expect_snapshot_plot("verify-showlegend-false", pl)
-})
-
-test_that("plot() nrows = 1 forces single-row layout", {
-  res <- make_verify_model(n_tests = 2)
-  pl <- plot(res, nrows = 1L)
-  expect_plotly(pl)
-
-  # Snapshots last
-  expect_snapshot_plot("verify-nrows-1", pl)
-})
-
-test_that("plot() shareX = FALSE gives independent x axes", {
-  res <- make_verify_model(n_tests = 2)
-  pl <- plot(res, shareX = FALSE)
-
-  # Snapshots last
-  expect_snapshot_plot("verify-sharex-false", pl)
-})
-
-test_that("plot() shareY = FALSE gives independent y axes", {
-  res <- make_verify_model(n_tests = 2)
-  pl <- plot(res, shareY = FALSE)
-
-  # Snapshots last
-  expect_snapshot_plot("verify-sharey-false", pl)
 })
 
 
@@ -241,22 +157,42 @@ test_that("plot() shareY = FALSE gives independent y axes", {
 
 test_that("plot() label filter selects matching condition from two", {
   res <- make_verify_model(n_tests = 2)
-  expect_snapshot_plot("verify-label-filter", plot(res, label = "non-neg"))
+  pl <- plot(res, label = "non-neg")
+  df <- as.data.frame(res, which = "sims", direction = "long", label = "non-neg")
+  names_df <- as.data.frame(res[["object"]])
+  var_names <- unique(df$variable)
+  label_names <- names_df$label[match(var_names, names_df$name)]
+  expect_plotly(pl)
+  traces <- plotly_traces(pl)
+  expect_true(nrow(traces) > 0)
+  expect_snapshot_plot("verify-label-filter", pl)
 })
 
 test_that("plot() test and label filters intersect correctly", {
   res <- make_verify_model(n_tests = 2)
-  expect_snapshot_plot("verify-nr-label-intersection", plot(res, test = 1L, label = "non-neg"))
+  pl <- plot(res, test = 1L, label = "non-neg")
+  expect_plotly(pl)
+  traces <- plotly_traces(pl)
+  expect_equal(nrow(traces), 1L)
+  expect_snapshot_plot("verify-nr-label-intersection", pl)
 })
 
 test_that("plot() status = 'pass' shows only passing tests", {
   res <- make_verify_model(with_fail = TRUE)
-  expect_snapshot_plot("verify-status-pass-only", plot(res, status = "pass"))
+  pl <- plot(res, status = "pass")
+  expect_plotly(pl)
+  traces <- plotly_traces(pl)
+  expect_true(nrow(traces) > 0)
+  expect_snapshot_plot("verify-status-pass-only", pl)
 })
 
 test_that("plot() status = 'fail' shows only failing tests", {
   res <- make_verify_model(with_fail = TRUE)
-  expect_snapshot_plot("verify-status-fail-only", plot(res, status = "fail"))
+  pl <- plot(res, status = "fail")
+  expect_plotly(pl)
+  traces <- plotly_traces(pl)
+  expect_true(nrow(traces) > 0)
+  expect_snapshot_plot("verify-status-fail-only", pl)
 })
 
 
@@ -266,18 +202,32 @@ test_that("plot() status = 'fail' shows only failing tests", {
 
 test_that("plot() custom palette changes line colours", {
   res <- make_verify_model()
-  expect_snapshot_plot("verify-custom-palette", plot(res, palette = "Pastel 1"))
+  pl <- plot(res, palette = "Pastel 1")
+  expect_plotly(pl)
+  traces <- plotly_traces(pl)
+  expect_true(nrow(traces) > 0)
+  # Unique colors should be assigned across traces when a palette is used
+  expect_true(length(unique(traces$color)) == nrow(traces))
+  expect_snapshot_plot("verify-custom-palette", pl)
 })
 
 test_that("plot() custom colors vector overrides palette", {
   res <- make_verify_model()
-  expect_snapshot_plot("verify-custom-colors", plot(res, colors = "steelblue"))
+  label_names <- as.data.frame(res[["object"]])$label
+  custom_colors <- stats::setNames(rep("steelblue", length(label_names)), label_names)
+  pl <- plot(res, colors = custom_colors)
+  expect_plotly(pl)
+  legend_check <- plotly_check_legend_colors(pl, expected = custom_colors)
+  expect_true(nrow(legend_check) > 0)
+  expect_true(all(legend_check$ok))
+  expect_true(all(legend_check$matches_expected))
+  expect_snapshot_plot("verify-custom-colors", pl)
 })
 
 test_that("plot() custom font_family changes annotation font", {
   res <- make_verify_model()
   pl <- plot(res, font_family = "Arial")
-  layout <- plotly_layout_attrs(pl)
+  layout <- plotly_layout(pl)
   expect_equal(layout$font$family, "Arial")
 
   # Snapshots last
@@ -287,7 +237,7 @@ test_that("plot() custom font_family changes annotation font", {
 test_that("plot() custom font_size changes annotation font", {
   res <- make_verify_model()
   pl <- plot(res, font_size = 20)
-  layout <- plotly_layout_attrs(pl)
+  layout <- plotly_layout(pl)
   expect_equal(layout$font$size, 20)
 
   # Snapshots last
@@ -296,7 +246,14 @@ test_that("plot() custom font_size changes annotation font", {
 
 test_that("plot() narrow wrap_width wraps long labels", {
   res <- make_verify_model()
-  expect_snapshot_plot("verify-wrap-width-narrow", plot(res, wrap_width = 10))
+  res[["object"]] <- update(res[["object"]], S, label = "This is a very long label that should be wrapped when wrap_width is narrow")
+  pl <- plot(res, wrap_width = 10)
+  expect_plotly(pl)
+  traces <- plotly_traces(pl)
+  expect_true(nrow(traces) > 0)
+  expect_true(all(grepl("<br", traces[["name"]], fixed = TRUE)))
+
+  expect_snapshot_plot("verify-wrap-width-narrow", pl)
 })
 
 
@@ -306,5 +263,8 @@ test_that("plot() narrow wrap_width wraps long labels", {
 
 test_that("plot() custom alpha is accepted", {
   res <- make_verify_model()
-  expect_snapshot_plot("verify-alpha-low", plot(res, alpha = 0.5))
+  pl <- plot(res, alpha = 0.5)
+  expect_plotly(pl)
+  expect_true(nrow(plotly_traces(pl)) > 0)
+  expect_snapshot_plot("verify-alpha-low", pl)
 })

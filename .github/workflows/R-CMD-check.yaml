@@ -29,7 +29,8 @@ jobs:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       R_KEEP_PKG_SOURCE: yes
       NOT_CRAN: "true"
-      AUTO_INSTALL_JULIA_ENV: "true"
+      SDBUILDR_INSTALL_JULIA_ENV: "true"
+      SDBUILDR_CREATE_TEST_FIGS: "true"
 
     steps:
       - uses: actions/checkout@v4

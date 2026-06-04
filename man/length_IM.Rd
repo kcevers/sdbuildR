@@ -19,4 +19,4 @@ Equivalent of .Length() in Insight Maker, which returns the number of elements w
 length_IM(c("a", "b", "c")) # 3
 length_IM("abcdef") # 6
 }
-\concept{custom}
+\concept{convenience}

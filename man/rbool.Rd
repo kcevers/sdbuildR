@@ -18,4 +18,4 @@ Equivalent of RandBoolean() in Insight Maker
 \examples{
 rbool(.5)
 }
-\concept{custom}
+\concept{convenience}

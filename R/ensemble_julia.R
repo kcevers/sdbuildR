@@ -15,6 +15,12 @@
 ensemble_julia <- function(object, n, save_sims, conditions, cross,
                            quantiles, only_stocks, vars = NULL, verbose,
                            n_conditions, total_sims) {
+
+  use_julia()
+
+  # Evaluate script
+  start_t <- Sys.time()
+
   # Create ensemble parameters
   ensemble_pars <- list(
     n = n,
@@ -51,8 +57,6 @@ ensemble_julia <- function(object, n, save_sims, conditions, cross,
   write_script(script, filepath)
   script <- paste0(readLines(filepath), collapse = "\n")
 
-  use_julia()
-
   on.exit(
     {
       # Ensure files are deleted even if an error occurs
@@ -69,8 +73,6 @@ ensemble_julia <- function(object, n, save_sims, conditions, cross,
   # Evaluate script
   sim <- tryCatch(
     {
-      # Evaluate script
-      start_t <- Sys.time()
 
       # Wrap in invisible and capture.output to keep Julia output quiet
       invisible(utils::capture.output(

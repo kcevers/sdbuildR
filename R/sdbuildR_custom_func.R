@@ -1,4 +1,4 @@
-#' Round Half-Up (as in Insight Maker)
+#' Round values half-up (as in Insight Maker)
 #'
 #' R rounds .5 to 0, whereas Insight Maker rounds .5 to 1. This function is the equivalent of Insight Maker's Round() function.
 #'
@@ -6,7 +6,7 @@
 #' @param digits Number of digits; optional, defaults to 0
 #'
 #' @returns Rounded value
-#' @concept custom
+#' @concept convenience
 #' @export
 #'
 #' @examples
@@ -29,7 +29,7 @@ round_IM <- function(x, digits = 0) {
 #' @param p Probability, numerical value between 0 and 1
 #'
 #' @returns Numerical value
-#' @concept custom
+#' @concept convenience
 #' @export
 #'
 #' @examples
@@ -46,7 +46,7 @@ logit <- function(p) {
 #' @param x Numerical value
 #'
 #' @returns Numerical value
-#' @concept custom
+#' @concept convenience
 #' @export
 #'
 #' @examples
@@ -63,7 +63,7 @@ expit <- function(x) {
 #' @param p Probability of TRUE, numerical value between 0 and 1
 #'
 #' @returns Logical value
-#' @concept custom
+#' @concept convenience
 #' @export
 #'
 #' @examples
@@ -81,7 +81,7 @@ rbool <- function(p) {
 #' @param b Vector of probabilities
 #'
 #' @returns One sample from custom distribution
-#' @concept custom
+#' @concept convenience
 #' @export
 #'
 #' @examples
@@ -91,15 +91,15 @@ rdist <- function(a, b) {
 }
 
 
-#' Find index of needle in haystack
+#' Find index of value in vector or string
 #'
-#' Find index of value in vector or string. Equivalent of .IndexOf() in Insight Maker.
+#' Equivalent of .IndexOf() in Insight Maker.
 #'
 #' @param haystack Vector or string to search through
 #' @param needle Value to search for
 #'
 #' @returns Index, integer
-#' @concept custom
+#' @concept convenience
 #' @export
 #'
 #' @examples
@@ -135,7 +135,7 @@ indexof <- function(haystack, needle) {
 #' @param x A vector or a string
 #'
 #' @returns The number of elements in x if x is a vector; the number of characters in x if x is a string
-#' @concept custom
+#' @concept convenience
 #' @export
 #'
 #' @examples
@@ -150,15 +150,15 @@ length_IM <- function(x) {
 }
 
 
-#' Check if needle is in haystack
-#'
-#' Check whether value is in vector or string. Equivalent of .Contains() in Insight Maker.
+#' Check whether value is in vector or string
+#' 
+#' Equivalent of .Contains() in Insight Maker.
 #'
 #' @param haystack Vector or string to search through
 #' @param needle Value to search for
 #'
 #' @returns Logical value
-#' @concept custom
+#' @concept convenience
 #' @export
 #'
 #' @examples
@@ -509,7 +509,9 @@ seasonal <- function(times, period = 1, shift = 0) {
 }
 
 
-#' Safely check whether x is less than zero
+#' Check whether x is less than zero
+#' 
+#' Check whether x is less than zero.
 #'
 #' @param x Value
 #'
@@ -522,12 +524,12 @@ seasonal <- function(times, period = 1, shift = 0) {
 #' nonnegative(-1)
 #'
 nonnegative <- function(x) {
-  # Safe comparison to zero
-  if (is.na(x)) {
-    return(x)
-  } else {
+  # # Safe comparison to zero
+  # if (is.na(x)) {
+  #   return(x)
+  # } else {
     return(max(c(0, x)))
-  }
+  # }
 }
 
 
@@ -539,7 +541,7 @@ nonnegative <- function(x) {
 #' @param b Divisor
 #'
 #' @returns Remainder
-#' @concept custom
+#' @concept convenience
 #' @export
 #' @rdname rem_mod
 #'
@@ -572,7 +574,7 @@ rem <- function(a, b) {
 
 
 #' @export
-#' @concept custom
+#' @concept convenience
 #' @rdname rem_mod
 mod <- function(a, b) {
   a %% b
@@ -580,7 +582,7 @@ mod <- function(a, b) {
 
 
 #' @export
-#' @concept custom
+#' @concept convenience
 #' @rdname rem_mod
 `%REM%` <- function(a, b) {
   rem(a, b)
@@ -603,7 +605,7 @@ mod <- function(a, b) {
 #' It transitions from near 0 to near `upper` around the `midpoint`, with the steepness
 #' of this transition controlled by `slope`.
 #'
-#' @concept custom
+#' @concept convenience
 #' @export
 #'
 #' @examples
@@ -666,7 +668,7 @@ logistic <- function(x, slope = 1, midpoint = 0, upper = 1) {
 
 
 #' @rdname logistic
-#' @concept custom
+#' @concept convenience
 #' @export
 sigmoid <- logistic
 
@@ -687,7 +689,7 @@ sigmoid <- logistic
 #' It transitions from near 0 to near `upper` around the `midpoint`, with the steepness
 #' of this transition controlled by `slope`. See \url{https://en.wikipedia.org/wiki/Hill_equation_%28biochemistry%29} for more details.
 #'
-#' @concept custom
+#' @concept convenience
 #' @export
 #'
 #' @examples
