@@ -91,7 +91,6 @@ by setting \code{nthreads} in \code{\link[=use_julia]{use_julia()}}. For simulat
 \code{\link[future:plan]{future::plan()}} to control parallel execution.
 
 To create a reproducible ensemble simulation, set a seed using \code{\link[=sim_settings]{sim_settings()}}.
-Currently, reproducibility for threaded simulations is not supported.
 
 If you do not see any variation within a condition of the ensemble (i.e., the
 confidence bands are virtually non-existent), there are likely no random

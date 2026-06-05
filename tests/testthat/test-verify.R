@@ -1007,9 +1007,9 @@ test_that("verify() with Julia backend fails conditioned test (n = 1)", {
   # rate = 0 keeps S at 100; asserting S < 50 fails
   sfm <- make_verifiable_sfm(language = "Julia") |>
     unit_test(
-      label = "S low when rate is zero",
-      expr = all(S < 50),
-      conditions = list(rate = 0)
+      label = "S changes when rate is zero (will fail)",
+      expr = all(diff(S) > 0),
+      conditions = list(rate = 0, S = 10)
     )
   result <- silence(verify(sfm))
   expect_equal(result[["results"]][[1]][["status"]], "fail")

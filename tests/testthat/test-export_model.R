@@ -136,3 +136,25 @@ test_that("export_model(format='deSolve') writes .R file, appending extension", 
   expect_equal(out_path, paste0(path, ".R"))
   expect_true(file.exists(out_path))
 })
+
+test_that("export_model(format='deSolve') output is valid R code", {
+  sfm <- sdbuildR("SIR")
+  out <- export_model(sfm, format = "deSolve")
+ 
+  withr::local_preserve_seed()
+
+  # Run the code and capture output to ensure it executes without error
+  env <- new.env()
+  expect_no_error(out <- eval(parse(text = out), envir = env))
+ 
+  names_env <- ls(env)
+  expect_true(all(unname(P[c("initial_value_name", 
+  "times_name", "time_name", "sim_df_name", "parameter_name", "timestep_name"
+  )]) %in% names_env))
+
+  df <- env[[P[["sim_df_name"]]]]
+  expect_true(is.data.frame(df))
+  var_names <- colnames(df)
+  expect_true(all(c("susceptible", "infected", "recovered") %in% var_names))
+
+})

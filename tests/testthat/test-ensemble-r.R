@@ -264,13 +264,14 @@ test_that("ensemble() in R respects seed", {
   sfm <- make_r_ensemble_random_sfm() |> sim_settings(seed = 123)
 
   # Should not modify global seed state
+  withr::local_seed(123) # ensure .Random.seed exists before capturing it
   orig_seed <- .Random.seed
 
   sims1 <- silence(ensemble(sfm, n = 3, verbose = FALSE, save_sims = TRUE))
   sims2 <- silence(ensemble(sfm, n = 3, verbose = FALSE, save_sims = TRUE))
 
   new_seed <- .Random.seed
-  expect_equal(orig_seed, new_seed)
+  expect_true(identical(orig_seed, new_seed))
 
   expect_equal(sims1[["summary"]], sims2[["summary"]])
   expect_equal(sims1[["df"]], sims2[["df"]])
@@ -304,6 +305,7 @@ test_that("ensemble() in R with parallel execution respects seed", {
   on.exit(future::plan(future::sequential), add = TRUE)
 
   # Should not modify global seed state
+  withr::local_seed(123) # ensure .Random.seed exists before capturing it
   orig_seed <- .Random.seed
 
   sims1 <- silence(ensemble(sfm, n = 3, verbose = FALSE, save_sims = TRUE))

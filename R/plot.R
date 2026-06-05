@@ -1333,28 +1333,8 @@ plot.ensemble_sdbuildR <- function(x,
                                    central_tendency = c("mean", "median", FALSE)[1],
                                    central_tendency_width = 3,
                                    ...) {
-  if (missing(x)) {
-    cli::cli_abort(c(
-      "x" = "No simulation data available.",
-      ">" = "Generate an ensemble first with {.fn ensemble}."
-    ))
-  }
 
-  # Check whether it is an sdbuildR object
-  if (!inherits(x, "ensemble_sdbuildR")) {
-    cli::cli_abort(c(
-      "x" = "Invalid object class.",
-      "i" = "This is not an object of class {.cls ensemble_sdbuildR}.",
-      ">" = "Generate an ensemble simulation with {.fn ensemble}."
-    ))
-  }
-
-  if (!x[["success"]]) {
-    cli::cli_abort(c(
-      "x" = "Ensemble simulation failed.",
-      ">" = "Check your model specification and try again."
-    ))
-  }
+  check_ensemble_sdbuildR(x)
 
   # Validate common plot parameters
   validate_plot_params(

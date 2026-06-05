@@ -76,7 +76,7 @@ ensemble_julia <- function(object, n, save_sims, conditions, cross,
     {
 
       if (!is.null(seed_nr)) {
-        command <- paste0('with_rng(", seed_nr, ") do\n\tinclude("', jl_path(filepath), '")\nend')
+        command <- paste0('with_rng(', as.numeric(seed_nr), ') do\n\tinclude("', jl_path(filepath), '")\nend')
 
       } else {
         command <- paste0('include("', jl_path(filepath), '")')

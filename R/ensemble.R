@@ -16,7 +16,6 @@
 #' [future::plan()] to control parallel execution.
 #'
 #' To create a reproducible ensemble simulation, set a seed using [sim_settings()].
-#' Currently, reproducibility for threaded simulations is not supported.
 #'
 #' If you do not see any variation within a condition of the ensemble (i.e., the
 #' confidence bands are virtually non-existent), there are likely no random
@@ -334,19 +333,19 @@ ensemble <- function(object,
 
   # Dispatch to language-specific backend
   if (language == "julia") {
-    return(ensemble_julia(
+    out <- ensemble_julia(
       object = object, n = n, save_sims = save_sims,
       conditions = conditions, cross = cross, quantiles = quantiles,
       only_stocks = only_stocks, vars = vars, verbose = verbose,
       n_conditions = n_conditions, total_sims = total_sims
-    ))
+    )
   } else if (language == "r") {
-    return(ensemble_r(
+    out <- ensemble_r(
       object = object, n = n, save_sims = save_sims,
       conditions = conditions, cross = cross, quantiles = quantiles,
       only_stocks = only_stocks, vars = vars, verbose = verbose,
       n_conditions = n_conditions, total_sims = total_sims
-    ))
+    )
   } else {
     cli::cli_abort(c(
       "Unsupported simulation language: {.val {language}}.",
@@ -354,6 +353,9 @@ ensemble <- function(object,
       ">" = "Set via {.fn sim_settings}(object, language = {.code 'R'}) or {.code 'Julia'}."
     ))
   }
+
+  validate_ensemble_sdbuildR(out)
+  out
 }
 
 
@@ -372,35 +374,12 @@ check_ensemble_sdbuildR <- function(x) {
       ">" = "Use {.fn ensemble} to create a valid ensemble object."
     ))
   }
-
-  if (!is.logical(x$success) || length(x$success) != 1) {
+  
+  if (!x[["success"]]) {
     cli::cli_abort(c(
-      "x" = "Invalid {.arg success} field.",
-      "!" = "The {.arg success} field must be a single {.cls logical} value.",
-      ">" = "Expected {.val {TRUE}} or {.val {FALSE}}."
+      "x" = "Ensemble simulation failed.",
+      ">" = "Check your model specification and try again."
     ))
-  }
-
-  if (x$success) {
-    if (is.null(x$summary) || !is.data.frame(x$summary)) {
-      cli::cli_abort(c(
-        "x" = "Missing or invalid summary data.",
-        "i" = "Successful ensemble must have a {.cls data.frame} in {.arg summary}."
-      ))
-    }
-    if (is.null(x$duration)) {
-      cli::cli_abort(c(
-        "x" = "Missing simulation duration.",
-        "i" = "Successful ensemble must have {.arg duration}."
-      ))
-    }
-  } else {
-    if (is.null(x$error_message) || !nzchar(x$error_message)) {
-      cli::cli_abort(c(
-        "x" = "Missing error message.",
-        "i" = "Failed ensemble must have a non-empty {.arg error_message}."
-      ))
-    }
   }
 
   invisible(x)
@@ -563,7 +542,6 @@ as.data.frame.ensemble_sdbuildR <- function(
 #' @concept ensemble
 #' @method head ensemble_sdbuildR
 head.ensemble_sdbuildR <- function(x, n = 6L, ...) {
-  check_ensemble_sdbuildR(x)
   df <- as.data.frame(x, ...)
   head(df, n)
 }
@@ -573,7 +551,6 @@ head.ensemble_sdbuildR <- function(x, n = 6L, ...) {
 #' @concept ensemble
 #' @method tail ensemble_sdbuildR
 tail.ensemble_sdbuildR <- function(x, n = 6L, ...) {
-  check_ensemble_sdbuildR(x)
   df <- as.data.frame(x, ...)
   tail(df, n)
 }
@@ -631,7 +608,14 @@ new_ensemble_sdbuildR <- function(success = FALSE,
 #'
 #' @noRd
 validate_ensemble_sdbuildR <- function(x) {
-  check_ensemble_sdbuildR(x)
+
+  if (!inherits(x, "ensemble_sdbuildR")) {
+    cli::cli_abort(c(
+      "x" = "Invalid object type.",
+      "!" = "Expected object of class {.cls ensemble_sdbuildR}.",
+      ">" = "Use {.fn ensemble} to create a valid ensemble object."
+    ))
+  }
 
   # Check all required fields are present
   required <- c(
@@ -641,9 +625,16 @@ validate_ensemble_sdbuildR <- function(x) {
   )
   missing_fields <- setdiff(required, names(x))
   if (length(missing_fields) > 0) {
-    cli::cli_warn(c(
-      "Ensemble object is missing fields.",
+    cli::cli_abort(c(
+      "x"= "Ensemble object is missing fields.",
       "!" = "Missing: {paste0('{.field ', missing_fields, '}', collapse = ', ')}."
+    ))
+  }
+
+  if (!is.logical(x[["success"]]) || length(x[["success"]]) != 1) {
+    cli::cli_abort(c(
+      "x" = "Field {.field success} should be a single {.cls logical} value.",
+      "i" = "Received: {.cls {class(x[['success']])}} with length {length(x[['success']])}."
     ))
   }
 
@@ -652,16 +643,16 @@ validate_ensemble_sdbuildR <- function(x) {
     expected_summary_cols <- c("condition", "variable", "time", "mean", "median")
     missing_summary_cols <- setdiff(expected_summary_cols, names(x[["summary"]]))
     if (length(missing_summary_cols) > 0) {
-      cli::cli_warn(c(
-        "Ensemble {.arg summary} is missing expected columns.",
+      cli::cli_abort(c(
+        "x" = "Ensemble {.arg summary} is missing expected columns.",
         "!" = "Missing: {paste0('{.field ', missing_summary_cols, '}', collapse = ', ')}."
       ))
     }
 
     q_cols <- grep("^q", names(x[["summary"]]), value = TRUE)
     if (length(q_cols) == 0) {
-      cli::cli_warn(c(
-        "Ensemble {.arg summary} has no quantile columns.",
+      cli::cli_abort(c(
+        "x" = "Ensemble {.arg summary} has no quantile columns.",
         "i" = "Expected columns prefixed with {.code q}."
       ))
     }
@@ -671,8 +662,8 @@ validate_ensemble_sdbuildR <- function(x) {
       expected_df_cols <- c("sim", "condition", "variable", "time", "value")
       missing_df_cols <- setdiff(expected_df_cols, names(x[["df"]]))
       if (length(missing_df_cols) > 0) {
-        cli::cli_warn(c(
-          "Ensemble {.arg df} is missing expected columns.",
+        cli::cli_abort(c(
+          "x" = "Ensemble {.arg df} is missing expected columns.",
           "!" = "Missing: {paste0('{.field ', missing_df_cols, '}', collapse = ', ')}."
         ))
       }
@@ -681,11 +672,27 @@ validate_ensemble_sdbuildR <- function(x) {
     # Validate n fields are numeric
     for (field in c("n", "n_total", "n_conditions")) {
       if (!is.null(x[[field]]) && !is.numeric(x[[field]])) {
-        cli::cli_warn(c(
-          "Field {.field {field}} should be {.cls numeric}.",
+        cli::cli_abort(c(
+          "x" = "Field {.field {field}} should be {.cls numeric}.",
           "i" = "Received: {.cls {class(x[[field]])}}"
         ))
       }
+    }
+
+    if (is.null(x$summary) || !is.data.frame(x$summary)) {
+      cli::cli_abort(c(
+        "x" = "Missing or invalid summary data.",
+        "i" = "Successful ensemble must have a {.cls data.frame} in {.arg summary}."
+      ))
+    }
+
+  } else if (!x$success) {
+
+    if (is.null(x$error_message) || !nzchar(x$error_message)) {
+      cli::cli_abort(c(
+        "x" = "Missing error message.",
+        "i" = "Failed ensemble must have a non-empty {.arg error_message}."
+      ))
     }
   }
 

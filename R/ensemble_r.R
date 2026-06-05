@@ -149,20 +149,29 @@ ensemble_r <- function(object, n, save_sims, conditions, cross,
   }
 
 
-  # Capture internal function so future workers can serialize it as a closure
-  # (eval_sim_script_r is not exported, so future.packages alone won't find it)
-  .eval_sim <- eval_sim_script_r
-
   # Run simulations (each task just evals a pre-compiled script)
   sim_results <- tryCatch(
     {
       if (use_par) {
-        apply_fun(tasks, function(task) {
-          .eval_sim(
-            parsed_expr = parsed_scripts[[task[["condition"]]]],
-            condition = task[["condition"]], sim = task[["sim"]]
-          )
-        }, future.seed = seed_nr, future.packages = "sdbuildR")
+        run_par <- function() {
+          apply_fun(tasks, function(task) {
+            # Resolve the internal worker function from the namespace on the
+            # worker itself (sdbuildR is loaded via future.packages). Serializing
+            # it as a captured global strips its namespace environment, which
+            # breaks lookups of internal objects such as `P` (object 'P' not
+            # found).
+            eval_sim <- utils::getFromNamespace("eval_sim_script_r", "sdbuildR")
+            eval_sim(
+              parsed_expr = parsed_scripts[[task[["condition"]]]],
+              condition = task[["condition"]], sim = task[["sim"]]
+            )
+          }, future.seed = seed_nr, future.packages = "sdbuildR")
+        }
+        # With a numeric seed, per-future seeds are derived deterministically, so
+        # restore the global RNG to avoid leaking state. Without a seed,
+        # future.seed = TRUE consumes the global RNG so that consecutive runs
+        # differ; preserving it would make them identical.
+        if (has_seed) withr::with_preserve_seed(run_par()) else run_par()
       } else {
         do_run <- function() {
           lapply(tasks, function(task) {
@@ -173,7 +182,7 @@ ensemble_r <- function(object, n, save_sims, conditions, cross,
         })
         }
 
-       if (has_seed) do_run() else withr::with_seed(seed_nr, do_run())
+       if (has_seed) withr::with_seed(seed_nr, do_run()) else do_run()
 
       }
     },

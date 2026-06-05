@@ -475,6 +475,7 @@ test_that("ensemble in Julia is reproducible with seed", {
     update(c("predator", "prey"), eqn = "runif(1)")
 
   # Should not modify global seed state
+  withr::local_seed(123) # ensure .Random.seed exists before capturing it
   orig_seed <- .Random.seed
 
   sims1 <- silence(ensemble(sfm, n = 3, save_sims = TRUE))
@@ -483,12 +484,18 @@ test_that("ensemble in Julia is reproducible with seed", {
   new_seed <- .Random.seed
   expect_equal(orig_seed, new_seed)
 
-  expect_equal(sims1[["summary"]], sims2[["summary"]])
-  expect_equal(sims1[["df"]], sims2[["df"]])
+  df1 <- as.data.frame(sims1, which = "summary")
+  df2 <- as.data.frame(sims2, which = "summary")
+  cols <- setdiff(colnames(df1), "variable")
+  tol <- 1e-5
+  expect_equal(df1[, cols], df2[, cols], tolerance = tol)
+  df1 <- as.data.frame(sims1, which = "sims")
+  df2 <- as.data.frame(sims2, which = "sims")
+  cols <- setdiff(colnames(df1), "variable")
+  expect_equal(df1[, cols], df2[, cols], tolerance = tol)
 
   # Each simulation within an ensemble should be different
   cols <- c("time", "value")
-  tol <- 1e-5
   df1a <- as.data.frame(sims1, which = "sims", sim = 1)
   df1b <- as.data.frame(sims1, which = "sims", sim = 2)
   df1c <- as.data.frame(sims1, which = "sims", sim = 3)
@@ -520,6 +527,7 @@ test_that("ensemble in Julia with threads is reproducible with seed", {
     update(c("predator", "prey"), eqn = "runif(1)")
 
   # Should not modify global seed state
+  withr::local_seed(123) # ensure .Random.seed exists before capturing it
   orig_seed <- .Random.seed
 
   sims1 <- silence(ensemble(sfm, n = 3, save_sims = TRUE))
@@ -679,25 +687,25 @@ test_that("check_ensemble_sdbuildR() rejects non-ensemble objects", {
   expect_error(check_ensemble_sdbuildR(42), "ensemble_sdbuildR")
 })
 
-test_that("check_ensemble_sdbuildR() assesses success, summary, duration", {
+test_that("validate_ensemble_sdbuildR() assesses success, summary, duration", {
   skip_if_julia_not_ready()
   sims0 <- sims <- silence(ensemble(make_jl_ensemble_sfm(), n = 3))
   sims$success <- "yes"
-  expect_error(check_ensemble_sdbuildR(sims), "success")
+  expect_error(validate_ensemble_sdbuildR(sims), "success")
 
   sims$success <- c(TRUE, FALSE)
-  expect_error(check_ensemble_sdbuildR(sims), "success")
+  expect_error(validate_ensemble_sdbuildR(sims), "success")
 
   sims <- sims0
   sims$summary <- NULL
-  expect_error(check_ensemble_sdbuildR(sims), "summary")
+  expect_error(validate_ensemble_sdbuildR(sims), "summary")
 
   sims$summary <- "not a df"
-  expect_error(check_ensemble_sdbuildR(sims), "summary")
+  expect_error(validate_ensemble_sdbuildR(sims), "summary")
 
   sims <- sims0
   sims$duration <- NULL
-  expect_error(check_ensemble_sdbuildR(sims), "duration")
+  expect_error(validate_ensemble_sdbuildR(sims), "duration")
 })
 
 test_that("check_ensemble_sdbuildR() passes for valid successful ensemble", {

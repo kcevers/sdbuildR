@@ -352,10 +352,10 @@ compile_run_ode_ensemble <- function(object, ensemble_pars, static, only_stocks)
 
   # Determine whether to wrap solve in with_rng for reproducible seeding based on sim_settings seed value
   use_with_rng_open <- use_with_rng_close <- ""
-  if (!is.null(object[["sim_settings"]][["seed"]])) {
-    use_with_rng_open <- paste0("with_rng(", P[["ensemble_ctx"]], ".", "rng",  ") do\n\t")
-    use_with_rng_close <- "\nend"
-  }
+  # if (!is.null(object[["sim_settings"]][["seed"]])) {
+  #   use_with_rng_open <- paste0("with_rng(", P[["ensemble_ctx"]], ".", "rng",  ") do\n\t")
+  #   use_with_rng_close <- "\nend"
+  # }
 
   # When using EnsembleThreads(), add a warm-up solve to force JIT compilation
   # of all solver code paths before threads are spawned. This prevents a known
