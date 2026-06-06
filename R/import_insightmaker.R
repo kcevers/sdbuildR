@@ -1,3 +1,32 @@
+#' Run an import step, re-raising failures with contextual guidance
+#'
+#' Wraps an import stage in a `tryCatch` that, on error, aborts with a friendly
+#' message explaining which stage failed plus the original error. Collapses the
+#' repeated `tryCatch(..., error = cli_abort(...))` blocks in
+#' [import_insightmaker()].
+#'
+#' @param expr Expression to evaluate (lazily; errors are caught).
+#' @param x Headline (`"x"`) bullet describing the failure.
+#' @param i Optional hint (`"i"`) bullet.
+#' @param error_as Name of the bullet (`">"` or `"i"`) under which the original
+#'   error message is shown.
+#' @returns The value of `expr` on success; otherwise aborts.
+#' @noRd
+#'
+.import_step <- function(expr, x, i = NULL, error_as = c(">", "i")) {
+  error_as <- match.arg(error_as)
+  tryCatch(
+    expr,
+    error = function(e) {
+      bullets <- c("x" = x)
+      if (!is.null(i)) bullets <- c(bullets, "i" = i)
+      bullets <- c(bullets, stats::setNames("Original error: {conditionMessage(e)}", error_as))
+      cli::cli_abort(bullets, call = NULL)
+    }
+  )
+}
+
+
 #' Import Insight Maker model
 #'
 #' Import a stock-and-flow model from [Insight Maker](https://insightmaker.com/). Models may be your own or another user's. Importing causal loop diagrams or agent-based models is not supported.
@@ -51,20 +80,10 @@ import_insightmaker <- function(URL,
   # - ctx$original_variables: data frame for import_metadata
   # - ctx$original_macros: data frame for import_metadata
   # - ctx$vendor_meta: meta info for import_metadata
-  ctx <- tryCatch(
-    {
-      file_to_sdbuildR(read_file, ext)
-    },
-    error = function(e) {
-      cli::cli_abort(
-        c(
-          "x" = "Failed to convert Insight Maker model structure to XMILE format.",
-          "i" = "Check for unsupported Insight Maker syntax or model structure.",
-          ">" = "Original error: {conditionMessage(e)}"
-        ),
-        call = NULL
-      )
-    }
+  ctx <- .import_step(
+    file_to_sdbuildR(read_file, ext),
+    x = "Failed to convert Insight Maker model structure to XMILE format.",
+    i = "Check for unsupported Insight Maker syntax or model structure."
   )
 
   # Store raw model and source info in context for import_metadata
@@ -81,20 +100,10 @@ import_insightmaker <- function(URL,
   object <- ctx$object
 
   # Check non-negativity for flows and stocks
-  object <- tryCatch(
-    {
-      check_nonnegativity(object, keep_nonnegative_flow, keep_nonnegative_stock)
-    },
-    error = function(e) {
-      cli::cli_abort(
-        c(
-          "x" = "Failed to check non-negativity constraints.",
-          "i" = "Review your keep_nonnegative_flow and keep_nonnegative_stock settings.",
-          ">" = "Original error: {conditionMessage(e)}"
-        ),
-        call = NULL
-      )
-    }
+  object <- .import_step(
+    check_nonnegativity(object, keep_nonnegative_flow, keep_nonnegative_stock),
+    x = "Failed to check non-negativity constraints.",
+    i = "Review your keep_nonnegative_flow and keep_nonnegative_stock settings."
   )
 
   # Convert macros
@@ -102,20 +111,10 @@ import_insightmaker <- function(URL,
     cli::cli_inform(c("i" = "Converting macros"))
   }
 
-  object <- tryCatch(
-    {
-      convert_macros_IM_wrapper(object)
-    },
-    error = function(e) {
-      cli::cli_abort(
-        c(
-          "x" = "Failed to convert macros from Insight Maker format.",
-          "i" = "Check for unsupported macro syntax or functions.",
-          ">" = "Original error: {conditionMessage(e)}"
-        ),
-        call = NULL
-      )
-    }
+  object <- .import_step(
+    convert_macros_IM_wrapper(object),
+    x = "Failed to convert macros from Insight Maker format.",
+    i = "Check for unsupported macro syntax or functions."
   )
 
   # Convert equations in model variables (IM format -> R format)
@@ -123,52 +122,24 @@ import_insightmaker <- function(URL,
     cli::cli_inform(c("i" = "Converting equations"))
   }
 
-  object <- tryCatch(
-    {
-      convert_equations_IM_wrapper(object)
-    },
-    error = function(e) {
-      cli::cli_abort(
-        c(
-          "x" = "Failed to convert equations from Insight Maker format.",
-          "i" = "Check for unsupported functions or syntax in your model equations.",
-          ">" = "Original error: {conditionMessage(e)}"
-        ),
-        call = NULL
-      )
-    }
+  object <- .import_step(
+    convert_equations_IM_wrapper(object),
+    x = "Failed to convert equations from Insight Maker format.",
+    i = "Check for unsupported functions or syntax in your model equations."
   )
 
   # Finalize equations by removing brackets from names
-  object <- tryCatch(
-    {
-      remove_brackets_from_names(object)
-    },
-    error = function(e) {
-      cli::cli_abort(
-        c(
-          "x" = "Failed to clean variable names.",
-          "i" = "Original error: {conditionMessage(e)}"
-        ),
-        call = NULL
-      )
-    }
+  object <- .import_step(
+    remove_brackets_from_names(object),
+    x = "Failed to clean variable names.",
+    error_as = "i"
   )
 
   # Split auxiliaries into constants and auxiliaries
-  object <- tryCatch(
-    {
-      split_aux_wrapper(object)
-    },
-    error = function(e) {
-      cli::cli_abort(
-        c(
-          "x" = "Failed to split auxiliary variables into constants and auxiliaries.",
-          "i" = "Original error: {conditionMessage(e)}"
-        ),
-        call = NULL
-      )
-    }
+  object <- .import_step(
+    split_aux_wrapper(object),
+    x = "Failed to split auxiliary variables into constants and auxiliaries.",
+    error_as = "i"
   )
 
   object <- prep_equations_variables(object)

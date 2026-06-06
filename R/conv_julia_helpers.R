@@ -98,37 +98,7 @@ replace_op_julia_impl <- function(eqn, var_names) {
     c("(?<!&)&(?!&)" = " && ")
   )
 
-  # Find indices of logical operators
-  idxs_logical_op <- stringr::str_locate_all(eqn, names(logical_op))
-
-  if (length(unlist(idxs_logical_op)) > 0) {
-    # Get match and replacement
-    df_logical_op <- as.data.frame(do.call(rbind, idxs_logical_op))
-    df_logical_op[["match"]] <- stringr::str_sub(eqn, df_logical_op[["start"]], df_logical_op[["end"]])
-    df_logical_op[["replacement"]] <- rep(
-      unname(logical_op),
-      vapply(idxs_logical_op, nrow, numeric(1))
-    )
-    df_logical_op <- df_logical_op[order(df_logical_op[["start"]]), ]
-
-    # Remove those that are in quotation marks or names
-    idxs_exclude <- get_seq_exclude(eqn, var_names)
-
-    if (nrow(df_logical_op) > 0) df_logical_op <- df_logical_op[!(df_logical_op[["start"]] %in% idxs_exclude | df_logical_op[["end"]] %in% idxs_exclude), ]
-    # Remove matches that are the same as the logical operator
-    if (nrow(df_logical_op) > 0) df_logical_op <- df_logical_op[df_logical_op[["replacement"]] != df_logical_op[["match"]], ]
-
-    if (nrow(df_logical_op) > 0) {
-      # Replace in reverse order
-      for (i in rev(seq_len(nrow(df_logical_op)))) {
-        stringr::str_sub(eqn, df_logical_op[i, ][["start"]], df_logical_op[i, ][["end"]]) <- df_logical_op[i, ][["replacement"]]
-      }
-      # Remove double spaces
-      eqn <- stringr::str_replace_all(eqn, "[ ]+", " ")
-    }
-  }
-
-  return(eqn)
+  apply_operator_replacements(eqn, var_names, logical_op)
 }
 
 
@@ -194,40 +164,4 @@ find_curly_brackets_julia <- function(df, paired_idxs) {
   start_curly <- matching[["start"]]
   end_curly <- matching[["end"]]
   return(cbind(df, data.frame(start_curly = start_curly, end_curly = end_curly)))
-}
-
-
-#' Translate vector bracket syntax from R to square brackets in Julia
-#'
-#' @inheritParams convert_equations_julia
-#' @returns Updated eqn
-#' @noRd
-#'
-vector_to_square_brackets_julia <- function(eqn, var_names) {
-  # Get indices of all enclosures
-  paired_idxs <- get_range_all_pairs(eqn, var_names,
-    type = "vector",
-    names_with_brackets = FALSE
-  )
-
-  # Remove those that are preceded by a letter
-  if (nrow(paired_idxs) > 0) paired_idxs <- paired_idxs[!stringr::str_detect(stringr::str_sub(eqn, paired_idxs[["start"]] - 1, paired_idxs[["start"]] - 1), "[[:alpha:]]"), ]
-
-  if (nrow(paired_idxs) > 0) {
-    # First replace all closing brackets with ]
-    chars <- strsplit(eqn, "", fixed = TRUE)[[1]]
-    chars[paired_idxs[["end"]]] <- "]"
-    eqn <- paste0(chars, collapse = "")
-
-    # Order paired_idxs by start position
-    paired_idxs <- paired_idxs[order(paired_idxs[["start"]]), ]
-
-    # Replace opening brackets c( with [
-    for (j in rev(seq_len(nrow(paired_idxs)))) {
-      # Replace c( with [
-      stringr::str_sub(eqn, paired_idxs[j, "start"], paired_idxs[j, "start"] + 1) <- "["
-    }
-  }
-
-  return(eqn)
 }

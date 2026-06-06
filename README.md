@@ -28,10 +28,11 @@ classic SIR (Susceptible-Infected-Recovered) epidemic model:
 ``` r
 library(sdbuildR)
 
+# Load stock-and-flow model
 sfm <- sdbuildR("SIR")
 
 # View the stock-and-flow diagram
-plot(sfm)   
+plot(sfm)
 ```
 
 ![](man/figures/README-sir-diagram.svg)
@@ -41,7 +42,7 @@ plot(sfm)
 simulate(sfm) |> plot()
 ```
 
-![](man/figures/README-sir-sim.pdf)
+![](man/figures/README-sir-sim.png)
 
 `simulate()` produces an interactive timeseries plot. See it run — and
 build the same model from scratch — in the [**Get started

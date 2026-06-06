@@ -143,14 +143,7 @@ export_plotly <- function(pl, file, format, width, height) {
 
   # Create temporary HTML file
   temp_html <- tempfile(fileext = ".html")
-  on.exit(
-    {
-      if (file.exists(temp_html)) {
-        file.remove(temp_html)
-      }
-    },
-    add = TRUE
-  )
+  on.exit(remove_files(temp_html), add = TRUE)
   htmlwidgets::saveWidget(pl, temp_html, selfcontained = TRUE)
 
   # Set webshot2 parameters based on format
@@ -642,370 +635,6 @@ plot.sdbuildR <- function(x,
     dependency_edges |> paste0(collapse = "\n\t"),
     rank_statements
 
-  )
-
-  pl <- DiagrammeR::grViz(viz_str)
-
-  pl
-}
-
-
-
-.plot_sdbuildR_old <- function(x,
-                          vars = NULL,
-                          format_label = TRUE,
-                          wrap_width = 20,
-                          font_size = 18,
-                          font_family = "Times New Roman",
-                          stock_col = "#83d3d4",
-                          flow_col = "#f48153",
-                          dependency_col = "#999999",
-                          show_dependencies = TRUE,
-                          show_constants = FALSE,
-                          show_aux = TRUE,
-                          minlen = 2,
-                          ...) {
-  sfm <- x
-  rm(x)
-  check_sdbuildR(sfm)
-
-  # Get property dataframe
-  df <- as.data.frame(sfm, properties = c("type", "name", "label", "eqn"))
-
-  # Check whether there are any variables
-  if (nrow(df) == 0) {
-    cli::cli_warn(c(
-      "i" = "Model contains no variables.",
-      ">" = "Add variables using {.fn stock}, {.fn flow}, {.fn constant}, and {.fn aux}."
-    ))
-    return(invisible(NULL))
-  }
-
-  # Get dependencies
-  dep <- dependencies(sfm)
-  flow_df <- get_flow_df(sfm)
-
-  if (!is.null(vars)) {
-    vars <- clean_vars(vars)
-
-    # Check whether specified variables are in the model
-    validate_vars_in_model(vars, df, context = "model")
-
-    # Only keep these variables in flow_df, dep, and df
-    df <- df[df[["name"]] %in% vars, , drop = FALSE]
-    dep <- dep[names(dep) %in% vars]
-    flow_df <- flow_df[flow_df[["name"]] %in% vars, , drop = FALSE]
-
-    # Set stocks not in vars to ''
-    flow_df[["to"]][!flow_df[["to"]] %in% vars] <- ""
-    flow_df[["from"]][!flow_df[["from"]] %in% vars] <- ""
-
-    # Set show_aux to TRUE if any variables are aux
-    if (any(vars %in% df[df[["type"]] == "aux", "name"])) {
-      show_aux <- TRUE
-    }
-
-    # Set show_constants to TRUE if any variables are constants
-    if (any(vars %in% df[df[["type"]] == "constant", "name"])) {
-      show_constants <- TRUE
-    }
-  }
-
-  if (format_label) {
-    df[["label"]] <- ifelse(df[["name"]] == df[["label"]],
-      stringr::str_replace_all(
-        df[["label"]],
-        c("_" = " ", "\\." = " ", "  " = " ")
-      ), df[["label"]]
-    )
-  }
-
-  # Prepare and format labels using centralized helper
-  df <- prepare_labels(df, wrap_width = wrap_width, format_label = FALSE, deduplicate = FALSE)
-  dict <- stats::setNames(df[["label"]], df[["name"]])
-
-  # Get equations and remove quotation marks from unit strings
-  dict_eqn <- stats::setNames(stringr::str_replace_all(
-    df[["eqn"]],
-    c("'" = "", "\"" = "")
-  ), df[["name"]])
-
-  # Categorize variables by type
-  stock_names <- df[df[["type"]] == "stock", "name"]
-  flow_names <- df[df[["type"]] == "flow", "name"]
-  aux_names <- df[df[["type"]] == "aux", "name"]
-  const_names <- df[df[["type"]] == "constant", "name"]
-
-  # Filter based on show parameters
-  if (!show_constants) const_names <- character(0)
-  if (!show_aux) aux_names <- character(0)
-
-  plot_var <- c(stock_names, flow_names)
-  if (show_constants) {
-    plot_var <- c(plot_var, const_names)
-  }
-  if (show_aux) {
-    plot_var <- c(plot_var, aux_names)
-  }
-
-  # Prepare stock nodes
-  if (length(stock_names) > 0) {
-    # Recycle stock_col if needed
-    stock_cols <- rep_len(stock_col, length(stock_names))
-    stock_nodes <- sprintf(
-      "%s [id=%s,label='%s',tooltip = 'eqn = %s',shape=box,style=filled,fillcolor='%s',fontsize=%s,fontname='%s']",
-      paste0("'", stock_names, "'"),
-      paste0("'", stock_names, "'"),
-      dict[stock_names],
-      dict_eqn[stock_names],
-      stock_cols, font_size, font_family
-    )
-  } else {
-    stock_nodes <- ""
-  }
-
-  # Prepare auxiliary nodes
-  if (length(aux_names) > 0) {
-    aux_nodes <- sprintf(
-      # "%s [id=%s,label='%s',tooltip = 'eqn = %s',shape=plaintext,fontsize=%s,fontname='%s', width=0.6, height=0.3]",
-      "%s [id=%s,xlabel='%s',label='',tooltip = 'eqn = %s',shape=circle,fontsize=%s,fontname='%s', width=0.15, height=0.15, fixedsize=true, style=filled, fillcolor='grey90']",
-      paste0("'", aux_names, "'"),
-      paste0("'", aux_names, "'"),
-      dict[aux_names],
-      dict_eqn[aux_names],
-      font_size - 2, font_family
-    )
-  } else {
-    aux_nodes <- ""
-  }
-
-  # Prepare constant nodes (italic font)
-  if (length(const_names) > 0) {
-    # Format labels: convert \n to <BR/> and add italics
-    formatted_labels <- vapply(dict[const_names], function(label) {
-      label_with_html_breaks <- gsub("\n", "<BR/>", label, fixed = TRUE)
-      paste0("<I>", label_with_html_breaks, "</I>")
-    }, character(1), USE.NAMES = FALSE)
-
-    const_nodes <- sprintf(
-      # "%s [id=%s,label=<%s>, tooltip = 'eqn = %s',
-      #                    shape=plaintext,fontsize=%s,fontname='%s',
-      #                    width=0.6, height=0.3]",
-      "%s [id=%s,xlabel=<%s>,label='', tooltip = 'eqn = %s',
-                         shape=diamond,fontsize=%s,fontname='%s',
-                         width=0.15, height=0.15, fixedsize=true, style=filled, fillcolor='grey90']",
-      paste0("'", const_names, "'"),
-      paste0("'", const_names, "'"),
-      formatted_labels,
-      dict_eqn[const_names],
-      font_size - 2, font_family
-    )
-  } else {
-    const_nodes <- ""
-  }
-
-
-  # Create rank groupings based on dependencies
-  rank_groups <- list()
-
-  # Reverse dependencies, because we want to couple constants/aux with the first variable that depends on them
-  dep_rev <- reverse_dep(dep)
-
-  # Helper function
-  get_first_dep <- function(var_names, dep_rev, plot_var) {
-    if (length(var_names) == 0) {
-      return(list())
-    }
-
-    dep_var <- dep_rev[var_names]
-
-    # Only keep those in plot_var
-    dep_var <- lapply(dep_var, function(x) {
-      intersect(x, plot_var)
-    })
-
-    dep_var <- dep_var[lengths(dep_var) != 0]
-
-    if (length(dep_var) > 0) {
-      lapply(dep_var, `[[`, 1)
-    } else {
-      list()
-    }
-  }
-
-  if (length(const_names) > 0) {
-    dep_var <- get_first_dep(const_names, dep_rev, plot_var)
-    rank_groups <- append(rank_groups, dep_var)
-  }
-
-  if (length(aux_names) > 0) {
-    dep_var <- get_first_dep(aux_names, dep_rev, plot_var)
-    rank_groups <- append(rank_groups, dep_var)
-  }
-
-
-  # Create rank statements
-  rank_statements <- ""
-  if (length(rank_groups) > 0) {
-    rank_statements <- vapply(names(rank_groups), function(rank_node) {
-      vars_in_rank <- rank_groups[[rank_node]]
-      sprintf(
-        "      {rank=same; %s }",
-        paste0("'", c(rank_node, vars_in_rank), "'", collapse = "; ")
-      )
-    }, character(1), USE.NAMES = FALSE)
-    rank_statements <- paste(rank_statements, collapse = "\n")
-  }
-
-  cloud_nodes <- flow_edges <- flow_nodes <- dependency_edges <- ""
-
-  if (length(flow_names) > 0) {
-    # If the flow is to a stock that doesn't exist, remove
-    flow_df[["from"]] <- ifelse(flow_df[["from"]] %in% stock_names,
-      flow_df[["from"]], ""
-    )
-    flow_df[["to"]] <- ifelse(flow_df[["to"]] %in% stock_names,
-      flow_df[["to"]], ""
-    )
-    flow_df <- as.matrix(flow_df)
-
-    # Fill in NA in flow_df with numbered clouds
-    idxs <- which(flow_df == "")
-    cloud_names <- character(0)
-    if (length(idxs) > 0) {
-      cloud_names <- paste0("Cloud", seq_along(idxs))
-      flow_df[idxs] <- cloud_names
-
-      # Find whether cloud is a source or a sink
-      # flow_df has three columns; idxs are row-based
-      labels <- cloud_names
-      labels[idxs <= (nrow(flow_df) * 2)] <- "Unspecified source"
-      labels[idxs > (nrow(flow_df) * 2)] <- "Unspecified sink"
-
-      # External environment is represented as a cloud
-      cloud_nodes <- sprintf(
-        "%s [label='', tooltip = %s,shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]",
-        paste0("'", cloud_names, "'"),
-        paste0("'", labels, "'")
-      )
-    }
-
-    # Create intermediate flow nodes (small nodes that flows pass through)
-    flow_nodes <- sprintf(
-      "%s [id=%s,label='%s', tooltip = 'eqn = %s', shape = plaintext, fontsize=%s, fontname='%s', width=0.6, height=0.3]",
-      paste0("'", flow_names, "'"),
-      paste0("'", flow_names, "'"),
-      dict[flow_names],
-      dict_eqn[flow_names],
-      font_size - 2,
-      font_family
-    )
-
-    # Create edges: from -> flow_node -> to
-    flow_edges <- c()
-    # Recycle flow_col if needed
-    flow_cols <- rep_len(flow_col, nrow(flow_df))
-
-    for (i in seq_len(nrow(flow_df))) {
-      flow_name <- flow_df[i, "name"]
-      flow_node <- flow_name
-      from_node <- flow_df[i, "from"]
-      to_node <- flow_df[i, "to"]
-
-      # Edge from source to flow node
-      flow_edges <- c(flow_edges, sprintf(
-        "%s -> %s [arrowhead='none', color='%s', penwidth=1.1, minlen=%s, splines=false]",
-        paste0("'", from_node, "'"),
-        paste0("'", flow_node, "'"),
-        paste0(
-          "black:",
-          # flow_col,":",
-          flow_cols[i], ":black"
-        ),
-        minlen
-      ))
-
-      # Edge from flow node to destination
-      flow_edges <- c(flow_edges, sprintf(
-        "%s -> %s [arrowhead='normal', color='%s', arrowsize=1.5, penwidth=1.1, minlen=%s, splines=ortho]",
-        paste0("'", flow_node, "'"),
-        paste0("'", to_node, "'"),
-        paste0(
-          "black:",
-          # flow_col,":",
-          flow_cols[i], ":black"
-        ),
-        minlen
-      ))
-    }
-  }
-
-  # Add dependency arrows if requested
-  if (show_dependencies) {
-    # Only keep dependencies in plot_var
-    dep <- lapply(dep, function(x) {
-      intersect(x, plot_var)
-    })
-
-    # Only keep entries in plot_var
-    dep <- dep[names(dep) %in% plot_var]
-
-    if (length(dep) > 0) {
-      dependency_edges <- unlist(lapply(names(dep), function(x) {
-        if (length(dep[[x]]) > 0) {
-          vapply(dep[[x]], function(y) {
-            sprintf(
-              "%s -> %s [color='%s', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']",
-              paste0("'", y, "'"),
-              paste0("'", x, "'"),
-              dependency_col
-            )
-          }, character(1), USE.NAMES = FALSE)
-        }
-      }))
-    }
-  }
-
-  # Compile string for diagram
-  viz_str <- sprintf(
-    "
-    digraph sfm {
-
-      graph [layout = dot, rankdir = LR, center=true, outputorder='edgesfirst', pad=.1, nodesep= .3]
-
-      # Rank groupings
-      %s
-
-      # Define stock nodes
-      %s
-
-      # Define flow nodes (intermediate nodes for flows)
-      %s
-
-      # Define external cloud nodes
-      %s
-
-      # Define flow edges (stock -> flow_node -> stock)
-      %s
-
-      # Define dependency edges
-      %s
-
-      # Define auxiliary nodes
-      %s
-
-      # Define constant nodes
-      %s
-    }
-          ",
-    rank_statements,
-    stock_nodes |> rev() |> paste0(collapse = "\n\t\t"),
-    flow_nodes |> paste0(collapse = "\n\t\t"),
-    cloud_nodes |> paste0(collapse = "\n\t\t"),
-    flow_edges |> paste0(collapse = "\n\t\t"),
-    dependency_edges |> paste0(collapse = "\n\t\t"),
-    aux_nodes |> paste0(collapse = "\n\t\t"),
-    const_nodes |> paste0(collapse = "\n\t\t")
   )
 
   pl <- DiagrammeR::grViz(viz_str)
@@ -1757,44 +1386,24 @@ plot_ensemble_helper <- function(subplot_label,
 
   if (which == "summary") {
     if (mode == "lines") {
-      if (plot_nonhighlight) {
-        pl <- plotly::add_ribbons(pl,
-          data = summary_df_nonhighlight,
-          x = ~time,
-          ymin = ~ get(q_low),
-          ymax = ~ get(q_high),
-          color = ~variable,
-          legendgroup = ~variable,
-          fillcolor = ~variable,
-          opacity = alpha,
-          type = "scatter",
-          mode = mode,
-          colors = colors,
-          # Add traces for non-stock variables (visible = "legendonly")
-          showlegend = showlegend,
-          visible = "legendonly"
-        )
-      }
-
-      # First plot confidence bands
-      if (plot_highlight) {
-        pl <- plotly::add_ribbons(pl,
-          data = summary_df_highlight,
-          x = ~time,
-          ymin = ~ get(q_low),
-          ymax = ~ get(q_high),
-          color = ~variable,
-          legendgroup = ~variable,
-          fillcolor = ~variable,
-          opacity = alpha,
-          type = "scatter",
-          mode = mode,
-          colors = colors,
-          showlegend = showlegend,
-          # Add traces for stock variables (visible = TRUE)
-          visible = TRUE
-        )
-      }
+      # Confidence bands: nonhighlight (visible = "legendonly") then highlight (visible = TRUE)
+      pl <- add_visibility_pair(pl, plotly::add_ribbons,
+        data_nonhighlight = summary_df_nonhighlight,
+        data_highlight = summary_df_highlight,
+        plot_nonhighlight = plot_nonhighlight,
+        plot_highlight = plot_highlight,
+        x = ~time,
+        ymin = ~ get(q_low),
+        ymax = ~ get(q_high),
+        color = ~variable,
+        legendgroup = ~variable,
+        fillcolor = ~variable,
+        opacity = alpha,
+        type = "scatter",
+        mode = mode,
+        colors = colors,
+        showlegend = showlegend
+      )
     }
   } else if (which == "sims") {
     # Draw one scatter trace per variable instead of one per (variable, sim).
@@ -1804,41 +1413,23 @@ plot_ensemble_helper <- function(subplot_label,
     # colors = colors means the colour mapping is identical to the summary
     # traces, while plotly still splits the data into one trace per variable.
 
-    # Add traces for non-stock variables (visible = "legendonly")
-    if (plot_nonhighlight) {
-      pl <- plotly::add_trace(pl,
-        data = break_sims_by_variable(df_nonhighlight),
-        x = ~time,
-        y = ~value,
-        color = ~variable,
-        legendgroup = ~variable,
-        type = "scatter",
-        mode = mode,
-        opacity = alpha,
-        colors = colors,
-        showlegend = if (plot_summary) FALSE else showlegend, # only show legend if summary is not plotted, otherwise it will be duplicated with the summary traces
-        connectgaps = FALSE, # required: NA must break the line, not bridge it
-        visible = "legendonly"
-      )
-    }
-
-    if (plot_highlight) {
-      pl <- plotly::add_trace(pl,
-        data = break_sims_by_variable(df_highlight),
-        x = ~time,
-        y = ~value,
-        color = ~variable,
-        legendgroup = ~variable,
-        type = "scatter",
-        mode = mode,
-        opacity = alpha,
-        colors = colors,
-        showlegend = if (plot_summary) FALSE else showlegend, # only show legend if summary is not plotted, otherwise it will be duplicated with the summary traces
-        connectgaps = FALSE, # required: NA must break the line, not bridge it
-        # Add traces for stock variables (visible = TRUE)
-        visible = TRUE
-      )
-    }
+    # nonhighlight (visible = "legendonly") then highlight (visible = TRUE)
+    pl <- add_visibility_pair(pl, plotly::add_trace,
+      data_nonhighlight = break_sims_by_variable(df_nonhighlight),
+      data_highlight = break_sims_by_variable(df_highlight),
+      plot_nonhighlight = plot_nonhighlight,
+      plot_highlight = plot_highlight,
+      x = ~time,
+      y = ~value,
+      color = ~variable,
+      legendgroup = ~variable,
+      type = "scatter",
+      mode = mode,
+      opacity = alpha,
+      colors = colors,
+      showlegend = if (plot_summary) FALSE else showlegend, # only show legend if summary is not plotted, otherwise it will be duplicated with the summary traces
+      connectgaps = FALSE # required: NA must break the line, not bridge it
+    )
   }
 
   # When central_tendency = FALSE, we still want a legend
@@ -1862,113 +1453,59 @@ plot_ensemble_helper <- function(subplot_label,
   # Plot mean/median points/lines
   if (plot_summary) {
     if (mode == "lines") {
-      if (plot_nonhighlight) {
-        pl <- plotly::add_trace(pl,
-          data = summary_df_nonhighlight,
-          x = ~time,
-          y = ~ get(central_tendency),
-          color = ~variable,
-          legendgroup = ~variable,
-          type = "scatter",
-          mode = mode,
-          colors = colors,
-          showlegend = showlegend,
-          line = list(width = central_tendency_width), # thicker line for mean
-          visible = "legendonly"
-        )
-      }
-
-      if (plot_highlight) {
-        pl <- plotly::add_trace(pl,
-          data = summary_df_highlight,
-          x = ~time,
-          y = ~ get(central_tendency),
-          color = ~variable,
-          legendgroup = ~variable,
-          type = "scatter",
-          mode = mode,
-          line = list(width = central_tendency_width), # thicker line for mean
-          showlegend = showlegend,
-          colors = colors,
-          visible = TRUE
-        )
-      }
+      pl <- add_visibility_pair(pl, plotly::add_trace,
+        data_nonhighlight = summary_df_nonhighlight,
+        data_highlight = summary_df_highlight,
+        plot_nonhighlight = plot_nonhighlight,
+        plot_highlight = plot_highlight,
+        x = ~time,
+        y = ~ get(central_tendency),
+        color = ~variable,
+        legendgroup = ~variable,
+        type = "scatter",
+        mode = mode,
+        colors = colors,
+        showlegend = showlegend,
+        line = list(width = central_tendency_width) # thicker line for mean
+      )
     } else if (mode == "markers" && which == "summary") {
-      if (plot_nonhighlight) {
-        pl <- plotly::add_trace(pl,
-          data = summary_df_nonhighlight,
-          x = ~time,
-          y = ~ get(central_tendency),
-          color = ~variable,
-          legendgroup = ~variable,
-          type = "scatter",
-          error_y = ~ list(
-            symmetric = FALSE,
-            arrayminus = get(central_tendency) - get(q_low),
-            array = get(q_high) - get(central_tendency),
-            color = colors
-          ),
-          mode = mode,
-          colors = colors,
-          showlegend = showlegend,
-          marker = list(size = central_tendency_width * 3), # thicker line for mean
-          visible = "legendonly"
-        )
-      }
-
-      if (plot_highlight) {
-        pl <- plotly::add_trace(pl,
-          data = summary_df_highlight,
-          x = ~time,
-          y = ~ get(central_tendency),
-          color = ~variable,
-          legendgroup = ~variable,
-          type = "scatter",
-          error_y = ~ list(
-            symmetric = FALSE,
-            arrayminus = get(central_tendency) - get(q_low),
-            array = get(q_high) - get(central_tendency),
-            color = colors
-          ),
-          mode = mode,
-          marker = list(size = central_tendency_width * 3), # thicker line for mean
-          showlegend = showlegend,
-          colors = colors,
-          visible = TRUE
-        )
-      }
+      pl <- add_visibility_pair(pl, plotly::add_trace,
+        data_nonhighlight = summary_df_nonhighlight,
+        data_highlight = summary_df_highlight,
+        plot_nonhighlight = plot_nonhighlight,
+        plot_highlight = plot_highlight,
+        x = ~time,
+        y = ~ get(central_tendency),
+        color = ~variable,
+        legendgroup = ~variable,
+        type = "scatter",
+        error_y = ~ list(
+          symmetric = FALSE,
+          arrayminus = get(central_tendency) - get(q_low),
+          array = get(q_high) - get(central_tendency),
+          color = colors
+        ),
+        mode = mode,
+        colors = colors,
+        showlegend = showlegend,
+        marker = list(size = central_tendency_width * 3) # thicker line for mean
+      )
     } else if (mode == "markers" && which == "sims") {
-      if (plot_nonhighlight) {
-        pl <- plotly::add_trace(pl,
-          data = summary_df_nonhighlight,
-          x = ~time,
-          y = ~ get(central_tendency),
-          color = ~variable,
-          legendgroup = ~variable,
-          type = "scatter",
-          mode = mode,
-          colors = colors,
-          showlegend = showlegend,
-          marker = list(size = central_tendency_width * 3), # thicker line for mean
-          visible = "legendonly"
-        )
-      }
-
-      if (plot_highlight) {
-        pl <- plotly::add_trace(pl,
-          data = summary_df_highlight,
-          x = ~time,
-          y = ~ get(central_tendency),
-          color = ~variable,
-          legendgroup = ~variable,
-          type = "scatter",
-          mode = mode,
-          marker = list(size = central_tendency_width * 3), # thicker line for mean
-          showlegend = showlegend,
-          colors = colors,
-          visible = TRUE
-        )
-      }
+      pl <- add_visibility_pair(pl, plotly::add_trace,
+        data_nonhighlight = summary_df_nonhighlight,
+        data_highlight = summary_df_highlight,
+        plot_nonhighlight = plot_nonhighlight,
+        plot_highlight = plot_highlight,
+        x = ~time,
+        y = ~ get(central_tendency),
+        color = ~variable,
+        legendgroup = ~variable,
+        type = "scatter",
+        mode = mode,
+        colors = colors,
+        showlegend = showlegend,
+        marker = list(size = central_tendency_width * 3) # thicker line for mean
+      )
     }
   }
 
@@ -2090,28 +1627,9 @@ plot.verify_sdbuildR <- function(x,
                                  alpha = 1,
                                  margin = .05,
                                  ...) {
-  if (missing(x)) {
-    cli::cli_abort(c(
-      "x" = "No simulation data available.",
-      ">" = "Generate a unit test run first with {.fn verify}."
-    ))
-  }
 
   # Check whether it is a verify_sdbuildR object
-  if (!inherits(x, "verify_sdbuildR")) {
-    cli::cli_abort(c(
-      "x" = "Invalid object class.",
-      "i" = "This is not an object of class {.cls verify_sdbuildR}.",
-      ">" = "Generate a unit test run with {.fn verify}."
-    ))
-  }
-
-  if (!x[["success"]]) {
-    cli::cli_abort(c(
-      "x" = "Unit test run failed.",
-      ">" = "Check your model specification and try again."
-    ))
-  }
+  check_verify_sdbuildR(x)
 
   # Validate common plot parameters
   validate_plot_params(
@@ -2173,7 +1691,8 @@ plot.verify_sdbuildR <- function(x,
   constants <- as.data.frame(do.call(rbind, constants))
 
   # Build default subtitle
-  default_sub <- paste0(n_tests, " test", ifelse(n_tests > 1, "s", ""), "; ", n_conditions, " condition", ifelse(n_conditions > 1, "s", ""))
+  default_sub <- paste0(n_tests, "unit test", ifelse(n_tests > 1, "s", ""), " across ", 
+  n_conditions, " condition", ifelse(n_conditions > 1, "s", ""))
 
   # Extract optional parameters with defaults
   sfm <- x[["object"]]

@@ -738,7 +738,6 @@ as.data.frame.sdbuildR <- function(x,
     internal_props <- c("prefix")
     existing_prop <- setdiff(Reduce(union, get_building_block_prop()), internal_props)
     idx_exist <- properties %in% existing_prop
-    # prop_in_df <- properties %in% names(df)
 
     if (!all(idx_exist)) {
       invalid_props <- properties[!idx_exist]

@@ -1,3 +1,30 @@
+#' Abort if a plot argument is non-NULL but of the wrong type
+#'
+#' Helper for validate_plot_params() that collapses the repeated
+#' "check type, otherwise cli_abort" blocks into a single call.
+#'
+#' @param value The argument value (skipped when `NULL`).
+#' @param arg Argument name, used in the error message.
+#' @param type One of "logical", "character", "numeric"; the required type.
+#' @param hint Optional final bullet with a usage hint.
+#' @noRd
+.assert_plot_type <- function(value, arg, type, hint = NULL) {
+  predicate <- switch(type,
+    logical = is.logical,
+    character = is.character,
+    numeric = is.numeric
+  )
+  if (!is.null(value) && !predicate(value)) {
+    bullets <- c(
+      "x" = "Invalid {.arg {arg}} argument.",
+      "i" = "The {.arg {arg}} argument must be {.cls {type}}."
+    )
+    if (!is.null(hint)) bullets <- c(bullets, ">" = hint)
+    cli::cli_abort(bullets)
+  }
+}
+
+
 #' Validate plot parameters
 #'
 #' Validate common parameters used across all plotting functions (plot.simulate_sdbuildR,
@@ -25,13 +52,7 @@ validate_plot_params <- function(showlegend = NULL,
                                  font_size = NULL,
                                  wrap_width = NULL,
                                  label_subplots = NULL) {
-  if (!is.null(showlegend) && !is.logical(showlegend)) {
-    cli::cli_abort(c(
-      "x" = "Invalid {.arg showlegend} argument.",
-      "i" = "The {.arg showlegend} argument must be {.cls logical}.",
-      ">" = "Use {.code TRUE} or {.code FALSE}."
-    ))
-  }
+  .assert_plot_type(showlegend, "showlegend", "logical", "Use {.code TRUE} or {.code FALSE}.")
 
   if (!is.null(vars)) {
     if (!is.character(vars)) {
@@ -50,29 +71,11 @@ validate_plot_params <- function(showlegend = NULL,
     }
   }
 
-  if (!is.null(palette) && !is.character(palette)) {
-    cli::cli_abort(c(
-      "x" = "Invalid {.arg palette} argument.",
-      "i" = "The {.arg palette} argument must be {.cls character}.",
-      ">" = "Use {.code hcl.pals()} to see available palettes."
-    ))
-  }
+  .assert_plot_type(palette, "palette", "character", "Use {.code hcl.pals()} to see available palettes.")
 
-  if (!is.null(colors) && !is.character(colors)) {
-    cli::cli_abort(c(
-      "x" = "Invalid {.arg colors} argument.",
-      "i" = "The {.arg colors} argument must be {.cls character}.",
-      ">" = "Provide a character vector of valid color names or hex codes."
-    ))
-  }
+  .assert_plot_type(colors, "colors", "character", "Provide a character vector of valid color names or hex codes.")
 
-  if (!is.null(alpha) && !is.numeric(alpha)) {
-    cli::cli_abort(c(
-      "x" = "Invalid {.arg alpha} argument.",
-      "i" = "The {.arg alpha} argument must be {.cls numeric}.",
-      ">" = "Provide a numeric value between 0 and 1."
-    ))
-  }
+  .assert_plot_type(alpha, "alpha", "numeric", "Provide a numeric value between 0 and 1.")
 
   if (!is.null(alpha) && (alpha < 0 | alpha > 1)) {
     cli::cli_abort(c(
@@ -82,12 +85,7 @@ validate_plot_params <- function(showlegend = NULL,
     ))
   }
 
-  if (!is.null(font_family) && !is.character(font_family)) {
-    cli::cli_abort(c(
-      "x" = "Invalid {.arg font_family} argument.",
-      ">" = "The {.arg font_family} argument must be {.cls character}."
-    ))
-  }
+  .assert_plot_type(font_family, "font_family", "character")
 
   if (!is.null(font_size) && (!is.numeric(font_size) || font_size <= 0)) {
     cli::cli_abort(c(
@@ -103,12 +101,7 @@ validate_plot_params <- function(showlegend = NULL,
     ))
   }
 
-  if (!is.null(label_subplots) && !is.logical(label_subplots)) {
-    cli::cli_abort(c(
-      "x" = "Invalid {.arg label_subplots} argument.",
-      "i" = "The {.arg label_subplots} argument must be {.cls logical}."
-    ))
-  }
+  .assert_plot_type(label_subplots, "label_subplots", "logical")
 
   invisible(TRUE)
 }
@@ -488,6 +481,40 @@ determine_highlight_vars <- function(names_df, highlight_strategy = "auto") {
       "x" = "Must be 'auto', 'all', 'none', or a character vector of variable names."
     ))
   }
+}
+
+
+#' Add a nonhighlight/highlight trace pair differing only in data and visibility
+#'
+#' The ensemble plot draws each layer (confidence ribbons, central-tendency lines,
+#' error-bar markers, raw simulations) twice: once for nonhighlight variables
+#' (\code{visible = "legendonly"}) and once for highlight variables
+#' (\code{visible = TRUE}). The two calls are otherwise identical. This helper runs
+#' both guarded calls in that order, forwarding the shared trace arguments via
+#' \code{...}. Formulas in \code{...} (e.g. \code{x = ~time}) are evaluated by
+#' plotly against \code{data} in the caller's environment, as before.
+#'
+#' @param pl Plotly object.
+#' @param add_fn Trace-adding function, e.g. \code{plotly::add_trace} or
+#'   \code{plotly::add_ribbons}.
+#' @param data_nonhighlight,data_highlight Data frames for each trace.
+#' @param plot_nonhighlight,plot_highlight Logical guards; the trace is skipped when
+#'   \code{FALSE}.
+#' @param ... Shared arguments forwarded to \code{add_fn}.
+#'
+#' @returns Updated plotly object.
+#' @noRd
+#'
+add_visibility_pair <- function(pl, add_fn,
+                                data_nonhighlight, data_highlight,
+                                plot_nonhighlight, plot_highlight, ...) {
+  if (plot_nonhighlight) {
+    pl <- add_fn(pl, data = data_nonhighlight, ..., visible = "legendonly")
+  }
+  if (plot_highlight) {
+    pl <- add_fn(pl, data = data_highlight, ..., visible = TRUE)
+  }
+  pl
 }
 
 

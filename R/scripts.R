@@ -50,11 +50,6 @@ attributes(%(sim_df_name)s)$troot
 attributes(%(sim_df_name)s)$valroot
 ",
 
-    # -- compile_prep_script ---------------------------------------------------
-
-    # prep_seed_r = "# Ensure reproducibility across runs in case of random elements\nset.seed(%(seed)s)",
-    # prep_seed_julia = "# Ensure reproducibility across runs in case of random elements\nRandom.seed!(%(seed)s)\n",
-
     # -- compile_funcs ----------------------------------------------------------
 
     funcs_r = "\n\n# User-specified funcs\n%(func_body)s\n",

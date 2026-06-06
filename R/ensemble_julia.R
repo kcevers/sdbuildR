@@ -59,15 +59,12 @@ ensemble_julia <- function(object, n, save_sims, conditions, cross,
   script <- paste0(readLines(filepath), collapse = "\n")
 
   on.exit(
-    {
-      # Ensure files are deleted even if an error occurs
-      paths <- c(filepath, ensemble_pars[["filepath_df"]], ensemble_pars[["filepath_summary"]])
-      for (path in paths) {
-        if (file.exists(path)) {
-          file.remove(path)
-        }
-      }
-    },
+    # Ensure files are deleted even if an error occurs
+    remove_files(c(
+      filepath,
+      ensemble_pars[["filepath_df"]],
+      ensemble_pars[["filepath_summary"]]
+    )),
     add = TRUE
   )
 
@@ -128,18 +125,9 @@ ensemble_julia <- function(object, n, save_sims, conditions, cross,
           ))
         } else {
           # Read the simulation results
-          df <- as.data.frame(data.table::fread(
-            ensemble_pars[["filepath_df"]][["df"]],
-            na.strings = c("", "NA")
-          ))
-          constants_out[["df"]] <- as.data.frame(data.table::fread(
-            ensemble_pars[["filepath_df"]][["constants"]],
-            na.strings = c("", "NA")
-          ))
-          init_out[["df"]] <- as.data.frame(data.table::fread(
-            ensemble_pars[["filepath_df"]][["init"]],
-            na.strings = c("", "NA")
-          ))
+          df <- read_sim_csv(ensemble_pars[["filepath_df"]][["df"]])
+          constants_out[["df"]] <- read_sim_csv(ensemble_pars[["filepath_df"]][["constants"]])
+          init_out[["df"]] <- read_sim_csv(ensemble_pars[["filepath_df"]][["init"]])
 
           # Filter to stocks only if requested
           if (only_stocks) {
@@ -152,18 +140,9 @@ ensemble_julia <- function(object, n, save_sims, conditions, cross,
       }
 
       # Read the summary file
-      summary_df <- as.data.frame(data.table::fread(
-        ensemble_pars[["filepath_summary"]][["df"]],
-        na.strings = c("", "NA")
-      ))
-      constants_out[["summary"]] <- as.data.frame(data.table::fread(
-        ensemble_pars[["filepath_summary"]][["constants"]],
-        na.strings = c("", "NA")
-      ))
-      init_out[["summary"]] <- as.data.frame(data.table::fread(
-        ensemble_pars[["filepath_summary"]][["init"]],
-        na.strings = c("", "NA")
-      ))
+      summary_df <- read_sim_csv(ensemble_pars[["filepath_summary"]][["df"]])
+      constants_out[["summary"]] <- read_sim_csv(ensemble_pars[["filepath_summary"]][["constants"]])
+      init_out[["summary"]] <- read_sim_csv(ensemble_pars[["filepath_summary"]][["init"]])
 
       # Filter summary to stocks only if requested
       if (only_stocks) {

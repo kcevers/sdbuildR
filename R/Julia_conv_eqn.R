@@ -293,8 +293,6 @@ find_curly_brackets <- function(df, paired_idxs) {
 #' @noRd
 #'
 convert_all_statements_julia <- function(eqn, var_names) {
-  # eqn_old <- eqn
-
   # If curly brackets surround entire eqn, replace and surround with begin ... end
   if (stringr::str_sub(eqn, 1, 1) == "{" && stringr::str_sub(eqn, nchar(eqn), nchar(eqn)) == "}") {
     stringr::str_sub(eqn, nchar(eqn), nchar(eqn)) <- "\nend"
@@ -466,15 +464,12 @@ create_default_arg <- function(arg) {
 #' @importFrom rlang .data
 #'
 convert_builtin_functions_julia <- function(type, name, eqn, var_names) {
-  # add_code <- list(func = list())
-
   # Check if equation contains letters and opening and closing brackets
   # (all translated R functions have brackets)
   contains_letters <- grepl("[[:alpha:]]", eqn) && grepl("\\(", eqn) && grepl("\\)", eqn)
   if (contains_letters) {
     # data.frame with regular expressions for each built-in R function
     syntax_df <- syntax_julia[["syntax_df"]]
-    # conv_df <- syntax_julia[["conv_df"]]
 
     # Preparation for first iteration
     done <- FALSE
@@ -532,9 +527,7 @@ convert_builtin_functions_julia <- function(type, name, eqn, var_names) {
           stringr::fixed(c("(?<!\\.)\\b" = "", "\\(" = "(", "\\)" = ")"))
         )
 
-        for (j in rev(seq_len(nrow(idx_df)))) {
-          stringr::str_sub(eqn, idx_df[j, "start"], idx_df[j, "end"]) <- idx_df[j, ][["R_regex"]]
-        }
+        eqn <- apply_replacements_reversed(eqn, idx_df, idx_df[["R_regex"]])
       }
 
       if (i == 1) {
@@ -551,44 +544,11 @@ convert_builtin_functions_julia <- function(type, name, eqn, var_names) {
       if (nrow(idx_df) == 0) {
         done <- TRUE
       } else {
-        # To find the arguments within round brackets, find all indices of matching '', (), [], c()
-        paired_idxs <- get_range_all_pairs(eqn, var_names, add_custom = "paste0()")
-        paired_idxs
-
-        # If there are brackets in the eqn:
-        if (nrow(paired_idxs) > 0) {
-          # Match the opening bracket of each function to round brackets in paired_idxs
-          idx_funcs <- merge(
-            paired_idxs[paired_idxs[["type"]] == "round", ],
-            idx_df,
-            by.x = "start",
-            by.y = "end"
-          )
-          idx_funcs[["start_bracket"]] <- idx_funcs[["start"]]
-          idx_funcs[["start"]] <- idx_funcs[["start.y"]]
-
-
-          df2 <- idx_df[idx_df[["syntax"]] == "syntax1b", ]
-          # Add start_bracket column to prevent errors
-          df2[["start_bracket"]] <- df2[["start"]]
-          # Add back syntax1b which does not need brackets
-          # idx_funcs <- dplyr::bind_rows(idx_funcs, df2)
-          idx_funcs <- bind_rows_(idx_funcs, df2)
-          idx_funcs <- idx_funcs[order(idx_funcs[["end"]]), ]
-          idx_funcs
-        } else {
-          # If there are no brackets in the eqn:
-          idx_funcs <- idx_df
-          # Add start_bracket column to prevent errors
-          idx_funcs[["start_bracket"]] <- idx_funcs[["start"]]
-        }
-
-        # Start with most nested function
-        idx_funcs_ordered <- idx_funcs
-        idx_funcs_ordered[["is_nested_around"]] <- any(idx_funcs_ordered[["start"]] < idx_funcs[["start"]] &
-          idx_funcs_ordered[["end"]] > idx_funcs[["end"]])
-        idx_funcs_ordered <- idx_funcs_ordered[order(idx_funcs_ordered[["is_nested_around"]]), ]
-        idx_func <- idx_funcs_ordered[1, ] # Select first match
+        # Pair functions to brackets and pick the most nested one (syntax1b needs no brackets)
+        idx_func <- select_innermost_function(eqn, idx_df, var_names,
+          bracketless_syntaxes = "syntax1b",
+          pair_args = list(add_custom = "paste0()")
+        )
 
         if (P[["debug"]]) {
           cli::cli_inform(c("i" = "idx_func:"))
@@ -657,14 +617,7 @@ convert_builtin_functions_julia <- function(type, name, eqn, var_names) {
     }
   }
 
-  # Flatten the add_code structure - extract all functions from add_code[["func"]]
   add_vars <- data.frame()
-  # if (length(add_code[["func"]]) > 0) {
-  #   # Flatten all functions from different syntax types
-  #   for (syntax_type in names(add_code[["func"]])) {
-  #     add_vars_aux <- append(add_vars_aux, add_code[["func"]][[syntax_type]])
-  #   }
-  # }
 
   return(list(eqn = eqn, add_vars = add_vars, doc = ""))
 }
@@ -762,7 +715,7 @@ conv_sample <- function(arg, R_func, julia_func) {
     )
   }
 
-  return(julia_str)
+  julia_str
 }
 
 

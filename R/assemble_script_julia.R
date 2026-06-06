@@ -24,13 +24,8 @@ simulate_julia <- function(object,
   object <- result$object # Get updated object with cache populated
 
   on.exit(
-    {
-      # Ensure files are deleted even if an error occurs
-      if (file.exists(filepath)) {
-          file.remove(filepath)
-      }
-      
-    },
+    # Ensure files are deleted even if an error occurs
+    remove_files(filepath),
     add = TRUE
   )
 
@@ -45,12 +40,7 @@ simulate_julia <- function(object,
       # Evaluate script
       start_t <- Sys.time()
 
-      # Wrap in invisible and capture.output to keep Julia output quiet
-      # out <- invisible({
-      #   utils::capture.output({
       out <- julia_eval(paste0('include("', jl_path(filepath), '")'))
-      #   })
-      # })
 
       end_t <- Sys.time()
 
@@ -70,7 +60,7 @@ simulate_julia <- function(object,
       names(init) <- julia_eval(P[["initial_value_names"]])
 
       # Read the simulation results dataframe
-      df <- as.data.frame(data.table::fread(filepath_sim, na.strings = c("", "NA")))
+      df <- read_sim_csv(filepath_sim)
       df <- filter_sim_df_vars(df, vars)
 
       new_simulate_sdbuildR(

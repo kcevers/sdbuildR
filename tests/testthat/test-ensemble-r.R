@@ -5,16 +5,12 @@
 
 test_that("ensemble() runs in R", {
   sfm <- make_r_ensemble_random_sfm()
-  sims <- silence(ensemble(sfm, n = 3, verbose = FALSE))
+  sims <- silence(ensemble(sfm, n = 3, verbose = FALSE, save_sims = TRUE))
   expect_s3_class(sims, "ensemble_sdbuildR")
   expect_true(sims[["success"]])
   expect_false(is.null(sims[["summary"]]))
-})
-
-test_that("ensemble() R returns correct structure", {
-  sfm <- make_r_ensemble_random_sfm()
-  sims <- silence(ensemble(sfm, n = 5, save_sims = TRUE, verbose = FALSE))
-
+  
+  # ensemble() R returns correct structure
   expected_fields <- c(
     "success", "df", "summary", "n", "n_total",
     "n_conditions", "conditions", "init", "constants",
@@ -164,22 +160,13 @@ test_that("ensemble() R non-crossed design pairs values", {
   expect_equal(sims[["n_total"]], nr_sims * nr_cond)
   expect_equal(sort(unique(sims[["df"]][["sim"]])), 1:nr_sims)
   expect_equal(sort(unique(sims[["df"]][["condition"]])), 1:nr_cond)
-})
-
-test_that("ensemble() R conditions data frame is correct", {
-  sfm <- make_r_ensemble_random_sfm()
-  sims <- silence(ensemble(sfm,
-    conditions = list(
-      "contact_rate" = c(1.5, 2, 2.5),
-      "infection_rate" = c(1, 2, 3)
-    ),
-    cross = FALSE, n = 2, save_sims = TRUE, verbose = FALSE
-  ))
-  expect_true(sims[["success"]])
-
+  
+  
+  # ensemble() R conditions data frame is correct
   cond_df <- as.data.frame(sims[["conditions"]])
-  expect_equal(cond_df[["condition"]], 1:3)
+  expect_equal(cond_df[["condition"]], 1:nr_cond)
   # Alphabetically sorted: infection_rate before contact_rate
+  expect_equal(names(cond_df), c("condition", "contact_rate", "infection_rate"))
   expect_equal(cond_df[["infection_rate"]], c(1, 2, 3))
   expect_equal(cond_df[["contact_rate"]], c(1.5, 2, 2.5))
 })

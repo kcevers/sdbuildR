@@ -1,0 +1,230 @@
+{
+  "data": [
+    {
+      "x": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, "NA", 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, "NA", 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, "NA", 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, "NA", 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+      "y": [937.14, 1456.33, 1519.95, 1418.4, 1292.27, 1171.03, 1059.7, 958.57, 866.98, 784.11, 709.15, "NA", 642.1, 1044.99, 1172.47, 1130.12, 1041.61, 947.84, 859.12, 777.66, 703.57, 636.42, 575.62, "NA", 135.53, 285.27, 469.94, 594.66, 628.33, 607.54, 565.68, 518.49, 472, 428.34, 388.13, "NA", 458.28, 735.23, 873.56, 879.24, 827.86, 760.7, 692.63, 628.35, 569.14, 515.14, 466.1, "NA", 256.17, 577.37, 847.77, 916.76, 877.23, 807.93, 735.37, 666.71, 603.6, 546.15, 494.05],
+      "legendgroup": "Infected",
+      "type": "scatter",
+      "mode": "lines",
+      "opacity": 0.3,
+      "showlegend": false,
+      "connectgaps": false,
+      "visible": true,
+      "name": "Infected",
+      "marker": {
+        "color": "rgba(200,122,138,1)",
+        "line": {
+          "color": "rgba(200,122,138,1)"
+        }
+      },
+      "textfont": {
+        "color": "rgba(200,122,138,1)"
+      },
+      "error_y": {
+        "color": "rgba(200,122,138,1)"
+      },
+      "error_x": {
+        "color": "rgba(200,122,138,1)"
+      },
+      "line": {
+        "color": "rgba(200,122,138,1)"
+      },
+      "xaxis": "x",
+      "yaxis": "y",
+      "frame": null
+    },
+    {
+      "x": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, "NA", 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, "NA", 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, "NA", 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, "NA", 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+      "y": [286.85, 408, 559.05, 706.97, 843.15, 966.84, 1078.85, 1180.19, 1271.85, 1354.75, 1429.73, "NA", 519.58, 603.64, 716.04, 832.1, 941.27, 1041.19, 1131.92, 1214.11, 1288.48, 1355.76, 1416.62, "NA", 657.34, 677.05, 713.99, 767.38, 829, 891.17, 950.13, 1004.59, 1054.33, 1099.53, 1140.53, "NA", 719.39, 778.3, 859.44, 947.8, 1033.65, 1113.46, 1186.45, 1252.78, 1312.91, 1367.35, 1416.62, "NA", 462.83, 502.09, 573.57, 662.85, 753.21, 837.9, 915.41, 985.82, 1049.6, 1107.33, 1159.56],
+      "legendgroup": "Recovered",
+      "type": "scatter",
+      "mode": "lines",
+      "opacity": 0.3,
+      "showlegend": false,
+      "connectgaps": false,
+      "visible": true,
+      "name": "Recovered",
+      "marker": {
+        "color": "rgba(107,157,89,1)",
+        "line": {
+          "color": "rgba(107,157,89,1)"
+        }
+      },
+      "textfont": {
+        "color": "rgba(107,157,89,1)"
+      },
+      "error_y": {
+        "color": "rgba(107,157,89,1)"
+      },
+      "error_x": {
+        "color": "rgba(107,157,89,1)"
+      },
+      "line": {
+        "color": "rgba(107,157,89,1)"
+      },
+      "xaxis": "x",
+      "yaxis": "y",
+      "frame": null
+    },
+    {
+      "x": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, "NA", 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, "NA", 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, "NA", 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, "NA", 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+      "y": [914.89, 274.56, 59.88, 13.51, 3.46, 1.01, 0.33, 0.12, 0.05, 0.02, 0.01, "NA", 830.62, 343.67, 103.79, 30.07, 9.42, 3.27, 1.26, 0.53, 0.25, 0.12, 0.06, "NA", 736.85, 567.4, 345.79, 167.68, 72.4, 31.01, 13.9, 6.64, 3.39, 1.84, 1.06, "NA", 705.36, 369.5, 150.04, 56, 21.52, 8.88, 3.96, 1.91, 0.99, 0.54, 0.32, "NA", 934.74, 574.28, 232.41, 74.13, 23.3, 7.91, 2.96, 1.21, 0.54, 0.26, 0.14],
+      "legendgroup": "Susceptible",
+      "type": "scatter",
+      "mode": "lines",
+      "opacity": 0.3,
+      "showlegend": false,
+      "connectgaps": false,
+      "visible": true,
+      "name": "Susceptible",
+      "marker": {
+        "color": "rgba(95,150,194,1)",
+        "line": {
+          "color": "rgba(95,150,194,1)"
+        }
+      },
+      "textfont": {
+        "color": "rgba(95,150,194,1)"
+      },
+      "error_y": {
+        "color": "rgba(95,150,194,1)"
+      },
+      "error_x": {
+        "color": "rgba(95,150,194,1)"
+      },
+      "line": {
+        "color": "rgba(95,150,194,1)"
+      },
+      "xaxis": "x",
+      "yaxis": "y",
+      "frame": null
+    },
+    {
+      "x": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+      "y": [485.85, 819.84, 976.74, 987.84, 933.46, 859.01, 782.5, 709.96, 643.06, 582.03, 526.61],
+      "legendgroup": "Infected",
+      "type": "scatter",
+      "mode": "lines",
+      "showlegend": true,
+      "line": {
+        "color": "rgba(200,122,138,1)",
+        "width": 3
+      },
+      "visible": true,
+      "name": "Infected",
+      "marker": {
+        "color": "rgba(200,122,138,1)",
+        "line": {
+          "color": "rgba(200,122,138,1)"
+        }
+      },
+      "textfont": {
+        "color": "rgba(200,122,138,1)"
+      },
+      "error_y": {
+        "color": "rgba(200,122,138,1)"
+      },
+      "error_x": {
+        "color": "rgba(200,122,138,1)"
+      },
+      "xaxis": "x",
+      "yaxis": "y",
+      "frame": null
+    },
+    {
+      "x": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+      "y": [529.2, 593.82, 684.42, 783.42, 880.05, 970.11, 1052.55, 1127.5, 1195.43, 1256.94, 1312.61],
+      "legendgroup": "Recovered",
+      "type": "scatter",
+      "mode": "lines",
+      "showlegend": true,
+      "line": {
+        "color": "rgba(107,157,89,1)",
+        "width": 3
+      },
+      "visible": true,
+      "name": "Recovered",
+      "marker": {
+        "color": "rgba(107,157,89,1)",
+        "line": {
+          "color": "rgba(107,157,89,1)"
+        }
+      },
+      "textfont": {
+        "color": "rgba(107,157,89,1)"
+      },
+      "error_y": {
+        "color": "rgba(107,157,89,1)"
+      },
+      "error_x": {
+        "color": "rgba(107,157,89,1)"
+      },
+      "xaxis": "x",
+      "yaxis": "y",
+      "frame": null
+    },
+    {
+      "x": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+      "y": [824.49, 425.88, 178.38, 68.28, 26.02, 10.42, 4.48, 2.08, 1.04, 0.56, 0.32],
+      "legendgroup": "Susceptible",
+      "type": "scatter",
+      "mode": "lines",
+      "showlegend": true,
+      "line": {
+        "color": "rgba(95,150,194,1)",
+        "width": 3
+      },
+      "visible": true,
+      "name": "Susceptible",
+      "marker": {
+        "color": "rgba(95,150,194,1)",
+        "line": {
+          "color": "rgba(95,150,194,1)"
+        }
+      },
+      "textfont": {
+        "color": "rgba(95,150,194,1)"
+      },
+      "error_y": {
+        "color": "rgba(95,150,194,1)"
+      },
+      "error_x": {
+        "color": "rgba(95,150,194,1)"
+      },
+      "xaxis": "x",
+      "yaxis": "y",
+      "frame": null
+    }
+  ],
+  "layout": {
+    "margin": {
+      "b": 50,
+      "l": 50,
+      "t": 50,
+      "r": 50
+    },
+    "legend": {
+      "traceorder": "reversed",
+      "font": {
+        "size": 14
+      }
+    },
+    "title": "Ensemble of Susceptible-Infected-Recovered (SIR)<span style='font-size:16px;'><br />Mean with 5/5 simulations<\/span>",
+    "xaxis": {
+      "domain": [0, 1],
+      "automargin": true,
+      "title": "Time (weeks)"
+    },
+    "yaxis": {
+      "domain": [0, 1],
+      "automargin": true,
+      "title": ""
+    },
+    "font": {
+      "family": "Times New Roman",
+      "size": 16
+    },
+    "hovermode": "closest",
+    "showlegend": true
+  }
+}

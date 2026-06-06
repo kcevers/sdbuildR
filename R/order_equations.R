@@ -269,7 +269,6 @@ reverse_dep <- function(dep) {
 #'
 dependencies_ <- function(object, eqns = NULL, only_var = TRUE, only_model_var = TRUE) {
   var_names <- get_model_var(object)
-  # var_names <- unique(get_model_var(object))
 
   # Funcs and graphical functions can be functions
   gf_names <- object[["variables"]][object[["variables"]][["type"]] == "lookup", "name"]

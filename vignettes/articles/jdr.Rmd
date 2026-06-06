@@ -1766,7 +1766,7 @@ if (!requireNamespace("future")) {
 if (!requireNamespace("future.apply")) {
   install.packages("future.apply")
 }
-future::plan(future::multisession, workers = parallelly::availableCores() - 5)
+future::plan(future::multisession, workers = parallelly::availableCores() - 1)
 ```
 
 After the ensemble simulations are completed, parallelization can be ended with:
@@ -1786,7 +1786,7 @@ use_julia()
 Parallelization is also supported with Julia:
 
 ```{r}
-use_julia(nthreads = parallelly::availableCores() - 5)
+use_julia(nthreads = parallelly::availableCores() - 1)
 ```
 
 By default, the simulation engine is R, which should be changed in the simulation settings to make use of Julia:
@@ -1826,13 +1826,13 @@ plot(sims, vars = c("engagement", "demands"))
 n <- 100
 use_julia(stop = TRUE)
 
-future::plan(future::multisession, workers = parallelly::availableCores() - 5)
+future::plan(future::multisession, workers = parallelly::availableCores() - 1)
 future_time <- system.time({
   sims <- ensemble(sfm, n = n, language = "R")
 })
 future::plan(future::sequential)
 
-use_julia(nthreads = parallelly::availableCores() - 5)
+use_julia(nthreads = parallelly::availableCores() - 1)
 julia_time <- system.time({
   sims <- ensemble(sfm, n = n, language = "Julia")
 })

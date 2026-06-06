@@ -8,7 +8,7 @@ output: github_document
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  fig.path = "man/figures/README-",
+  # fig.path = "man/figures/README-",
   dpi = 300
 )
 ```
@@ -30,10 +30,11 @@ Load one of the dozens of models from the built-in library, such as the classic 
 ```{r quickstart-sfm, eval=FALSE}
 library(sdbuildR)
 
+# Load stock-and-flow model
 sfm <- sdbuildR("SIR")
 
 # View the stock-and-flow diagram
-plot(sfm)   
+plot(sfm)
 ```
 
 ```{r sir-diagram, include=FALSE, eval=TRUE}
@@ -47,7 +48,7 @@ if (!file.exists(dirname(filepath))) {
 export_plot(
   plot(sfm),
   filepath,
-  width = 18, height = 6, units = "cm"
+  width = 8, height = 4, units = "cm"
 )
 ```
 
@@ -61,15 +62,15 @@ simulate(sfm) |> plot()
 
 ```{r sir-sim, include=FALSE, eval=TRUE}
 pl <- simulate(sfm, dt = 0.01, save_at = 0.01) |> plot()
-filepath <- file.path("man", "figures", "README-sir-sim.pdf")
+filepath <- file.path("man", "figures", "README-sir-sim.png")
 export_plot(
   pl,
   filepath,
-  width = 18, height = 6, units = "cm"
+  width = 8, height = 4, units = "cm"
 )
 ```
 
-![](man/figures/README-sir-sim.pdf)
+![](man/figures/README-sir-sim.png)
 
 `simulate()` produces an interactive timeseries plot. See it run — and build the same model from scratch — in the [**Get started guide**](https://kcevers.github.io/sdbuildR/articles/sdbuildR.html).
 

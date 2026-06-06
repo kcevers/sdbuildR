@@ -350,8 +350,8 @@ test_that("ensemble() non-crossed design pairs values", {
 
   sims <- silence(ensemble(sfm,
     conditions = list(
-      "a1" = c(1.1, 1.2, 1.3),
-      "a2" = c(1.2, 1.3, 1.4)
+      "a2" = c(1.2, 1.3, 1.4),
+      "a1" = c(1.1, 1.2, 1.3)
     ),
     cross = FALSE, n = nr_sims, save_sims = TRUE
   ))
@@ -361,71 +361,26 @@ test_that("ensemble() non-crossed design pairs values", {
   expect_equal(sort(unique(sims[["df"]][["sim"]])), 1:nr_sims)
   expect_equal(sort(unique(sims[["df"]][["condition"]])), 1:nr_cond)
   expect_equal(sort(unique(sims[["summary"]][["condition"]])), 1:nr_cond)
-})
-
-test_that("ensemble() non-crossed design conditions data frame", {
-  skip_if_julia_not_ready()
-
-  sfm <- make_jl_ensemble_sfm()
-
-  n <- 3
-  sims <- silence(ensemble(sfm,
-    conditions = list(
-      a2 = c(0.2, 0.3, 0.4),
-      a1 = c(1.3, 1.4, 1.5)
-    ),
-    cross = FALSE, n = n, save_sims = TRUE
-  ))
-  expect_true(sims[["success"]])
 
   cond_df <- as.data.frame(sims[["conditions"]])
-  expect_equal(cond_df[["condition"]], 1:3)
+  expect_equal(cond_df[["condition"]], 1:nr_cond)
   # Conditions are alphabetically sorted, so a1 comes before a2
-  expect_equal(cond_df[["a1"]], c(1.3, 1.4, 1.5))
-  expect_equal(cond_df[["a2"]], c(0.2, 0.3, 0.4))
-  expect_equal(unique(sims[["constants"]][["df"]][["sim"]]), 1:n)
-  expect_equal(unique(sims[["constants"]][["df"]][["condition"]]), 1:3)
+  expect_equal(colnames(cond_df), c("condition", "a1", "a2"))
+  expect_equal(cond_df[["a1"]], c(1.1, 1.2, 1.3))
+  expect_equal(cond_df[["a2"]], c(1.2, 1.3, 1.4))
+  expect_equal(unique(sims[["constants"]][["df"]][["sim"]]), 1:nr_sims)
+  expect_equal(unique(sims[["constants"]][["df"]][["condition"]]), 1:nr_cond)
+
+
+  # condition column in summary and df should match conditions table
+  df <- as.data.frame(sims, which = "summary")
+  expect_equal(sort(unique(df[["condition"]])), seq_len(nr_cond))
+
+  df <- as.data.frame(sims, which = "sims")
+  expect_equal(sort(unique(df[["condition"]])), seq_len(nr_cond))
+
 })
 
-test_that("ensemble() conditions parameters are alphabetically sorted", {
-  skip_if_julia_not_ready()
-
-  # Regression test: in an earlier version, conditions parameter order was not preserved
-  sfm <- sdbuildR() |>
-    sim_settings(language = "Julia") |>
-    sim_settings(stop = 12, dt = 0.1, save_at = 1, time_units = "month") |>
-    meta(name = "Maya's Burnout") |>
-    update("workload", "stock", eqn = 4) |>
-    update("new_tasks", "flow",
-      eqn = "workload * work_growth", to = "workload"
-    ) |>
-    update("work_growth", "constant", eqn = 1.5) |>
-    update(c("sleep", "necessary_sleep", "worry_factor"),
-      c("stock", "constant", "constant"),
-      eqn = c("necessary_sleep", 8, 0.1)
-    ) |>
-    update("worry_about_work", "flow",
-      eqn = "workload * worry_factor", from = "sleep"
-    ) |>
-    update("need_for_rest", "flow",
-      eqn = "workload * necessary_sleep / sleep", from = "workload"
-    )
-
-  sims <- silence(ensemble(sfm,
-    n = 3, save_sims = TRUE,
-    conditions = list(
-      "work_growth" = c(1.5),
-      "necessary_sleep" = c(8)
-    )
-  ))
-  expect_true(sims[["success"]])
-
-  cond_df <- as.data.frame(sims[["conditions"]])
-  expect_true("work_growth" %in% colnames(cond_df))
-  expect_true("necessary_sleep" %in% colnames(cond_df))
-  expect_equal(cond_df[["work_growth"]], 1.5)
-  expect_equal(cond_df[["necessary_sleep"]], 8)
-})
 
 test_that("ensemble() with mixed stock and constant in conditions", {
   skip_if_julia_not_ready()
@@ -706,13 +661,10 @@ test_that("validate_ensemble_sdbuildR() assesses success, summary, duration", {
   sims <- sims0
   sims$duration <- NULL
   expect_error(validate_ensemble_sdbuildR(sims), "duration")
-})
-
-test_that("check_ensemble_sdbuildR() passes for valid successful ensemble", {
-  skip_if_julia_not_ready()
-  sims <- silence(ensemble(make_jl_ensemble_sfm(), n = 3))
-  expect_no_error(check_ensemble_sdbuildR(sims))
-  expect_invisible(check_ensemble_sdbuildR(sims))
+ 
+  # check_ensemble_sdbuildR() passes for valid successful ensemble
+  expect_no_error(check_ensemble_sdbuildR(sims0))
+  expect_invisible(check_ensemble_sdbuildR(sims0))
 })
 
 
@@ -764,36 +716,6 @@ cli::test_that_cli(configs = "plain", "ensemble setup rejects malformed equation
 })
 
 
-# ensemble() object structure -------------------------------------------------
-
-test_that("ensemble() success result has all required fields including error_message = NULL", {
-  skip_if_julia_not_ready()
-  sims <- silence(ensemble(make_jl_ensemble_sfm(), n = 3))
-  required <- c(
-    "success", "error_message", "df", "summary", "n", "n_total",
-    "n_conditions", "conditions", "init", "constants", "script",
-    "duration", "cross", "quantiles", "object"
-  )
-  for (field in required) {
-    expect_true(field %in% names(sims), info = paste("Missing:", field))
-  }
-  expect_true(sims[["success"]])
-  expect_null(sims[["error_message"]])
-})
-
-test_that("ensemble() success result has correct field types", {
-  skip_if_julia_not_ready()
-  sims <- silence(ensemble(make_jl_ensemble_sfm(), n = 3))
-  expect_true(sims[["success"]])
-  expect_null(sims[["error_message"]])
-  expect_s3_class(sims[["summary"]], "data.frame")
-  expect_true(is.numeric(sims[["n"]]))
-  expect_true(is.numeric(sims[["n_total"]]))
-  expect_true(is.numeric(sims[["n_conditions"]]))
-  expect_true(is.character(sims[["script"]]))
-})
-
-
 # as.data.frame.ensemble_sdbuildR() -------------------------------------------
 
 
@@ -831,9 +753,9 @@ test_that("as.data.frame() individual sims df has expected columns", {
   expect_true(all(c("sim", "condition", "variable", "time", "value") %in% names(df)))
 })
 
-test_that("as.data.frame() direction = 'wide' widens summary", {
+test_that("as.data.frame() direction = 'wide' widens summary and sims", {
   skip_if_julia_not_ready()
-  sims <- silence(ensemble(make_jl_ensemble_sfm(), n = 3))
+  sims <- silence(ensemble(make_jl_ensemble_sfm(), n = 3, save_sims = TRUE))
   df_long <- as.data.frame(sims, direction = "long")
   df_wide <- as.data.frame(sims, direction = "wide")
   # Wide has fewer rows (one per condition+time, not per condition+time+variable)
@@ -843,11 +765,8 @@ test_that("as.data.frame() direction = 'wide' widens summary", {
   # condition and time remain as id columns
   expect_true("condition" %in% names(df_wide))
   expect_true("time" %in% names(df_wide))
-})
-
-test_that("as.data.frame() direction = 'wide' widens individual sims", {
-  skip_if_julia_not_ready()
-  sims <- silence(ensemble(make_jl_ensemble_sfm(), n = 3, save_sims = TRUE))
+  
+  # as.data.frame() direction = 'wide' widens individual sims
   df_long <- as.data.frame(sims, which = "sims", direction = "long")
   df_wide <- as.data.frame(sims, which = "sims", direction = "wide")
   expect_lt(nrow(df_wide), nrow(df_long))
@@ -878,18 +797,6 @@ test_that("as.data.frame() row.names length mismatch errors", {
   skip_if_julia_not_ready()
   sims <- silence(ensemble(make_jl_ensemble_sfm(), n = 3))
   expect_error(as.data.frame(sims, row.names = c("a", "b")), "mismatch|row.names|row names")
-})
-
-test_that("as.data.frame() preserves all conditions with multiple conditions", {
-  skip_if_julia_not_ready()
-  sfm <- make_jl_ensemble_sfm()
-  n_cond <- 3
-  sims <- silence(ensemble(sfm,
-    conditions = list("a1" = c(1.1, 1.2, 1.3)),
-    n = 3
-  ))
-  df <- as.data.frame(sims)
-  expect_equal(sort(unique(df[["condition"]])), seq_len(n_cond))
 })
 
 

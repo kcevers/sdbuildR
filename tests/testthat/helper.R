@@ -1,7 +1,6 @@
 # Test Helper Functions
 expect_snapshot_plot <- function(name, code, fileext = NULL, width = 4, height = 4) {
-  # Announce the file before touching skips or running `code`. This way,
-  # if the skips are active, testthat will not auto-delete the corresponding snapshot file.
+
   withr::local_pdf(NULL)
 
   pl <- code
@@ -17,9 +16,11 @@ expect_snapshot_plot <- function(name, code, fileext = NULL, width = 4, height =
     }
   }
 
+  # Announce the file before touching skips or running `code`. This way,
+  # if the skips are active, testthat will not auto-delete the corresponding snapshot file.
   if (plotly_object) {
-    announce_snapshot_file(name = name)
-    announce_snapshot_file(paste0(name, ".png"))
+    announce_snapshot_file(name = paste0(name, ".json"))
+    announce_snapshot_file(name = paste0(name, ".png"))
   }
 
   skip_on_cran()
@@ -34,18 +35,19 @@ expect_snapshot_plot <- function(name, code, fileext = NULL, width = 4, height =
 
   } else {
 
-    skip_on_os("mac") # floating point differences cause snapshot failures on GitHub Actions macOS runners
-    skip_on_os("linux")
+    # skip_on_os("mac") # floating point differences cause snapshot failures on GitHub Actions macOS runners
+    # skip_on_os("linux")
 
     # Stable assertion on structure
     json <- normalize_plotly(pl) |> jsonlite::toJSON(pretty = TRUE, auto_unbox = TRUE)
 
     json_path <- tempfile(fileext = ".json")
     writeLines(json, json_path)
-    expect_snapshot_file(json_path, name = name)
+    expect_snapshot_file(json_path, name = paste0(name, ".json"))
 
     # Visual artifact for manual inspection, never fails
-    skip_if(Sys.getenv("SDBUILDR_CREATE_TEST_FIGS") != "true", "Skipping plot snapshot creation (SDBUILDR_CREATE_TEST_FIGS not set to 'true')")
+    skip_if(Sys.getenv("SDBUILDR_CREATE_TEST_FIGS") != "true", 
+    "Skipping plot snapshot creation (SDBUILDR_CREATE_TEST_FIGS not set to 'true')")
 
     img_path <- tempfile(fileext = ".png")
     tryCatch({

@@ -145,7 +145,7 @@ test_that("export_model(format='deSolve') output is valid R code", {
 
   # Run the code and capture output to ensure it executes without error
   env <- new.env()
-  expect_no_error(out <- eval(parse(text = out), envir = env))
+  expect_no_error(suppressWarnings(out <- eval(parse(text = out), envir = env)))
  
   names_env <- ls(env)
   expect_true(all(unname(P[c("initial_value_name", 

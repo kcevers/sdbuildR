@@ -20,10 +20,13 @@ A stock-and-flow model object of class \code{\link[=sdbuildR]{sdbuildR}} with th
 Change the type of a variable in a stock-and-flow model.
 }
 \examples{
-# Change the birth rate of predators from a constant to an auxiliary
+# Start with a simple predator-prey model
 sfm <- sdbuildR("predator_prey")
-sfm <- change_type(sfm, delta, new_type = "aux") |>
-  # Use a sin function to introduce seasonality in the birth rate
+# Change the birth rate of predators from a constant to an auxiliary
+sfm <- change_type(sfm, delta, new_type = "aux")
+# This allows us to introduce time-dependence in the birth rate
+# (e.g., seasonality with a sine function)
+sfm <- sfm |>
   update(delta, eqn = 0.025 + 0.01 * sin(2 * pi * t / 12))
 sim <- simulate(sfm)
 plot(sim)

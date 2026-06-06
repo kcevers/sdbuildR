@@ -19,5 +19,6 @@
 ^tests/testthat/testdata/insightmaker/delay/
 ^tests/testthat/testdata/insightmaker/fix/
 ^tests/testthat/testdata/insightmaker/extra/
+^tests/testthat/testdata/psychomodels/
 ^CRAN-SUBMISSION$
 ^\.claude/

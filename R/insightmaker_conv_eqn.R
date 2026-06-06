@@ -347,62 +347,31 @@ replace_op_IM <- function(eqn, var_names) {
   names(logical_op) <- paste0("(?:^|(?<=\\W))", names(logical_op), "(?=(?:\\W|$))")
   logical_op <- c(logical_op, c("(?<!=|<|>)=(?!=)" = "==", "<>" = "!="))
 
-  # Find indices of logical operators
-  idxs_logical_op <- stringr::str_locate_all(eqn, stringr::regex(names(logical_op),
-    ignore_case = TRUE
-  ))
-
-  if (length(unlist(idxs_logical_op)) > 0) {
-    # Get match and replacement
-    df_logical_op <- as.data.frame(do.call(rbind, idxs_logical_op))
-    df_logical_op[["match"]] <- stringr::str_sub(
-      eqn, df_logical_op[["start"]],
-      df_logical_op[["end"]]
+  # For "=", exclude matches inside function(...) argument lists: there "=" is a
+  # default-assignment operator and must stay as is.
+  exclude_function_arg_equals <- function(eqn, var_names) {
+    paired_idxs <- get_range_all_pairs(eqn, var_names,
+      type = "round",
+      names_with_brackets = TRUE
     )
-    df_logical_op[["replacement"]] <- rep(
-      unname(logical_op),
-      vapply(idxs_logical_op, nrow, numeric(1))
-    )
-    df_logical_op <- df_logical_op[order(df_logical_op[["start"]]), ]
+    end_function_words <- get_words(eqn)
+    end_function_words <- end_function_words[end_function_words[["word"]] == "function", "end"]
 
-    # Remove those that are in quotation marks or names
-    idxs_exclude <- get_seq_exclude(eqn, var_names, names_with_brackets = TRUE)
-    if (nrow(df_logical_op) > 0) df_logical_op <- df_logical_op[!(df_logical_op[["start"]] %in% idxs_exclude | df_logical_op[["end"]] %in% idxs_exclude), ]
-
-    # Remove matches that are the same as the logical operator
-    if (nrow(df_logical_op) > 0) df_logical_op <- df_logical_op[df_logical_op[["replacement"]] != df_logical_op[["match"]], ]
-
-    if (nrow(df_logical_op) > 0) {
-      # In case of "=", remove those that are in function(...), as these are for default assignment of arguments and should stay as =
-      paired_idxs <- get_range_all_pairs(eqn, var_names,
-        type = "round",
-        names_with_brackets = TRUE
-      )
-      end_function_words <- get_words(eqn)
-      end_function_words <- end_function_words[end_function_words[["word"]] == "function", "end"]
-
-      if (nrow(paired_idxs) > 0 && length(end_function_words) > 0) {
-        function_brackets <- paired_idxs
-        function_brackets <- function_brackets[function_brackets[["start"]] %in% (end_function_words + 1), ]
-        idxs_exclude <- unlist(mapply(seq, function_brackets[["start"]], function_brackets[["end"]], SIMPLIFY = FALSE))
-
-        if (nrow(df_logical_op) > 0) df_logical_op <- df_logical_op[!(df_logical_op[["start"]] %in% idxs_exclude | df_logical_op[["end"]] %in% idxs_exclude), ]
-      }
-
-      if (nrow(df_logical_op) > 0) {
-        # Replace in reverse order; no nested functions, so we can replace them in one go
-        for (i in rev(seq_len(nrow(df_logical_op)))) {
-          stringr::str_sub(eqn, df_logical_op[i, ][["start"]], df_logical_op[i, ][["end"]]) <- df_logical_op[i, ][["replacement"]]
-        }
-        # Remove double spaces
-        eqn <- stringr::str_replace_all(eqn, "[ ]+", " ")
-      }
+    if (nrow(paired_idxs) > 0 && length(end_function_words) > 0) {
+      function_brackets <- paired_idxs[paired_idxs[["start"]] %in% (end_function_words + 1), ]
+      return(unlist(mapply(seq, function_brackets[["start"]], function_brackets[["end"]], SIMPLIFY = FALSE)))
     }
+    integer(0)
   }
+
+  eqn <- apply_operator_replacements(eqn, var_names, logical_op,
+    names_with_brackets = TRUE,
+    ignore_case = TRUE,
+    extra_exclude = exclude_function_arg_equals
+  )
 
   # Translate assignment operator <- to =. This can't be done above as then = would be translated to ==. Insight Maker does not use = as an assignment operator.
   df_logical_op <- as.data.frame(stringr::str_locate_all(eqn, "<-")[[1]])
-  df_logical_op
 
   if (nrow(df_logical_op) > 0) {
     # Remove those that are in quotation marks or names
@@ -411,9 +380,7 @@ replace_op_IM <- function(eqn, var_names) {
 
     if (nrow(df_logical_op) > 0) {
       # Replace in reverse order; no nested functions, so we can replace them in one go
-      for (i in rev(seq_len(nrow(df_logical_op)))) {
-        stringr::str_sub(eqn, df_logical_op[i, ][["start"]], df_logical_op[i, ][["end"]]) <- "="
-      }
+      eqn <- apply_replacements_reversed(eqn, df_logical_op, "=")
     }
   }
 
@@ -743,9 +710,7 @@ convert_builtin_functions_IM <- function(type, name, eqn, var_names) {
           ))
         )
 
-        for (j in rev(seq_len(nrow(idx_df)))) {
-          stringr::str_sub(eqn, idx_df[j, "start"], idx_df[j, "end"]) <- idx_df[j, ][["insightmaker_regex"]]
-        }
+        eqn <- apply_replacements_reversed(eqn, idx_df, idx_df[["insightmaker_regex"]])
       }
 
       if (i == 1) {
@@ -755,7 +720,6 @@ convert_builtin_functions_IM <- function(type, name, eqn, var_names) {
         # Also only keep those functions that were detected on the first iteration.
         # No new functions to be translated will be added.
         syntax_df <- syntax_df[idx_keep, , drop = FALSE]
-        # IM_regex <- syntax_df[["insightmaker_regex"]]
         IM_regex <- stringr::regex(syntax_df[["insightmaker_regex"]],
           ignore_case = ignore_case_arg
         )
@@ -767,43 +731,12 @@ convert_builtin_functions_IM <- function(type, name, eqn, var_names) {
       if (nrow(idx_df) == 0) {
         done <- TRUE
       } else {
-        # To find the arguments within round brackets, find all indices of matching '', (), [], c()
-        paired_idxs <- get_range_all_pairs(eqn, var_names,
-          # add_custom = "paste0()",
-          names_with_brackets = TRUE
+        # Pair functions to brackets and pick the most nested one
+        # (syntax0b/syntax1b need no brackets)
+        idx_func <- select_innermost_function(eqn, idx_df, var_names,
+          bracketless_syntaxes = c("syntax0b", "syntax1b"),
+          pair_args = list(names_with_brackets = TRUE)
         )
-        paired_idxs
-
-        # If there are brackets in the eqn:
-        if (nrow(paired_idxs) > 0) {
-          # Match the opening bracket of each function to round brackets in paired_idxs
-          idx_funcs <- merge(
-            paired_idxs[paired_idxs[["type"]] == "round", ],
-            idx_df,
-            by.x = "start",
-            by.y = "end"
-          )
-          idx_funcs["start_bracket"] <- idx_funcs[["start"]]
-          idx_funcs["start"] <- idx_funcs[["start.y"]]
-          temp <- idx_df[idx_df[["syntax"]] %in% c("syntax0b", "syntax1b"), ]
-          # Add start_bracket column to prevent errors
-          temp["start_bracket"] <- temp[["start"]]
-          # idx_funcs <- dplyr::bind_rows(idx_funcs, temp)
-          idx_funcs <- bind_rows_(idx_funcs, temp)
-          idx_funcs <- idx_funcs[order(idx_funcs[["end"]]), ]
-        } else {
-          # If there are no brackets in the eqn, add start_bracket column to prevent errors
-          idx_funcs <- idx_df
-          idx_funcs["start_bracket"] <- idx_funcs["start"]
-        }
-
-        # Start with most nested function
-        idx_funcs_ordered <- idx_funcs
-        idx_funcs_ordered[["is_nested_around"]] <- any(idx_funcs_ordered[["start"]] < idx_funcs[["start"]] & idx_funcs_ordered[["end"]] > idx_funcs[["end"]])
-        idx_funcs_ordered <- idx_funcs_ordered[order(idx_funcs_ordered[["is_nested_around"]]), ]
-
-        # Select first match
-        idx_func <- idx_funcs_ordered[1, ]
 
         # Remove _replace in replacement function
         idx_func[["insightmaker"]] <- stringr::str_replace(idx_func[["insightmaker"]], "_replace$", "")
@@ -911,7 +844,6 @@ convert_builtin_functions_IM <- function(type, name, eqn, var_names) {
             add_vars <- rbind(add_vars, add_var)
 
             # Add newly created variables to names_df so that they are safe from replacement, e.g., if a variable contains the word "Time"
-            # add_names <- vapply(add_code, names, character(1), USE.NAMES = FALSE)
             var_names <- c(var_names, add_var[["name"]])
           }
         }
@@ -928,7 +860,6 @@ convert_builtin_functions_IM <- function(type, name, eqn, var_names) {
         translated_func <- c(translated_func, idx_func[["insightmaker"]])
       }
     }
-    # add_code <- add_code_list
 
     # Check for unsupported functions
     eqn_split <- strsplit(eqn, "")[[1]]
@@ -1038,13 +969,6 @@ extract_prefunc_args <- function(eqn, var_names, start_func, names_with_brackets
 conv_lookup <- function(func, arg, name) {
   func_name_str <- sprintf("%s_lookup", name)
   arg[1] <- stringr::str_replace_all(arg[1], c("^\\[" = "", "\\]$" = ""))
-  # add_code <- list(gf = list(list(
-  #   xpts = arg[2], ypts = arg[3],
-  #   source = arg[1],
-  #   interpolation = "linear",
-  #   extrapolation = "nearest"
-  # )) |>
-  #   stats::setNames(func_name_str))
   add_var <- do.call(
     get_variable_row,
     list(
@@ -1084,6 +1008,30 @@ check_only_primitive <- function(eqn) {
 }
 
 
+#' Build the replacement and auxiliary variable for a time-based graphical function
+#'
+#' Shared tail of conv_step(), conv_pulse(), and conv_ramp(). Each names a
+#' new auxiliary variable after the function type and occurrence index, replaces the
+#' call with a lookup into that auxiliary at the current time, and registers the
+#' auxiliary's definition.
+#'
+#' @param name Model element the function belongs to.
+#' @param func Function type ("step", "pulse", "ramp").
+#' @param match_idx Occurrence index of this function within the equation.
+#' @param func_def_str Equation defining the auxiliary variable.
+#'
+#' @returns List with `replacement` and `add_var`.
+#' @noRd
+#'
+make_aux_graphical_function <- function(name, func, match_idx, func_def_str) {
+  func_name_str <- sprintf("%s_%s%s", name, func, as.character(match_idx))
+  list(
+    replacement = sprintf("[%s](%s)", func_name_str, P[["time_name"]]),
+    add_var = get_variable_row(name = func_name_str, type = "aux", eqn = func_def_str)
+  )
+}
+
+
 #' Convert Insight Maker's Step() function to R
 #'
 #' @param h_step Height of step, defaults to 1
@@ -1095,12 +1043,6 @@ check_only_primitive <- function(eqn) {
 #'
 conv_step <- function(func, arg, match_idx, name, # Default settings of Insight Maker
                       h_step = "1") {
-  # Name of function is the type (step, pulse, ramp), the number, and which model element it belongs to
-  func_name_str <- sprintf(
-    "%s_%s%s", name, func, # If there is only one match, don't number function
-    as.character(match_idx)
-  )
-  replacement <- sprintf("[%s](%s)", func_name_str, P[["time_name"]])
   # Step(Start, Height=1), e.g., Step({2 Years}, 100)
 
   # Clean start time by converting to simulation time units
@@ -1116,13 +1058,8 @@ conv_step <- function(func, arg, match_idx, name, # Default settings of Insight 
     start_t_step,
     h_step
   )
-  # add_code <- list(aux = list(list(eqn = func_def_str)) |> stats::setNames(func_name_str))
-  add_var <- get_variable_row(name = func_name_str, type = "aux", eqn = func_def_str)
 
-  return(list(
-    replacement = replacement,
-    add_var = add_var
-  ))
+  make_aux_graphical_function(name, func, match_idx, func_def_str)
 }
 
 
@@ -1145,13 +1082,6 @@ conv_pulse <- function(func,
                        h_pulse = "1",
                        w_pulse = "0",
                        repeat_interval = "NULL") {
-  # Name of function is the type (step, pulse, ramp), the number, and which model element it belongs to
-  func_name_str <- sprintf(
-    "%s_%s%s", name, func, # If there is only one match, don't number function
-    as.character(match_idx)
-  )
-  replacement <- sprintf("[%s](%s)", func_name_str, P[["time_name"]])
-
   # Pulse(Time, Height, Width=0, Repeat=-1), e.g., Pulse({5 Years}, 10, 1, {10 Years})
 
   # Start time
@@ -1175,13 +1105,8 @@ conv_pulse <- function(func,
     w_pulse,
     repeat_interval
   )
-  # add_code <- list(aux = list(list(eqn = func_def_str)) |> stats::setNames(func_name_str))
-  add_var <- get_variable_row(name = func_name_str, type = "aux", eqn = func_def_str)
 
-  return(list(
-    replacement = replacement,
-    add_var = add_var
-  ))
+  make_aux_graphical_function(name, func, match_idx, func_def_str)
 }
 
 
@@ -1196,13 +1121,6 @@ conv_pulse <- function(func,
 #'
 conv_ramp <- function(func, arg, match_idx, name, # Default settings of Insight Maker
                       h_ramp = "1") {
-  # Name of function is the type (step, pulse, ramp), the number, and which model element it belongs to
-  func_name_str <- sprintf(
-    "%s_%s%s", name, func, # If there is only one match, don't number function
-    as.character(match_idx)
-  )
-  replacement <- sprintf("[%s](%s)", func_name_str, P[["time_name"]])
-
   # Ramp(Start, Finish, Height=1), e.g., Ramp({3 Years}, {8 Years}, -50)
 
   # Start and end time
@@ -1220,60 +1138,6 @@ conv_ramp <- function(func, arg, match_idx, name, # Default settings of Insight 
     end_t_ramp,
     h_ramp
   )
-  # add_code <- list(aux = list(list(
-  #   eqn = func_def_str
-  # )) |> stats::setNames(func_name_str))
-  add_var <- get_variable_row(name = func_name_str, type = "aux", eqn = func_def_str)
 
-  return(list(
-    replacement = replacement,
-    add_var = add_var
-  ))
+  make_aux_graphical_function(name, func, match_idx, func_def_str)
 }
-
-
-# #' Convert Insight Maker's Seasonal() function to R
-# #'
-# #' @param period Period of wave in years, defaults to 1
-# #' @param shift Time in years at which the wave peaks, defaults to 0
-# #'
-# #' @returns List with transformed eqn and list with additional R code needed to make the eqn function
-# #' @inheritParams convert_equations_IM
-# #' @noRd
-# #' @inheritParams conv_step
-# #'
-# conv_seasonal <- function(func, arg, match_idx, name,
-#                           period = "u(\"1common_yr\")", shift = "u(\"0common_yr\")") {
-#   # Name of function is the type (step, pulse, ramp), the number, and which model element it belongs to
-#   func_name_str <- sprintf(
-#     "%s_%s%s", name, func, # If there is only one match, don't number function
-#     as.character(match_idx)
-#   )
-#   replacement <- sprintf("[%s](%s)", func_name_str, P[["time_name"]])
-
-#   # If an argument is specified, it's the peak time
-#   if (nzchar(arg)) {
-#     # If there are only numbers and a period in there, add unit
-#     if (grepl("^[0-9]+\\.?[0-9]*$", arg[1]) || grepl("^[\\.?[0-9]*$", arg[1])) {
-#       shift <- paste0("u(\"", arg[1], "common_yr\")")
-#     } else {
-#       shift <- arg[1]
-#     }
-#   }
-
-#   # Function definition to put at beginning of script
-#   func_def_str <- sprintf(
-#     "seasonal(%s, %s, %s)",
-#     P[["times_name"]],
-#     period, shift
-#   )
-#   # add_code <- list(aux = list(list(
-#   #   eqn = func_def_str
-#   # )) |> stats::setNames(func_name_str))
-#   add_var <- get_variable_row(name = func_name_str, type = "aux", eqn = func_def_str)
-
-#   return(list(
-#     replacement = replacement,
-#     add_var = add_var
-#   ))
-# }

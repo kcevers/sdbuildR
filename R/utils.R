@@ -1,3 +1,37 @@
+#' Remove files if they exist
+#'
+#' Deletes each path that exists, ignoring those that do not. Used in `on.exit()`
+#' handlers to clean up temporary scripts and output files. `paths` may be a nested
+#' list (e.g. the Julia ensemble filepath structure); it is flattened first.
+#'
+#' @param paths Character vector or (nested) list of file paths.
+#' @returns Invisibly `NULL`.
+#' @noRd
+#'
+remove_files <- function(paths) {
+  for (path in unlist(paths, use.names = FALSE)) {
+    if (file.exists(path)) {
+      file.remove(path)
+    }
+  }
+  invisible()
+}
+
+
+#' Read a simulation-output CSV written by the Julia backend
+#'
+#' Thin wrapper around [data.table::fread()] used to read the data, init,
+#' constants and summary files produced by Julia simulations and ensembles, with
+#' consistent NA handling, returned as a plain data.frame.
+#'
+#' @param path File path to read.
+#' @returns A data.frame.
+#' @noRd
+#'
+read_sim_csv <- function(path) {
+  as.data.frame(data.table::fread(path, na.strings = c("", "NA")))
+}
+
 #' @noRd
 .clean_which <- function(which) {
   which <- trimws(tolower(which))
@@ -886,8 +920,7 @@ get_range_names <- function(eqn, var_names, names_with_brackets = FALSE) {
     }
 
     # Add surrounding word boundaries and escape special characters
-    # R_names <- paste0("\\b", stringr::str_escape(var_names), "\\b")
-    # \\b doesn't match beginning or end of string; \W is non-wodr character; ?: is non-capture group
+    # \\b doesn't match beginning or end of string; \W is non-word character; ?: is non-capture group
     R_names <- paste0("(?:^|(?<=\\W))", stringr::str_escape(var_names), "(?=(?:\\W|$))")
     idxs_names <- stringr::str_locate_all(eqn, R_names)
 
@@ -907,6 +940,100 @@ get_range_names <- function(eqn, var_names, names_with_brackets = FALSE) {
   }
 
   return(idxs_df)
+}
+
+
+#' Replace substrings in reverse order of position
+#'
+#' Applies a set of substring replacements to `x`, working from the last match to
+#' the first so that earlier (lower-index) replacements are not invalidated by the
+#' index shifts of later ones. This idiom recurs throughout the equation-conversion
+#' code, where matches are located up front and spliced back in afterwards.
+#'
+#' @param x String to modify.
+#' @param df data.frame with integer `start` and `end` columns giving the spans to
+#'   replace.
+#' @param replacement Replacement values, recycled to `nrow(df)`. Defaults to the
+#'   `replacement` column of `df`; pass a scalar to use the same value for every span.
+#'
+#' @returns Updated string `x`.
+#' @noRd
+#'
+apply_replacements_reversed <- function(x, df, replacement = df[["replacement"]]) {
+  if (nrow(df) == 0) {
+    return(x)
+  }
+  replacement <- rep_len(replacement, nrow(df))
+  starts <- df[["start"]]
+  ends <- df[["end"]]
+  for (i in rev(seq_len(nrow(df)))) {
+    stringr::str_sub(x, starts[i], ends[i]) <- replacement[i]
+  }
+  x
+}
+
+
+#' Replace a dictionary of operators in an equation
+#'
+#' Shared engine behind replace_op_IM() and replace_op_julia_impl(). Locates
+#' every operator in `op`, drops matches that fall inside quoted strings / variable
+#' names (and any spans flagged by `extra_exclude`), removes no-op matches, and
+#' splices in the replacements from last to first.
+#'
+#' @param eqn Equation string.
+#' @param var_names Variable names whose spans must not be treated as operators.
+#' @param op Named character vector: names are (regex) patterns to match, values
+#'   are their replacements.
+#' @param names_with_brackets Passed to get_seq_exclude(); whether bracketed
+#'   names are excluded.
+#' @param ignore_case Whether the operator patterns are matched case-insensitively.
+#' @param extra_exclude Optional `function(eqn, var_names)` returning additional
+#'   indices to exclude from replacement (e.g. `=` inside `function(...)` argument
+#'   lists).
+#'
+#' @returns Updated equation string.
+#' @noRd
+#'
+apply_operator_replacements <- function(eqn, var_names, op,
+                                        names_with_brackets = FALSE,
+                                        ignore_case = FALSE,
+                                        extra_exclude = NULL) {
+  pattern <- if (ignore_case) {
+    stringr::regex(names(op), ignore_case = TRUE)
+  } else {
+    names(op)
+  }
+
+  idxs_op <- stringr::str_locate_all(eqn, pattern)
+  if (length(unlist(idxs_op)) == 0) {
+    return(eqn)
+  }
+
+  df <- as.data.frame(do.call(rbind, idxs_op))
+  df[["match"]] <- stringr::str_sub(eqn, df[["start"]], df[["end"]])
+  df[["replacement"]] <- rep(unname(op), vapply(idxs_op, nrow, numeric(1)))
+  df <- df[order(df[["start"]]), ]
+
+  # Drop matches inside quotation marks or names
+  idxs_exclude <- get_seq_exclude(eqn, var_names, names_with_brackets = names_with_brackets)
+  if (nrow(df) > 0) df <- df[!(df[["start"]] %in% idxs_exclude | df[["end"]] %in% idxs_exclude), ]
+
+  # Drop matches that already equal their replacement
+  if (nrow(df) > 0) df <- df[df[["replacement"]] != df[["match"]], ]
+
+  # Language-specific extra exclusions (e.g. = in function() argument defaults)
+  if (nrow(df) > 0 && !is.null(extra_exclude)) {
+    extra <- extra_exclude(eqn, var_names)
+    if (length(extra) > 0) df <- df[!(df[["start"]] %in% extra | df[["end"]] %in% extra), ]
+  }
+
+  if (nrow(df) > 0) {
+    eqn <- apply_replacements_reversed(eqn, df)
+    # Remove double spaces
+    eqn <- stringr::str_replace_all(eqn, "[ ]+", " ")
+  }
+
+  eqn
 }
 
 
@@ -1068,6 +1195,62 @@ get_range_quot <- function(eqn) {
     }
   }
   return(pair_quotation_marks)
+}
+
+
+#' Select the innermost built-in function to convert next
+#'
+#' Shared step of convert_builtin_functions_IM() and
+#' convert_builtin_functions_julia(). Given the detected function matches
+#' (`idx_df`), it pairs each function with its opening round bracket, adds back the
+#' functions that take no brackets, and returns the single most deeply nested match
+#' (the one to convert first so that nested calls are resolved inside-out).
+#'
+#' @param eqn Equation string.
+#' @param idx_df data.frame of detected function matches (with `start`, `end`,
+#'   `syntax` columns).
+#' @param var_names Variable names, forwarded to get_range_all_pairs().
+#' @param bracketless_syntaxes Character vector of `syntax` values whose functions
+#'   do not require brackets and must be added back to the candidate set.
+#' @param pair_args Extra arguments passed to get_range_all_pairs() (the only
+#'   language-specific difference, e.g. `add_custom = "paste0()"` for Julia or
+#'   `names_with_brackets = TRUE` for Insight Maker).
+#'
+#' @returns Single-row data.frame for the function to convert next.
+#' @noRd
+#'
+select_innermost_function <- function(eqn, idx_df, var_names,
+                                      bracketless_syntaxes, pair_args = list()) {
+  # To find the arguments within round brackets, find all indices of matching '', (), [], c()
+  paired_idxs <- do.call(get_range_all_pairs, c(list(eqn, var_names), pair_args))
+
+  if (nrow(paired_idxs) > 0) {
+    # Match the opening bracket of each function to round brackets in paired_idxs
+    idx_funcs <- merge(
+      paired_idxs[paired_idxs[["type"]] == "round", ],
+      idx_df,
+      by.x = "start",
+      by.y = "end"
+    )
+    idx_funcs[["start_bracket"]] <- idx_funcs[["start"]]
+    idx_funcs[["start"]] <- idx_funcs[["start.y"]]
+
+    # Add back functions that do not need brackets
+    bracketless <- idx_df[idx_df[["syntax"]] %in% bracketless_syntaxes, ]
+    bracketless[["start_bracket"]] <- bracketless[["start"]]
+    idx_funcs <- bind_rows_(idx_funcs, bracketless)
+    idx_funcs <- idx_funcs[order(idx_funcs[["end"]]), ]
+  } else {
+    # If there are no brackets in the eqn, add start_bracket column to prevent errors
+    idx_funcs <- idx_df
+    idx_funcs[["start_bracket"]] <- idx_funcs[["start"]]
+  }
+
+  # Start with most nested function
+  idx_funcs_ordered <- idx_funcs
+  idx_funcs_ordered[["is_nested_around"]] <- any(idx_funcs_ordered[["start"]] < idx_funcs[["start"]] & idx_funcs_ordered[["end"]] > idx_funcs[["end"]])
+  idx_funcs_ordered <- idx_funcs_ordered[order(idx_funcs_ordered[["is_nested_around"]]), ]
+  idx_funcs_ordered[1, ]
 }
 
 

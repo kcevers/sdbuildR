@@ -104,11 +104,7 @@ url_to_insightmaker <- function(URL, file = NULL) {
 
   # If no file path was specified before, delete file
   if (delete_after) {
-    on.exit({
-      if (file.exists(file)) {
-        file.remove(file)
-      }
-    }, add = TRUE)
+    on.exit(remove_files(file), add = TRUE)
   }
 
   writeLines(xml_str, file)
@@ -1150,10 +1146,9 @@ file_to_sdbuildR <- function(read_file, ext) {
   # The conversion functions work on object[["variables"]], so we need to populate it
   ctx <- ctx_add_variables(ctx)
 
-  # Prepare globals/macros, conveyors, converters
+  # Prepare globals/macros and converters
   # These work on object[["variables"]] and object temporary fields
   ctx$object <- prep_globals_IM(ctx$object, macros)
-  # ctx$object <- prep_conveyors_IM(ctx$object)
   ctx$object <- prep_converters_IM(ctx$object)
 
   if (P[["debug"]]) {
@@ -1521,52 +1516,6 @@ prep_globals_IM <- function(object, macros) {
 }
 
 
-# prep_conveyors_IM <- function(object) {
-#   # Conveyors Stocks have a fixed delay with a specified delay length. If a stock "A" is referred to as [A], it refers to the delayed value of A, whereas [[A]] refers to the accumulated value to the 'true' current value of A. If the stock is of StockMode Conveyor, any reference to [A] refers to the delayed value of A.
-#   # In short:
-#   # for a stock A which is a conveyor,
-#   # [A] refers to A_conveyor
-#   # [[A]] refers to A
-
-#   # Find conveyor stocks - check if conveyor column exists
-#   conveyor_stocks <- character(0)
-#   if ("conveyor" %in% colnames(object[["variables"]])) {
-#     conveyor_idx <- !is.na(object[["variables"]][["conveyor"]]) &
-#       object[["variables"]][["conveyor"]] != "" &
-#       object[["variables"]][["type"]] == "stock"
-#     if (any(conveyor_idx)) {
-#       conveyor_stocks <- object[["variables"]][conveyor_idx, "name"]
-#     }
-#   }
-
-#   if (length(conveyor_stocks) > 0) {
-#     # Ensure correct referencing of conveyors
-#     dict <- paste0("[", conveyor_stocks, P[["conveyor_suffix"]], "]") |>
-#       stats::setNames(paste0("[[", conveyor_stocks, "]]"))
-
-#     # Update equations in data frame
-#     for (i in seq_len(nrow(object[["variables"]]))) {
-#       if ("eqn_insightmaker" %in% colnames(object[["variables"]])) {
-#         if (!is.na(object[["variables"]][i, "eqn_insightmaker"])) {
-#           object[["variables"]][i, "eqn_insightmaker"] <- stringr::str_replace_all(
-#             object[["variables"]][i, "eqn_insightmaker"],
-#             stringr::fixed(dict, ignore_case = TRUE)
-#           )
-
-#           # Remove any left-over double bracket notations - these should be []
-#           object[["variables"]][i, "eqn_insightmaker"] <- stringr::str_replace_all(
-#             object[["variables"]][i, "eqn_insightmaker"],
-#             stringr::fixed(c("[[" = "[", "]]" = "]"))
-#           )
-#         }
-#       }
-#     }
-#   }
-
-#   return(object)
-# }
-
-
 prep_converters_IM <- function(object) {
   # Get graphical function names and sources
   gf_idx <- object[["variables"]][["type"]] == "lookup"
@@ -1790,10 +1739,7 @@ strip_units_curly <- function(x, var_names) {
   paired_idxs[["replacement"]][idx] <- ""
 
   # Process in reverse order so replacements don't shift indices
-  for (i in rev(seq.int(nrow(paired_idxs)))) {
-    # Replace the entire curly bracket expression with the replacement
-    stringr::str_sub(x, paired_idxs[i, "start"], paired_idxs[i, "end"]) <- paired_idxs[i, "replacement"]
-  }
+  x <- apply_replacements_reversed(x, paired_idxs)
 
   list(
     old_x = x,
@@ -2106,9 +2052,7 @@ replace_safely <- function(eqn, dict, var_names, ignore_case = TRUE) {
   if (nrow(idx_df) > 0) idx_df <- idx_df[!(idx_df[["start"]] %in% idxs_exclude | idx_df[["end"]] %in% idxs_exclude), ]
   if (nrow(idx_df) > 0) {
     # Replace in reverse order
-    for (i in rev(seq.int(nrow(idx_df)))) {
-      stringr::str_sub(eqn, idx_df[i, "start"], idx_df[i, "end"]) <- idx_df[i, "replacement"]
-    }
+    eqn <- apply_replacements_reversed(eqn, idx_df)
   }
 
   return(eqn)

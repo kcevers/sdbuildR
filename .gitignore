@@ -12,5 +12,6 @@ notes/
 docs
 tests/testthat/testdata/insightmaker/delay
 tests/testthat/testdata/insightmaker/fix
+tests/testthat/testdata/psychomodels
 ^cran-comments\.md$
 .claude/

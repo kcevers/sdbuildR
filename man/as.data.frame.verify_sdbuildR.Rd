@@ -83,8 +83,10 @@ shows only the requested matching test number(s) for the retained simulation
 row(s). Use \code{direction = "wide"} to pivot variables into columns.
 }
 \examples{
+# Create model with 2 unit tests
 sfm <- sdbuildR("SIR") |>
   unit_test(expr = all(susceptible >= 0)) |>
+  # Add test with conditions
   unit_test(
     label = "lower infection rate",
     expr = all(susceptible >= 0),
@@ -96,15 +98,15 @@ res <- verify(sfm)
 as.data.frame(res)
 
 # Simulation time-series (long format)
-as.data.frame(res, which = "sims")
+as.data.frame(res, which = "sims") |> head()
 
 # Simulation time-series (wide format)
-as.data.frame(res, which = "sims", direction = "wide")
+as.data.frame(res, which = "sims", direction = "wide") |> head()
 
 # Filter to simulation for test 2 only
-as.data.frame(res, which = "sims", test = 2)
+as.data.frame(res, which = "sims", test = 2) |> head()
 
 # Only simulations for passing tests
-as.data.frame(res, which = "sims", status = "pass")
+as.data.frame(res, which = "sims", status = "pass") |> head()
 }
 \concept{unitTest}

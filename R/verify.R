@@ -197,6 +197,26 @@ verify.sdbuildR <- function(object, verbose = TRUE, test = NULL, ...) {
 }
 
 
+check_verify_sdbuildR <- function(x) {
+  if (!inherits(x, "verify_sdbuildR")) {
+    cli::cli_abort(c(
+      "x" = "Invalid object class.",
+      "i" = "This is not an object of class {.cls verify_sdbuildR}.",
+      ">" = "Generate a unit test run with {.fn verify}."
+    ))
+  }
+
+  if (!x[["success"]]) {
+    cli::cli_abort(c(
+      "x" = "Unit test run failed.",
+      ">" = "Check your model specification and try again."
+    ))
+  }
+  
+  invisible(x)
+}
+
+
 # ==============================================================================
 # UNIT TEST BUILDER
 # ==============================================================================
@@ -833,9 +853,33 @@ new_verify_sdbuildR <- function(success = FALSE,
 }
 
 
+#' Print a unit-test result message as indented cli bullets
+#'
+#' Used by print.verify_sdbuildR() for failed, errored, and skipped tests. The
+#' (possibly multi-line) message is split into one bullet per line.
+#'
+#' @param message Message string, or `NULL`/empty to print nothing.
+#' @param emph Whether to wrap each line in `{.emph ...}` (used for skipped tests).
+#' @noRd
+#'
+.emit_test_message <- function(message, emph = FALSE) {
+  if (is.null(message) || !nzchar(message)) {
+    return(invisible())
+  }
+  lines <- strsplit(message, "\\n", fixed = TRUE)[[1L]]
+  if (emph) {
+    lines <- vapply(lines, function(L) paste0("{.emph ", L, "}"), character(1))
+  }
+  bullets <- stats::setNames(lines, rep(" ", length(lines)))
+  cli::cli_bullets(bullets)
+}
+
+
 #' @export
 #' @concept unitTest
 print.verify_sdbuildR <- function(x, ...) {
+  check_verify_sdbuildR(x)
+
   results <- x[["results"]]
 
   if (length(results) == 0) {
@@ -869,28 +913,15 @@ print.verify_sdbuildR <- function(x, ...) {
       },
       fail = {
         cli::cli_inform(c("x" = "{original_nr}. {r[['label']]}"))
-        if (!is.null(r[["message"]]) && nzchar(r[["message"]])) {
-          lines <- strsplit(r[["message"]], "\\n", fixed = TRUE)[[1L]]
-          bullets <- stats::setNames(lines, rep(" ", length(lines)))
-          cli::cli_bullets(bullets)
-        }
+        .emit_test_message(r[["message"]])
       },
       error = {
         cli::cli_inform(c("!" = "{original_nr}. {r[['label']]}"))
-        if (!is.null(r[["message"]]) && nzchar(r[["message"]])) {
-          lines <- strsplit(r[["message"]], "\\n", fixed = TRUE)[[1L]]
-          bullets <- stats::setNames(lines, rep(" ", length(lines)))
-          cli::cli_bullets(bullets)
-        }
+        .emit_test_message(r[["message"]])
       },
       skip = {
         cli::cli_inform(c("i" = "{original_nr}. {r[['label']]}"))
-        if (!is.null(r[["message"]]) && nzchar(r[["message"]])) {
-          lines <- strsplit(r[["message"]], "\\n", fixed = TRUE)[[1L]]
-          emph_lines <- vapply(lines, function(L) paste0("{.emph ", L, "}"), character(1))
-          bullets <- stats::setNames(emph_lines, rep(" ", length(emph_lines)))
-          cli::cli_bullets(bullets)
-        }
+        .emit_test_message(r[["message"]], emph = TRUE)
       }
     )
   }
@@ -948,8 +979,10 @@ print.verify_sdbuildR <- function(x, ...) {
 #' @method as.data.frame verify_sdbuildR
 #'
 #' @examples
+#' # Create model with 2 unit tests
 #' sfm <- sdbuildR("SIR") |>
 #'   unit_test(expr = all(susceptible >= 0)) |>
+#'   # Add test with conditions
 #'   unit_test(
 #'     label = "lower infection rate",
 #'     expr = all(susceptible >= 0),
@@ -961,16 +994,16 @@ print.verify_sdbuildR <- function(x, ...) {
 #' as.data.frame(res)
 #'
 #' # Simulation time-series (long format)
-#' as.data.frame(res, which = "sims")
+#' as.data.frame(res, which = "sims") |> head()
 #'
 #' # Simulation time-series (wide format)
-#' as.data.frame(res, which = "sims", direction = "wide")
+#' as.data.frame(res, which = "sims", direction = "wide") |> head()
 #'
 #' # Filter to simulation for test 2 only
-#' as.data.frame(res, which = "sims", test = 2)
+#' as.data.frame(res, which = "sims", test = 2) |> head()
 #'
 #' # Only simulations for passing tests
-#' as.data.frame(res, which = "sims", status = "pass")
+#' as.data.frame(res, which = "sims", status = "pass") |> head()
 as.data.frame.verify_sdbuildR <- function(x, row.names = NULL, optional = FALSE,
                                           which = c("tests", "sims")[1],
                                           direction = "long",
@@ -978,6 +1011,8 @@ as.data.frame.verify_sdbuildR <- function(x, row.names = NULL, optional = FALSE,
                                           status = c("pass", "fail", "error", "skip"),
                                           condition = NULL,
                                           ...) {
+  check_verify_sdbuildR(x)
+
   which <- .clean_which_verify(which)
 
   # ---- which = "sims": return simulation time-series -------------------------

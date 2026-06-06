@@ -1,0 +1,236 @@
+{
+  "data": [
+    {
+      "fillcolor": "Infected",
+      "x": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0],
+      "type": "scatter",
+      "mode": "lines",
+      "hoveron": "points",
+      "fill": "toself",
+      "legendgroup": "Infected",
+      "opacity": 0.3,
+      "showlegend": true,
+      "visible": true,
+      "y": [147.6, 314.48, 507.72, 623.12, 648.28, 622.85, 578.38, 529.48, 481.72, 437.02, 395.92, 695.79, 769.34, 850.64, 940.48, 1039.64, 1148.71, 1267.21, 1389.57, 1485.2, 1415.19, 907.63],
+      "name": "Infected",
+      "marker": {
+        "color": "rgba(200,122,138,1)",
+        "line": {
+          "color": "rgba(200,122,138,1)"
+        }
+      },
+      "textfont": {
+        "color": "rgba(200,122,138,1)"
+      },
+      "error_y": {
+        "color": "rgba(200,122,138,1)"
+      },
+      "error_x": {
+        "color": "rgba(200,122,138,1)"
+      },
+      "line": {
+        "color": "rgba(200,122,138,1)"
+      },
+      "xaxis": "x",
+      "yaxis": "y",
+      "frame": null
+    },
+    {
+      "fillcolor": "Recovered",
+      "x": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0],
+      "type": "scatter",
+      "mode": "lines",
+      "hoveron": "points",
+      "fill": "toself",
+      "legendgroup": "Recovered",
+      "opacity": 0.3,
+      "showlegend": true,
+      "visible": true,
+      "y": [304.45, 417.41, 560.5, 667.26, 760.79, 843.23, 918.88, 987.69, 1050.07, 1100.31, 1142.43, 1428.41, 1366.19, 1310.46, 1248.91, 1181, 1106.23, 1024.41, 936.23, 845.1, 768.18, 713.19],
+      "name": "Recovered",
+      "marker": {
+        "color": "rgba(107,157,89,1)",
+        "line": {
+          "color": "rgba(107,157,89,1)"
+        }
+      },
+      "textfont": {
+        "color": "rgba(107,157,89,1)"
+      },
+      "error_y": {
+        "color": "rgba(107,157,89,1)"
+      },
+      "error_x": {
+        "color": "rgba(107,157,89,1)"
+      },
+      "line": {
+        "color": "rgba(107,157,89,1)"
+      },
+      "xaxis": "x",
+      "yaxis": "y",
+      "frame": null
+    },
+    {
+      "fillcolor": "Susceptible",
+      "x": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0],
+      "type": "scatter",
+      "mode": "lines",
+      "hoveron": "points",
+      "fill": "toself",
+      "legendgroup": "Susceptible",
+      "opacity": 0.3,
+      "showlegend": true,
+      "visible": true,
+      "y": [708.51, 281.47, 64.27, 15.17, 4.06, 1.24, 0.43, 0.16, 0.07, 0.03, 0.02, 0.02, 0.99, 1.71, 3.15, 6.17, 12.91, 28.8, 67.49, 158.32, 334.45, 573.59, 932.75],
+      "name": "Susceptible",
+      "marker": {
+        "color": "rgba(95,150,194,1)",
+        "line": {
+          "color": "rgba(95,150,194,1)"
+        }
+      },
+      "textfont": {
+        "color": "rgba(95,150,194,1)"
+      },
+      "error_y": {
+        "color": "rgba(95,150,194,1)"
+      },
+      "error_x": {
+        "color": "rgba(95,150,194,1)"
+      },
+      "line": {
+        "color": "rgba(95,150,194,1)"
+      },
+      "xaxis": "x",
+      "yaxis": "y",
+      "frame": null
+    },
+    {
+      "x": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+      "y": [458.28, 735.23, 873.56, 916.76, 877.23, 807.93, 735.37, 666.71, 603.6, 546.15, 494.05],
+      "legendgroup": "Infected",
+      "type": "scatter",
+      "mode": "lines",
+      "showlegend": true,
+      "line": {
+        "color": "rgba(200,122,138,1)",
+        "width": 3
+      },
+      "visible": true,
+      "name": "Infected",
+      "marker": {
+        "color": "rgba(200,122,138,1)",
+        "line": {
+          "color": "rgba(200,122,138,1)"
+        }
+      },
+      "textfont": {
+        "color": "rgba(200,122,138,1)"
+      },
+      "error_y": {
+        "color": "rgba(200,122,138,1)"
+      },
+      "error_x": {
+        "color": "rgba(200,122,138,1)"
+      },
+      "xaxis": "x",
+      "yaxis": "y",
+      "frame": null
+    },
+    {
+      "x": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+      "y": [519.58, 603.64, 713.99, 767.38, 843.15, 966.84, 1078.85, 1180.19, 1271.85, 1354.75, 1416.62],
+      "legendgroup": "Recovered",
+      "type": "scatter",
+      "mode": "lines",
+      "showlegend": true,
+      "line": {
+        "color": "rgba(107,157,89,1)",
+        "width": 3
+      },
+      "visible": true,
+      "name": "Recovered",
+      "marker": {
+        "color": "rgba(107,157,89,1)",
+        "line": {
+          "color": "rgba(107,157,89,1)"
+        }
+      },
+      "textfont": {
+        "color": "rgba(107,157,89,1)"
+      },
+      "error_y": {
+        "color": "rgba(107,157,89,1)"
+      },
+      "error_x": {
+        "color": "rgba(107,157,89,1)"
+      },
+      "xaxis": "x",
+      "yaxis": "y",
+      "frame": null
+    },
+    {
+      "x": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+      "y": [830.62, 369.5, 150.04, 56, 21.52, 7.91, 2.96, 1.21, 0.54, 0.26, 0.14],
+      "legendgroup": "Susceptible",
+      "type": "scatter",
+      "mode": "lines",
+      "showlegend": true,
+      "line": {
+        "color": "rgba(95,150,194,1)",
+        "width": 3
+      },
+      "visible": true,
+      "name": "Susceptible",
+      "marker": {
+        "color": "rgba(95,150,194,1)",
+        "line": {
+          "color": "rgba(95,150,194,1)"
+        }
+      },
+      "textfont": {
+        "color": "rgba(95,150,194,1)"
+      },
+      "error_y": {
+        "color": "rgba(95,150,194,1)"
+      },
+      "error_x": {
+        "color": "rgba(95,150,194,1)"
+      },
+      "xaxis": "x",
+      "yaxis": "y",
+      "frame": null
+    }
+  ],
+  "layout": {
+    "margin": {
+      "b": 50,
+      "l": 50,
+      "t": 50,
+      "r": 50
+    },
+    "legend": {
+      "traceorder": "reversed",
+      "font": {
+        "size": 14
+      }
+    },
+    "title": "Ensemble of Susceptible-Infected-Recovered (SIR)<span style='font-size:16px;'><br />Median with [0.025, 0.975] confidence interval of 5 simulations<\/span>",
+    "xaxis": {
+      "domain": [0, 1],
+      "automargin": true,
+      "title": "Time (weeks)"
+    },
+    "yaxis": {
+      "domain": [0, 1],
+      "automargin": true,
+      "title": ""
+    },
+    "font": {
+      "family": "Times New Roman",
+      "size": 16
+    },
+    "hovermode": "closest",
+    "showlegend": true
+  }
+}
