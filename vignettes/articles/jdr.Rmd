@@ -1911,6 +1911,7 @@ simulate(sfm) |> plot()
 Run an ensemble simulation:
 
 ```{r}
+sfm <- sim_settings(sfm, save_sims = TRUE)
 sims <- ensemble(sfm, n = n)
 plot(sims,
   which = "sims", sim = 1:n, alpha = .25, central_tendency = FALSE,
