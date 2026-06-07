@@ -8,7 +8,7 @@ P <- list(
   # jl_pkg_name = "SystemDynamicsBuildR",
   # jl_pkg_version = "0.2.5", # required version SystemDynamicsBuildR
   jl_pkg_name = "StockFlowRSupport",
-  jl_pkg_version_github_release = "0.0.5", # required version StockFlowRSupport
+  jl_pkg_version_github_release = "0.0.6", # required version StockFlowRSupport
   model_setup_name = "model_setup",
   func_name = "func",
   initial_value_name = "init",
@@ -337,8 +337,8 @@ get_syntax_julia <- function() {
       "cor", "Statistics.cor", "syntax1", "", "", FALSE,
       "cov", "Statistics.cov", "syntax1", "", "", FALSE,
       "var", "Statistics.var", "syntax1", "", "", FALSE,
-      "range", "extrema", "syntax1", "", "", FALSE,
-      "as.logical", "Bool", "syntax1", "", "", TRUE,
+      "range", "r_range", "syntax1", "", "", FALSE,
+      "as.logical", "r_as_logical", "syntax1", "", "", TRUE,
       "seq", "range", "syntax_seq", "", "", FALSE,
       "seq.int", "range", "syntax_seq", "", "", FALSE,
       "seq_along", "range", "syntax_seq", "", "", FALSE,
@@ -347,7 +347,13 @@ get_syntax_julia <- function() {
       "sample.int", "StatsBase.sample", "syntax_sample", "", "", FALSE,
       "cumsum", "cumsum", "syntax1", "", "", FALSE,
       "cumprod", "cumprod", "syntax1", "", "", FALSE,
-      "diff", "diff", "syntax1", "", "", FALSE,
+      "cummax", "r_cummax", "syntax1", "", "", FALSE,
+      "cummin", "r_cummin", "syntax1", "", "", FALSE,
+      "diff", "r_diff", "syntax1", "", "", FALSE,
+      "rep", "r_rep", "syntax1", "", "", FALSE,
+      "factorial", "factorial", "syntax1", "", "", TRUE,
+      "choose", "binomial", "syntax1", "", "", TRUE,
+      "trimws", "strip", "syntax1", "", "", TRUE,
       "abs", "abs", "syntax1", "", "", TRUE,
       "sign", "sign", "syntax1", "", "", TRUE,
       "cos", "cos", "syntax1", "", "", TRUE,
@@ -359,8 +365,7 @@ get_syntax_julia <- function() {
       "cospi", "cospi", "syntax1", "", "", TRUE,
       "sinpi", "sinpi", "syntax1", "", "", TRUE,
       "tanpi", "tanpi", "syntax1", "", "", TRUE,
-      "nchar", "length", "syntax1", "", "", FALSE,
-      "cor", "cor", "syntax1", "", "", FALSE,
+      "nchar", "length", "syntax1", "", "", TRUE,
       "floor", "floor", "syntax1", "", "", TRUE,
       "ceiling", "ceil", "syntax1", "", "", TRUE,
       "round", "round_", "syntax1", "", "", TRUE,
@@ -384,31 +389,40 @@ get_syntax_julia <- function() {
       "nrow", "size", "syntax1", "", "1", FALSE,
       "ncol", "size", "syntax1", "", "2", FALSE,
       "cbind", "hcat", "syntax1", "", "", FALSE,
-      "rbind", "vcat", "syntax1", "", "", FALSE,
+      "rbind", "r_rbind", "syntax1", "", "", FALSE,
+      "rowSums", "r_rowsums", "syntax1", "", "", FALSE,
+      "colSums", "r_colsums", "syntax1", "", "", FALSE,
+      "rowMeans", "r_rowmeans", "syntax1", "", "", FALSE,
+      "colMeans", "r_colmeans", "syntax1", "", "", FALSE,
 
       # Matrix functions
       "diag", "LinearAlgebra.diag", "syntax1", "", "", FALSE,
-      "upper.tri", "LinearAlgebra.UpperTriangular", "syntax1", "", "", FALSE,
-      "lower.tri", "LinearAlgebra.LowerTriangular", "syntax1", "", "", FALSE,
+      "upper.tri", "r_upper_tri", "syntax1", "", "", FALSE,
+      "lower.tri", "r_lower_tri", "syntax1", "", "", FALSE,
       "norm", "LinearAlgebra.norm", "syntax1", "", "", FALSE,
       "det", "LinearAlgebra.det", "syntax1", "", "", FALSE,
       "t", "transpose", "syntax1", "", "", FALSE,
       "rev", "reverse", "syntax1", "", "", FALSE,
       "print", "println", "syntax1", "", "", FALSE,
-      "na.omit", "skipmissing", "syntax1", "", "", FALSE,
+      "na.omit", "r_na_omit", "syntax1", "", "", FALSE,
       "eigen", "LinearAlgebra.eigen", "syntax1", "", "", FALSE,
-      "getcd", "pwd", "syntax1", "", "", FALSE,
+      "getwd", "pwd", "syntax1", "", "", FALSE,
       "setwd", "cd", "syntax1", "", "", FALSE,
       "Filter", "filter", "syntax1", "", "", TRUE,
       "which", "findall", "syntax1", "", "", FALSE,
+      "match", "r_match", "syntax1", "", "", FALSE,
+      "unique", "unique", "syntax1", "", "", FALSE,
+      "ifelse", "ifelse", "syntax1", "", "", TRUE,
       "class", "typeof", "syntax1", "", "", FALSE,
       # String manipulation
-      "grep", "match", "syntax1", "", "", FALSE,
+      "grep", "r_grep", "syntax1", "", "", FALSE,
       "strsplit", "split", "syntax1", "", "", FALSE,
-      "paste0", "join", "syntax1", "", "", FALSE,
+      "paste0", "string", "syntax1", "", "", TRUE,
       "toupper", "uppercase", "syntax1", "", "", TRUE,
       "tolower", "lowercase", "syntax1", "", "", TRUE,
-      "stringr::str_to_title", "uppercasefirst", "syntax1", "", "", TRUE,
+      "startsWith", "startswith", "syntax1", "", "", TRUE,
+      "endsWith", "endswith", "syntax1", "", "", TRUE,
+      "stringr::str_to_title", "titlecase", "syntax1", "", "", TRUE,
       # Sets
       "union", "union", "syntax1", "", "", FALSE,
       "intersect", "intersect", "syntax1", "", "", FALSE,
@@ -423,7 +437,7 @@ get_syntax_julia <- function() {
       "is.nan", "isnan", "syntax1", "", "", TRUE,
       # https://docs.julialang.org/en/v1/base/collections
       # Julia: indexin, sortperm, findfirst
-      "sort", "sort", "syntax1", "", "", FALSE,
+      "sort", "r_sort", "syntax1", "", "", FALSE,
       # Complex numbers
       "Re", "real", "syntax1", "", "", TRUE,
       "Im", "imag", "syntax1", "", "", TRUE,
@@ -528,6 +542,22 @@ get_syntax_julia <- function() {
 
   # Convert to data.frame
   conv_df <- as.data.frame(conv_df, stringsAsFactors = FALSE)
+
+  # Whether sort_args() should fill R's default arguments and reorder against R's
+  # formals. TRUE only when the Julia target faithfully mirrors R's positional
+  # signature, so filled defaults land in the right positions: distributions
+  # (syntaxD), seq, sample, and faithful wrappers/custom functions that take
+  # options users may name out of order. For all other syntax1 functions the
+  # provided arguments are passed through unchanged (Julia supplies its own
+  # defaults). See sort_args().
+  fill_defaults_funcs <- c(
+    "grep", "rep",
+    "logistic", "sigmoid", "hill",
+    "step", "pulse", "ramp", "seasonal"
+  )
+  conv_df[["fill_defaults"]] <-
+    conv_df[["syntax"]] %in% c("syntaxD", "syntax_seq", "syntax_sample") |
+      conv_df[["R"]] %in% fill_defaults_funcs
 
   # Create syntax_df by copying conv_df
   syntax_df <- conv_df

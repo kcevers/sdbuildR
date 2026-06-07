@@ -46,7 +46,7 @@ replace_digits_with_floats_julia <- function(eqn, var_names) {
     }
   }
 
-  return(eqn)
+  eqn
 }
 
 
@@ -79,10 +79,11 @@ replace_op_julia_impl <- function(eqn, var_names) {
     ">=" = " .>= ",
     "==" = " .== ",
     "!=" = " .!= ",
-    "%%" = "\\u2295",
-    "%REM%" = "%",
-    "<-" = " = ",
-    "%*%" = " * ",
+    "%%" = "\\u2295", # Modulo operator
+    "%/%" = "\\u2298", # Floor operator
+    "%REM%" = "%", # Remainder operator
+    "<-" = " = ", # Assignment operator
+    "%*%" = " * ", # Matrix multiplication in R is just multiplication in Julia
     "%in%" = " in "
   )
 

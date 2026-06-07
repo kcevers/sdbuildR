@@ -25,7 +25,7 @@ test_that("converting equations to Julia", {
   result <- convert_equations_julia(
     type, name, "range(predator_births, predator_deaths) * 10", var_names
   )
-  expected <- "extrema(predator_births, predator_deaths) .* 10.0"
+  expected <- "r_range(predator_births, predator_deaths) .* 10.0"
   expect_equal(result$eqn, expected)
 
   result <- convert_equations_julia(
@@ -99,7 +99,7 @@ test_that("converting functions to Julia with named arguments", {
   result <- convert_equations_julia(
     type, name, "range(x = 10, y= 8)", var_names
   )
-  expected <- "extrema(10.0, 8.0)"
+  expected <- "r_range(10.0, 8.0)"
   expect_equal(result$eqn, expected)
 
   result <- convert_equations_julia(
@@ -317,39 +317,186 @@ test_that("convert_distribution() to Julia", {
   expected <- "rand(Distributions.Normal(1.0, 3.0), 10)"
   expect_equal(result, expected)
 
+  # R parameterizes Exponential/Gamma by rate; Julia uses scale = 1 / rate
   result <- convert_builtin_functions_julia(type, name, "rexp(10, 3)", var_names)$eqn
-  expected <- "rand(Distributions.Exponential(3.0), 10)"
+  expected <- "rand(Distributions.Exponential(1 / (3.0)), 10)"
   expect_equal(result, expected)
 
   result <- convert_builtin_functions_julia(type, name, "rexp(1, rate=30)", var_names)$eqn
-  expected <- "rand(Distributions.Exponential(30.0))"
+  expected <- "rand(Distributions.Exponential(1 / (30.0)))"
   expect_equal(result, expected)
 
 
   # cdf, pdf, quantile
   result <- convert_builtin_functions_julia(type, name, "pexp(1, rate=30)", var_names)$eqn
-  expected <- "Distributions.cdf.(Distributions.Exponential(30.0), 1)"
+  expected <- "Distributions.cdf.(Distributions.Exponential(1 / (30.0)), 1)"
   expect_equal(result, expected)
 
   result <- convert_builtin_functions_julia(type, name, "qexp(1, rate=30)", var_names)$eqn
-  expected <- "Distributions.quantile.(Distributions.Exponential(30.0), 1)"
+  expected <- "Distributions.quantile.(Distributions.Exponential(1 / (30.0)), 1)"
   expect_equal(result, expected)
 
   result <- convert_builtin_functions_julia(type, name, "dexp(1, rate=30)", var_names)$eqn
-  expected <- "Distributions.pdf.(Distributions.Exponential(30.0), 1)"
+  expected <- "Distributions.pdf.(Distributions.Exponential(1 / (30.0)), 1)"
   expect_equal(result, expected)
 
+  # Gamma: sort_args() resolves scale = 1/rate, so rate is dropped
   result <- convert_builtin_functions_julia(type, name, "pgamma(1, 2, rate=30)", var_names)$eqn
-  expected <- "Distributions.cdf.(Distributions.Gamma(2.0, 30.0, 1.0/30.0), 1)"
+  expected <- "Distributions.cdf.(Distributions.Gamma(2.0, 1.0/30.0), 1)"
   expect_equal(result, expected)
 
   result <- convert_builtin_functions_julia(type, name, "qgamma(1, 2, rate=30)", var_names)$eqn
-  expected <- "Distributions.quantile.(Distributions.Gamma(2.0, 30.0, 1.0/30.0), 1)"
+  expected <- "Distributions.quantile.(Distributions.Gamma(2.0, 1.0/30.0), 1)"
   expect_equal(result, expected)
 
   result <- convert_builtin_functions_julia(type, name, "dgamma(1, 2, rate=30)", var_names)$eqn
-  expected <- "Distributions.pdf.(Distributions.Gamma(2.0, 30.0, 1.0/30.0), 1)"
+  expected <- "Distributions.pdf.(Distributions.Gamma(2.0, 1.0/30.0), 1)"
   expect_equal(result, expected)
+})
+
+
+test_that("corrected builtin conversions to Julia", {
+  sfm <- sdbuildR("predator_prey")
+  var_names <- c(get_model_var(sfm), "m", "x", "y", "tbl", "cond", "a", "b")
+  name <- var_names[1]
+  type <- "aux"
+  conv <- function(s) convert_builtin_functions_julia(type, name, s, var_names)$eqn
+
+  # Reductions: R's na.rm/use defaults are no longer injected (syntax1 no-fill)
+  expect_equal(conv("mean(x)"), "Statistics.mean(x)")
+  expect_equal(conv("median(x)"), "Statistics.median(x)")
+  expect_equal(conv("sd(x)"), "Statistics.std(x)")
+  expect_equal(conv("var(x)"), "Statistics.var(x)")
+  expect_equal(conv("cor(x, y)"), "Statistics.cor(x, y)")
+
+  # pmin/pmax keep all args (na.rm no longer captures a positional arg)
+  expect_equal(conv("pmin(a, b)"), "min.(a, b)")
+  expect_equal(conv("pmax(a, b)"), "max.(a, b)")
+
+  # sort -> r_sort; decreasing passed positionally to the wrapper
+  expect_equal(conv("sort(x)"), "r_sort(x)")
+  expect_equal(conv("sort(x, decreasing=TRUE)"), "r_sort(x, true)")
+  expect_equal(conv("unique(x)"), "unique(x)")
+
+  # paste0 -> string (broadcast), not join
+  expect_equal(conv("paste0(\"a\", x)"), "string.(\"a\", x)")
+
+  # as.logical -> r_as_logical (broadcast), not Bool
+  expect_equal(conv("as.logical(x)"), "r_as_logical.(x)")
+
+  # nchar -> length (broadcast); no spurious type/allowNA/keepNA args
+  expect_equal(conv("nchar(x)"), "length.(x)")
+
+  # str_to_title -> titlecase (namespaced name no longer errors; no locale arg)
+  expect_equal(conv("stringr::str_to_title(x)"), "titlecase.(x)")
+
+  # match -> r_match (was a latent passthrough to Julia's regex match)
+  expect_equal(conv("match(x, tbl)"), "r_match(x, tbl)")
+
+  # na.omit -> r_na_omit (eager), range -> r_range (vector), ifelse broadcast
+  expect_equal(conv("na.omit(x)"), "r_na_omit(x)")
+  expect_equal(conv("range(x)"), "r_range(x)")
+  expect_equal(conv("ifelse(cond, a, b)"), "ifelse.(cond, a, b)")
+
+  # grep -> r_grep (faithful wrapper, fill path); value lands in correct slot
+  expect_equal(conv("grep(\"a\", x)"),
+               "r_grep(\"a\", x, false, false, false, false, false, false)")
+  expect_equal(conv("grep(\"a\", x, value=TRUE)"),
+               "r_grep(\"a\", x, false, false, true, false, false, false)")
+
+  # rbind -> r_rbind, and arguments are no longer dropped (deparse.level fix)
+  expect_equal(conv("rbind(x, x)"), "r_rbind(x, x)")
+  expect_equal(conv("rbind(x, x, x)"), "r_rbind(x, x, x)")
+
+  # cbind keeps all arguments now (previously dropped to hcat(x))
+  expect_equal(conv("cbind(x, x)"), "hcat(x, x)")
+
+  # upper.tri / lower.tri -> logical-mask helpers (diag from wrapper default)
+  expect_equal(conv("upper.tri(m)"), "r_upper_tri(m)")
+  expect_equal(conv("upper.tri(m, TRUE)"), "r_upper_tri(m, true)")
+  expect_equal(conv("lower.tri(m)"), "r_lower_tri(m)")
+
+  # getwd typo fixed (was getcd, never matched)
+  expect_equal(conv("getwd()"), "pwd()")
+
+  # diff -> r_diff; positional lag is preserved (was dropped under old varargs path)
+  expect_equal(conv("diff(x)"), "r_diff(x)")
+  expect_equal(conv("diff(x, 2)"), "r_diff(x, 2)")
+})
+
+
+test_that("added builtin conversions to Julia (batch 3)", {
+  sfm <- sdbuildR("predator_prey")
+  var_names <- c(get_model_var(sfm), "m", "x", "y", "n", "k")
+  name <- var_names[1]
+  type <- "aux"
+  conv <- function(s) convert_builtin_functions_julia(type, name, s, var_names)$eqn
+
+  # rep -> r_rep; named each/length.out/times map to correct positions (fill path)
+  expect_equal(conv("rep(x, 3)"), "r_rep(x, 3.0, -1.0, 1.0)")
+  expect_equal(conv("rep(x, each=2)"), "r_rep(x, 1.0, -1.0, 2.0)")
+  expect_equal(conv("rep(x, length.out=5)"), "r_rep(x, 1.0, 5.0, 1.0)")
+  expect_equal(conv("rep(x, times=2, each=3)"), "r_rep(x, 2.0, -1.0, 3.0)")
+
+  # Matrix margins -> vector-returning helpers
+  expect_equal(conv("rowSums(m)"), "r_rowsums(m)")
+  expect_equal(conv("colSums(m)"), "r_colsums(m)")
+  expect_equal(conv("rowMeans(m)"), "r_rowmeans(m)")
+  expect_equal(conv("colMeans(m)"), "r_colmeans(m)")
+
+  # cumulative max/min (Base has cumsum/cumprod but not these)
+  expect_equal(conv("cummax(x)"), "r_cummax(x)")
+  expect_equal(conv("cummin(x)"), "r_cummin(x)")
+
+  # Base Julia targets, broadcast
+  expect_equal(conv("factorial(n)"), "factorial.(n)")
+  expect_equal(conv("choose(n, k)"), "binomial.(n, k)")
+  expect_equal(conv("trimws(x)"), "strip.(x)")
+})
+
+
+test_that("floor-division operator %/% maps to the Julia ⊘ operator", {
+  sfm <- sdbuildR("predator_prey")
+  var_names <- c(get_model_var(sfm), "a", "b")
+  conv <- function(s) convert_equations_julia("aux", var_names[1], s, var_names)$eqn
+
+  # Intermediate form carries the ⊘ escape (decoded to ⊘ when the .jl is written)
+  expect_equal(conv("a %/% b"), "a \\u2298 b")
+  expect_equal(decode_unicode(conv("a %/% b")), "a ⊘ b")
+
+  # The slash inside %/% is not mistaken for the division operator
+  expect_false(grepl("\\./", conv("a %/% b")))
+})
+
+
+test_that("sort_args lowercases injected logical defaults (TRUE/FALSE -> true/false)", {
+  # Injected R defaults are capitalized ("FALSE"/"TRUE") because they come from
+  # formals() *after* replace_op_julia() has already lowercased user-written
+  # logicals. sort_args() must lowercase them so the emitted Julia is valid.
+
+  # grep's ignore.case/perl/value/fixed/useBytes/invert all default to FALSE
+  out <- sort_args(c("\"a\"", "x"), "grep",
+    var_names = character(0), fill_defaults = TRUE
+  )
+  vals <- unname(unlist(out))
+  expect_false(any(vals %in% c("TRUE", "FALSE"))) # no R-style capitals leak through
+  expect_true("false" %in% vals)
+
+  # pexp has lower.tail = TRUE (and log.p = FALSE) -> exercises both directions
+  out2 <- sort_args("1.0", "pexp",
+    var_names = character(0), fill_defaults = TRUE
+  )
+  vals2 <- unname(unlist(out2))
+  expect_true("true" %in% vals2)
+  expect_true("false" %in% vals2)
+  expect_false(any(vals2 %in% c("TRUE", "FALSE")))
+
+  # End-to-end: grep's filled defaults appear lowercased in the generated call
+  sfm <- sdbuildR("predator_prey")
+  var_names <- c(get_model_var(sfm), "x")
+  out3 <- convert_builtin_functions_julia("aux", var_names[1], "grep(\"a\", x)", var_names)$eqn
+  expect_false(grepl("FALSE|TRUE", out3))
+  expect_match(out3, "false")
 })
 
 

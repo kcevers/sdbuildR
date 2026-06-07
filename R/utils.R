@@ -778,38 +778,80 @@ parse_args <- function(bracket_arg) {
 #' @noRd
 #' @returns List with named and sorted arguments
 #'
-sort_args <- function(arg, func_name, default_arg = NULL, var_names = NULL) {
-  # If default arguments are not provided, assume func_name is an R function
-  if (is.null(default_arg)) {
-    # Find default arguments of R function
-    # Assume Julia and R arguments are the same, with the same order
-    default_arg <- do.call(formals, list(func_name)) |> as.list()
-    varargs <- any(names(default_arg) == "...")
-    default_arg <- default_arg[names(default_arg) != "..."] # Remove ellipsis
-
-    # formals(seq) is empty for some reason
-    if (func_name == "seq") {
-      default_arg <- list(
-        "from" = "1.0", "to" = "1.0", "by" = NULL,
-        "length.out" = NULL, "along.with" = NULL
-      )
-    } else if (func_name == "seq_along") {
-      default_arg <- list("along.with" = "NULL")
-    } else if (func_name == "seq_len") {
-      default_arg <- list("length.out" = "1.0")
-    }
-  }
-
-  # Find names and values of arguments
+sort_args <- function(arg, func_name, default_arg = NULL, var_names = NULL,
+                      fill_defaults = TRUE) {
+  # Find names and values of arguments (e.g. "mean = 3" -> name "mean", value "3")
   contains_name <- stringr::str_detect(arg, "=")
   arg_split <- stringr::str_split_fixed(arg, "=", n = 2)
   names_arg <- trimws(ifelse(contains_name, arg_split[, 1], NA))
   values_arg <- trimws(ifelse(contains_name, arg_split[, 2], arg_split[, 1]))
 
-  # For some functions, there are no default arguments, so there is no need to sort them
-  if (length(default_arg) == 0) {
-    arg_R <- stats::setNames(values_arg, names_arg)
+  if (!fill_defaults) {
+    # syntax1 path: pass only the user-provided arguments, in the given order,
+    # with names dropped. We deliberately do NOT inject R defaults the Julia
+    # target lacks (na.rm, deparse.level, locale, ...) or reorder. The Julia
+    # function or r_* wrapper supplies its own defaults and adapts argument
+    # names / order / keywords internally.
+
+    # Best-effort validation: flag named arguments that are not valid R formals
+    # (catches typos like sd(a, y = test)). Skipped silently when formals are
+    # unavailable (primitives, namespaced names) or variadic, so we never error
+    # on cases the no-fill path is specifically designed to tolerate.
+    named <- names_arg[!is.na(names_arg)]
+    if (length(named) > 0) {
+      fmls <- tryCatch(
+        names(as.list(do.call(formals, list(func_name)))),
+        error = function(e) NULL
+      )
+      if (!is.null(fmls) && !("..." %in% fmls)) {
+        bad <- named[!(named %in% fmls)]
+        if (length(bad) > 0) {
+          cli::cli_abort(c(
+            "x" = "{cli::qty(length(bad))}Invalid argument{?s} for {.fn {func_name}}.",
+            "i" = "{.code {bad}} {?is/are} not allowed.",
+            ">" = "Allowed arguments: {.code {fmls}}."
+          ))
+        }
+      }
+    }
+
+    arg_R <- as.list(values_arg[nzchar(values_arg)])
   } else {
+    # Fill path (distributions, seq, sample, and faithful r_* wrappers): resolve
+    # against R's formals, fill unprovided defaults, and reorder into formal
+    # order. The Julia target mirrors R's positional signature, so filled
+    # defaults land in the correct positions.
+
+    # If default arguments are not provided, assume func_name is an R function
+    if (is.null(default_arg)) {
+      # Find default arguments of R function
+      # Assume Julia and R arguments are the same, with the same order
+      default_arg <- do.call(formals, list(func_name)) |> as.list()
+      varargs <- any(names(default_arg) == "...")
+      default_arg <- default_arg[names(default_arg) != "..."] # Remove ellipsis
+
+      # formals(seq) is empty for some reason
+      if (func_name == "seq") {
+        default_arg <- list(
+          "from" = "1.0", "to" = "1.0", "by" = NULL,
+          "length.out" = NULL, "along.with" = NULL
+        )
+      } else if (func_name == "seq_along") {
+        default_arg <- list("along.with" = "NULL")
+      } else if (func_name == "seq_len") {
+        default_arg <- list("length.out" = "1.0")
+      } else if (func_name == "rep") {
+        # rep() is variadic with opaque formals; hardcode the args r_rep mirrors
+        # so named forms (each =, length.out =) map to the correct positions.
+        # length.out = -1 is r_rep's "unset" sentinel.
+        default_arg <- as.list(alist(x = , times = "1", length.out = "-1", each = "1"))
+      }
+    }
+
+    # For some functions, there are no default arguments, so there is no need to sort them
+    if (length(default_arg) == 0) {
+      arg_R <- stats::setNames(values_arg, names_arg)
+    } else {
     # Check whether all argument names are in the allowed argument names in case of no dots argument (...)
     idx <- !names_arg %in% names(default_arg) & !is.na(names_arg)
     if (!varargs && any(idx)) {
@@ -884,15 +926,28 @@ sort_args <- function(arg, func_name, default_arg = NULL, var_names = NULL) {
       }
     }
 
-    # Ensure digits become floats for Julia
-    for (name in names(arg_R)) {
-      if (!is.null(arg_R[[name]])) {
-        arg_R[[name]] <- replace_digits_with_floats(arg_R[[name]], var_names)
+      # Ensure digits become floats for Julia
+      for (name in names(arg_R)) {
+        if (!is.null(arg_R[[name]])) {
+          arg_R[[name]] <- replace_digits_with_floats(arg_R[[name]], var_names)
+        }
       }
     }
   }
 
   arg_R <- lapply(arg_R, as.character)
+
+  # Lowercase logical defaults injected from R formals (e.g. ignore.case = FALSE)
+  # so they are valid Julia. User-supplied TRUE/FALSE in the equation are already
+  # converted earlier by replace_op_julia(); only injected defaults remain.
+  arg_R <- lapply(arg_R, function(v) {
+    if (is.null(v)) {
+      return(v)
+    }
+    v[v == "TRUE"] <- "true"
+    v[v == "FALSE"] <- "false"
+    v
+  })
 
   return(arg_R)
 }

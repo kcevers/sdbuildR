@@ -1319,12 +1319,17 @@ We save this version of the stock-and-flow model as `sfm0` for later use:
 sfm0 <- sfm
 ```
 
+
+```{r, include=FALSE, eval=FALSE}
+compare_models(sdbuildR("jdr"), sfm)
+```
+
+
 Note that this is identical to the version stored in the model library, which can be loaded using `sdbuildR()`:
 
 ```{r}
 sfm0 <- sfm <- sdbuildR("jdr")
 ```
-
 
 ```{r include=FALSE}
 if (recreate_figs) {
@@ -1759,7 +1764,7 @@ sfm <- sfm0 <- sim_settings(sfm0, save_n = 100)
 
 Alternatively, `save_at` can be passed to `sim_settings` to save at specific time points (e.g., `save_at = c(1, 100)`) or at a fixed interval (e.g., `save_at = 10` to save every ten time units). To further support computationally intensive ensemble simulations, **stockflow** enables parallelization supported by the **future** package [@bengtsson_unifying_2021]. The parallization backend needs to be configured prior to running ensemble simulations:
 
-```{r}
+```{r, eval = interactive()}
 if (!requireNamespace("future")) {
   install.packages("future")
 }
@@ -1771,7 +1776,7 @@ future::plan(future::multisession, workers = parallelly::availableCores() - 1)
 
 After the ensemble simulations are completed, parallelization can be ended with:
 
-```{r}
+```{r, eval = interactive()}
 future::plan(future::sequential)
 ```
 
@@ -1785,7 +1790,7 @@ use_julia()
 
 Parallelization is also supported with Julia:
 
-```{r}
+```{r, eval = interactive()}
 use_julia(nthreads = parallelly::availableCores() - 1)
 ```
 
@@ -1798,13 +1803,13 @@ sfm <- sfm0 <- sim_settings(sfm0, language = "Julia")
 
 To revert to single-threaded simulation, stop and restart the Julia session:
 
-```{r}
+```{r, eval = interactive()}
 use_julia(restart = TRUE)
 ```
 
 The Julia session can be ended with:
 
-```{r, eval = FALSE}
+```{r, eval = interactive()}
 use_julia(stop = TRUE)
 ```
 
@@ -1842,7 +1847,7 @@ print(future_time)
 print(julia_time)
 ```
 
-The mean and 95\% confidence interval across all simulations is shown above, **plotting only engagement and demands for simplicity. The burnout phenomenon appears robust to variations in initial conditions, as all simulations eventually converge to the same stable state of high job demands and zero work engagement.
+The mean and 95\% confidence interval across all simulations is shown above. The burnout phenomenon appears robust to variations in initial conditions, as all simulations eventually converge to the same stable state of high job demands and zero work engagement.
 
 Parameters (i.e., constants) are often of greater theoretical interest than initial conditions, as their variation can for instance represent individual differences, contextual factors, or uncertainty in the theory's assumptions. Parameters in ensemble simulations can be varied by redefining their `eqn` to draw from a distribution, or by passing a set of values to vary. For example, we can simulate three values of `motivation_rate`, the rate at which resources increase engagement. 
 
@@ -1887,8 +1892,8 @@ Next, we create a pulse function that is 1 for a period of two weeks and 0 other
 
 ```{r}
 sfm <- sfm |>
-  constant(start, eqn = 21) |>
-  constant(duration, eqn = 14) |>
+  constant(start, eqn = 14) |>
+  constant(duration, eqn = 7) |>
   constant(intervention, eqn = pulse(times, start, width = duration)) |>
   flow(intervention_effect,
     eqn = 0.05 * intervention(t),
@@ -1906,7 +1911,7 @@ simulate(sfm) |> plot()
 Run an ensemble simulation:
 
 ```{r}
-sims <- ensemble(sfm, n = n, save_sims = TRUE)
+sims <- ensemble(sfm, n = n)
 plot(sims,
   which = "sims", sim = 1:n, alpha = .25, central_tendency = FALSE,
   vars = c("engagement", "demands", "motivation_rate")
@@ -1926,7 +1931,9 @@ To compute the effectiveness of the intervention, we increase the simulation len
 
 ```{r}
 n <- 1000
-sfm <- sim_settings(sfm, stop = 1000, save_at = 1000, save_sims = TRUE)
+sfm <- sim_settings(sfm,
+# Only save engagement at the last time point
+vars = "engagement", stop = 1000, save_at = 1000)
 sims <- ensemble(sfm, n = n)
 df <- as.data.frame(sims, direction = "wide", which = "sims")
 tab <- table(round(df$engagement)) |>
@@ -1961,8 +1968,8 @@ if (recreate_figs) {
   annot_ <- utils::modifyList(annot, list(font = list(size = font_size_subplot + 1, family = font_family)))
 
   # Ensemble (plain)
-  sfm <- sfm_ens_par |> sim_settings(save_at = save_at)
-  sims <- ensemble(sfm, n = 1000)
+  sfm <- sfm_ens_par |> sim_settings(save_at = save_at, save_sims = TRUE)
+  sims <- ensemble(sfm, n = 1000, save_sims = FALSE)
 
   pl_ens <- plot(sims,
     vars = vars_, colors = colors_,
@@ -1973,8 +1980,7 @@ if (recreate_figs) {
   # Parameter variation
   sims <- ensemble(sfm,
     n = n_ens_par,
-    conditions = conditions,
-    save_sims = TRUE
+    conditions = conditions
   )
 
   pl_par <- plot(sims,
@@ -1999,13 +2005,12 @@ if (recreate_figs) {
   vars_ <- VARS[VARS %in% show_vars]
   colors_ <- COLORS[VARS %in% show_vars]
 
-  sfm <- sim_settings(sfm_int, save_at = save_at)
-  sims <- ensemble(sfm, n = n_ens_par, only_stocks = FALSE, save_sims = TRUE)
+  sfm <- sim_settings(sfm_int, save_at = save_at, only_stocks = FALSE, save_sims = TRUE)
+  sims <- ensemble(sfm, n = n_ens_par)
 
   pl_int <- plot(sims,
     which = "sims", sim = 1:n_ens_par,
     alpha = alpha, central_tendency = FALSE,
-    # which = "summary",
     showlegend = TRUE,
     vars = vars_, colors = colors_, ylim = ylim,
     main = "", sub = "",

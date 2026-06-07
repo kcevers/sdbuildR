@@ -61,6 +61,95 @@ test_that("conv_distribution_julia: non-integer first argument throws an error",
 })
 
 
+# ---------------------------------------------------------------------------
+# rate -> scale reparameterization (Exponential, Gamma)
+# R parameterizes these by `rate`; Julia's Distributions use `scale = 1/rate`.
+# The real conversion path passes a *named* argument list (from sort_args()).
+# ---------------------------------------------------------------------------
+
+test_that("reparam_rate_distribution: Exponential inverts rate to scale", {
+  out <- reparam_rate_distribution(
+    arg          = list(n = "10", rate = "4.0"),
+    distribution = "Distributions.Exponential"
+  )
+  expect_equal(out, list(n = "10", rate = "1 / (4.0)"))
+})
+
+test_that("reparam_rate_distribution: Gamma drops the redundant rate", {
+  out <- reparam_rate_distribution(
+    arg          = list(n = "10", shape = "2.0", rate = "4.0", scale = "0.25"),
+    distribution = "Distributions.Gamma"
+  )
+  expect_equal(out, list(n = "10", shape = "2.0", scale = "0.25"))
+})
+
+test_that("reparam_rate_distribution: no-op for other distributions", {
+  arg <- list(n = "10", mean = "0.0", sd = "1.0")
+  expect_equal(
+    reparam_rate_distribution(arg, "Distributions.Normal"),
+    arg
+  )
+})
+
+test_that("reparam_rate_distribution: no-op on unnamed input", {
+  arg <- list("10", "2.0", "0.25")
+  expect_equal(reparam_rate_distribution(arg, "Distributions.Gamma"), arg)
+})
+
+test_that("conv_distribution_julia: rgamma keeps scale, drops rate", {
+  result <- conv_distribution_julia(
+    arg          = list(n = "10", shape = "2.0", rate = "4.0", scale = "0.25"),
+    R_func       = "rgamma",
+    julia_func   = "rand",
+    distribution = "Distributions.Gamma"
+  )
+  expect_equal(result, "rand(Distributions.Gamma(2.0, 0.25), 10)")
+})
+
+test_that("conv_distribution_julia: rexp inverts rate to scale", {
+  result <- conv_distribution_julia(
+    arg          = list(n = "10", rate = "4.0"),
+    R_func       = "rexp",
+    julia_func   = "rand",
+    distribution = "Distributions.Exponential"
+  )
+  expect_equal(result, "rand(Distributions.Exponential(1 / (4.0)), 10)")
+})
+
+test_that("conv_distribution_julia: pexp inverts rate in cdf form", {
+  result <- conv_distribution_julia(
+    arg          = list(q = "2.0", rate = "4.0", lower.tail = "TRUE", log.p = "FALSE"),
+    R_func       = "pexp",
+    julia_func   = "Distributions.cdf.",
+    distribution = "Distributions.Exponential"
+  )
+  expect_equal(result, "Distributions.cdf.(Distributions.Exponential(1 / (4.0)), 2)")
+})
+
+test_that("conv_distribution_julia: pgamma drops rate in cdf form", {
+  result <- conv_distribution_julia(
+    arg          = list(
+      q = "2.0", shape = "2.0", rate = "4.0", scale = "0.25",
+      lower.tail = "TRUE", log.p = "FALSE"
+    ),
+    R_func       = "pgamma",
+    julia_func   = "Distributions.cdf.",
+    distribution = "Distributions.Gamma"
+  )
+  expect_equal(result, "Distributions.cdf.(Distributions.Gamma(2.0, 0.25), 2)")
+})
+
+test_that("conv_distribution_julia: named args work for non-rate distributions", {
+  result <- conv_distribution_julia(
+    arg          = list(n = "10", mean = "0.0", sd = "1.0"),
+    R_func       = "rnorm",
+    julia_func   = "rand",
+    distribution = "Distributions.Normal"
+  )
+  expect_equal(result, "rand(Distributions.Normal(0.0, 1.0), 10)")
+})
+
+
 # ============================================================================
 # conv_seq_julia()
 # ============================================================================
@@ -181,3 +270,4 @@ test_that("conv_sample_julia: sample.int generates integer range seq(1.0, n)", {
   expect_match(result, "round_\\(3\\)")
   expect_match(result, "replace=false")
 })
+

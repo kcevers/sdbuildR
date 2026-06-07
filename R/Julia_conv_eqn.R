@@ -559,7 +559,10 @@ convert_builtin_functions_julia <- function(type, name, eqn, var_names) {
         bracket_arg <- stringr::str_sub(eqn, idx_func[["start_bracket"]] + 1, idx_func[["end"]] - 1)
 
         arg <- parse_args(bracket_arg)
-        named_arg <- sort_args(arg, idx_func[["R_first_iter"]], var_names = var_names)
+        named_arg <- sort_args(arg, idx_func[["R_first_iter"]],
+          var_names = var_names,
+          fill_defaults = as.logical(idx_func[["fill_defaults"]])
+        )
         arg <- unname(unlist(named_arg))
 
         # Indices of replacement in eqn
@@ -582,9 +585,10 @@ convert_builtin_functions_julia <- function(type, name, eqn, var_names) {
             ifelse(nzchar(idx_func[["add_second_arg"]]) & nzchar(arg), ", ", "")
           )
         } else if (idx_func[["syntax"]] == "syntaxD") {
-          # Convert random number generation
+          # Convert random number generation. Pass the *named* argument list so
+          # rate/scale reparameterization (Exponential, Gamma) can match by name.
           replacement <- conv_distribution(
-            arg,
+            named_arg,
             idx_func[["R_first_iter"]],
             idx_func[["julia"]],
             idx_func[["add_first_arg"]]

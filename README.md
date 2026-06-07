@@ -67,8 +67,8 @@ remotes::install_github("KCEvers/sdbuildR")
 
 sdbuildR is designed to support the iterative process of building,
 simulating, and testing stock-and-flow models. Models can flexibly be
-modified and simulated in either R or
-[Julia](https://kcevers.github.io/sdbuildR/articles/julia-setup.html)
+modified and simulated in either R or Julia [(see setup
+guide)](https://kcevers.github.io/sdbuildR/articles/julia-setup.html)
 for a major speed-up on large or repeated runs. All package capabilities
 are described in the vignettes:
 
@@ -89,8 +89,8 @@ are described in the vignettes:
     example of formalizing psychological theory with sdbuildR.
   - [Julia
     setup](https://kcevers.github.io/sdbuildR/articles/julia-setup.html):
-    Speed up simulations with
-    Julia.
+    Set up Julia for faster
+    simulations.
   - [Import/Export](https://kcevers.github.io/sdbuildR/articles/import-export.html):
     Import models from deSolve or Insight Maker, and export to other
     formats.

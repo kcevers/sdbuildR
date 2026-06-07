@@ -4,6 +4,36 @@
 #' from R to Julia code
 
 
+#' Reparameterize rate-based R distributions for Julia
+#'
+#' R's `rexp()`/`rgamma()` (and their `d`/`p`/`q` variants) use a `rate`
+#' parameter, whereas Julia's `Distributions.Exponential`/`Distributions.Gamma`
+#' use `scale = 1 / rate`. `sort_args()` already resolves Gamma's `scale` (its
+#' formals include `scale = 1 / rate`), so we drop the now-redundant `rate`.
+#' Exponential has no `scale` formal, so we invert `rate` directly.
+#'
+#' Operates on a *named* argument list (the real conversion path). It is a
+#' no-op for unnamed input, e.g. when `conv_distribution_julia()` is called
+#' directly with a plain character vector in unit tests.
+#'
+#' @param arg List of arguments, named in R's formal order
+#' @param distribution String with Julia distribution call
+#'
+#' @returns List of arguments with Julia-compatible parameterization
+#' @noRd
+#'
+reparam_rate_distribution <- function(arg, distribution) {
+  if (endsWith(distribution, "Exponential") && is_defined(arg[["rate"]])) {
+    # Julia's Exponential takes scale = 1 / rate
+    arg[["rate"]] <- sprintf("1 / (%s)", arg[["rate"]])
+  } else if (endsWith(distribution, "Gamma")) {
+    # sort_args() already computed scale = 1 / rate; drop the redundant rate
+    arg[["rate"]] <- NULL
+  }
+  arg
+}
+
+
 #' Convert random number generation in R to Julia
 #'
 #' @inheritParams sort_args
@@ -26,6 +56,11 @@ conv_distribution_julia <- function(arg, R_func, julia_func, distribution) {
       "i" = "Must be {.cls integer}."
     ), call. = FALSE)
   }
+
+  # R parameterizes Exponential/Gamma by rate; Julia uses scale = 1 / rate.
+  # Acts on the named argument list; a no-op for unnamed input.
+  arg <- reparam_rate_distribution(arg, distribution)
+  arg <- unname(arg)
 
   # If n = 1, don't include it, as rand(..., 1) generates a vector. n is the first argument.
   julia_str <- sprintf(
