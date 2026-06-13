@@ -1,5 +1,5 @@
 #' Translate between deSolve and DifferentialEquations.jl solver names
-#' 
+#'
 #' Translate between deSolve and DifferentialEquations.jl solver names, or validate that a given solver name is recognized in either language. This is used internally to allow users to specify familiar R solvers when using Julia for simulation, and to provide warnings when an exact equivalent is not available.
 #'
 #' @param method Solver name to validate or translate.
@@ -14,13 +14,13 @@
 #' @examples
 #' # List supported solvers
 #' sim_methods()
-#' 
+#'
 #' # List supported R solvers
 #' sim_methods(from = "R")
-#' 
+#'
 #' # List supported Julia solvers
 #' sim_methods(from = "Julia")
-#' 
+#'
 #' # Validate or translate specific solvers
 #' sim_methods("rk4", from = "R", to = "Julia")
 sim_methods <- function(method, from = NULL, to = NULL) {

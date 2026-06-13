@@ -80,7 +80,6 @@ summarise_by <- function(df, by, quantiles, q_names) {
 ensemble_r <- function(object, n, save_sims, conditions, cross,
                        quantiles, only_stocks, vars = NULL, verbose,
                        n_conditions, total_sims) {
-
   # Find seed if specified
   has_seed <- !is.null(object[["sim_settings"]][["seed"]])
   if (has_seed) {
@@ -175,15 +174,14 @@ ensemble_r <- function(object, n, save_sims, conditions, cross,
       } else {
         do_run <- function() {
           lapply(tasks, function(task) {
-          eval_sim_script_r(
-            parsed_expr = parsed_scripts[[task[["condition"]]]],
-            condition = task[["condition"]], sim = task[["sim"]]
-          )
-        })
+            eval_sim_script_r(
+              parsed_expr = parsed_scripts[[task[["condition"]]]],
+              condition = task[["condition"]], sim = task[["sim"]]
+            )
+          })
         }
 
-       if (has_seed) withr::with_seed(seed_nr, do_run()) else do_run()
-
+        if (has_seed) withr::with_seed(seed_nr, do_run()) else do_run()
       }
     },
     error = function(e) {

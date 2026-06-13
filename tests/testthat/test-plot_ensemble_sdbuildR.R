@@ -197,9 +197,10 @@ test_that("plot.ensemble_sdbuildR() shareX and shareY works", {
   # 4 conditions
   n <- 3
   nrows <- 2
-  sims <- make_r_ens(n = n, conditions = list("contact_rate" = c(1.5, 2.5),
+  sims <- make_r_ens(n = n, conditions = list(
+    "contact_rate" = c(1.5, 2.5),
     "recovery_rate" = c(0.1, 0.2)
-    ), cross = TRUE)
+  ), cross = TRUE)
 
   pl <- plot(sims, shareX = TRUE, shareY = TRUE, nrows = nrows)
   info <- plotly_subplot_grid(pl)

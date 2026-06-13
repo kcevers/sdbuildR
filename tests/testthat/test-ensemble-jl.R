@@ -99,8 +99,8 @@ test_that("ensemble() runs successfully", {
   expect_true(sims[["success"]])
   expect_false(is.null(sims[["summary"]]))
 
- # correct structure
-    expected_fields <- c(
+  # correct structure
+  expected_fields <- c(
     "success", "df", "summary", "n", "n_total",
     "n_conditions", "conditions", "init", "constants",
     "script", "duration"
@@ -378,7 +378,6 @@ test_that("ensemble() non-crossed design pairs values", {
 
   df <- as.data.frame(sims, which = "sims")
   expect_equal(sort(unique(df[["condition"]])), seq_len(nr_cond))
-
 })
 
 
@@ -464,7 +463,6 @@ test_that("ensemble in Julia is reproducible with seed", {
   expect_true(abs(sum(df2a[, cols] - df2b[, cols])) > tol)
   expect_true(abs(sum(df2a[, cols] - df2c[, cols])) > tol)
   expect_true(abs(sum(df2b[, cols] - df2c[, cols])) > tol)
-
 })
 
 
@@ -510,9 +508,7 @@ test_that("ensemble in Julia with threads is reproducible with seed", {
   expect_true(abs(sum(df2a[, cols] - df2b[, cols])) > tol)
   expect_true(abs(sum(df2a[, cols] - df2c[, cols])) > tol)
   expect_true(abs(sum(df2b[, cols] - df2c[, cols])) > tol)
-
 })
-
 
 
 test_that("ensemble in Julia without seed", {
@@ -539,7 +535,6 @@ test_that("ensemble in Julia without seed", {
   df1 <- as.data.frame(sims1, which = "sims")
   df2 <- as.data.frame(sims2, which = "sims")
   expect_true(abs(sum(df1[, cols] - df2[, cols])) > tol)
-
 })
 
 # Edge cases --------------------------------------------
@@ -661,7 +656,7 @@ test_that("validate_ensemble_sdbuildR() assesses success, summary, duration", {
   sims <- sims0
   sims$duration <- NULL
   expect_error(validate_ensemble_sdbuildR(sims), "duration")
- 
+
   # check_ensemble_sdbuildR() passes for valid successful ensemble
   expect_no_error(check_ensemble_sdbuildR(sims0))
   expect_invisible(check_ensemble_sdbuildR(sims0))
@@ -765,7 +760,7 @@ test_that("as.data.frame() direction = 'wide' widens summary and sims", {
   # condition and time remain as id columns
   expect_true("condition" %in% names(df_wide))
   expect_true("time" %in% names(df_wide))
-  
+
   # as.data.frame() direction = 'wide' widens individual sims
   df_long <- as.data.frame(sims, which = "sims", direction = "long")
   df_wide <- as.data.frame(sims, which = "sims", direction = "wide")
@@ -850,4 +845,3 @@ test_that("summary() result has expected columns", {
   q_cols <- grep("^q", names(s), value = TRUE)
   expect_gt(length(q_cols), 0)
 })
-

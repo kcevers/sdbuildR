@@ -600,6 +600,8 @@ pre_assemble_components <- function(object) {
     object[["assemble"]][["summary"]] <- summary(object)
   }
 
+  # --- Structural invariant check (cheap; guards codegen correctness) ---------
+  validate_layout(object)
 
   object
 }

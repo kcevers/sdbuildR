@@ -5,8 +5,8 @@
 # 3. List columns work consistently across R and Julia
 # 4. Multiple flows populate correctly in list columns
 
-# Test prep_stock_change() creates list columns
-test_that("prep_stock_change() creates list columns", {
+# Test prep_stock_change() creates list columns (R backend)
+test_that("prep_stock_change() creates list columns (R)", {
   sfm <- sdbuildR() |>
     update(name = "S", type = "stock", eqn = "100") |>
     update(name = "inflow1", type = "flow", eqn = "5", to = "S") |>
@@ -28,8 +28,8 @@ test_that("prep_stock_change() creates list columns", {
   expect_equal(s_outflow, "outflow1")
 })
 
-# Test prep_stock_change() creates list columns
-test_that("prep_stock_change() creates list columns", {
+# Test prep_stock_change() creates list columns (Julia backend)
+test_that("prep_stock_change() creates list columns (Julia)", {
   sfm <- sdbuildR() |>
     update(name = "S", type = "stock", eqn = "100") |>
     update(name = "inflow1", type = "flow", eqn = "5", to = "S") |>
@@ -197,6 +197,37 @@ test_that("prep functions handle pre-existing list columns", {
 
   # Should be identical
   expect_equal(first_inflow, second_inflow)
+})
+
+# Test sum_name positional index matches stock order (Julia state vector)
+test_that("prep_stock_change() assigns dSdt[] indices matching stock order", {
+  sfm <- sdbuildR() |>
+    update(name = "alpha", type = "stock", eqn = "1") |>
+    update(name = "beta", type = "stock", eqn = "2") |>
+    update(name = "gamma", type = "stock", eqn = "3") |>
+    sim_settings(language = "Julia")
+
+  sfm <- prep_stock_change(sfm)
+
+  stocks <- sfm$variables[sfm$variables$type == "stock", ]
+  # i-th stock (table order = state-vector order) must be dSdt[i]
+  expect_equal(stocks$sum_name, paste0("dSdt[", seq_len(nrow(stocks)), "]"))
+})
+
+# Test incremental prep does not leave stale indices on other stocks
+test_that("incremental prep_stock_change() keeps all dSdt[] indices consistent", {
+  # Build with two stocks, then insert a third that sorts in the middle and
+  # prep only that one (the incremental path used by mutators). The earlier
+  # full layout + final sanitize must still yield a consistent mapping.
+  sfm <- sdbuildR() |>
+    update(name = "a", type = "stock", eqn = "1") |>
+    update(name = "z", type = "stock", eqn = "2") |>
+    sim_settings(language = "Julia") |>
+    update(name = "m", type = "stock", eqn = "3")
+
+  stocks <- sfm$variables[sfm$variables$type == "stock", ]
+  expect_equal(stocks$name, c("a", "m", "z"))
+  expect_equal(stocks$sum_name, paste0("dSdt[", seq_len(nrow(stocks)), "]"))
 })
 
 # Test bidirectional flow (from and to same stock)

@@ -791,7 +791,6 @@ syntax_IM <- get_syntax_IM()
 syntax_julia <- get_syntax_julia()
 
 
-
 ##### Protected names not to be used as variable names #####
 protected_names <- c(
   # Reserved words in R

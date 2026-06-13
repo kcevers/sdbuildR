@@ -374,7 +374,7 @@ check_ensemble_sdbuildR <- function(x) {
       ">" = "Use {.fn ensemble} to create a valid ensemble object."
     ))
   }
-  
+
   if (!x[["success"]]) {
     cli::cli_abort(c(
       "x" = "Ensemble simulation failed.",
@@ -608,7 +608,6 @@ new_ensemble_sdbuildR <- function(success = FALSE,
 #'
 #' @noRd
 validate_ensemble_sdbuildR <- function(x) {
-
   if (!inherits(x, "ensemble_sdbuildR")) {
     cli::cli_abort(c(
       "x" = "Invalid object type.",
@@ -626,7 +625,7 @@ validate_ensemble_sdbuildR <- function(x) {
   missing_fields <- setdiff(required, names(x))
   if (length(missing_fields) > 0) {
     cli::cli_abort(c(
-      "x"= "Ensemble object is missing fields.",
+      "x" = "Ensemble object is missing fields.",
       "!" = "Missing: {paste0('{.field ', missing_fields, '}', collapse = ', ')}."
     ))
   }
@@ -685,9 +684,7 @@ validate_ensemble_sdbuildR <- function(x) {
         "i" = "Successful ensemble must have a {.cls data.frame} in {.arg summary}."
       ))
     }
-
   } else if (!x$success) {
-
     if (is.null(x$error_message) || !nzchar(x$error_message)) {
       cli::cli_abort(c(
         "x" = "Missing error message.",

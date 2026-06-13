@@ -56,7 +56,6 @@ test_that("plot.verify_sdbuildR for two conditions", {
   expect_true(info$shareX)
 
   expect_snapshot_plot("verify-two-conditions", pl)
-
 })
 
 
@@ -80,7 +79,6 @@ test_that("plot.verify_sdbuildR keeps trace colors aligned with the legend", {
   expect_setequal(traces[["name"]], label_names)
   expect_true(nrow(legend_check) > 0)
   expect_true(all(legend_check$ok))
-
 })
 
 
@@ -108,7 +106,6 @@ test_that("plot.verify_sdbuildR uses explicit custom colors on legend traces", {
   expect_true(nrow(legend_check) > 0)
   expect_true(all(legend_check$ok))
   expect_true(all(legend_check$matches_expected))
-
 })
 
 

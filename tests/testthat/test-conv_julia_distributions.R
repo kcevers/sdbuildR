@@ -128,12 +128,12 @@ test_that("conv_distribution_julia: pexp inverts rate in cdf form", {
 
 test_that("conv_distribution_julia: pgamma drops rate in cdf form", {
   result <- conv_distribution_julia(
-    arg          = list(
+    arg = list(
       q = "2.0", shape = "2.0", rate = "4.0", scale = "0.25",
       lower.tail = "TRUE", log.p = "FALSE"
     ),
-    R_func       = "pgamma",
-    julia_func   = "Distributions.cdf.",
+    R_func = "pgamma",
+    julia_func = "Distributions.cdf.",
     distribution = "Distributions.Gamma"
   )
   expect_equal(result, "Distributions.cdf.(Distributions.Gamma(2.0, 0.25), 2)")
@@ -270,4 +270,3 @@ test_that("conv_sample_julia: sample.int generates integer range seq(1.0, n)", {
   expect_match(result, "round_\\(3\\)")
   expect_match(result, "replace=false")
 })
-

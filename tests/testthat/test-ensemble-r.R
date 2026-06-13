@@ -9,7 +9,7 @@ test_that("ensemble() runs in R", {
   expect_s3_class(sims, "ensemble_sdbuildR")
   expect_true(sims[["success"]])
   expect_false(is.null(sims[["summary"]]))
-  
+
   # ensemble() R returns correct structure
   expected_fields <- c(
     "success", "df", "summary", "n", "n_total",
@@ -160,8 +160,8 @@ test_that("ensemble() R non-crossed design pairs values", {
   expect_equal(sims[["n_total"]], nr_sims * nr_cond)
   expect_equal(sort(unique(sims[["df"]][["sim"]])), 1:nr_sims)
   expect_equal(sort(unique(sims[["df"]][["condition"]])), 1:nr_cond)
-  
-  
+
+
   # ensemble() R conditions data frame is correct
   cond_df <- as.data.frame(sims[["conditions"]])
   expect_equal(cond_df[["condition"]], 1:nr_cond)
@@ -287,7 +287,7 @@ test_that("ensemble() in R with parallel execution respects seed", {
   skip_on_cran()
 
   sfm <- make_r_ensemble_random_sfm() |> sim_settings(seed = 123)
-  
+
   future::plan(future::multisession, workers = 2)
   on.exit(future::plan(future::sequential), add = TRUE)
 
@@ -327,7 +327,7 @@ test_that("ensemble() in R without seed", {
   sfm <- make_r_ensemble_random_sfm() |> sim_settings(seed = NULL)
   sims1 <- silence(ensemble(sfm, n = 3, verbose = FALSE, save_sims = TRUE))
   sims2 <- silence(ensemble(sfm, n = 3, verbose = FALSE, save_sims = TRUE))
-  
+
   tol <- 1e-5
   df1 <- as.data.frame(sims1, which = "summary")
   df2 <- as.data.frame(sims2, which = "summary")
@@ -338,7 +338,6 @@ test_that("ensemble() in R without seed", {
   df1 <- as.data.frame(sims1, which = "sims")
   df2 <- as.data.frame(sims2, which = "sims")
   expect_true(abs(sum(df1[, cols] - df2[, cols])) > tol)
-
 })
 
 # Parallel execution via user-managed future plan -------------------------
@@ -370,4 +369,16 @@ test_that("ensemble() R uses parallel path when future plan has multiple workers
   expect_true(sims[["success"]])
   expect_equal(sims[["n"]], n)
   expect_gt(future::nbrOfWorkers(), 1L)
+})
+
+
+test_that("ensemble respects sim_settings save_sims and per-call override via ...", {
+  sfm <- sdbuildR("SIR") |>
+    sim_settings(save_sims = TRUE)
+
+  ens_keep <- ensemble(sfm, n = 2)
+  expect_true(!is.null(ens_keep$df))
+
+  ens_drop <- ensemble(sfm, n = 2, save_sims = FALSE)
+  expect_null(ens_drop$df)
 })

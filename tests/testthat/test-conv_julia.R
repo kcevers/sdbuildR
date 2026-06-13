@@ -399,10 +399,14 @@ test_that("corrected builtin conversions to Julia", {
   expect_equal(conv("ifelse(cond, a, b)"), "ifelse.(cond, a, b)")
 
   # grep -> r_grep (faithful wrapper, fill path); value lands in correct slot
-  expect_equal(conv("grep(\"a\", x)"),
-               "r_grep(\"a\", x, false, false, false, false, false, false)")
-  expect_equal(conv("grep(\"a\", x, value=TRUE)"),
-               "r_grep(\"a\", x, false, false, true, false, false, false)")
+  expect_equal(
+    conv("grep(\"a\", x)"),
+    "r_grep(\"a\", x, false, false, false, false, false, false)"
+  )
+  expect_equal(
+    conv("grep(\"a\", x, value=TRUE)"),
+    "r_grep(\"a\", x, false, false, true, false, false, false)"
+  )
 
   # rbind -> r_rbind, and arguments are no longer dropped (deparse.level fix)
   expect_equal(conv("rbind(x, x)"), "r_rbind(x, x)")

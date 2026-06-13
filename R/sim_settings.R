@@ -67,7 +67,7 @@
 #' sfm <- sim_settings(sfm, save_n = 11)
 #' sim <- simulate(sfm)
 #' head(as.data.frame(sim))
-#' 
+#'
 #' # Add stochastic initial condition but specify seed to obtain same result
 #' sfm <- sim_settings(sfm, seed = 1) |>
 #'   update(c(predator, prey), eqn = runif(1, 20, 50))
@@ -196,7 +196,6 @@ sim_settings <- function(object,
 
   # Seed must be NULL or an integer
   if (!missing(seed) && !is.null(seed)) {
-
     if (is.na(seed)) {
       seed <- NULL
     } else if (isFALSE(seed)) {
@@ -263,7 +262,7 @@ sim_settings <- function(object,
   # Selectively invalidate based on what changed
   time_related <- c(
     "start", "stop", "dt", "save_at", "save_n", "save_type",
-    "time_units", "method"#, "seed"
+    "time_units", "method" # , "seed"
   )
   if (all(names(argg) %in% c("language", time_related))) {
     object <- invalidate_assemble(object, "times")

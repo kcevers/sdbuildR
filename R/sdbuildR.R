@@ -314,13 +314,12 @@ check_sdbuildR <- function(object) {
 
 
 #' Check summary diagnostics for errors
-#' 
+#'
 #' Checks the summary diagnostics for any errors and aborts with a message if any are found. Called before simulation and unit testing to ensure the model is in a valid state.
 #' @inheritParams update.sdbuildR
 #' @returns Invisibly returns TRUE if no errors are found, otherwise aborts with a message.
 #' @noRd
 check_summary_diagnostics <- function(object) {
-
   if (is.null(object[["assemble"]][["summary"]])) {
     object[["assemble"]][["summary"]] <- summary(object)
   }
@@ -402,6 +401,66 @@ validate_sdbuildR <- function(object) {
           ))
         }
       }
+    }
+  }
+
+  invisible(object)
+}
+
+
+#' Validate the compiled model layout before code generation
+#'
+#' Structural invariant check run at codegen time (via pre_assemble_components()).
+#' Catches internal inconsistencies that would otherwise silently produce a
+#' wrong simulation rather than an error -- most importantly that each stock's
+#' derivative slot (`sum_name`, e.g. `dSdt[i]` in Julia) matches the stock's
+#' position in the state vector. A mismatch means stock dynamics are swapped.
+#'
+#' These are invariants the package must uphold; a violation is a bug in
+#' sdbuildR, not user error, so it aborts with a report link.
+#'
+#' @inheritParams update.sdbuildR
+#' @returns Invisibly returns the object, unchanged.
+#' @noRd
+validate_layout <- function(object) {
+  vars <- object[["variables"]]
+  if (is.null(vars) || nrow(vars) == 0) {
+    return(invisible(object))
+  }
+
+  internal_error <- function(...) {
+    cli::cli_abort(
+      c(..., "i" = "This is an internal sdbuildR error; please report it at {.url https://github.com/KCEvers/sdbuildR/issues}."),
+      class = "sdbuildR_layout_error"
+    )
+  }
+
+  # Variable names must be unique (state vector / unpacking rely on this).
+  dups <- unique(vars[["name"]][duplicated(vars[["name"]])])
+  if (length(dups) > 0) {
+    internal_error("Duplicate variable name{?s}: {.val {dups}}.")
+  }
+
+  # Stock derivative slots must match the state-vector order. sum_name is only
+  # populated after prep_stock_change(), so skip if absent (e.g. empty model).
+  stock_idx <- which(vars[["type"]] == "stock")
+  if (length(stock_idx) > 0 && "sum_name" %in% colnames(vars) &&
+    is_defined(vars[stock_idx[1], "sum_name"])) {
+    lang <- lang_adapter(object[["sim_settings"]][["language"]])
+    stock_names <- vars[stock_idx, "name"]
+    expected <- vapply(
+      seq_along(stock_idx),
+      function(pos) lang$format_sum_name(vars[stock_idx[pos], ], pos, stock_names),
+      character(1)
+    )
+    actual <- vars[stock_idx, "sum_name"]
+    if (!identical(actual, expected)) {
+      internal_error(
+        "Stock derivative slots are misaligned with the state vector.",
+        "x" = "Stocks (in order): {.val {stock_names}}.",
+        "x" = "Expected slots: {.val {expected}}.",
+        "x" = "Found slots: {.val {actual}}."
+      )
     }
   }
 
@@ -495,6 +554,27 @@ sanitize_sdbuildR <- function(object) {
     ord <- order(type_rank, name_lower)
     object[["variables"]] <- object[["variables"]][ord, , drop = FALSE]
     rownames(object[["variables"]]) <- NULL
+
+    # Refresh stock sum_name against the canonical order just established. For
+    # Julia, sum_name is a positional state-vector index (dSdt[i]) that must
+    # match the stock order used to build init/unpack at compile time. Mutators
+    # (e.g. change_type) compute sum_name in prep_stock_change *before* this
+    # sort, so without this re-sync the indices can be permuted (#change_type
+    # bug). No-op for R, where sum_name is name-based.
+    stock_idx <- which(object[["variables"]][["type"]] == "stock")
+    has_sum_name <- "sum_name" %in% colnames(object[["variables"]]) &&
+      length(stock_idx) > 0 &&
+      is_defined(object[["variables"]][stock_idx[1], "sum_name"])
+    if (has_sum_name) {
+      lang <- lang_adapter(object[["sim_settings"]][["language"]])
+      stock_names <- object[["variables"]][stock_idx, "name"]
+      for (pos in seq_along(stock_idx)) {
+        i <- stock_idx[pos]
+        object[["variables"]][i, "sum_name"] <- lang$format_sum_name(
+          object[["variables"]][i, ], pos, stock_names
+        )
+      }
+    }
   }
 
   object

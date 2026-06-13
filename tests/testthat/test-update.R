@@ -69,7 +69,6 @@ test_that("update() rejects disallowed names", {
 })
 
 
-
 test_that("update() enforces flow rules", {
   sfm <- sdbuildR()
   sfm <- update(sfm, "StockA", type = "stock")
@@ -574,6 +573,120 @@ test_that("change_type() invalidates test deps cache", {
 
   expect_null(sfm[["assemble"]][["unit_tests"]][["deps"]])
 })
+
+# ==============================================================================
+# change_type() — stock dSdt[] index alignment (Julia state-vector layout)
+# ==============================================================================
+
+test_that("change_type() to stock keeps dSdt[] indices aligned with stock order", {
+  # Converting a non-stock to a stock adds a new state variable. The new stock
+  # is appended during the change, then sanitize_sdbuildR() re-sorts variables
+  # by type/name. The positional dSdt[] index must follow that final order, or
+  # stock dynamics get silently swapped.
+  sfm <- sdbuildR() |>
+    update("a_stock", type = "stock", eqn = "1") |>
+    update("z_stock", type = "stock", eqn = "2") |>
+    # 'motiv' sorts alphabetically BETWEEN a_stock and z_stock, so making it a
+    # stock shifts z_stock's index -- exactly the regressed scenario.
+    update("motiv", type = "constant", eqn = "0.3") |>
+    sim_settings(language = "Julia")
+
+  expect_stock_indices_aligned(sfm)
+
+  sfm <- change_type(sfm, "motiv", new_type = "stock")
+
+  # motiv must land in its sorted position (2nd) and z_stock must shift to 3rd
+  stocks <- sfm[["variables"]][sfm[["variables"]][["type"]] == "stock", ]
+  expect_equal(stocks[["name"]], c("a_stock", "motiv", "z_stock"))
+  expect_stock_indices_aligned(sfm)
+
+  # A stock with no flows must get a zero derivative (not another stock's flows)
+  motiv_row <- sfm[["variables"]][sfm[["variables"]][["name"]] == "motiv", ]
+  expect_equal(motiv_row[["sum_name"]], "dSdt[2]")
+  expect_equal(motiv_row[["sum_eqn"]], "0.0")
+})
+
+
+test_that("change_type() to stock keeps dSdt[] aligned in a realistic model", {
+  # Regression for the JDR template: change_type(motivation_rate -> stock) used
+  # to leave resources pointing at dSdt[4] while the state vector put it at 5.
+  sfm <- sdbuildR("JDR") |>
+    sim_settings(language = "Julia") |>
+    change_type("motivation_rate", new_type = "stock")
+
+  expect_stock_indices_aligned(sfm)
+
+  mr <- sfm[["variables"]][sfm[["variables"]][["name"]] == "motivation_rate", ]
+  expect_equal(mr[["sum_eqn"]], "0.0") # no flows -> constant
+})
+
+
+test_that("discard() reindexes remaining stock dSdt[] contiguously", {
+  sfm <- sdbuildR() |>
+    update("a", type = "stock", eqn = "1") |>
+    update("b", type = "stock", eqn = "2") |>
+    update("c", type = "stock", eqn = "3") |>
+    sim_settings(language = "Julia")
+
+  expect_stock_indices_aligned(sfm)
+
+  sfm <- suppressWarnings(discard(sfm, "a"))
+
+  stocks <- sfm[["variables"]][sfm[["variables"]][["type"]] == "stock", ]
+  expect_equal(stocks[["name"]], c("b", "c"))
+  expect_stock_indices_aligned(sfm) # b -> dSdt[1], c -> dSdt[2]
+})
+
+
+test_that("change_type() away from stock reindexes remaining stocks", {
+  sfm <- sdbuildR() |>
+    update("a", type = "stock", eqn = "1") |>
+    update("b", type = "stock", eqn = "2") |>
+    update("c", type = "stock", eqn = "3") |>
+    sim_settings(language = "Julia")
+
+  sfm <- suppressWarnings(change_type(sfm, "a", new_type = "constant"))
+
+  stocks <- sfm[["variables"]][sfm[["variables"]][["type"]] == "stock", ]
+  expect_equal(stocks[["name"]], c("b", "c"))
+  expect_stock_indices_aligned(sfm)
+})
+
+
+test_that("change_name() that reorders stocks keeps dSdt[] aligned", {
+  # Renaming a stock can change its alphabetical sort position, which shifts
+  # other stocks' state-vector indices.
+  sfm <- sdbuildR() |>
+    update("b", type = "stock", eqn = "1") |>
+    update("c", type = "stock", eqn = "2") |>
+    sim_settings(language = "Julia")
+
+  # Rename c -> a, which now sorts first
+  sfm <- change_name(sfm, "c", new_name = "a")
+
+  stocks <- sfm[["variables"]][sfm[["variables"]][["type"]] == "stock", ]
+  expect_equal(stocks[["name"]], c("a", "b"))
+  expect_stock_indices_aligned(sfm)
+})
+
+
+test_that("change_type() to stock simulates correctly in Julia (no-flow stock is constant)", {
+  # End-to-end behavioral regression: a stock with no flows must stay constant,
+  # and must not absorb another stock's dynamics via a misaligned dSdt[] index.
+  skip_if_julia_not_ready()
+
+  sfm <- sdbuildR("JDR") |>
+    sim_settings(language = "Julia") |>
+    change_type("motivation_rate", new_type = "stock")
+
+  sim <- simulate(sfm)
+  df <- as.data.frame(sim)
+  mr <- df[df[["variable"]] == "motivation_rate", "value"]
+
+  expect_true(length(mr) > 0)
+  expect_equal(diff(range(mr)), 0) # no flows -> perfectly constant
+})
+
 
 test_that("change_name() updates multiple renames in unit tests simultaneously", {
   sfm <- make_verifiable_sfm() |>

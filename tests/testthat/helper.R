@@ -1,6 +1,5 @@
 # Test Helper Functions
 expect_snapshot_plot <- function(name, code, fileext = NULL, width = 4, height = 4) {
-
   withr::local_pdf(NULL)
 
   pl <- code
@@ -32,9 +31,7 @@ expect_snapshot_plot <- function(name, code, fileext = NULL, width = 4, height =
   if (!plotly_object) {
     # DiagrammeR
     expect_snapshot_value(pl[["x"]][["diagram"]], style = "json")
-
   } else {
-
     # skip_on_os("mac") # floating point differences cause snapshot failures on GitHub Actions macOS runners
     # skip_on_os("linux")
 
@@ -46,33 +43,38 @@ expect_snapshot_plot <- function(name, code, fileext = NULL, width = 4, height =
     expect_snapshot_file(json_path, name = paste0(name, ".json"))
 
     # Visual artifact for manual inspection, never fails
-    skip_if(Sys.getenv("SDBUILDR_CREATE_TEST_FIGS") != "true", 
-    "Skipping plot snapshot creation (SDBUILDR_CREATE_TEST_FIGS not set to 'true')")
+    skip_if(
+      Sys.getenv("SDBUILDR_CREATE_TEST_FIGS") != "true",
+      "Skipping plot snapshot creation (SDBUILDR_CREATE_TEST_FIGS not set to 'true')"
+    )
 
     img_path <- tempfile(fileext = ".png")
-    tryCatch({
-      export_plot(pl, file = img_path, width = width, height = height)
-      expect_snapshot_file(img_path,
-      name = paste0(name, ".png"),
-      compare = function(old, new) TRUE
-    )
-    },
+    tryCatch(
+      {
+        export_plot(pl, file = img_path, width = width, height = height)
+        expect_snapshot_file(img_path,
+          name = paste0(name, ".png"),
+          compare = function(old, new) TRUE
+        )
+      },
       stockflow_export_error = function(e) {
         testthat::skip(paste("Plot export unavailable:", conditionMessage(e)))
       }
     )
-    
   }
 
   invisible()
 }
 
 normalize_plotly <- function(pl, digits = 2) {
-      # # normalize plotly's random internal IDs
-    # json <- gsub('"[a-f0-9]{8,}"', '"ID"', json)
+  # # normalize plotly's random internal IDs
+  # json <- gsub('"[a-f0-9]{8,}"', '"ID"', json)
   b <- plotly::plotly_build(pl)$x
-  rn <- function(z) if (is.numeric(z)) round(z, digits)
-                    else if (is.list(z)) lapply(z, rn) else z
+  rn <- function(z) {
+    if (is.numeric(z)) {
+      round(z, digits)
+    } else if (is.list(z)) lapply(z, rn) else z
+  }
   list(data = lapply(b$data, rn), layout = rn(b$layout))
 }
 
@@ -120,8 +122,8 @@ expect_successful_simulation <- function(sfm, ...) {
 }
 
 #' Execute code quietly (suppressing messages and warnings)
-#' 
-#' @noRd 
+#'
+#' @noRd
 silence <- function(expr) {
   suppressMessages(suppressWarnings(expr))
 }
@@ -174,11 +176,30 @@ make_jl_ensemble_sfm <- function() {
 }
 
 
-
 make_r_ensemble_random_sfm <- function() {
   sdbuildR("SIR") |>
     update(c(susceptible, infected, recovered), eqn = "runif(1, 1, 1000)") |>
     sim_settings(language = "R", start = 0, stop = 10, dt = 0.1, save_at = 1, seed = 42)
+}
+
+
+# Assert the core ODE layout invariant for a Julia-language model:
+# the k-th stock (in variables-table order, which is the order used to build the
+# state vector / init / unpacking) must have sum_name == "dSdt[k]". A permuted
+# or non-contiguous mapping means dSdt[] is misaligned with the state vector,
+# which silently swaps stock dynamics (see change_type/sanitize index bug).
+# Runs in pure R (codegen only); no Julia installation required.
+expect_stock_indices_aligned <- function(sfm) {
+  stopifnot(identical(sfm[["sim_settings"]][["language"]], "Julia"))
+  stocks <- sfm[["variables"]][sfm[["variables"]][["type"]] == "stock", ]
+  expect_equal(
+    stocks[["sum_name"]],
+    paste0("dSdt[", seq_len(nrow(stocks)), "]"),
+    info = paste0(
+      "Stock dSdt[] indices must match state-vector order. Stocks: ",
+      paste(stocks[["name"]], collapse = ", ")
+    )
+  )
 }
 
 
@@ -248,11 +269,15 @@ expect_plotly <- function(x) {
 #' Accepts hex (#RRGGBB[AA]), rgb()/rgba() and named R colours; returns
 #' uppercase #RRGGBB (alpha stripped) or NA_character_.
 normalize_color_string <- function(col) {
-  if (is.null(col)) return(NA_character_)
+  if (is.null(col)) {
+    return(NA_character_)
+  }
   col_chr <- as.character(col)[1L]
-  if (!nzchar(col_chr)) return(NA_character_)
+  if (!nzchar(col_chr)) {
+    return(NA_character_)
+  }
 
-  if (grepl("^rgba?\\(", col_chr)) {                       # rgb()/rgba()
+  if (grepl("^rgba?\\(", col_chr)) { # rgb()/rgba()
     nums <- as.numeric(strsplit(gsub("rgba?\\(|\\)", "", col_chr), ",")[[1L]])
     if (length(nums) >= 3) {
       rgb <- nums[1:3]
@@ -260,40 +285,48 @@ normalize_color_string <- function(col) {
       return(toupper(grDevices::rgb(rgb[1], rgb[2], rgb[3], maxColorValue = 255)))
     }
   }
-  if (grepl("^#", col_chr)) {                              # hex, strip any alpha
+  if (grepl("^#", col_chr)) { # hex, strip any alpha
     return(toupper(if (nchar(col_chr) >= 7) substr(col_chr, 1, 7) else col_chr))
   }
-  v <- tryCatch(grDevices::col2rgb(col_chr), error = function(e) NULL)  # named
-  if (!is.null(v)) return(toupper(grDevices::rgb(v[1], v[2], v[3], maxColorValue = 255)))
+  v <- tryCatch(grDevices::col2rgb(col_chr), error = function(e) NULL) # named
+  if (!is.null(v)) {
+    return(toupper(grDevices::rgb(v[1], v[2], v[3], maxColorValue = 255)))
+  }
   NA_character_
 }
 
 #' One comprehensive trace-level data frame (colour column normalized)
 plotly_traces <- function(pl) {
   traces <- plotly::plotly_build(pl)[["x"]][["data"]]
-  if (!length(traces)) return(data.frame())
+  if (!length(traces)) {
+    return(data.frame())
+  }
 
   scal <- function(x) if (is.null(x) || !nzchar(as.character(x)[1L])) NA_character_ else as.character(x)[1L]
 
   data.frame(
-    trace       = seq_along(traces),
-    name        = vapply(traces, function(t) scal(t[["name"]]), character(1)),
+    trace = seq_along(traces),
+    name = vapply(traces, function(t) scal(t[["name"]]), character(1)),
     legendgroup = vapply(traces, function(t) scal(t[["legendgroup"]]), character(1)),
-    type        = vapply(traces, function(t) scal(t[["type"]]), character(1)),
-    mode        = vapply(traces, function(t) scal(t[["mode"]]), character(1)),
-    showlegend  = vapply(traces, function(t) isTRUE(t[["showlegend"]]), logical(1)),
-    visible     = vapply(traces, function(t) {
-                    v <- t[["visible"]]
-                    if (is.null(v)) "TRUE"
-                    else if (is.logical(v)) if (isTRUE(v[1L])) "TRUE" else "FALSE"
-                    else as.character(v)[1L]
-                  }, character(1)),
-    xaxis       = vapply(traces, function(t) t[["xaxis"]] %||% "x", character(1)),
-    yaxis       = vapply(traces, function(t) t[["yaxis"]] %||% "y", character(1)),
-    color       = vapply(traces, function(t) {
-                    col <- t[["line"]][["color"]] %||% t[["marker"]][["color"]] %||% t[["fillcolor"]]
-                    normalize_color_string(col)
-                  }, character(1)),
+    type = vapply(traces, function(t) scal(t[["type"]]), character(1)),
+    mode = vapply(traces, function(t) scal(t[["mode"]]), character(1)),
+    showlegend = vapply(traces, function(t) isTRUE(t[["showlegend"]]), logical(1)),
+    visible = vapply(traces, function(t) {
+      v <- t[["visible"]]
+      if (is.null(v)) {
+        "TRUE"
+      } else if (is.logical(v)) {
+        if (isTRUE(v[1L])) "TRUE" else "FALSE"
+      } else {
+        as.character(v)[1L]
+      }
+    }, character(1)),
+    xaxis = vapply(traces, function(t) t[["xaxis"]] %||% "x", character(1)),
+    yaxis = vapply(traces, function(t) t[["yaxis"]] %||% "y", character(1)),
+    color = vapply(traces, function(t) {
+      col <- t[["line"]][["color"]] %||% t[["marker"]][["color"]] %||% t[["fillcolor"]]
+      normalize_color_string(col)
+    }, character(1)),
     stringsAsFactors = FALSE
   )
 }
@@ -303,10 +336,16 @@ plotly_layout <- function(pl) {
   norm <- function(x) {
     if (is.list(x)) {
       nms <- names(x) %||% rep("", length(x))
-      x[] <- Map(function(val, nm)
-        if (is.character(val) && length(val) == 1L && grepl("color", nm, ignore.case = TRUE))
-          normalize_color_string(val) else norm(val),
-        x, nms)
+      x[] <- Map(
+        function(val, nm) {
+          if (is.character(val) && length(val) == 1L && grepl("color", nm, ignore.case = TRUE)) {
+            normalize_color_string(val)
+          } else {
+            norm(val)
+          }
+        },
+        x, nms
+      )
     }
     x
   }
@@ -317,27 +356,31 @@ plotly_layout <- function(pl) {
 #' (and, optionally, an expected named palette)
 plotly_check_legend_colors <- function(pl, expected = NULL) {
   df <- plotly_traces(pl)
-  if (!nrow(df)) return(data.frame())
+  if (!nrow(df)) {
+    return(data.frame())
+  }
 
   df$group <- ifelse(is.na(df$legendgroup), df$name, df$legendgroup)
   df <- df[!is.na(df$group) & !is.na(df$color), , drop = FALSE]
-  if (!nrow(df)) return(data.frame())
+  if (!nrow(df)) {
+    return(data.frame())
+  }
 
   res <- do.call(rbind, lapply(split(df, df$group), function(rows) {
-    g            <- rows$group[1L]
+    g <- rows$group[1L]
     legend_color <- unique(rows$color[rows$showlegend])
     trace_colors <- unique(rows$color)
     out <- data.frame(
-      group        = g,
+      group = g,
       legend_color = paste(legend_color, collapse = "|"),
       trace_colors = paste(trace_colors, collapse = "|"),
-      n_legend     = sum(rows$showlegend),
-      ok           = length(legend_color) == 1L && all(trace_colors == legend_color),
+      n_legend = sum(rows$showlegend),
+      ok = length(legend_color) == 1L && all(trace_colors == legend_color),
       stringsAsFactors = FALSE
     )
     if (!is.null(expected)) {
       exp <- if (g %in% names(expected)) normalize_color_string(expected[[g]]) else NA_character_
-      out$expected         <- exp
+      out$expected <- exp
       out$matches_expected <- length(legend_color) == 1L && identical(legend_color, exp)
     }
     out
@@ -352,7 +395,7 @@ plotly_check_legend_colors <- function(pl, expected = NULL) {
 #' shareY collapses y-axes within a ROW (observable only with >1 column).
 #' Returns NA where sharing has no observable effect.
 plotly_subplot_grid <- function(pl) {
-  b   <- plotly::plotly_build(pl)[["x"]]
+  b <- plotly::plotly_build(pl)[["x"]]
   lay <- b[["layout"]]
 
   xkeys <- grep("^xaxis", names(lay), value = TRUE)
@@ -361,13 +404,14 @@ plotly_subplot_grid <- function(pl) {
   n_yaxes <- length(ykeys)
 
   # distinct horizontal extents = columns; distinct vertical extents = rows
-  dom   <- function(keys) unique(lapply(keys, function(k) round(lay[[k]][["domain"]] %||% c(0, 1), 6)))
+  dom <- function(keys) unique(lapply(keys, function(k) round(lay[[k]][["domain"]] %||% c(0, 1), 6)))
   ncols <- max(length(dom(xkeys)), 1L)
   nrows <- max(length(dom(ykeys)), 1L)
 
   # one panel = one distinct (xaxis, yaxis) reference
-  pairs <- unique(vapply(b[["data"]], function(tr)
-    paste(tr[["xaxis"]] %||% "x", tr[["yaxis"]] %||% "y"), character(1)))
+  pairs <- unique(vapply(b[["data"]], function(tr) {
+    paste(tr[["xaxis"]] %||% "x", tr[["yaxis"]] %||% "y")
+  }, character(1)))
   n_panels <- length(pairs)
 
   shareX <- if (nrows > 1L) n_xaxes == ncols else NA
@@ -382,7 +426,9 @@ plotly_subplot_grid <- function(pl) {
 }
 
 plotly_dedupe_legend <- function(traces) {
-  if (!nrow(traces)) return(traces)
+  if (!nrow(traces)) {
+    return(traces)
+  }
 
   # legend identity: legendgroup, else name; anonymous traces stay distinct
   key <- ifelse(!is.na(traces$legendgroup), traces$legendgroup, traces$name)
@@ -390,9 +436,9 @@ plotly_dedupe_legend <- function(traces) {
   key[na_key] <- paste0("__trace", traces$trace[na_key])
 
   # order groups by first appearance, then put showlegend = TRUE first within each
-  ord  <- order(match(key, unique(key)), !traces$showlegend)
-  t2   <- traces[ord, , drop = FALSE]
-  out  <- t2[!duplicated(key[ord]), , drop = FALSE]
+  ord <- order(match(key, unique(key)), !traces$showlegend)
+  t2 <- traces[ord, , drop = FALSE]
+  out <- t2[!duplicated(key[ord]), , drop = FALSE]
   rownames(out) <- NULL
   out
 }
@@ -416,23 +462,25 @@ extract_diagram_nodes <- function(pl) {
     diagram,
     gregexpr('"[^"]+"\\s*\\[[^\\]]*\\]', diagram, perl = TRUE)
   )[[1]]
-  if (length(defs) == 0L) return(data.frame())
+  if (length(defs) == 0L) {
+    return(data.frame())
+  }
 
   parsed <- lapply(defs, function(def) {
-    parts     <- regmatches(def, regexec('(?s)^"([^"]+)"\\s*\\[(.*)\\]$', def, perl = TRUE))[[1]]
-    name      <- parts[2]
+    parts <- regmatches(def, regexec('(?s)^"([^"]+)"\\s*\\[(.*)\\]$', def, perl = TRUE))[[1]]
+    name <- parts[2]
     attrs_str <- parts[3]
 
     # key = value, where value is "...", '...', or <...>. A negated class like
     # [^"] also matches newlines, so values with embedded \n are captured whole.
     pat <- '(\\w+)\\s*=\\s*("[^"]*"|\'[^\']*\'|<[^>]*>)'
-    m   <- regmatches(attrs_str, gregexpr(pat, attrs_str, perl = TRUE))[[1]]
+    m <- regmatches(attrs_str, gregexpr(pat, attrs_str, perl = TRUE))[[1]]
 
     kv <- list(name = name)
     for (pair in m) {
-      key <- trimws(sub('(?s)\\s*=.*$', "", pair, perl = TRUE))
-      val <- sub('(?s)^[^=]*=\\s*', "", pair, perl = TRUE)
-      val <- sub('(?s)^["\'<](.*)["\'>]$', "\\1", val, perl = TRUE)  # strip delimiters
+      key <- trimws(sub("(?s)\\s*=.*$", "", pair, perl = TRUE))
+      val <- sub("(?s)^[^=]*=\\s*", "", pair, perl = TRUE)
+      val <- sub('(?s)^["\'<](.*)["\'>]$', "\\1", val, perl = TRUE) # strip delimiters
       # NB: embedded newlines in (wrapped) labels are preserved, so callers can
       # verify wrapping, e.g. grepl("\n", nodes$label).
       kv[[key]] <- trimws(val)
@@ -465,27 +513,27 @@ extract_diagram_edges <- function(pl) {
 
   parse_attrs <- function(attrs_str) {
     pat <- '(\\w+)\\s*=\\s*("[^"]*"|\'[^\']*\'|<[^>]*>|[^,\\]]+)'
-    m   <- regmatches(attrs_str, gregexpr(pat, attrs_str, perl = TRUE))[[1]]
+    m <- regmatches(attrs_str, gregexpr(pat, attrs_str, perl = TRUE))[[1]]
     kv <- list()
     for (pair in m) {
-      key <- trimws(sub('\\s*=.*$', "", pair))
-      val <- sub('^[^=]*=\\s*', "", pair)
+      key <- trimws(sub("\\s*=.*$", "", pair))
+      val <- sub("^[^=]*=\\s*", "", pair)
       val <- sub('^["\'<](.*)["\'>]$', "\\1", val)
       kv[[key]] <- trimws(val)
     }
     kv
   }
 
-  current_type  <- NA_character_
+  current_type <- NA_character_
   current_attrs <- list()
   rows <- list()
 
   for (line in lines) {
-    if (grepl("^#", line)) {                         # section comment -> edge type
+    if (grepl("^#", line)) { # section comment -> edge type
       current_type <- trimws(sub("^#\\s*", "", line))
-    } else if (grepl("^edge\\s*\\[", line)) {        # shared style for the group
-      current_attrs <- parse_attrs(sub('^edge\\s*\\[(.*)\\]\\s*$', "\\1", line))
-    } else if (grepl('"[^"]+"\\s*->\\s*"[^"]+"', line)) {  # an actual edge
+    } else if (grepl("^edge\\s*\\[", line)) { # shared style for the group
+      current_attrs <- parse_attrs(sub("^edge\\s*\\[(.*)\\]\\s*$", "\\1", line))
+    } else if (grepl('"[^"]+"\\s*->\\s*"[^"]+"', line)) { # an actual edge
       m <- regmatches(line, regexec('"([^"]+)"\\s*->\\s*"([^"]+)"', line))[[1]]
       rows[[length(rows) + 1L]] <- c(
         list(from = m[2], to = m[3], type = current_type),
@@ -493,7 +541,9 @@ extract_diagram_edges <- function(pl) {
       )
     }
   }
-  if (length(rows) == 0L) return(data.frame())
+  if (length(rows) == 0L) {
+    return(data.frame())
+  }
 
   all_cols <- unique(unlist(lapply(rows, names)))
   df <- do.call(rbind, lapply(rows, function(x) {
@@ -504,7 +554,6 @@ extract_diagram_edges <- function(pl) {
   rownames(df) <- NULL
   df
 }
-
 
 
 # Helper models used across import-export tests

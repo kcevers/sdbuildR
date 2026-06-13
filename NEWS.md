@@ -1,5 +1,8 @@
 # sdbuildR (development version)
 
+* Fixed a bug where converting a variable to a stock (or otherwise adding, removing, or renaming stocks) could misalign each stock's derivative slot with the state vector in Julia simulations, silently swapping stock dynamics. Stock derivative indices are now kept consistent with the state-vector order.
+* Added an internal structural validator that checks model layout (stock derivative alignment, unique variable names) before code generation, turning this class of inconsistency into an explicit error rather than a wrong result.
+* Fixed a temporary CSV file leak in single Julia simulations.
 * textutils is now a required, not suggested dependency.
 
 # sdbuildR 1.0.8

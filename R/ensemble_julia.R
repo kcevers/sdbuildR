@@ -15,7 +15,6 @@
 ensemble_julia <- function(object, n, save_sims, conditions, cross,
                            quantiles, only_stocks, vars = NULL, verbose,
                            n_conditions, total_sims) {
-
   use_julia()
 
   # Evaluate script
@@ -71,10 +70,8 @@ ensemble_julia <- function(object, n, save_sims, conditions, cross,
   # Evaluate script
   sim <- tryCatch(
     {
-
       if (!is.null(seed_nr)) {
-        command <- paste0('with_rng(', as.numeric(seed_nr), ') do\n\tinclude("', jl_path(filepath), '")\nend')
-
+        command <- paste0("with_rng(", as.numeric(seed_nr), ') do\n\tinclude("', jl_path(filepath), '")\nend')
       } else {
         command <- paste0('include("', jl_path(filepath), '")')
       }

@@ -24,8 +24,9 @@ simulate_julia <- function(object,
   object <- result$object # Get updated object with cache populated
 
   on.exit(
-    # Ensure files are deleted even if an error occurs
-    remove_files(filepath),
+    # Ensure files are deleted even if an error occurs (both the .jl script and
+    # the .csv Julia writes the results to)
+    remove_files(c(filepath, filepath_sim)),
     add = TRUE
   )
 

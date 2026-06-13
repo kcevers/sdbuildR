@@ -151,7 +151,7 @@ length_IM <- function(x) {
 
 
 #' Check whether value is in vector or string
-#' 
+#'
 #' Equivalent of .Contains() in Insight Maker.
 #'
 #' @param haystack Vector or string to search through
@@ -510,7 +510,7 @@ seasonal <- function(times, period = 1, shift = 0) {
 
 
 #' Check whether x is less than zero
-#' 
+#'
 #' Check whether x is less than zero.
 #'
 #' @param x Value
@@ -528,7 +528,7 @@ nonnegative <- function(x) {
   # if (is.na(x)) {
   #   return(x)
   # } else {
-    return(max(c(0, x)))
+  return(max(c(0, x)))
   # }
 }
 

@@ -12,7 +12,6 @@
   if (should_auto_setup) {
     tryCatch(
       {
-
         # Check existence Manifest.toml file
         manifest_file <- system.file("Manifest.toml", package = "sdbuildR")
         if (!file.exists(manifest_file)) {

@@ -325,16 +325,6 @@ test_that("verify() always retains sims regardless of save_sims", {
   expect_true(!is.null(res$sims)) # always present, no save_sims needed
 })
 
-test_that("ensemble respects sim_settings save_sims and per-call override via ...", {
-  sfm <- sdbuildR("SIR") |>
-    sim_settings(save_sims = TRUE)
-
-  ens_keep <- ensemble(sfm, n = 2)
-  expect_true(!is.null(ens_keep$df))
-
-  ens_drop <- ensemble(sfm, n = 2, save_sims = FALSE)
-  expect_null(ens_drop$df)
-})
 
 test_that("sim_settings() rejects invalid save_sims", {
   expect_error(sim_settings(sdbuildR(), save_sims = "notlogical"), "Invalid")

@@ -336,8 +336,10 @@ plot.sdbuildR <- function(x,
 
   # Prepare stock nodes
   if (length(stock_names) > 0) {
-    style_stock <- sprintf("node [shape=box,style=filled,fillcolor='%s']", 
-      stock_col)
+    style_stock <- sprintf(
+      "node [shape=box,style=filled,fillcolor='%s']",
+      stock_col
+    )
 
     stock_nodes <- sprintf(
       "%s [id=%s,label='%s',tooltip = 'eqn = %s']",
@@ -352,8 +354,10 @@ plot.sdbuildR <- function(x,
 
   # Prepare auxiliary nodes
   if (length(aux_names) > 0) {
-    style_aux <- sprintf("node [shape=circle,fontsize=%s, width=0.15, height=0.15, fixedsize=true, style=filled, fillcolor='grey90']",
-      font_size - 2)
+    style_aux <- sprintf(
+      "node [shape=circle,fontsize=%s, width=0.15, height=0.15, fixedsize=true, style=filled, fillcolor='grey90']",
+      font_size - 2
+    )
 
     aux_nodes <- sprintf(
       "%s [id=%s,xlabel='%s',label='',tooltip = 'eqn = %s']",
@@ -374,8 +378,10 @@ plot.sdbuildR <- function(x,
       paste0("<I>", label_with_html_breaks, "</I>")
     }, character(1), USE.NAMES = FALSE)
 
-    style_const <- sprintf("node [shape=diamond,fontsize=%s,width=0.15, height=0.15, fixedsize=true, style=filled, fillcolor='grey90']",
-      font_size - 2)
+    style_const <- sprintf(
+      "node [shape=diamond,fontsize=%s,width=0.15, height=0.15, fixedsize=true, style=filled, fillcolor='grey90']",
+      font_size - 2
+    )
 
     const_nodes <- sprintf(
       "%s [id=%s,xlabel=<%s>,label='', tooltip = 'eqn = %s']",
@@ -479,8 +485,10 @@ plot.sdbuildR <- function(x,
     }
 
     # Flow node style
-    style_flow_node <- sprintf("node [style = '',shape=plaintext, fontsize=%s, width=0.6, height=0.3]",
-      font_size - 2)
+    style_flow_node <- sprintf(
+      "node [style = '',shape=plaintext, fontsize=%s, width=0.6, height=0.3]",
+      font_size - 2
+    )
 
     # Create intermediate flow nodes (small nodes that flows pass through)
     flow_nodes <- sprintf(
@@ -498,16 +506,16 @@ plot.sdbuildR <- function(x,
     style_flow_edges_from_source <- sprintf(
       "edge [style = '', arrowhead='none', color='%s', penwidth=1.1, minlen=%s, splines=false, tailport='e', headport='w']",
       paste0(
-          "black:", flow_col, ":black"
-        ),
-        minlen
+        "black:", flow_col, ":black"
+      ),
+      minlen
     )
     style_flow_edges_to_destination <- sprintf(
       "edge [style = '', arrowhead='normal', color='%s', arrowsize=1.5, penwidth=1.1, minlen=%s, splines=ortho, tailport='e', headport='w']",
       paste0(
-          "black:", flow_col, ":black"
-        ),
-        minlen
+        "black:", flow_col, ":black"
+      ),
+      minlen
     )
 
     # # Recycle flow_col if needed
@@ -538,9 +546,10 @@ plot.sdbuildR <- function(x,
   # Add dependency arrows if requested
   style_dependency <- dependency_edges <- ""
   if (show_dependencies) {
-
-    style_dependency <- sprintf("edge [style = '', color='%s', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport = '_', headport='_']",
-      dependency_col)
+    style_dependency <- sprintf(
+      "edge [style = '', color='%s', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport = '_', headport='_']",
+      dependency_col
+    )
 
     # Only keep dependencies in plot_var
     dep <- lapply(dep, function(x) {
@@ -607,14 +616,14 @@ plot.sdbuildR <- function(x,
       %s
       %s
 
-      
+
       # Rank groupings
       %s
 
     }
           ",
-          pad = as.character(pad),
-          nodesep = as.character(nodesep),
+    pad = as.character(pad),
+    nodesep = as.character(nodesep),
     style_node,
     style_stock,
     stock_nodes |> paste0(collapse = "\n\t"),
@@ -634,7 +643,6 @@ plot.sdbuildR <- function(x,
     style_dependency,
     dependency_edges |> paste0(collapse = "\n\t"),
     rank_statements
-
   )
 
   pl <- DiagrammeR::grViz(viz_str)
@@ -962,7 +970,6 @@ plot.ensemble_sdbuildR <- function(x,
                                    central_tendency = c("mean", "median", FALSE)[1],
                                    central_tendency_width = 3,
                                    ...) {
-
   check_ensemble_sdbuildR(x)
 
   # Validate common plot parameters
@@ -1258,14 +1265,18 @@ plot.ensemble_sdbuildR <- function(x,
 #' @returns data.frame with NA spacer rows inserted between trajectories.
 #' @noRd
 break_by_sim <- function(d, group = "sim", x = "time", y = "value") {
-  if (nrow(d) == 0) return(d)
+  if (nrow(d) == 0) {
+    return(d)
+  }
   # Composite key over the grouping columns so e.g. the same sim index in
   # different conditions counts as two distinct trajectories.
   key <- interaction(d[, group, drop = FALSE], drop = TRUE, lex.order = TRUE)
   ord <- order(key, d[[x]])
   d <- d[ord, , drop = FALSE]
   parts <- split(d, key[ord], drop = TRUE)
-  if (length(parts) <= 1L) return(d) # nothing to separate
+  if (length(parts) <= 1L) {
+    return(d)
+  } # nothing to separate
   spacer <- d[1, , drop = FALSE]
   spacer[[x]] <- NA # NA in x and y breaks the line; keep grouping columns
   spacer[[y]] <- NA
@@ -1286,7 +1297,9 @@ break_by_sim <- function(d, group = "sim", x = "time", y = "value") {
 #' @returns data.frame with NA spacer rows inserted between simulations.
 #' @noRd
 break_sims_by_variable <- function(d) {
-  if (nrow(d) == 0) return(d)
+  if (nrow(d) == 0) {
+    return(d)
+  }
   # A trajectory is one (condition, sim) pair; fall back to "sim" alone if no
   # condition column is present.
   group <- intersect(c("condition", "sim"), colnames(d))
@@ -1309,7 +1322,9 @@ break_sims_by_variable <- function(d) {
 #' @returns Named list of per-condition data.frames, or NULL if `d` is NULL.
 #' @noRd
 split_by_cond <- function(d) {
-  if (is.null(d)) return(NULL)
+  if (is.null(d)) {
+    return(NULL)
+  }
   split(d, d[["condition"]])
 }
 
@@ -1327,7 +1342,9 @@ split_by_cond <- function(d) {
 #' @returns data.frame of rows for `key`, or NULL.
 #' @noRd
 get_cond <- function(lst, key, template) {
-  if (is.null(template)) return(NULL)
+  if (is.null(template)) {
+    return(NULL)
+  }
   d <- lst[[as.character(key)]]
   if (is.null(d)) template[0, , drop = FALSE] else d
 }
@@ -1627,7 +1644,6 @@ plot.verify_sdbuildR <- function(x,
                                  alpha = 1,
                                  margin = .05,
                                  ...) {
-
   # Check whether it is a verify_sdbuildR object
   check_verify_sdbuildR(x)
 
@@ -1691,8 +1707,10 @@ plot.verify_sdbuildR <- function(x,
   constants <- as.data.frame(do.call(rbind, constants))
 
   # Build default subtitle
-  default_sub <- paste0(n_tests, "unit test", ifelse(n_tests > 1, "s", ""), " across ", 
-  n_conditions, " condition", ifelse(n_conditions > 1, "s", ""))
+  default_sub <- paste0(
+    n_tests, "unit test", ifelse(n_tests > 1, "s", ""), " across ",
+    n_conditions, " condition", ifelse(n_conditions > 1, "s", "")
+  )
 
   # Extract optional parameters with defaults
   sfm <- x[["object"]]

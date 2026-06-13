@@ -145,7 +145,7 @@ verify.sdbuildR <- function(object, verbose = TRUE, test = NULL, ...) {
   # Set sim_vars in simulation specifications. Each simulate() call receives the same centrally-computed `sim_vars` so all conditions return consistent variable sets.
   object <- sim_settings(object, vars = sim_vars)
 
-  # Run one simulation per unique condition set. 
+  # Run one simulation per unique condition set.
   sim_cache <- vector("list", n_conditions)
   for (j_idx in seq_along(unique_keys)) {
     key <- unique_keys[[j_idx]]
@@ -212,7 +212,7 @@ check_verify_sdbuildR <- function(x) {
       ">" = "Check your model specification and try again."
     ))
   }
-  
+
   invisible(x)
 }
 

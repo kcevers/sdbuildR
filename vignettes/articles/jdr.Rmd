@@ -1038,20 +1038,19 @@ if (recreate_figs) {
   # pl <- plot(sfm, minlen = 1.5, font_size = 20, font_family = font_family, show_constants = FALSE, show_aux = TRUE, show_dependencies = TRUE, stock_col = stock_col, flow_col = flow_col, pad = .1, nodesep = .5)
   # cat(pl[["x"]][["diagram"]])
   # at bottom, add:
-      #   "invisnode1" [id="invisnode1",label="Invisible Node",shape=box,style=invis,fontsize=12, width=.2, height=.1, fixedsize=true]
-      # "invisnode2" [id="invisnode2",label="Invisible Node",shape=box,style=invis,fontsize=12, width=.2, height=.1, fixedsize=true]
+  #   "invisnode1" [id="invisnode1",label="Invisible Node",shape=box,style=invis,fontsize=12, width=.2, height=.1, fixedsize=true]
+  # "invisnode2" [id="invisnode2",label="Invisible Node",shape=box,style=invis,fontsize=12, width=.2, height=.1, fixedsize=true]
 
 
-      #  # Rank groupings
-      #  {rank=same; engagement; invisnode1; performance; invisnode2; energy; resources; demands}
+  #  # Rank groupings
+  #  {rank=same; engagement; invisnode1; performance; invisnode2; energy; resources; demands}
 
-      #  # Enforce top-to-bottom order
-      #  engagement -> performance -> energy -> resources -> demands [style=invis]
+  #  # Enforce top-to-bottom order
+  #  engagement -> performance -> energy -> resources -> demands [style=invis]
   {
-
     viz_str <- '
-    
-   
+
+
     digraph sfm {
 
       graph [layout = dot, rankdir = LR, center=true, outputorder="edgesfirst", pad=0.1, nodesep= 0.3, overlap = false]
@@ -1100,14 +1099,14 @@ if (recreate_figs) {
       "performance" [id="performance",xlabel="Job Performance",label="",tooltip = "eqn = engagement + energy"]
 
       # Define constant nodes
-      
+
        # Rank groupings
        {rank=same; engagement; invisnode1; performance; invisnode2; energy; resources; demands}
 
        # Enforce top-to-bottom order
        engagement -> invisnode1 -> performance -> invisnode2 -> energy -> resources -> demands [style=invis]
 
-      
+
 
       # Define flow edges (stock -> flow_node)
       edge [style = "", arrowhead="none", color="black:#CCC568:black", penwidth=1.1, minlen=1.5, splines=false, tailport="e", headport="w"]
@@ -1159,13 +1158,12 @@ if (recreate_figs) {
         "engagement" -> "performance"
         "energy" -> "performance"
 
-      
+
     }
     '
-
   }
 
-{
+  {
     viz_str2 <- "
 
     digraph sfm {
@@ -1259,12 +1257,12 @@ if (recreate_figs) {
 
     }
     "
-}
-    pl <- DiagrammeR::grViz(viz_str2)
+  }
+  pl <- DiagrammeR::grViz(viz_str2)
 
 
-    pl <- DiagrammeR::grViz(viz_str)
-  
+  pl <- DiagrammeR::grViz(viz_str)
+
 
   export_plot(pl, file.path(filepath_figs, "sfm_JDR_full.pdf"))
 }
@@ -1764,7 +1762,7 @@ sfm <- sfm0 <- sim_settings(sfm0, save_n = 100)
 
 Alternatively, `save_at` can be passed to `sim_settings` to save at specific time points (e.g., `save_at = c(1, 100)`) or at a fixed interval (e.g., `save_at = 10` to save every ten time units). To further support computationally intensive ensemble simulations, **stockflow** enables parallelization supported by the **future** package [@bengtsson_unifying_2021]. The parallization backend needs to be configured prior to running ensemble simulations:
 
-```{r, eval = interactive()}
+```{r, eval = FALSE}
 if (!requireNamespace("future")) {
   install.packages("future")
 }
@@ -1776,7 +1774,7 @@ future::plan(future::multisession, workers = parallelly::availableCores() - 1)
 
 After the ensemble simulations are completed, parallelization can be ended with:
 
-```{r, eval = interactive()}
+```{r, eval = FALSE}
 future::plan(future::sequential)
 ```
 
@@ -1790,7 +1788,7 @@ use_julia()
 
 Parallelization is also supported with Julia:
 
-```{r, eval = interactive()}
+```{r, eval = FALSE}
 use_julia(nthreads = parallelly::availableCores() - 1)
 ```
 
@@ -1803,13 +1801,13 @@ sfm <- sfm0 <- sim_settings(sfm0, language = "Julia")
 
 To revert to single-threaded simulation, stop and restart the Julia session:
 
-```{r, eval = interactive()}
+```{r, eval = FALSE}
 use_julia(restart = TRUE)
 ```
 
 The Julia session can be ended with:
 
-```{r, eval = interactive()}
+```{r, eval = FALSE}
 use_julia(stop = TRUE)
 ```
 
@@ -1892,11 +1890,11 @@ Next, we create a pulse function that is 1 for a period of two weeks and 0 other
 
 ```{r}
 sfm <- sfm |>
-  constant(start, eqn = 14) |>
-  constant(duration, eqn = 7) |>
+  constant(start, eqn = 21) |>
+  constant(duration, eqn = 14) |>
   constant(intervention, eqn = pulse(times, start, width = duration)) |>
   flow(intervention_effect,
-    eqn = 0.05 * intervention(t),
+    eqn = 0.1 * intervention(t),
     to = motivation_rate, label = "Intervention Effect"
   )
 ```
@@ -1933,8 +1931,9 @@ To compute the effectiveness of the intervention, we increase the simulation len
 ```{r}
 n <- 1000
 sfm <- sim_settings(sfm,
-# Only save engagement at the last time point
-vars = "engagement", stop = 1000, save_at = 1000)
+  # Only save engagement at the last time point
+  vars = "engagement", stop = 1000, save_at = 1000
+)
 sims <- ensemble(sfm, n = n)
 df <- as.data.frame(sims, direction = "wide", which = "sims")
 tab <- table(round(df$engagement)) |>
@@ -1944,7 +1943,7 @@ colnames(tab) <- c("Engagement", "Proportion")
 print(tab)
 ```
 
-A shorter intervention is not effective.
+A shorter intervention is not as effective.
 
 ```{r}
 sfm2 <- update(sfm, duration, eqn = 7)
@@ -2100,14 +2099,6 @@ Finally, formal models are powerful tools for guiding experimental and statistic
 if (!requireNamespace("lavaan")) {
   install.packages("lavaan")
 }
-if (!requireNamespace("dplyr")) {
-  install.packages("dplyr")
-}
-if (!requireNamespace("tidyr")) {
-  install.packages("tidyr")
-}
-library(dplyr)
-library(tidyr)
 library(lavaan)
 ```
 
@@ -2145,13 +2136,13 @@ sfm <- update(sfm, df = df)
 # This modified model can now be used for the ensemble simulation, which will yield a dataset with variability in both initial conditions and parameters.
 
 # Simulation study
+vars <- c("energy", "demands", "engagement", "resources", "performance")
 sfm <- sim_settings(sfm,
   save_at = 1,
   # Modify stop to a round value so the last value is included
-  stop = round(365 / 2)
+  stop = round(365 / 2), vars = vars, save_sims = TRUE
 )
 n <- 10000
-vars <- c("energy", "demands", "engagement", "resources", "performance")
 
 sims <- ensemble(sfm, n = n, save_sims = TRUE)
 plot(sims, vars = vars, which = "summary")
@@ -2180,10 +2171,10 @@ build_wave_data <- function(dfX, dfD, wave1, lag, x1, x2) {
   colnames(dfX_wave2) <- gsub(x1, paste0(x1, "_wave2"), colnames(dfX_wave2))
   dfD_wave2 <- dfD[dfD$time == (wave1 + lag), setdiff(names(dfD), "time")]
   colnames(dfD_wave2) <- gsub(x2, paste0(x2, "_wave2"), colnames(dfD_wave2))
-  dfX_wave1 |>
-    dplyr::left_join(dfX_wave2, by = "sim") |>
-    dplyr::left_join(dfD_wave1, by = "sim") |>
-    dplyr::left_join(dfD_wave2, by = "sim")
+  out <- merge(dfX_wave1, dfX_wave2, by = "sim", all.x = TRUE)
+  out <- merge(out, dfD_wave1, by = "sim", all.x = TRUE)
+  out <- merge(out, dfD_wave2, by = "sim", all.x = TRUE)
+  out
 }
 
 model <- sprintf(" # wave 1 -> wave 2

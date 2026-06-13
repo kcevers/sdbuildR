@@ -32,7 +32,7 @@ simulate_r <- function(object,
         eval(parse(text = script), envir = envir)
       }
 
-     if (is.null(seed_nr)) do_run() else withr::with_seed(as.numeric(seed_nr), do_run())
+      if (is.null(seed_nr)) do_run() else withr::with_seed(as.numeric(seed_nr), do_run())
 
       end_t <- Sys.time()
 

@@ -295,7 +295,7 @@ test_that("plot.simulate_sdbuildR() respects show_constants", {
   sfm <- update(sfm, "Stock1", type = "stock")
   sfm <- update(sfm, "const_val", type = "constant", eqn = "100")
   sim <- simulate(sfm)
-  
+
   constants <- as.data.frame(sim[["object"]], type = "constants", properties = "label")
   const_label <- constants$label[constants$name == "const_val"]
   pl_with_constants <- plot(sim, show_constants = TRUE)

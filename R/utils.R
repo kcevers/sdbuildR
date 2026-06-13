@@ -334,8 +334,10 @@ is_defined <- function(x) {
 #' @returns List with extracted entries
 #' @noRd
 list_extract <- function(nested_list, entry, keep_entry_name = FALSE) {
-traverse <- function(x) {
-    if (!is.list(x)) return(list())
+  traverse <- function(x) {
+    if (!is.list(x)) {
+      return(list())
+    }
 
     out <- list()
     for (nm in names(x)) {
@@ -852,79 +854,79 @@ sort_args <- function(arg, func_name, default_arg = NULL, var_names = NULL,
     if (length(default_arg) == 0) {
       arg_R <- stats::setNames(values_arg, names_arg)
     } else {
-    # Check whether all argument names are in the allowed argument names in case of no dots argument (...)
-    idx <- !names_arg %in% names(default_arg) & !is.na(names_arg)
-    if (!varargs && any(idx)) {
-      bad_args <- names_arg[idx]
-      allowed <- names(default_arg)
-      cli::cli_abort(c(
-        "x" = "{cli::qty(length(bad_args))}Invalid argument{?s} for {.fn {func_name}}.",
-        "i" = "{.code {bad_args}} {?is/are} not allowed.",
-        ">" = "Allowed arguments: {.code {allowed}}."
-      ))
-    }
+      # Check whether all argument names are in the allowed argument names in case of no dots argument (...)
+      idx <- !names_arg %in% names(default_arg) & !is.na(names_arg)
+      if (!varargs && any(idx)) {
+        bad_args <- names_arg[idx]
+        allowed <- names(default_arg)
+        cli::cli_abort(c(
+          "x" = "{cli::qty(length(bad_args))}Invalid argument{?s} for {.fn {func_name}}.",
+          "i" = "{.code {bad_args}} {?is/are} not allowed.",
+          ">" = "Allowed arguments: {.code {allowed}}."
+        ))
+      }
 
-    # Check if there are too many arguments
-    if (!varargs && length(arg) > length(default_arg)) {
-      allowed <- names(default_arg)
-      cli::cli_abort(c(
-        "x" = "Too many arguments for {.fn {func_name}}.",
-        "i" = "Got {length(arg)} but maximum is {length(default_arg)}.",
-        ">" = "Allowed arguments: {.code {allowed}}."
-      ))
-    }
+      # Check if there are too many arguments
+      if (!varargs && length(arg) > length(default_arg)) {
+        allowed <- names(default_arg)
+        cli::cli_abort(c(
+          "x" = "Too many arguments for {.fn {func_name}}.",
+          "i" = "Got {length(arg)} but maximum is {length(default_arg)}.",
+          ">" = "Allowed arguments: {.code {allowed}}."
+        ))
+      }
 
-    # Add names to unnamed arguments; note that R can mix named and default arguments, e.g., runif(max = 10, 20, min = 1). Julia cannot if they're not keyword arguments!
-    idx <- which(!contains_name & nzchar(values_arg)) # Find unnamed arguments which have values
-    standard_order <- names(default_arg)
-    if (length(idx) > 0 && length(standard_order) > 0) {
-      new_names <- setdiff(standard_order, stats::na.omit(names_arg)) # names which are missing from the passed argument names
-      names_arg[idx] <- new_names[seq_along(idx)] # Assign new names to unnamed arguments; only select as many as there are unnamed arguments
-    }
+      # Add names to unnamed arguments; note that R can mix named and default arguments, e.g., runif(max = 10, 20, min = 1). Julia cannot if they're not keyword arguments!
+      idx <- which(!contains_name & nzchar(values_arg)) # Find unnamed arguments which have values
+      standard_order <- names(default_arg)
+      if (length(idx) > 0 && length(standard_order) > 0) {
+        new_names <- setdiff(standard_order, stats::na.omit(names_arg)) # names which are missing from the passed argument names
+        names_arg[idx] <- new_names[seq_along(idx)] # Assign new names to unnamed arguments; only select as many as there are unnamed arguments
+      }
 
-    # Check for missing obligatory arguments
-    # obligatory arguments without a default (class == "name" or is.symbol, e.g., n in formals(rnorm) is a symbol)
-    obligatory_args <- unlist(lapply(default_arg, is.symbol))
-    idx <- !names(default_arg[obligatory_args]) %in% names_arg
+      # Check for missing obligatory arguments
+      # obligatory arguments without a default (class == "name" or is.symbol, e.g., n in formals(rnorm) is a symbol)
+      obligatory_args <- unlist(lapply(default_arg, is.symbol))
+      idx <- !names(default_arg[obligatory_args]) %in% names_arg
 
-    if (any(idx)) {
-      missing_args <- names(default_arg[obligatory_args])[idx]
-      cli::cli_abort(c(
-        "x" = "{cli::qty(length(missing_args))}Missing required argument{?s} for {.fn {func_name}}.",
-        ">" = "{.code {missing_args}} {?is/are} required."
-      ))
-    }
+      if (any(idx)) {
+        missing_args <- names(default_arg[obligatory_args])[idx]
+        cli::cli_abort(c(
+          "x" = "{cli::qty(length(missing_args))}Missing required argument{?s} for {.fn {func_name}}.",
+          ">" = "{.code {missing_args}} {?is/are} required."
+        ))
+      }
 
-    # Overwrite default arguments with specified arguments & remove NULL arguments
-    default_arg_list <- default_arg[!obligatory_args | unlist(lapply(default_arg, is.null))]
-    arg_R <- utils::modifyList(default_arg_list, as.list(stats::setNames(values_arg, names_arg)))
+      # Overwrite default arguments with specified arguments & remove NULL arguments
+      default_arg_list <- default_arg[!obligatory_args | unlist(lapply(default_arg, is.null))]
+      arg_R <- utils::modifyList(default_arg_list, as.list(stats::setNames(values_arg, names_arg)))
 
-    # Sort order of arguments according to default order
-    order_arg <- c(names(default_arg), setdiff(names(arg_R), names(default_arg)))
-    arg_R <- arg_R[order_arg]
+      # Sort order of arguments according to default order
+      order_arg <- c(names(default_arg), setdiff(names(arg_R), names(default_arg)))
+      arg_R <- arg_R[order_arg]
 
-    # Check if any of the arguments are calls - these will need to be evaluated
-    if (any(vapply(arg_R, class, character(1)) == "call")) {
-      arg_R_num <- lapply(arg_R, function(x) {
-        if (!is.call(x)) {
-          if (!grepl("'|\"", x) & !is.na(suppressWarnings(as.numeric(x)))) {
-            x <- as.numeric(x)
+      # Check if any of the arguments are calls - these will need to be evaluated
+      if (any(vapply(arg_R, class, character(1)) == "call")) {
+        arg_R_num <- lapply(arg_R, function(x) {
+          if (!is.call(x)) {
+            if (!grepl("'|\"", x) & !is.na(suppressWarnings(as.numeric(x)))) {
+              x <- as.numeric(x)
+            }
+          }
+          return(x)
+        })
+
+        # Parse in case of default arguments like scale = 1/rate
+        for (name in names(arg_R)) {
+          if (is.language(arg_R[[name]]) && !is.name(arg_R[[name]])) {
+            # Evaluate the expression in the context of merged_args
+            env <- list2env(arg_R_num, parent = baseenv())
+
+            # Substitute values into the expression
+            arg_R[[name]] <- deparse(eval(bquote(substitute(.(arg_R[[name]]), env))))
           }
         }
-        return(x)
-      })
-
-      # Parse in case of default arguments like scale = 1/rate
-      for (name in names(arg_R)) {
-        if (is.language(arg_R[[name]]) && !is.name(arg_R[[name]])) {
-          # Evaluate the expression in the context of merged_args
-          env <- list2env(arg_R_num, parent = baseenv())
-
-          # Substitute values into the expression
-          arg_R[[name]] <- deparse(eval(bquote(substitute(.(arg_R[[name]]), env))))
-        }
       }
-    }
 
       # Ensure digits become floats for Julia
       for (name in names(arg_R)) {

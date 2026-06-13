@@ -111,7 +111,6 @@ url_to_insightmaker <- function(URL, file = NULL) {
   read_file <- xml2::read_xml(file)
 
 
-
   read_file
 }
 

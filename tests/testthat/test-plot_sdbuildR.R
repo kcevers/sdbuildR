@@ -176,7 +176,7 @@ test_that("plot() filters variables correctly", {
     "sdbuildR-filtered-variables",
     pl
   )
-  
+
   var_names <- c("susceptible")
   pl <- plot(sfm, vars = var_names, show_aux = TRUE, show_constants = TRUE)
   nodes <- extract_diagram_nodes(pl)
@@ -249,8 +249,8 @@ test_that("plot.sdbuildR() with custom wrap width", {
 
   pl <- plot(sfm1, wrap_width = 10)
   nodes <- extract_diagram_nodes(pl)
-  expect_true(grepl("\n", nodes$label, fixed = TRUE))  # check that label contains a newline (indicating wrapping)
-  
+  expect_true(grepl("\n", nodes$label, fixed = TRUE)) # check that label contains a newline (indicating wrapping)
+
   expect_snapshot_plot("sdbuildR-wrap-width-small", pl)
 })
 
