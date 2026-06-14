@@ -23,7 +23,7 @@ jobs:
       NOT_CRAN: "true"
       SDBUILDR_INSTALL_JULIA_ENV: "true"
       SDBUILDR_CREATE_TEST_FIGS: "true"
-      SDBUILDR_TRACE_VIGNETTE_CHUNKS: "true"
+      SDBUILDR_VIGNETTE_TRACE_FILE: "jdr-render-trace.log"
 
     permissions:
       contents: write
@@ -59,6 +59,24 @@ jobs:
       - name: Build site
         run: pkgdown::build_site_github_pages(new_process = FALSE, install = FALSE)
         shell: Rscript {0}
+
+      - name: Print vignette trace
+        if: always()
+        run: |
+          if [ -f "$SDBUILDR_VIGNETTE_TRACE_FILE" ]; then
+            cat "$SDBUILDR_VIGNETTE_TRACE_FILE"
+          else
+            echo "No vignette trace file found at $SDBUILDR_VIGNETTE_TRACE_FILE"
+          fi
+        shell: bash
+
+      - name: Upload vignette trace
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jdr-render-trace
+          path: ${{ env.SDBUILDR_VIGNETTE_TRACE_FILE }}
+          if-no-files-found: ignore
 
       - name: Deploy to GitHub pages 🚀
         if: github.event_name != 'pull_request'

@@ -23,28 +23,47 @@ knitr::opts_chunk$set(
   out.width = "80%" # Display figures at 80% of container width
 )
 
-if (identical(Sys.getenv("SDBUILDR_TRACE_VIGNETTE_CHUNKS"), "true")) {
-  knitr::opts_knit$set(progress = TRUE, verbose = TRUE)
+trace_file <- Sys.getenv("SDBUILDR_VIGNETTE_TRACE_FILE", unset = "")
+if (nzchar(trace_file)) {
+  trace_dir <- dirname(trace_file)
+  if (nzchar(trace_dir) && !dir.exists(trace_dir)) {
+    dir.create(trace_dir, recursive = TRUE, showWarnings = FALSE)
+  }
+
+  trace_chunk <- function(stage, options) {
+    code <- trimws(options$code)
+    code <- code[nzchar(code)]
+    first_code <- if (length(code)) paste(utils::head(code, 3L), collapse = " | ") else ""
+    first_code <- substr(first_code, 1L, 240L)
+    line <- sprintf(
+      "%s\t%s\t%s\tpid=%s\t%s\n",
+      format(Sys.time(), "%Y-%m-%d %H:%M:%S %Z"),
+      stage,
+      options$label,
+      Sys.getpid(),
+      first_code
+    )
+    cat(line, file = trace_file, append = TRUE)
+    cat(line)
+    flush.console()
+    NULL
+  }
+
+  default_chunk_hook <- knitr::knit_hooks$get("chunk")
+  knitr::opts_hooks$set(
+    eval = function(options) {
+      if (isTRUE(options$eval)) {
+        trace_chunk("START", options)
+      }
+      options
+    }
+  )
   knitr::knit_hooks$set(
-    before = function(options) {
+    chunk = function(x, options) {
       if (isTRUE(options$eval)) {
-        cat(sprintf(
-          "\n>>> START chunk: %s at %s\n",
-          options$label,
-          format(Sys.time(), "%Y-%m-%d %H:%M:%S %Z")
-        ), file = stderr())
+        trace_chunk("END", options)
       }
-      NULL
-    },
-    after = function(options) {
-      if (isTRUE(options$eval)) {
-        cat(sprintf(
-          "<<< END chunk: %s at %s\n\n",
-          options$label,
-          format(Sys.time(), "%Y-%m-%d %H:%M:%S %Z")
-        ), file = stderr())
-      }
-      NULL
+      default_chunk_hook(x, options)
     }
   )
 }
@@ -61,11 +80,7 @@ library(kableExtra)
 
 ```{r include=FALSE}
 # Set recreate_figs <- TRUE to reproduce the figures in the paper
-recreate_figs <- TRUE
-
-# if (!has_internet()) {
-#   recreate_figs <- FALSE
-# }
+recreate_figs <- FALSE # TRUE
 ```
 
 ```{r include=FALSE}
