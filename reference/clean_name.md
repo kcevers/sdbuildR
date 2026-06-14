@@ -6,7 +6,7 @@ use in R and Julia.
 ## Usage
 
 ``` r
-clean_name(new, existing, protected = c())
+clean_name(new, protected = NULL)
 ```
 
 ## Arguments
@@ -15,13 +15,9 @@ clean_name(new, existing, protected = c())
 
   Vector of names to transform to valid names
 
-- existing:
-
-  Vector of existing names in model
-
 - protected:
 
-  Optional vector of protected names
+  Optional vector of protected names, e.g., existing names in model
 
 ## Value
 
@@ -30,9 +26,9 @@ Vector of cleaned names
 ## Examples
 
 ``` r
-sfm <- xmile("predator_prey")
+sfm <- sdbuildR("predator_prey")
 # As the variable name "predator" is already taken, clean_name() will create
-# an unique name
-clean_name("predator", as.data.frame(sfm)[["name"]]) # "predator_1"
+# a unique name
+clean_name("predator", as.data.frame(sfm)[["name"]])
 #> [1] "predator_1"
 ```

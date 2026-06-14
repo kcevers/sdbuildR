@@ -1,7 +1,6 @@
-# Find index of needle in haystack
+# Find index of value in vector or string
 
-Find index of value in vector or string. Equivalent of .IndexOf() in
-Insight Maker.
+Equivalent of .IndexOf() in Insight Maker.
 
 ## Usage
 

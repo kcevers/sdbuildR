@@ -22,5 +22,5 @@ Logical value
 
 ``` r
 rbool(.5)
-#> [1] FALSE
+#> [1] TRUE
 ```

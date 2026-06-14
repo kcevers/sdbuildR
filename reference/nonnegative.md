@@ -1,6 +1,6 @@
-# Safely check whether x is less than zero
+# Check whether x is less than zero
 
-If using Julia, units are preserved
+Check whether x is less than zero.
 
 ## Usage
 

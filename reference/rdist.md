@@ -26,5 +26,5 @@ One sample from custom distribution
 
 ``` r
 rdist(c(1, 2, 3), c(.5, .25, .25))
-#> [1] 1
+#> [1] 2
 ```

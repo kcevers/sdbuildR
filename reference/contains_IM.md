@@ -1,7 +1,6 @@
-# Check if needle is in haystack
+# Check whether value is in vector or string
 
-Check whether value is in vector or string. Equivalent of .Contains() in
-Insight Maker.
+Equivalent of .Contains() in Insight Maker.
 
 ## Usage
 

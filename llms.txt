@@ -1,104 +1,91 @@
-# sdbuildR: Easily Build, Simulate, and Visualise Stock-and-Flow Models in R
+# sdbuildR: Easily Build, Simulate, and Explore Stock-and-Flow Models in R
 
-Model systems as stock-and-flow models in R. Stock-and-flow models are
-foundational to system dynamics, and help to understand systems
-complicated by nonlinearities, delays, and feedback loops. sdbuildR aims
-to make stock-and-flow modeling accessible and effortless, enabling you
-to dedicate your expertise to what matters most: building insightful,
-high-quality models. Get started at
-<https://kcevers.github.io/sdbuildR/>!
+**sdbuildR** is an R package for building, simulating, and exploring
+stock-and-flow models. Originating in the field of system dynamics,
+stock-and-flow models represent processes as quantities (stocks) that
+accumulate or deplete over time and the processes (inflows and outflows)
+that change them. **sdbuildR** is designed to make stock-and-flow
+modelling accessible to a broad audience, requiring minimal mathematical
+or system dynamics background knowledge.
 
-## Features
+## Quick start
 
-- **Accessibility**: Get started with stock-and-flow models with limited
-  knowledge.
-- **Flexibility**: Modify your models easily and robustly.
-- **Insight Maker integration**: Import models from [Insight
-  Maker](https://insightmaker.com/).
-- **Julia backend**: Use Julia for high-performance simulations, without
-  any knowledge of Julia.
-- **Unit support**: Use standard or custom units to verify and interpret
-  your model.
+Load one of the dozens of models from the built-in library, such as the
+classic SIR (Susceptible-Infected-Recovered) epidemic model:
 
-All package capabilities are described in the vignettes:
+``` r
 
-- [Build](https://kcevers.github.io/sdbuildR/articles/build.html): Learn
-  how to build, modify, and debug stock-and-flow models.
-- [Julia
-  setup](https://kcevers.github.io/sdbuildR/articles/julia-setup.html):
-  Install and set up the Julia environment for running ensemble
-  simulations and using units.
-- [Ensemble](https://kcevers.github.io/sdbuildR/articles/ensemble.html):
-  Learn how to assess a model’s sensitivity, uncertainty and robustness
-  with ensemble simulations.
-- [Units](https://kcevers.github.io/sdbuildR/articles/units.html): Learn
-  why and how to use (custom) units.
+library(sdbuildR)
+
+# Load stock-and-flow model
+sfm <- sdbuildR("SIR")
+
+# View the stock-and-flow diagram
+plot(sfm)
+```
+
+![](reference/figures/README-sir-diagram.svg)
+
+``` r
+
+# Simulate and visualise the dynamics over time
+simulate(sfm) |> plot()
+```
+
+![](reference/figures/README-sir-sim.png)
+
+[`simulate()`](https://rdrr.io/r/stats/simulate.html) produces an
+interactive timeseries plot. See it run — and build the same model from
+scratch — in the [**Get started
+guide**](https://kcevers.github.io/sdbuildR/articles/sdbuildR.html).
 
 ## Installation
 
 The release version can be installed from CRAN:
 
 ``` r
+
 install.packages("sdbuildR")
 ```
 
 The development version can be installed from GitHub:
 
 ``` r
+
 if (!require("remotes")) install.packages("remotes")
 remotes::install_github("KCEvers/sdbuildR")
 ```
 
-sdbuildR offers two simulation engines: R and Julia (supported by
-[JuliaConnectoR](https://github.com/stefan-m-lenz/JuliaConnectoR/)). If
-you would like to run ensemble simulations and use units, you will need
-to install and set up the Julia environment. See [this
-vignette](https://kcevers.github.io/sdbuildR/articles/julia-setup.html)
-for guidance.
+## Overview of main features
 
-## Citation
+sdbuildR is designed to support the iterative process of building,
+simulating, and testing stock-and-flow models. Models can flexibly be
+modified and simulated in either R or Julia [(see setup
+guide)](https://kcevers.github.io/sdbuildR/articles/julia-setup.html)
+for a major speed-up on large or repeated runs. All package capabilities
+are described in the vignettes:
 
-To cite sdbuildR, please use:
-
-``` r
-citation("sdbuildR")
-#> To cite package 'sdbuildR' in publications use:
-#> 
-#>   Evers K (2025). _sdbuildR: Easily Build, Simulate, and Visualise
-#>   Stock-and-Flow Models_. R package version 1.0.7.9000,
-#>   https://github.com/KCEvers/sdbuildR,
-#>   <https://kcevers.github.io/sdbuildR/>.
-#> 
-#> A BibTeX entry for LaTeX users is
-#> 
-#>   @Manual{,
-#>     title = {sdbuildR: Easily Build, Simulate, and Visualise Stock-and-Flow Models},
-#>     author = {Kyra Caitlin Evers},
-#>     year = {2025},
-#>     note = {R package version 1.0.7.9000, https://github.com/KCEvers/sdbuildR},
-#>     url = {https://kcevers.github.io/sdbuildR/},
-#>   }
-```
-
-## Limitations
-
-- Unlike in other system dynamics software, sdbuildR provides only
-  minimal support for non-negative stocks and flows. Specifically,
-  setting stocks to non-negative will constrain the stocks to remain
-  non-negative, but will not adjust the corresponding flows. In any
-  case, enforcing either stocks or flows to be non-negative is not
-  recommended, as it may mask model misspecification. Stocks and flows
-  that logically cannot be negative (e.g., animals or deaths) should
-  ideally remain non-negative as a result of the model’s equations and
-  parameters, rather than by forcing them to be non-negative.
-
-- sdbuildR does not support vectorized operations, destructuring
-  assignment, or minimum and maximum constraints for variables.
-
-- sdbuildR does not support the Insight Maker functions Stop(),
-  Prompt(), Confirm(), Pause(), Fix(), Map(), Filter(), and Repeat(),
-  nor the delay and past functions. A message is issued if any of these
-  are detected.
+- [Get
+  started](https://kcevers.github.io/sdbuildR/articles/sdbuildR.html): A
+  guided tour of the main features.
+- [Build](https://kcevers.github.io/sdbuildR/articles/build.html):
+  Build, modify, and simulate stock-and-flow models.
+- [Ensemble
+  simulations](https://kcevers.github.io/sdbuildR/articles/ensemble.html):
+  Explore a model’s behaviour across parameter ranges and initial
+  conditions.
+- [Unit
+  tests](https://kcevers.github.io/sdbuildR/articles/unit-tests.html):
+  Verify models behave as intended with unit tests.
+- [Job Demands-Resources
+  Theory](https://kcevers.github.io/sdbuildR/articles/jdr.html): An
+  example of formalizing psychological theory with sdbuildR.
+- [Julia
+  setup](https://kcevers.github.io/sdbuildR/articles/julia-setup.html):
+  Set up Julia for faster simulations.
+- [Import/Export](https://kcevers.github.io/sdbuildR/articles/import-export.html):
+  Import models from deSolve or Insight Maker, and export to other
+  formats.
 
 ## Other system dynamics software
 
@@ -122,72 +109,147 @@ package may have bugs, particularly in complex model translations. We
 encourage users to report [issues on
 GitHub](https://github.com/KCEvers/sdbuildR/issues) - your input helps
 the package improve! Use
-[`debugger()`](https://kcevers.github.io/sdbuildR/reference/debugger.md)
-to diagnose model errors, and use the vignettes for guidance.
+[`summary()`](https://rdrr.io/r/base/summary.html) to run model
+diagnostics, and use the vignettes for guidance.
+
+## Citation
+
+To cite sdbuildR, please use:
+
+``` r
+
+citation("sdbuildR")
+#> To cite package 'sdbuildR' in publications use:
+#> 
+#>   Evers K (2025). _sdbuildR: Easily Build, Simulate, and Visualise
+#>   Stock-and-Flow Models_. doi:10.32614/CRAN.package.sdbuildR
+#>   <https://doi.org/10.32614/CRAN.package.sdbuildR>, R package version
+#>   1.0.8.
+#> 
+#> A BibTeX entry for LaTeX users is
+#> 
+#>   @Manual{,
+#>     title = {sdbuildR: Easily Build, Simulate, and Visualise Stock-and-Flow Models},
+#>     author = {Kyra Caitlin Evers},
+#>     year = {2025},
+#>     note = {R package version 1.0.8},
+#>     doi = {10.32614/CRAN.package.sdbuildR},
+#>   }
+```
 
 # Package index
 
 ## Building stock-and-flow models
 
-- [`as.data.frame(`*`<sdbuildR_sim>`*`)`](https://kcevers.github.io/sdbuildR/reference/as.data.frame.sdbuildR_sim.md)
-  : Create data frame of simulation results
-- [`as.data.frame(`*`<sdbuildR_xmile>`*`)`](https://kcevers.github.io/sdbuildR/reference/as.data.frame.sdbuildR_xmile.md)
+- [`as.data.frame(`*`<sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/as.data.frame.sdbuildR.md)
   : Convert stock-and-flow model to data frame
-- [`build()`](https://kcevers.github.io/sdbuildR/reference/build.md) :
-  Create, modify or remove variables
-- [`debugger()`](https://kcevers.github.io/sdbuildR/reference/debugger.md)
-  : Debug stock-and-flow model
-- [`find_dependencies()`](https://kcevers.github.io/sdbuildR/reference/find_dependencies.md)
+- [`as.data.frame(`*`<simulate_sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/as.data.frame.simulate_sdbuildR.md)
+  : Create data frame of simulation results
+- [`auxiliary()`](https://kcevers.github.io/sdbuildR/reference/auxiliary.md)
+  [`aux()`](https://kcevers.github.io/sdbuildR/reference/auxiliary.md) :
+  Add or modify auxiliaries
+- [`change_name()`](https://kcevers.github.io/sdbuildR/reference/change_name.md)
+  : Change name of variable
+- [`change_type()`](https://kcevers.github.io/sdbuildR/reference/change_type.md)
+  : Change variable type
+- [`compare_models()`](https://kcevers.github.io/sdbuildR/reference/compare_models.md)
+  : Compare two stock-and-flow models
+- [`constant()`](https://kcevers.github.io/sdbuildR/reference/constant.md)
+  : Add or modify constants
+- [`custom_func()`](https://kcevers.github.io/sdbuildR/reference/custom_func.md)
+  : Create or modify custom variables or functions
+- [`dependencies()`](https://kcevers.github.io/sdbuildR/reference/dependencies.md)
   : Find dependencies
-- [`get_build_code()`](https://kcevers.github.io/sdbuildR/reference/get_build_code.md)
-  : Generate code to build stock-and-flow model
-- [`header()`](https://kcevers.github.io/sdbuildR/reference/header.md) :
-  Modify header of stock-and-flow model
-- [`macro()`](https://kcevers.github.io/sdbuildR/reference/macro.md) :
-  Create, modify or remove a global variable or function
-- [`plot(`*`<sdbuildR_xmile>`*`)`](https://kcevers.github.io/sdbuildR/reference/plot.sdbuildR_xmile.md)
+- [`discard()`](https://kcevers.github.io/sdbuildR/reference/discard.md)
+  : Remove variable(s)
+- [`flow()`](https://kcevers.github.io/sdbuildR/reference/flow.md) : Add
+  or modify flows
+- [`lookup()`](https://kcevers.github.io/sdbuildR/reference/lookup.md) :
+  Add or modify lookup variables (graphical functions)
+- [`meta()`](https://kcevers.github.io/sdbuildR/reference/meta.md) :
+  Modify meta of stock-and-flow model
+- [`plot(`*`<sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/plot.sdbuildR.md)
   : Plot stock-and-flow diagram
-- [`print(`*`<summary.sdbuildR_xmile>`*`)`](https://kcevers.github.io/sdbuildR/reference/print.summary.sdbuildR_xmile.md)
-  : Print method for summary.sdbuildR_xmile
-- [`summary(`*`<sdbuildR_xmile>`*`)`](https://kcevers.github.io/sdbuildR/reference/summary.sdbuildR_xmile.md)
+- [`print(`*`<compare_sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/print.compare_sdbuildR.md)
+  : Print comparison of two stock-and-flow models
+- [`print(`*`<sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/print.sdbuildR.md)
   : Print overview of stock-and-flow model
-- [`xmile()`](https://kcevers.github.io/sdbuildR/reference/xmile.md) :
-  Create a new stock-and-flow model
+- [`print(`*`<simulate_sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/print.simulate_sdbuildR.md)
+  : Print simulation of a stock-and-flow model
+- [`print(`*`<summary_sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/print.summary_sdbuildR.md)
+  : Print method for summary_sdbuildR
+- [`sdbuildR()`](https://kcevers.github.io/sdbuildR/reference/sdbuildR.md)
+  : Create a new stock-and-flow model
+- [`stock()`](https://kcevers.github.io/sdbuildR/reference/stock.md) :
+  Add or modify stocks
+- [`summary(`*`<sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/summary.sdbuildR.md)
+  : Run model diagnostics
+- [`update(`*`<sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/update.sdbuildR.md)
+  : Create or modify variables
 
 ## Simulate stock-and-flow models
 
+- [`head(`*`<simulate_sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/head.simulate_sdbuildR.md)
+  : Print first rows of a simulation
+- [`plot(`*`<simulate_sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/plot.simulate_sdbuildR.md)
+  : Plot timeseries of simulation
+- [`sim_methods()`](https://kcevers.github.io/sdbuildR/reference/sim_methods.md)
+  : Translate between deSolve and DifferentialEquations.jl solver names
+- [`sim_settings()`](https://kcevers.github.io/sdbuildR/reference/sim_settings.md)
+  : Modify simulation specifications
+- [`simulate(`*`<sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/simulate.sdbuildR.md)
+  : Simulate stock-and-flow model
+- [`summary(`*`<simulate_sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/summary.simulate_sdbuildR.md)
+  : Summarise simulation results
+- [`tail(`*`<simulate_sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/tail.simulate_sdbuildR.md)
+  : Print last rows of a simulation
+
+## Ensemble simulations
+
 - [`ensemble()`](https://kcevers.github.io/sdbuildR/reference/ensemble.md)
   : Run ensemble simulations
-- [`export_plot()`](https://kcevers.github.io/sdbuildR/reference/export_plot.md)
-  : Save plot to a file
-- [`plot(`*`<sdbuildR_ensemble>`*`)`](https://kcevers.github.io/sdbuildR/reference/plot.sdbuildR_ensemble.md)
-  : Plot timeseries of ensemble
-- [`plot(`*`<sdbuildR_sim>`*`)`](https://kcevers.github.io/sdbuildR/reference/plot.sdbuildR_sim.md)
-  : Plot timeseries of simulation
-- [`sim_specs()`](https://kcevers.github.io/sdbuildR/reference/sim_specs.md)
-  : Modify simulation specifications
-- [`simulate()`](https://kcevers.github.io/sdbuildR/reference/simulate.md)
-  : Simulate stock-and-flow model
-- [`solvers()`](https://kcevers.github.io/sdbuildR/reference/solvers.md)
-  : Check or translate between deSolve and Julia DifferentialEquations
-  solvers
+- [`plot(`*`<ensemble_sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/plot.ensemble_sdbuildR.md)
+  : Plot timeseries of ensemble simulation
+
+## Unit testing
+
+- [`as.data.frame(`*`<verify_sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/as.data.frame.verify_sdbuildR.md)
+  : Convert verify() results to a data frame
+- [`discard_unit_test()`](https://kcevers.github.io/sdbuildR/reference/discard_unit_test.md)
+  : Remove a unit test from a stock-and-flow model
+- [`head(`*`<verify_sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/head.verify_sdbuildR.md)
+  : Print first rows of verify results
+- [`plot(`*`<verify_sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/plot.verify_sdbuildR.md)
+  : Plot verify results
+- [`tail(`*`<verify_sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/tail.verify_sdbuildR.md)
+  : Print last rows of verify results
+- [`unit_test()`](https://kcevers.github.io/sdbuildR/reference/unit_test.md)
+  : Add or modify unit tests
+- [`unit_tests()`](https://kcevers.github.io/sdbuildR/reference/unit_tests.md)
+  : Display unit tests defined on a stock-and-flow model
+- [`verify()`](https://kcevers.github.io/sdbuildR/reference/verify.md) :
+  Verify model behavior with unit tests
+- [`verify(`*`<sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/verify.sdbuildR.md)
+  : Verify unit tests against simulation results
 
 ## Set-up and use Julia
 
 - [`install_julia_env()`](https://kcevers.github.io/sdbuildR/reference/install_julia_env.md)
   : Install, update, or remove Julia environment
-- [`julia_status()`](https://kcevers.github.io/sdbuildR/reference/julia_status.md)
-  : Check status of Julia installation and environment
 - [`use_julia()`](https://kcevers.github.io/sdbuildR/reference/use_julia.md)
   : Start Julia and activate environment
-- [`use_threads()`](https://kcevers.github.io/sdbuildR/reference/use_threads.md)
-  : Set up threaded ensemble simulations
 
-## Insight Maker
+## Importing and exporting models
 
-- [`insightmaker_to_sfm()`](https://kcevers.github.io/sdbuildR/reference/insightmaker_to_sfm.md)
+- [`export_model()`](https://kcevers.github.io/sdbuildR/reference/export_model.md)
+  : Export a stock-and-flow model
+- [`import_desolve()`](https://kcevers.github.io/sdbuildR/reference/import_desolve.md)
+  : Import a deSolve model
+- [`import_insightmaker()`](https://kcevers.github.io/sdbuildR/reference/import_insightmaker.md)
   : Import Insight Maker model
-- [`url_to_IM()`](https://kcevers.github.io/sdbuildR/reference/url_to_IM.md)
+- [`insightmaker_to_json()`](https://kcevers.github.io/sdbuildR/reference/insightmaker_to_json.md)
+  : Convert .InsightMaker file to .json file
+- [`url_to_insightmaker()`](https://kcevers.github.io/sdbuildR/reference/url_to_insightmaker.md)
   : Extract Insight Maker model from URL
 
 ## Input functions
@@ -201,14 +263,18 @@ to diagnose model errors, and use the vignettes for guidance.
 - [`step()`](https://kcevers.github.io/sdbuildR/reference/step.md) :
   Create step function
 
-## Custom functions
+## Convenience functions
 
 - [`contains_IM()`](https://kcevers.github.io/sdbuildR/reference/contains_IM.md)
-  : Check if needle is in haystack
+  : Check whether value is in vector or string
 - [`expit()`](https://kcevers.github.io/sdbuildR/reference/expit.md) :
   Expit function
+- [`export_plot()`](https://kcevers.github.io/sdbuildR/reference/export_plot.md)
+  : Save plot to a file
+- [`hill()`](https://kcevers.github.io/sdbuildR/reference/hill.md) :
+  Hill function
 - [`indexof()`](https://kcevers.github.io/sdbuildR/reference/indexof.md)
-  : Find index of needle in haystack
+  : Find index of value in vector or string
 - [`length_IM()`](https://kcevers.github.io/sdbuildR/reference/length_IM.md)
   : Length of vector or string
 - [`logistic()`](https://kcevers.github.io/sdbuildR/reference/logistic.md)
@@ -225,28 +291,7 @@ to diagnose model errors, and use the vignettes for guidance.
   [`` `%REM%` ``](https://kcevers.github.io/sdbuildR/reference/rem_mod.md)
   : Remainder and modulus
 - [`round_IM()`](https://kcevers.github.io/sdbuildR/reference/round_IM.md)
-  : Round Half-Up (as in Insight Maker)
-
-## Delay functions
-
-## Units
-
-- [`convert_u()`](https://kcevers.github.io/sdbuildR/reference/convert_u.md)
-  : Convert unit in equation
-- [`drop_u()`](https://kcevers.github.io/sdbuildR/reference/drop_u.md) :
-  Drop unit in equation
-- [`get_regex_time_units()`](https://kcevers.github.io/sdbuildR/reference/get_regex_time_units.md)
-  : Get regular expressions for time units in Julia
-- [`get_regex_units()`](https://kcevers.github.io/sdbuildR/reference/get_regex_units.md)
-  : Get regular expressions for units in Julia
-- [`get_units()`](https://kcevers.github.io/sdbuildR/reference/get_units.md)
-  : View all standard units
-- [`model_units()`](https://kcevers.github.io/sdbuildR/reference/model_units.md)
-  : Create, modify or remove custom units
-- [`u()`](https://kcevers.github.io/sdbuildR/reference/u.md) : Specify
-  unit in equations
-- [`unit_prefixes()`](https://kcevers.github.io/sdbuildR/reference/unit_prefixes.md)
-  : Show unit prefixes
+  : Round values half-up (as in Insight Maker)
 
 ## Internal functions
 
@@ -255,7 +300,7 @@ to diagnose model errors, and use the vignettes for guidance.
 - [`has_internet()`](https://kcevers.github.io/sdbuildR/reference/has_internet.md)
   : Check if user has internet
 - [`nonnegative()`](https://kcevers.github.io/sdbuildR/reference/nonnegative.md)
-  : Safely check whether x is less than zero
+  : Check whether x is less than zero
 - [`saveat_func()`](https://kcevers.github.io/sdbuildR/reference/saveat_func.md)
   : Internal function to save data frame at specific times
 
@@ -265,11 +310,13 @@ to diagnose model errors, and use the vignettes for guidance.
 
 - [Building stock-and-flow
   models](https://kcevers.github.io/sdbuildR/articles/build.md):
+- [Ensemble
+  simulations](https://kcevers.github.io/sdbuildR/articles/ensemble.md):
+- [Unit Testing Stock-and-Flow
+  Models](https://kcevers.github.io/sdbuildR/articles/unit-tests.md):
 - [Formalizing Job Demands-Resources
   Theory](https://kcevers.github.io/sdbuildR/articles/jdr.md):
 - [Setting up
   Julia](https://kcevers.github.io/sdbuildR/articles/julia-setup.md):
-- [Ensemble
-  simulations](https://kcevers.github.io/sdbuildR/articles/ensemble.md):
-- [Using (custom)
-  units](https://kcevers.github.io/sdbuildR/articles/units.md):
+- [Importing and Exporting
+  Models](https://kcevers.github.io/sdbuildR/articles/import-export.md):

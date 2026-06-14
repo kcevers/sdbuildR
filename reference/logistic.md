@@ -50,14 +50,18 @@ logistic(0)
 # equivalent:
 sigmoid(0)
 #> [1] 0.5
-logistic(1, slope = 5, midpoint = 0.5, upper = 10)
-#> [1] 9.241418
+
+# Adjust parameters
+logistic(0, slope = 5, midpoint = 0.5, upper = 10)
+#> [1] 0.7585818
 
 # Visualize different slopes
 x <- seq(-5, 5, length.out = 1000)
 plot(x, logistic(x, slope = 1), type = "l", ylab = "f(x)", ylim = c(0, 1))
 lines(x, logistic(x, slope = 5), col = "blue")
 lines(x, logistic(x, slope = 50), col = "red")
-legend("topleft", legend = c("slope = 1", "slope = 5", "slope = 50"),
-       col = c("black", "blue", "red"), lty = 1)
+legend("topleft",
+  legend = c("slope = 1", "slope = 5", "slope = 50"),
+  col = c("black", "blue", "red"), lty = 1
+)
 ```

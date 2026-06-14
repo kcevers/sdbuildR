@@ -1,4 +1,4 @@
-# Round Half-Up (as in Insight Maker)
+# Round values half-up (as in Insight Maker)
 
 R rounds .5 to 0, whereas Insight Maker rounds .5 to 1. This function is
 the equivalent of Insight Maker's Round() function.

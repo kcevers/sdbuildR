@@ -7,22 +7,33 @@ installed (see below).
 ## Usage
 
 ``` r
-export_plot(pl, file, width = 3, height = 4, units = "cm", dpi = 300)
+export_plot(
+  pl,
+  file,
+  width = 3,
+  height = 4,
+  units = "cm",
+  dpi = 300,
+  font_family = ""
+)
 ```
 
 ## Arguments
 
 - pl:
 
-  Plot object.
+  Plot object. Can be a `grViz` object from the DiagrammeR package (for
+  stock-and-flow diagrams) or a `plotly` object from the plotly package
+  (for (ensemble) simulation results).
 
 - file:
 
   File path to save plot to, including a file extension. For plotting a
   stock-and-flow model, the file extension can be one of png, pdf, svg,
   ps, eps, webp. For plotting a simulation, the file extension can be
-  one of png, pdf, jpg, jpeg, webp. If no file extension is specified,
-  it will default to png.
+  one of png, pdf, jpg, jpeg, webp. For plotting a qgraph graph, the
+  file extension can be one of png, pdf, svg, ps, eps, jpg, jpeg, tiff,
+  bmp. If no file extension is specified, it will default to png.
 
 - width:
 
@@ -41,6 +52,11 @@ export_plot(pl, file, width = 3, height = 4, units = "cm", dpi = 300)
 
   Resolution of image. Only used if units is not "px".
 
+- font_family:
+
+  Font family used for qgraph exports. For PDF/PS/EPS exports, this is
+  applied when the graphics device is opened.
+
 ## Value
 
 Returns `NULL` invisibly, called for side effects.
@@ -48,25 +64,24 @@ Returns `NULL` invisibly, called for side effects.
 ## Examples
 
 ``` r
+
 # Only if dependencies are installed
-if (require("DiagrammeRsvg", quietly = TRUE) &
-  require("rsvg", quietly = TRUE)) {
-  sfm <- xmile("SIR")
+if (requireNamespace("DiagrammeRsvg", quietly = TRUE) &&
+  requireNamespace("rsvg", quietly = TRUE)) {
+  sfm <- sdbuildR("SIR")
   file <- tempfile(fileext = ".png")
   export_plot(plot(sfm), file)
 
   # Remove plot
   file.remove(file)
 }
-#> Linking to librsvg 2.58.0
 #> [1] TRUE
 
-if (FALSE) { # interactive()
 if (FALSE) { # \dontrun{
 # requires internet
-# Only if dependencies are installed
-if (require("htmlwidgets", quietly = TRUE) &
-  require("webshot2", quietly = TRUE)) {
+# Only if suggested dependencies are installed
+if (requireNamespace("htmlwidgets", quietly = TRUE) &&
+  requireNamespace("webshot2", quietly = TRUE)) {
   # Requires Chrome to save plotly plot:
   sim <- simulate(sfm)
   export_plot(plot(sim), file)
@@ -75,5 +90,4 @@ if (require("htmlwidgets", quietly = TRUE) &
   file.remove(file)
 }
 } # }
-}
 ```

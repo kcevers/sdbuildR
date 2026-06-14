@@ -1,491 +1,540 @@
 # Building stock-and-flow models
 
 ``` r
+
 library(sdbuildR)
 ```
 
 Stock-and-flow models represent systems as states (stocks) that
 accumulate over time with processes (flows) that change these variables.
-Foundational to the field of system dynamics, stock-and-flow models are
-widely used in areas such as epidemiology, economics, and environmental
-science to model systems complicated by nonlinearities, delays, and
-feedback loops. In this vignette, we will explore how to build
-stock-and-flow models from scratch using sdbuildR. We will first go
-through the basics: What are the building blocks of a stock-and-flow
-model? How can we combine them to create a model of our system? To give
-a quick overview of how sdbuildR works, we will recreate a well-known
-predator-prey model. We will then develop a model of our own to show how
-sdbuildR facilitates iterative model development.
+In this vignette, we will demonstrate how to create stock-and-flow
+models from scratch using sdbuildR. It covers the basics of
+stock-and-flow modelling in the context of psychology with an example of
+burnout. Note that this vignette serves as online supplemental material
+A accompanying the paper *Formalizing Psychological Theory with
+stockflow: A Stock-and-Flow Modelling Tutorial in R* by Evers et
+al. (under review). To reproduce the figures in the paper, please see
+the corresponding .Rmd file.
 
 ## Stock-and-flow models
 
-Stock-and-flow models are composed of stocks, which are the variables
-that determine the state of the system, and flows, which are the way
-stocks change. Stocks accumulate material or information over time, such
-as people or products. Stocks are variables that can increase and
-decrease, and can be measured at a single moment in time. Despite what
-their name may imply, stocks need not be tangible, and can also be
-variables such as beliefs, feelings, or knowledge.
+Stock-and-flow models conceptualize systems in terms of quantities that
+accumulate (i.e., stocks) and the processes (i.e., flows) that change
+them over time. Stocks are like the amount of water in a bathtub: they
+store the effects of past and present flows. Stocks must be able to
+increase and decrease, and should be measurable at a single moment in
+time. Inflows – water from the tap – raise the stock, while outflows –
+water through the drain – lower it. As such, flows represent the rates
+at which stocks change, measured in units per time (e.g., litre per
+minute). The net rate of change in the water level is determined by the
+difference between the inflows and outflows. In this way, a stock
+functions as a memory of past activity: it increases when inflows exceed
+outflows and decreases when outflows outpace inflows. Without an
+outflow, the water remains in the bathtub; without an inflow, the
+bathtub stays empty. This structure is the foundation of stock-and-flow
+models, where stocks represent the state of a system, and flows
+represent the processes that alter that state over time.
 
-The value of a stock is increased or decreased by flows. Flows represent
-the rates at which stocks change, measured in units per time (e.g.,
-people per year, dollars per month). Flows transport whatever is in the
-stock, and have to come and go somewhere. The source and sink of flows
-may be another stock, or may be left unspecified as outside the model
-boundary. For instance, in a population model, births are an inflow, and
-deaths are an outflow. Usually, we don’t specify where the outflow of
-deaths is going to, meaning it is outside of the model boundary.
+Stock-and-flow models provide an intuitive way to formalize
+psychological theories as many are fundamentally concerned with change
+over time. Despite the physical connotation of the term, stocks need not
+be tangible: emotions, knowledge, beliefs, perceptions, stress,
+motivation, and trust are all examples of psychological constructs that
+accumulate over time, often in response to experience or behaviour. The
+processes that drive these changes – such as emotion regulation, coping,
+and learning – are the flows, specifying what causes psychological
+states to increase or decrease.
 
-The net change in a stock is the sum of inflows minus outflows. A stock
-may have multiple inflows and multiple outflows. This means you can
-separate different processes that affect your stock. If two stocks are
-connected by a flow, the flow directly takes the material from the first
-stock to the second stock (i.e. a material flow). For example, in the
-Susceptible-Infected-Recovered model, susceptible individuals move to
-the infected stock through the flow of infection, and infected
-individuals move to the recovered stock through the flow of recovery.
-
-To help build a stock-and-flow model, you can also use three other types
-of variables: constants, auxiliaries, and graphical functions. Constants
-are variables that do not change over the course of the simulation -
-they are time-independent. Think of fixed birth rates, time constants,
-or thresholds. Conversely, auxiliaries are dynamic, and help as
-intermediate computations for flows. To create custom interpolation
-functions, use graphical functions (also called converters, or table or
-lookup functions).
-
-| Building Block     | Purpose                                                                         | Example                                                                     |
-|:-------------------|:--------------------------------------------------------------------------------|:----------------------------------------------------------------------------|
-| Stock              | Defines the state of the system                                                 | People, products, beliefs, blood sugar, CO2 in atmosphere                   |
-| Flow               | Moves material or information to and from stocks and outside the model boundary | Birth rates, product order rates, eating, revenue, sales                    |
-| Constant           | Specifies static parameters                                                     | Fixed prices, constants, coefficients, parameters                           |
-| Auxiliary          | Computes intermediate computations dynamically in the model                     | Sum of all Stocks, ratios of flows, averages                                |
-| Graphical Function | Allows custom input-output interpolation functions                              | Interventions or events occurring at known times such as vaccines or storms |
-
-Stock-and-flow building blocks
-
-## A Simple Example: Predator-Prey
-
-To create a stock-and-flow model from scratch, we first create an XMILE
-object using
-[`xmile()`](https://kcevers.github.io/sdbuildR/reference/xmile.md),
-which yields a nested list in the structure of the XMILE standard. This
-model is still empty, but has default simulation specifications. We add
-a model name with
-[`header()`](https://kcevers.github.io/sdbuildR/reference/header.md).
+To demonstrate stock-and-flow modelling in a psychological context, we
+will create a simplified model of burnout. The model represents a
+stylized pattern of how burnout develops over time on a within-person
+level. It contains a single stock representing the current level of
+energy, an inflow for recovery, and an outflow for depletion from work.
+We first initialize an empty stock-and-flow model:
 
 ``` r
-sfm <- xmile() |> header(name = "Predator-Prey Model")
-summary(sfm)
-#> Your model contains:
-#> * 0 Stocks
-#> * 0 Flows
-#> * 0 Constants
-#> * 0 Auxiliaries
-#> * 0 Graphical Functions
-#> * 0 Custom model units
-#> * 0 Macros
+
+sfm <- sdbuildR()
+print(sfm)
 #> 
-#> Simulation time: 0.0 to 100.0 seconds (dt = 0.01)
-#> Simulation settings: solver euler in R
+#> ── Stock-and-Flow Model ────────────────────────────────────────────────────────
+#> ℹ Empty model without any variables.
+#> 
+#> ── Simulation Settings ──
+#> 
+#> Time: 0 to 100 seconds (dt = 0.01) • euler • R
 ```
 
-We add two stocks, predators and prey.
-[`build()`](https://kcevers.github.io/sdbuildR/reference/build.md) takes
-the variable name, building block type (`stock`, `flow`, `constant`,
-`aux`, or `gf`), and type-specific properties (e.g., `eqn` for equation,
-`label` for plotting). Here, we start the simulation with 10 predators
-and 50 prey. We use the pipe operator `|>` to pass the result of an
-expression to the next expression as a first argument.
+Though the model contains no elements, it includes default simulation
+settings, such as the duration of the simulation and a solver (`euler`)
+specifying the numerical technique used to generate output from the
+model. We change the simulation settings to model energy over the course
+of 16 weeks (note that the time unit merely changes the labels on the
+axes of the resulting plots, and does not affect the model’s behaviour).
+In addition, we set `only_stocks = FALSE` to return all model variables
+in the simulation output, not just the stocks:
 
 ``` r
-sfm <- build(sfm, "predator", "stock", eqn = 10, label = "Predator") |>
-  build("prey", "stock", eqn = 50, label = "Prey")
+
+sfm <- sim_settings(sfm, stop = 16, time_units = "weeks", only_stocks = FALSE)
 ```
 
-How does this model evolve over time?
+A model name can be supplied with
+[`meta()`](https://kcevers.github.io/sdbuildR/reference/meta.md).
 
 ``` r
-sim <- simulate(sfm)
-plot(sim)
+
+sfm <- meta(sfm, name = "Burnout")
 ```
 
-The stocks are static! Stocks can only change through flows, and we have
-not yet added any flows to the model. We could also have noticed this by
-running
-[`debugger()`](https://kcevers.github.io/sdbuildR/reference/debugger.md):
+Next, we introduce a stock to the model to represent energy. Each model
+element requires a unique `name`, which serves as its identifier in
+equations and follows the same naming rules as R variables (e.g., no
+spaces or special characters). We here simply choose `energy`. An
+optional `label` can be supplied for use in plots and diagrams (e.g.,
+`label = "Energy Level"`); when omitted, the name is used.
+
+Every stock also needs an *initial condition*: the value of the stock at
+the start of the simulation. This is set via the `eqn` argument, where
+here, we initialize energy at .3:
 
 ``` r
-debugger(sfm)
-#> No problems detected!
-#> Potentially problematic:
-#> * Your model has no flows.
+
+sfm <- stock(sfm, name = energy, eqn = .3, label = "Energy")
 ```
 
-We create four flows: the births and deaths of both the predators and
-prey. The rate of the flow is indicated in `eqn`. In addition, flows
-have to be connected to at least one stock: a stock the flow is coming
-from (`from`) and/or a stock the flow is flowing to (`to`). Inflows add
-to the stock, and outflows subtract from the stock.
+Plotting the stock-and-flow model yields its stock-and-flow diagram,
+which now consists of only one stock:
 
 ``` r
-sfm <- build(sfm, "predator_births", "flow",
-  eqn = "delta*prey*predator",
-  label = "Births", to = "predator"
-) |>
-  build("predator_deaths", "flow",
-    eqn = "gamma*predator",
-    label = "Deaths", from = "predator"
-  ) |>
-  build("prey_births", "flow",
-    eqn = "alpha*prey",
-    label = "Births", to = "prey"
-  ) |>
-  build("prey_deaths", "flow",
-    eqn = "beta*prey*predator",
-    label = "Deaths", from = "prey"
-  )
+
 plot(sfm)
 ```
 
-The flows make use of four other variables: `delta`, `gamma`, `alpha`,
-and `beta`. Below, we add these constants in a vectorized manner for
-efficiency. In addition, we document the meaning of these variables in
-the optional `doc` property.
+To assess its dynamics, we simulate the model over time and visualise
+the resulting timeseries:
 
 ``` r
-sfm <- build(sfm, c("delta", "gamma", "alpha", "beta"), "constant",
-  eqn = c(.025, .5, .5, .05),
-  label = c("Delta", "Gamma", "Alpha", "Beta"),
-  doc = c(
-    "Birth rate of predators", "Death rate of predators",
-    "Birth rate of prey", "Death rate of prey by predators"
-  )
+
+simulate(sfm) |> plot()
+```
+
+Above, we use the pipe operator `|>` for better legibility. It simply
+passes the result of an expression to the next expression as its first
+argument. Across the entirety of the simulation, energy remains at its
+initial state. Stocks without flows are static, as there is no process
+specifying how they change. To deplete energy, we introduce an outflow
+representing work. For simplicity, we specify that work occurs at a
+constant rate over time, say `.5`. Rather than defining the flow’s `eqn`
+to be `.5` directly, we add a constant to the model, so that it can
+easily be changed later. This also helps to keep track of how
+parametrized the model is.
+
+``` r
+
+sfm <- constant(sfm, work_rate, eqn = .5, label = "Work Rate")
+```
+
+As shown above, `eqn` is a generic argument used for all variable types.
+`work_rate` can now be used as a variable in the equation for the
+outflow from energy:
+
+``` r
+
+sfm <- flow(sfm, work,
+  eqn = work_rate, from = energy,
+  label = "Depletion from work"
 )
 ```
 
-We now have a complete predator-prey model, ready to be simulated!
+Note that `eqn` accepts any valid R expression, including functions
+(e.g., [`sqrt()`](https://rdrr.io/r/base/MathFun.html),
+[`min()`](https://rdrr.io/r/base/Extremes.html)) and arithmetic
+operators (e.g., `*`, `+`). Expressions must evaluate to a scalar,
+whereas vectors and matrices are not supported. Equations can reference
+only other variables defined in the model, as shown above; they cannot
+access objects from the user’s R environment.
+
+Flows require more than an `eqn`, and also need to be connected to a
+stock, at least as either an inflow (`to`) or an outflow (`from`). Note
+that by definition, outflows are subtracted from the stock, and as such
+do not need a minus sign in `eqn` to indicate that they decrease the
+stock. We simulate the model to check whether energy indeed depletes
+from work:
 
 ``` r
-sim <- simulate(sfm)
-plot(sim)
+
+simulate(sfm) |> plot()
 ```
 
-The model shows classic predator-prey dynamics, with oscillations in the
-populations of both species. As the number of prey rises, the population
-of predators grows, consuming the prey. With fewer prey, the larger
-number of predators don’t have enough to eat, such that the predators
-start to dwindle. The population of prey can grow again, leading to
-another cycle.
+As shown in the plot, energy decreases with a constant rate at each time
+step, creating linear decay over time. As the outflow is specified as
+`.5`, energy decreases by `.5` per unit of time (1 week), producing a
+negative energy state. To rectify this implausible behaviour, a naive
+solution may be to include a logical statement such as
+`ifelse(energy < 0, 0, energy)`. However, this computational trick would
+mask model misspecification. Ideally, stocks should remain within bounds
+as a result of the model’s equations and parameters. For instance, we
+can prevent negative energy by making `work` proportional to the amount
+of available energy: `work_rate * energy`.
 
-## Building models in practice: The art of iteration
-
-Of course, in reality, creating a stock-and-flow model isn’t a one-shot
-process. The variables, connections, and equations will have to be
-experimented with and tweaked to accurately represent the system’s
-behavior. Let’s explore how to iteratively build stock-and-flow models
-by creating a simplified model of burnout, inspired by [classic system
-dynamics
-models](https://ocw.mit.edu/courses/15-988-system-dynamics-self-study-fall-1998-spring-1999/e8bd0c07ef2848b39e55fc8ff52dcb88_generic3.pdf).
-
-Let’s say Maya has just switched from a part-time to a full-time job,
-and she wants to impress her supervisor. She is working hard and putting
-in extra hours. However, the more she works, the more projects,
-meetings, and emails pile on - work breeds work. This comes at the cost
-of her sleep, which she can only sustain for a limited time. Maya ends
-up working far beyond her capacity, to the point where she is unable to
-work at all.
-
-As a first step in creating this stock-and-flow model, let’s start by
-setting up our model. We change the name, and specify that we want to
-see Maya’s burnout develop over the course of 12 months:
+To assess whether this produces more plausible model behaviour, we
+modify the outflow using
+[`update()`](https://rdrr.io/r/stats/update.html):
 
 ``` r
-sfm <- xmile() |>
-  header(name = "Maya's Burnout") |>
-  sim_specs(stop = 12, time_units = "month")
+
+sfm <- update(sfm, work, eqn = work_rate * energy)
+
+simulate(sfm) |> plot()
 ```
 
-We add a stock for Maya’s work, which is the number of hours she works
-per day. She starts from 4 hours per day, her part-time job. We add a
-flow that increases Maya’s daily work hours as a function of the work
-she’s doing and a multiplier.
+Energy now follows an exponential decay pattern, where work now depletes
+energy until it is zero, but not beyond this point. By letting the flow
+rate depend on the level of the stock itself, we have introduced a
+*feedback loop* to the system. Positive feedback loops amplify change,
+whereas negative feedback loops bring the system back to a target state.
+Here, `work` consists of a negative feedback loop that pulls energy to
+zero: the higher energy is, the more its outflow decreases it.
+
+To allow energy to recover, we introduce an inflow, again specified as a
+simple constant rate:
 
 ``` r
-sfm <- build(sfm, "workload", "stock", eqn = 4) |>
-  build("new_tasks", "flow", eqn = "workload * work_growth", to = "workload") |>
-  build("work_growth", "constant", eqn = .1)
+
+sfm <- constant(sfm, recovery_rate, eqn = .3, label = "Recovery Rate") |>
+  flow(recovery, eqn = recovery_rate, to = energy, label = "Recovery")
+
+simulate(sfm) |> plot()
+```
+
+Flows can differ in their rates, meaning some processes are slower or
+faster than others. Here, we have specified recovery to evolve more
+slowly than work. As a result of the new inflow, energy now stabilizes
+at a fixed level, as energy recovery and depletion balance out. But what
+if the ability to recover is not static, but erodes over time? Put
+differently, what if the recovery rate is not a constant, but a stock?
+To implement this idea, we change the type of `recovery_rate`, and
+update its initial value:
+
+``` r
+
+sfm <- change_type(sfm, recovery_rate, new_type = stock) |>
+  update(recovery_rate, eqn = 1)
+```
+
+We specify with a new outflow that the recovery rate erodes over time as
+a function of the available recovery rate and the amount worked.
+
+``` r
+
+sfm <- flow(sfm, erosion,
+  eqn = recovery_rate * work,
+  from = recovery_rate, label = "Recovery Erosion"
+)
+simulate(sfm) |> plot()
+```
+
+The plot shows how the erosion of the ability to recover produces a
+characteristic burnout pattern: a steep initial rise followed by a
+collapse of energy. Counter-intuitively, though the recovery rate only
+decreases over time, energy first rises. However, this becomes clear
+once we inspect the balance between the inflow and outflow. To track
+this balance, we introduce an auxiliary: an intermediate variable
+computed at each time step that does not itself feed into any stock, but
+can be used in flow equations or to monitor other dynamic quantities:
+
+``` r
+
+# Add auxiliary to keep track of net change in energy (inflow - outflow)
+sfm <- aux(sfm, net_change, eqn = recovery - work, label = "Net change in energy")
+simulate(sfm) |> plot()
+```
+
+The net change in energy is initially positive, as recovery exceeds
+energy depletion from work. As erosion progressively reduces the
+recovery rate, this inflow weakens, eventually falling below the outflow
+from work. The net change in energy is negative, and energy begins to
+decline, leading to the observed collapse. This complex behaviour is
+produced by a simple stock-and-flow model consisting of two stocks and
+three flows:
+
+``` r
 
 plot(sfm)
 ```
 
-``` r
-sim <- simulate(sfm)
-plot(sim)
-```
-
-Maya’s work day is increasing exponentially! We’re clearly missing
-something. We’ve only added an inflow, but no outflow yet. In order to
-keep Maya’s work hours in check, we need to add a balancing feedback
-loop, so that her work hours can also decrease. Maya tries to adjust her
-hours to the normal workday, which is 8 hours. We add a new constant and
-an outflow:
+Throughout the modelling process, variables can be renamed with
+[`change_name()`](https://kcevers.github.io/sdbuildR/reference/change_name.md)
+and removed with
+[`discard()`](https://kcevers.github.io/sdbuildR/reference/discard.md).
+Moreover, we can easily check for common mistakes in the model
+specification, such as references to undefined variables or flows which
+are not connected to any stock:
 
 ``` r
-sfm <- build(sfm, "normal_workday", "constant", eqn = 8) |>
-  build("back_to_normal", "flow", eqn = "workload - normal_workday", from = "workload")
 
-sim <- simulate(sfm)
-plot(sim, add_constants = TRUE)
+summary(sfm)
+#> 
+#> ── Stock-and-Flow Model Diagnostics ────────────────────────────────────────────
+#> ✔ No problems detected!
 ```
 
-Despite adding a balancing feedback loop, Maya’s daily work hours settle
-above the normal work day, reflecting the interplay of the reinforcing
-and balancing feedback loop.
+In summary, stock-and-flow models consist of one or more stocks, each
+requiring an inflow and/or outflow to change over time. Without limiting
+processes, stocks may continue to increase indefinitely; without
+restorative processes, stocks may deplete past the point of recovery.
+Although inflows and outflows connected to the same stock could be
+combined into a single net flow (as often done in differential equation
+models), stock-and-flow modelling generally keeps flows disaggregated.
+Separating inflows and outflows encourages more precise thinking about
+what processes increase and decrease stocks, and what distinct
+information and rates of change govern each flow. Disaggregation also
+supports more targeted interventions, for example by identifying whether
+to limit inflows or promote outflows.
 
-Let’s now add sleep to our model. We create a stock for the daily hours
-of sleep Maya is getting and a constant for the sleep she needs. To
-specify that the more she works, the less Maya sleeps, we add a outflow
-from sleep that depends on how much she is working and a multiplier.
+For convenience, stock-and-flow models may further be supplemented with
+constants and auxiliaries. Constants are static parameters that do not
+change over the time course of the simulation, whereas auxiliaries are
+dynamic, meaning they are computed anew at each step. To illustrate the
+difference, a constant with `eqn = runif(1)` will be fixed to a random
+number at the beginning of the simulation, whereas an auxiliary with the
+same `eqn` will draw a new number each time step. Throughout the
+tutorial, we use the term \`\`variable’’ for any part of the system, be
+that a stock, flow, constant, or auxiliary. Though this usage may differ
+from other scientific fields, we here choose to adhere to system
+dynamics terminology.
 
-``` r
-sfm <- build(sfm, "sleep", "stock", eqn = "necessary_sleep") |>
-  build("necessary_sleep", "constant", eqn = 8) |>
-  build("worry_about_work", "flow",
-    eqn = "workload * worry_factor", from = "sleep"
-  ) |>
-  build("worry_factor", "constant", eqn = .1)
+## Variable types
 
-plot(sfm)
-```
+| Characteristic | Stock | Flow | Constant | Auxiliary |
+|:---|:---|:---|:---|:---|
+| Role in system | Defines the state of the system; accumulates the effects of flow(s) over time | Increases or decreases a stock | Specifies static quantity | Provides intermediate computations for convenience; keeps track of changing quantities |
+| Varies within time horizon | ✓ | ✓ | ✗ | ✓ |
+| A process taking place over time | ✗ | ✓ | ✗ | Possibly |
+| Can be captured at any given moment in time | ✓ | ✗ | ✓ | Possibly |
+| `eqn` denotes | Initial condition | Flow rate computed at every time step | Fixed value | Value computed at every time step |
+| Allowed dependencies in `eqn` | Constants and (initial values of) other stocks | Any other variable | Other constants and (initial values of) stocks | Any other variable |
+| Examples | Emotions, beliefs, stress, trust, resources | Coping, learning, emotion regulation | Rates, capacities, thresholds | Performance indices, ratios, sums of stocks |
 
-The model now contains two stocks and three flows.
+Characteristics of Variable Types in Stock-and-Flow Models {.table
+.table style="margin-left: auto; margin-right: auto;"}
 
-``` r
-sim <- simulate(sfm)
-plot(sim)
-```
+The following flowchart can be used to determine a variable’s type:
 
-Maya’s sleep is decreasing, but we haven’t yet added the effect of her
-sleep deficit on how much she is working. The further Maya’s sleep is
-from what she needs, the more she tries to reduce her work. We change
-the outflow from work to increase the less she sleeps, and increase the
-amount of work that piles on, for good measure.
+## Overview of package functionality
 
-``` r
-sfm <- build(sfm, "back_to_normal",
-  change_name = "need_for_rest",
-  eqn = "workload * necessary_sleep / sleep"
-) |>
-  build("work_growth", eqn = 1.5)
-```
+| Function | Purpose |
+|:---|:---|
+| [`sdbuildR()`](https://kcevers.github.io/sdbuildR/reference/sdbuildR.md) | Create empty model or load template |
+| [`stock()`](https://kcevers.github.io/sdbuildR/reference/stock.md) | Add or modify a stock |
+| [`flow()`](https://kcevers.github.io/sdbuildR/reference/flow.md) | Add or modify a flow |
+| [`constant()`](https://kcevers.github.io/sdbuildR/reference/constant.md) | Add or modify a constant |
+| [`aux()`](https://kcevers.github.io/sdbuildR/reference/auxiliary.md) | Add or modify an auxiliary |
+| [`lookup()`](https://kcevers.github.io/sdbuildR/reference/lookup.md) | Add or modify a lookup function |
+| [`update()`](https://rdrr.io/r/stats/update.html) | Add or modify any variable (generic) |
+| [`simulate()`](https://rdrr.io/r/stats/simulate.html) | Simulate model |
+| [`plot()`](https://rdrr.io/r/graphics/plot.default.html) | Plot model diagram or simulation |
+| [`summary()`](https://rdrr.io/r/base/summary.html) | Run model diagnostics |
+| [`as.data.frame()`](https://rdrr.io/r/base/as.data.frame.html) | Get model properties in a dataframe |
+| [`sim_settings()`](https://kcevers.github.io/sdbuildR/reference/sim_settings.md) | Modify simulation specifications |
+| [`meta()`](https://kcevers.github.io/sdbuildR/reference/meta.md) | Modify model metadata |
+| [`export_model()`](https://kcevers.github.io/sdbuildR/reference/export_model.md) | Export models to other formats |
 
-``` r
-sim <- simulate(sfm)
-plot(sim)
-```
+Main functions in *sdbuildR* {.table .table
+style="margin-left: auto; margin-right: auto;"}
 
-We’ve now created burnout in our model: Maya’s work hours increase far
-beyond what is sustainable, to the point where she stops working
-completely. This is a classic example of overshoot and collapse, in
-which tasks beyond an individual’s capacity deplete their resources,
-making the behaviour unsustainable in the long-term.
+In some cases, it may be useful to refer to global simulation variables
+in the model’s equations:
 
-But what if rather than only decreasing, Maya’s daily sleep can also
-recover? To do so, we change the outflow from sleep to not always
-increase with the hours worked per day, but to only increase when the
-hours worked per day exceed a normal work day. When the hours worked per
-day are less than a normal work day, Maya’s sleep will improve. What
-will this look like?
+| Variable | Description | Use case |
+|:---|:---|:---|
+| `times` | Vector with simulation times | Use in equations, e.g., `pulse(times, 5, width = dt)` |
+| `t` | Current time in the ODE | Use in equations, e.g., `input(t)` |
+| `dt` | Time step of the simulation | Use in equations, e.g., `pulse(times, 5, width = dt)` |
 
-``` r
-sfm <- build(sfm, "worry_about_work",
-  eqn = "(workload - normal_workday) * worry_factor"
-) |>
-  build("worry_factor", eqn = .5)
-
-sim <- simulate(sfm)
-plot(sim, add_constants = TRUE)
-```
-
-We’ve created oscillations in the system! Maya is now trapped in a cycle
-of overworking, which causes her sleep to deteriorate to the point of
-collapse. As she takes more time off work, her sleep recovers, but this
-only starts the cycle anew. What’s worse, the oscillations are growing
-in amplitude, with each cycle becoming more extreme. Of course, the
-model becomes untenable beyond this time horizon, as Maya would work
-more than 24 hours a day.
-
-## Overview of package functions
-
-| Function                                                                                       | Purpose                                           |
-|:-----------------------------------------------------------------------------------------------|:--------------------------------------------------|
-| [`xmile()`](https://kcevers.github.io/sdbuildR/reference/xmile.md)                             | Create object of class xmile or load template     |
-| [`insightmaker_to_sfm()`](https://kcevers.github.io/sdbuildR/reference/insightmaker_to_sfm.md) | Import Insight Maker model                        |
-| [`build()`](https://kcevers.github.io/sdbuildR/reference/build.md)                             | Create, modify, or remove variable from the model |
-| [`simulate()`](https://kcevers.github.io/sdbuildR/reference/simulate.md)                       | Simulate model                                    |
-| [`plot()`](https://rdrr.io/r/graphics/plot.default.html)                                       | Plot model diagram or simulation                  |
-| [`summary()`](https://rdrr.io/r/base/summary.html)                                             | Print summary of building blocks and variables    |
-| [`as.data.frame()`](https://rdrr.io/r/base/as.data.frame.html)                                 | Get model properties in a dataframe               |
-| [`debugger()`](https://kcevers.github.io/sdbuildR/reference/debugger.md)                       | Find problems in your model formulation           |
-| [`get_build_code()`](https://kcevers.github.io/sdbuildR/reference/get_build_code.md)           | Get code to build model from scratch              |
-| [`sim_specs()`](https://kcevers.github.io/sdbuildR/reference/sim_specs.md)                     | Modify simulation specifications                  |
-| [`model_units()`](https://kcevers.github.io/sdbuildR/reference/model_units.md)                 | Create, modify, or remove custom units            |
-| [`macro()`](https://kcevers.github.io/sdbuildR/reference/macro.md)                             | Create, modify, or remove global variables        |
-| [`header()`](https://kcevers.github.io/sdbuildR/reference/header.md)                           | Modify model header                               |
-
-Main functions in *sdbuildR*
-
-| Variable | Description                  | Use case                                           |
-|:---------|:-----------------------------|:---------------------------------------------------|
-| `times`  | Vector with simulation times | Use in equations, e.g. pulse(times, 5, width = dt) |
-| `t`      | Current time in the ODE      | Use in equations, e.g. input(t)                    |
-| `dt`     | Time step of the simulation  | Use in equations, e.g. pulse(times, 5, width = dt) |
-
-Global variables in *sdbuildR*
+Global simulation variables in *sdbuildR* {.table .table
+style="margin-left: auto; margin-right: auto;"}
 
 ### Simulation specifications
 
 We may want to observe the system over a longer time period, or with a
-different time step. To change the simulation specifications, use
-[`sim_specs()`](https://kcevers.github.io/sdbuildR/reference/sim_specs.md).
-Below, we simulate from 0 to 250 days. To decrease the size of the
-resulting dataframe, the simulation time step `dt` should *not* be
-lowered, as this can affect the accuracy of the simulation. Rather, we
-can save the simulation results only every 0.1 days, which preserves
-accuracy. We additionally don’t save the first 100 days. The method is
-set to `"euler"`, which is the simplest numerical integration method.
-For more complex models or when higher accuracy is needed, consider
-other methods like `"rk4"`. See \[`?solvers()`\] for available methods.
+different time step.
 
 ``` r
-sfm <- xmile("predator_prey") |>
-  sim_specs(
-    time_units = "days",
+
+sfm <- sfm |>
+  sim_settings(
     start = 0,
     stop = 250,
-    method = "euler",
-    dt = 0.001,
-    save_at = 0.1,
-    save_from = 100
+    dt = 0.001
   )
 ```
 
+Simulation settings can be set directly on the model object as above, or
+passed to [`simulate()`](https://rdrr.io/r/stats/simulate.html):
+
+``` r
+
+sim <- simulate(sfm, start = 0, stop = 250)
+```
+
+`dt` refers to the time step of the simulation, which determines how
+often the model’s equations are evaluated. A smaller `dt` can increase
+the accuracy of the simulation, but also increases computational time
+and the size of the resulting dataframe. To reduce the saved output, we
+may save fewer timepoints, for instance, every 0.1 days:
+
+``` r
+
+sfm <- sim_settings(sfm, save_at = 0.1)
+```
+
+Or specific time points:
+
+``` r
+
+sfm <- sim_settings(sfm, save_at = c(1, 50, 100))
+```
+
+Alternatively, we can specify the number of time points to save with
+`save_n`:
+
+``` r
+
+sfm <- sim_settings(sfm, save_n = 100)
+```
+
+Similarly, we may change the numerical method used to solve the model.
+The default method is `"euler"`, which is the simplest numerical
+integration method. For more complex models or when higher accuracy is
+needed, consider other methods like `"rk4"`:
+
+``` r
+
+sfm <- sim_settings(sfm, method = "rk4")
+```
+
+All available simulation methods can found with:
+
+``` r
+
+sim_methods()
+#> $R
+#>  [1] "euler"      "rk2"        "rk4"        "rk23bs"     "ode23"     
+#>  [6] "rk45dp6"    "rk45dp7"    "rk45e"      "rk45f"      "rk45ck"    
+#> [11] "rk78dp"     "rk78f"      "ode45"      "irk3r"      "irk5r"     
+#> [16] "irk4hh"     "irk4l"      "irk6kb"     "irk6l"      "lsoda"     
+#> [21] "lsodar"     "lsode"      "lsodes"     "bdf"        "bdf_d"     
+#> [26] "vode"       "daspk"      "adams"      "impAdams"   "impAdams_d"
+#> [31] "radau"     
+#> 
+#> $Julia
+#>  [1] "Euler()"        "ForwardEuler()" "Midpoint()"     "Heun()"        
+#>  [5] "RK4()"          "BS3()"          "Tsit5()"        "Vern6()"       
+#>  [9] "Vern7()"        "Vern8()"        "Vern9()"        "Rosenbrock23()"
+```
+
+Note that some methods may not be available in Julia and vice versa.
+
 In case the simulation contains stochastic elements, we may want to set
 a seed to ensure that the simulation is reproducible. For example, the
-initial value of the predator and prey stocks could be a random number.
-The seed needs to be an integer, and can also be set with
-[`sim_specs()`](https://kcevers.github.io/sdbuildR/reference/sim_specs.md).
+initial value of energy could be a random number:
 
 ``` r
-sfm <- build(sfm, c("predator", "prey"), eqn = "runif(1, 20, 50)") |>
-  sim_specs(seed = 1)
+
+sfm <- stock(sfm, energy, eqn = runif(1, 0, 1))
 ```
 
-In case a seed was set, this will appear in
-[`summary.sdbuildR_xmile()`](https://kcevers.github.io/sdbuildR/reference/summary.sdbuildR_xmile.md).
+The seed needs to be an integer:
+
+``` r
+
+sfm <- sim_settings(sfm, seed = 123)
+```
+
 The seed can also be removed to ensure variation in the simulation. This
 can be useful to for example test the sensitivity of the model to
-changes in the initial condition.
+initial condition variation.
 
 ``` r
-sfm <- sim_specs(sfm, seed = NULL)
+
+sfm <- sim_settings(sfm, seed = NULL)
 ```
 
-### Documenting
+### Renaming variables
 
-To document meta-properties of the model, use
-[`header()`](https://kcevers.github.io/sdbuildR/reference/header.md).
-Some standard XMILE properties specified in the header are `name`,
-`caption`, `created` (recording the date it was created), `author`
-(recording the creator of the model), and `version`. In addition, any
-other properties useful for documenting the model may be added, such as
-`URL` or `doi`.
+Variable names can easily be changed:
 
 ``` r
-sfm <- header(sfm, author = "Kyra Evers", affiliation = "University of Amsterdam")
+
+sfm <- change_name(sfm, recovery_rate, new_name = recovery_store)
 ```
 
-### Deconstructing a model
+This will ensure that all references to `recovery_rate` are changed to
+`recovery_store`.
 
-To understand how a model was built, use
-[`get_build_code()`](https://kcevers.github.io/sdbuildR/reference/get_build_code.md).
-This will return the R code used to build the model, omitting default
-specifications.
+### Allowed variable names
+
+When creating variables or changing variable names, a warning may be
+issued that the name was modified to be syntactically valid and unique.
+For example:
 
 ``` r
-get_build_code(xmile("logistic_model"))
-#> Warning: Could not use `colored = TRUE`, as the package prettycode is not installed.
-#> Please install it if you want to see colored output or see
-#> `?styler::print.vertical()` for more information.
-#> sfm <- xmile() |>
-#>   sim_specs(method = "euler", start = "0.0", stop = "200.0", dt = "0.01", save_at = "0.01", save_from = "0.0", seed = NULL, time_units = "s", language = "R") |>
-#>   header(name = "Logistic model", created = "2025-11-22 12:07:20.436357") |>
-#>   build(name = "X", type = "stock", eqn = ".01", label = "Population size") |>
-#>   build(name = "r", type = "constant", eqn = "0.1", label = "Growth rate") |>
-#>   build(name = "K", type = "constant", eqn = "1", label = "Carrying capacity") |>
-#>   build(name = "inflow", type = "flow", eqn = "r * X", to = "X", label = "Births") |>
-#>   build(name = "outflow", type = "flow", eqn = "r * X^2 / K", from = "X", label = "Deaths")
+
+sfm <- change_name(sfm, recovery_rate, new_name = t)
+#> Error in `check_var_existence()`:
+#> ! Variable not found in model.
+#> ✖ `recovery_rate` does not exist.
 ```
 
-### Changing variable names
-
-To rename a variable, use `change_name` in
-[`build()`](https://kcevers.github.io/sdbuildR/reference/build.md):
+The name `t` is not usable, as this already refers to the current time
+step. Similarly, names cannot contain spaces or special characters:
 
 ``` r
-sfm <- xmile("SIR") |> build("Infection_Rate", change_name = "Infections")
+
+sfm <- change_name(sfm, recovery_rate, new_name = recovery - rate)
+#> Error in `check_var_existence()`:
+#> ! Variable not found in model.
+#> ✖ `recovery_rate` does not exist.
 ```
 
-This will ensure that all references to `'Infection_Rate'` are changed
-to `'Infections'`. Both when creating variables and changing variable
-names, you may get a warning that the name was modified to be
-syntactically valid and unique. For example, you cannot use the name
-`'t'`, as this is the current time step in the ODE. Similarly, names
-cannot contain spaces or special characters. Use `change_name` to adjust
-the name to your liking.
-
-### Erasing variables
-
-To remove a variable from the model, use `erase` in
-[`build()`](https://kcevers.github.io/sdbuildR/reference/build.md):
+Names also cannot be duplicated:
 
 ``` r
-sfm <- build(sfm, "Susceptible", erase = TRUE)
+
+sfm <- change_name(sfm, energy, new_name = recovery)
+#> Warning: A name was changed for syntactic validity or uniqueness.
+#> ℹ "recovery" → `recovery_1`
+```
+
+### Removing variables
+
+To remove a variable from the model, use
+[`discard()`](https://kcevers.github.io/sdbuildR/reference/discard.md):
+
+``` r
+
+sfm <- discard(sfm, net_change)
 ```
 
 Note that this cannot be undone!
 
-### Changing variable types
+### Lookup functions
 
-During the process of building a model, you may realize that a variable
-is not what you thought it was - a constant may actually be a stock, or
-a stock may turn out to be a flow on second thought. For example, a
-birth rate may not be constant throughout the simulation, but depend on
-other variables in the model. You could erase the variable and create a
-new one, but you may also use `change_type` in
-[`build()`](https://kcevers.github.io/sdbuildR/reference/build.md):
-
-``` r
-sfm <- xmile() |>
-  build("birth_rate", "constant") |>
-  build("birth_rate", change_type = "aux")
-```
-
-### Graphical functions
-
-Graphical functions (`gf`), also known as table or lookup functions, are
-interpolation functions used to create custom input-output functions,
-where we define the desired output (y) for a specified input (x). They
-are defined by a set of x- and y-domain points. The interpolation method
-defines the behaviour of the graphical function between x-points, and
-the extrapolation method defines the behaviour outside of the x-points.
-For example, a simple graphical function called “graph” may look like
-this:
+Lookup functions (`lookup`), also known as table or graphical functions,
+are interpolation functions used to create custom input-output
+functions, where we define the desired output (y) for a specified input
+(x). They are defined by a set of x- and y-domain points. The
+interpolation method defines the behaviour of the lookup function
+between x-points, and the extrapolation method defines the behaviour
+outside of the x-points. For example, a simple lookup function called
+`"graph"` may look like this:
 
 ``` r
-sfm <- xmile() |>
-  build("graph", "gf",
+
+sfm <- sdbuildR() |>
+  lookup(graph,
     xpts = c(0, 1, 2), ypts = c(0.5, 1, 1),
     interpolation = "linear", extrapolation = "nearest"
   )
@@ -494,25 +543,40 @@ sfm <- xmile() |>
 The function can now be used in any equation in the model like so:
 
 ``` r
-sfm <- build(sfm, "x", "constant", eqn = "graph(1)")
+
+sfm <- constant(sfm, x, eqn = graph(1))
 ```
 
-### Macros
+### Custom functions
 
-Macros are global variables or functions that can be used anywhere in
-the model. They are useful for defining constants or functions that are
-used repeatedly. For example, if the
+New functions can be defined such that they can be used anywhere in the
+model. For example, if the
 [`logistic()`](https://kcevers.github.io/sdbuildR/reference/logistic.md)
 function did not exist, you could create it yourself:
 
 ``` r
-sfm <- xmile() |>
-  macro("func", eqn = "function(x, slope = 1, midpoint = .5) 1 / (1 + exp(-slope*(x-midpoint)))")
+
+sfm <- sdbuildR() |>
+  custom_func(f, eqn = function(x, slope = 1, midpoint = .5) 1 / (1 + exp(-slope * (x - midpoint))))
 ```
 
-This will create a function `func()` that can be used in any equation in
+This will create a function `f()` that can be used in any equation in
 the model like so:
 
 ``` r
-sfm <- build(sfm, "x", "constant", eqn = "func(0)")
+
+sfm <- constant(sfm, x, eqn = f(0))
+```
+
+### Documenting
+
+To document meta-properties of the model, use
+[`meta()`](https://kcevers.github.io/sdbuildR/reference/meta.md). For
+example, the model’s `name`, subtitle (`caption`), or `author`.
+[`meta()`](https://kcevers.github.io/sdbuildR/reference/meta.md) accepts
+any key-value pair, so custom metadata can also be added.
+
+``` r
+
+sfm <- meta(sfm, author = "Kyra Evers", affiliation = "University of Amsterdam")
 ```

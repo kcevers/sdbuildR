@@ -31,24 +31,24 @@ one column per variable.
 ## Examples
 
 ``` r
-# Recommended: Use save_at in sim_specs() to downsample simulations
-sfm <- xmile("SIR") |> sim_specs(dt = 0.01, save_at = 1)
+# Recommended: Use save_at in sim_settings() to downsample simulations
+sfm <- sdbuildR("SIR") |> sim_settings(dt = 0.01, save_at = 1)
 sim <- simulate(sfm)
 df <- as.data.frame(sim)
 nrow(df) # Returns only times at intervals of 1
 #> [1] 63
 head(df)
-#>   time variable       value
-#> 1    0 Infected    1.000000
-#> 2    1 Infected    4.431808
-#> 3    2 Infected   19.636874
-#> 4    3 Infected   86.929468
-#> 5    4 Infected  383.273923
-#> 6    5 Infected 1660.347298
+#>   time variable        value
+#> 1    0 infected     1.000000
+#> 2    1 infected     6.567386
+#> 3    2 infected    43.116029
+#> 4    3 infected   282.439436
+#> 5    4 infected  1823.799110
+#> 6    5 infected 10783.794761
 
 # The saveat_func() is the underlying function used by simulate()
 # Direct use is not recommended, but shown here for completeness:
-sfm <- sfm |> sim_specs(save_at = 0.01)
+sfm <- sfm |> sim_settings(save_at = 0.01)
 sim <- simulate(sfm)
 df <- as.data.frame(sim)
 nrow(df) # Many more rows

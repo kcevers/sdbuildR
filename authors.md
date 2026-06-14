@@ -8,16 +8,17 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/KCEvers/sdbuildR/blob/main/DESCRIPTION)
+[`inst/CITATION`](https://github.com/KCEvers/sdbuildR/blob/stockflow/inst/CITATION)
 
 Evers K (2025). *sdbuildR: Easily Build, Simulate, and Visualise
-Stock-and-Flow Models*. R package version 1.0.8.9000,
-<https://kcevers.github.io/sdbuildR/>.
+Stock-and-Flow Models*.
+[doi:10.32614/CRAN.package.sdbuildR](https://doi.org/10.32614/CRAN.package.sdbuildR).
+R package version 1.0.8.
 
     @Manual{,
       title = {sdbuildR: Easily Build, Simulate, and Visualise Stock-and-Flow Models},
       author = {Kyra Caitlin Evers},
       year = {2025},
-      note = {R package version 1.0.8.9000},
-      url = {https://kcevers.github.io/sdbuildR/},
+      note = {R package version 1.0.8},
+      doi = {10.32614/CRAN.package.sdbuildR},
     }
