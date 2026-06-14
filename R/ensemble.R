@@ -100,6 +100,7 @@
 #' sims <- ensemble(sfm, n = 10)
 #' plot(sims)
 #'
+#' @examplesIf Sys.getenv("NOT_CRAN") == "true"
 #' # To plot individual trajectories, rerun the ensemble with save_sims = TRUE.
 #' # Note that this can consume a lot of memory for large simulations.
 #' sims <- ensemble(sfm, n = 10, save_sims = TRUE)
@@ -111,7 +112,6 @@
 #' # Plot the median with lighter individual trajectories
 #' plot(sims, central_tendency = "median", which = "sims", alpha = 0.1)
 #'
-#' @examplesIf Sys.getenv("NOT_CRAN") == "true"
 #' # For larger ensembles, we can use parallelization with future
 #' if (requireNamespace("future", quietly = TRUE) &&
 #'   requireNamespace("future.apply", quietly = TRUE)) {

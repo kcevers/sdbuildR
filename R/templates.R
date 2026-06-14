@@ -292,7 +292,7 @@ templates <- function(template) {
       update("m1", "constant", eqn = "-0.714", label = "Nonlinear slope m1")
   } else if (template == "jdr") {
     object <- sdbuildR() |>
-      sim_settings(start = "0.0", stop = "182.5", dt = "0.01", seed = "123", time_units = "day", only_stocks = FALSE) |>
+      sim_settings(start = "0.0", stop = round(182.5), dt = "0.01", seed = "123", time_units = "day", only_stocks = FALSE, save_at = 1) |>
       meta(name = "Job Demands and Resources (JD-R) Theory", created = "2026-05-25 10:42:07.289319") |>
       stock("demands", eqn = "runif(1, 0.01, 2)", label = "Job Demands") |>
       stock("energy", eqn = "runif(1, 0.01, 2)", label = "Energy") |>

@@ -128,7 +128,8 @@ font_size_subplot <- font_size # round(font_size * 1.5)
 xlab <- "Time (days)"
 
 # Finer-grained simulation
-save_at <- .1 # .01
+save_at_fine <- .1 # .01
+save_at_coarse <- 1
 
 # Annotation template
 annot <- list(xanchor = "center", yanchor = "middle", showarrow = FALSE, xref = "paper", yref = "paper", font = list(size = font_size_subplot, family = font_family))
@@ -266,7 +267,11 @@ As a first step, we initialize a new stock-and-flow model, and set the simulatio
 ```{r}
 sfm <- sdbuildR() |>
   sim_settings(
-    stop = 365 / 2, time_units = "day",
+    stop = round(182.5), time_units = "day",
+    # Simulation timestep
+    dt = 0.01,
+    # Reduce the output size
+    save_at = 1,
     # Set only_stocks = FALSE to return all variables (not just stocks) in the simulation output
     only_stocks = FALSE
   )
@@ -446,7 +451,7 @@ if (recreate_figs) {
   # Simulate three models with different functional forms
   sfm0_rev <- sdbuildR() |>
     stock(Stock, eqn = 0.1) |>
-    sim_settings(only_stocks = FALSE, stop = 10)
+    sim_settings(only_stocks = FALSE, stop = 10, save_at = save_at_fine, dt = .01)
   sfm1_rev <- sfm0_rev |> flow(Inflow, eqn = 1 * Stock * (1 - Stock / 0.5), to = Stock)
   sfm2_rev <- sfm0_rev |> flow(Inflow, eqn = pnorm(Stock, mean = 0.5, sd = 0.3), to = Stock)
   sfm3_rev <- sfm0_rev |> flow(Inflow, eqn = Stock^3 / (0.5^3 + Stock^3), to = Stock)
@@ -840,7 +845,7 @@ if (recreate_figs) {
   # Timeseries
   for (letter in names(func_form_list)) {
     sim <- simulate(func_form_list[[letter]],
-      save_at = .01, only_stocks = FALSE
+      save_at = save_at_fine, only_stocks = FALSE
     )
 
     vars_in_sim <- unique(sim$df$variable)
@@ -1392,7 +1397,7 @@ if (recreate_figs) {
 
   for (letter in names(sfm_list)) {
     sim <- simulate(sfm_list[[letter]],
-      save_at = .01, only_stocks = FALSE
+      save_at = save_at_fine, only_stocks = FALSE
     )
 
     vars_in_sim <- unique(sim$df$variable)
@@ -1646,6 +1651,8 @@ if (recreate_figs) {
   vars_ <- VARS[VARS %in% show_vars]
   colors_ <- COLORS[VARS %in% show_vars]
 
+  sim <- simulate(sfm, seed = 1, save_at = save_at_fine)
+
   pl <- plot(sim, vars = vars_, colors = colors_, xlab = "", main = "") |>
     rm_grid() |>
     plotly::layout(yaxis = list(range = c(0, 2.5)))
@@ -1744,13 +1751,13 @@ if (recreate_figs) {
   colors_ <- COLORS[VARS %in% show_vars]
 
   sim1 <- simulate(sfm0,
-    save_at = save_at,
+    save_at = save_at_fine,
     stop = 500, only_stocks = FALSE
   )
   pl1 <- plot(sim1, vars = vars_, colors = colors_, main = "", xlab = "")
 
   sim2 <- simulate(sfm2,
-    save_at = save_at,
+    save_at = save_at_fine,
     stop = 500, only_stocks = FALSE
   )
   pl2 <- plot(sim2, vars = vars_, colors = colors_, main = "", xlab = "")
@@ -1903,7 +1910,7 @@ sims <- ensemble(sfm, n = n, conditions = conditions)
 
 # Plot all trajectories
 plot(sims,
-  which = "sims", sim = 1:n, alpha = .25,
+  which = "sims", sim = 1:n, alpha = .75,
   nrows = 3, central_tendency = FALSE,
   vars = c("engagement", "demands")
 )
@@ -1953,7 +1960,7 @@ Run an ensemble simulation:
 sfm <- sim_settings(sfm, save_sims = TRUE)
 sims <- ensemble(sfm, n = n)
 plot(sims,
-  which = "sims", sim = 1:n, alpha = .25, central_tendency = FALSE,
+  which = "sims", sim = 1:n, alpha = .75, central_tendency = FALSE,
   vars = c("engagement", "demands", "motivation_rate")
 )
 ```
@@ -2009,7 +2016,7 @@ if (recreate_figs) {
   annot_ <- utils::modifyList(annot, list(font = list(size = font_size_subplot + 1, family = font_family)))
 
   # Ensemble (plain)
-  sfm <- sfm_ens_par |> sim_settings(save_at = save_at, save_sims = TRUE)
+  sfm <- sfm_ens_par |> sim_settings(save_at = save_at_fine, save_sims = TRUE)
   sims <- ensemble(sfm, n = 1000, save_sims = FALSE)
 
   pl_ens <- plot(sims,
@@ -2046,7 +2053,7 @@ if (recreate_figs) {
   vars_ <- VARS[VARS %in% show_vars]
   colors_ <- COLORS[VARS %in% show_vars]
 
-  sfm <- sim_settings(sfm_int, save_at = save_at, only_stocks = FALSE, save_sims = TRUE)
+  sfm <- sim_settings(sfm_int, save_at = save_at_fine, only_stocks = FALSE, save_sims = TRUE)
   sims <- ensemble(sfm, n = n_ens_par)
 
   pl_int <- plot(sims,
@@ -2123,7 +2130,8 @@ if (recreate_figs) {
     width = 5.5, height = 5.5
   )
 
-  sfm <- sfm |> sim_settings(save_at = 1)
+  sfm <- sim_settings(sfm, save_at = save_at_coarse)
+
 }
 ```
 

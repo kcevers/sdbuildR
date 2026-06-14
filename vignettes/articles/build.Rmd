@@ -34,11 +34,7 @@ library(kableExtra)
 
 ```{r include=FALSE}
 # Set this to TRUE to recreate the figures in the paper
-recreate_figs <- TRUE
-
-# if (!has_internet()) {
-#   recreate_figs <- FALSE
-# }
+recreate_figs <- FALSE
 ```
 
 ```{r include=FALSE}
