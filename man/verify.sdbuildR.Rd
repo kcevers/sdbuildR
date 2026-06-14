@@ -4,18 +4,16 @@
 \alias{verify.sdbuildR}
 \title{Verify unit tests against simulation results}
 \usage{
-\method{verify}{sdbuildR}(object, verbose = TRUE, test = NULL, ...)
+\method{verify}{sdbuildR}(object, test = NULL, ...)
 }
 \arguments{
 \item{object}{An \code{\link{sdbuildR}} object.}
-
-\item{verbose}{If \code{TRUE} (default), print results to the console.}
 
 \item{test}{Integer vector of test number(s) to run (numbers-based, as shown by \code{\link[=unit_tests]{unit_tests()}}).
 Defaults to \code{NULL} (run all tests).}
 
 \item{...}{Additional arguments passed to \code{\link[=sim_settings]{sim_settings()}} (e.g., \code{seed},
-\code{dt}) and then to \code{\link[=simulate.sdbuildR]{simulate.sdbuildR()}}.}
+\code{dt}).}
 }
 \value{
 An object of class \code{verify_sdbuildR}, returned invisibly. Use

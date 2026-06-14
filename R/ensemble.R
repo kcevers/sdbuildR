@@ -93,12 +93,12 @@
 #' )
 #'
 #' # For ensemble simulations, it is highly recommended to reduce the
-#' # returned output. For example, to save only 100 values per simulation:
-#' sfm <- sim_settings(sfm, save_n = 100)
+#' # returned output. For example, to save only 20 values per simulation:
+#' sfm <- sim_settings(sfm, save_n = 20)
 #'
-#' # Run ensemble simulation with 10 simulations
-#' sims <- ensemble(sfm, n = 10)
-#' plot(sims)
+#' # Run ensemble simulation with a small number of simulations
+#' sims <- ensemble(sfm, n = 3)
+#' if (interactive()) plot(sims)
 #'
 #' @examplesIf Sys.getenv("NOT_CRAN") == "true"
 #' # To plot individual trajectories, rerun the ensemble with save_sims = TRUE.

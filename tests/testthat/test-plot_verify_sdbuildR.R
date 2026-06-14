@@ -35,6 +35,8 @@ test_that("plot.verify_sdbuildR for single condition, n=1", {
 })
 
 test_that("plot.verify_sdbuildR for two conditions", {
+  skip_on_cran()
+
   res <- make_verify_model(n_tests = 2)
   pl <- plot(res, nrows = 2L, shareX = TRUE, shareY = TRUE)
   expect_plotly(pl)

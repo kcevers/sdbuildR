@@ -1,20 +1,9 @@
 # Tests for conservative assembly cache invalidation
 
-withr::local_options(list(sdbuildR.defer_codegen = FALSE))
-
-expect_empty_assemble_cache <- function(assemble) {
-  expect_equal(length(assemble), length(empty_assemble()))
-  expect_setequal(names(assemble), names(empty_assemble()))
-  expect_null(assemble[["language"]])
-  expect_null(assemble[["input_hash"]])
-  expect_null(assemble[["eqn_cache"]])
-  expect_null(assemble[["ordering"]])
-  expect_equal(assemble[["times"]], "")
-  expect_equal(assemble[["static"]][["script"]], "")
-}
-
 
 test_that("invalidate_assemble clears the canonical cache for every category", {
+  withr::local_options(list(sdbuildR.defer_codegen = FALSE))
+
   categories <- c(
     "all", "variables", "static", "dynamic", "times", "funcs",
     "nonneg", "unit_tests"
@@ -30,6 +19,8 @@ test_that("invalidate_assemble clears the canonical cache for every category", {
 
 
 test_that("codegen sim_settings changes rebuild the base cache", {
+  withr::local_options(list(sdbuildR.defer_codegen = FALSE))
+
   sfm1 <- sdbuildR("SIR") |>
     sim_settings(language = "R", stop = 10)
   hash1 <- sfm1[["assemble"]][["input_hash"]]
@@ -44,6 +35,8 @@ test_that("codegen sim_settings changes rebuild the base cache", {
 
 
 test_that("runtime-only sim_settings do not change the base cache hash", {
+  withr::local_options(list(sdbuildR.defer_codegen = FALSE))
+
   sfm <- sdbuildR("SIR") |>
     sim_settings(language = "R", start = 0, stop = 10, dt = 0.1)
   hash <- sfm[["assemble"]][["input_hash"]]
@@ -56,6 +49,8 @@ test_that("runtime-only sim_settings do not change the base cache hash", {
 
 
 test_that("model edits rebuild the base cache conservatively", {
+  withr::local_options(list(sdbuildR.defer_codegen = FALSE))
+
   sfm1 <- sdbuildR("SIR")
   hash1 <- sfm1[["assemble"]][["input_hash"]]
 
@@ -69,6 +64,8 @@ test_that("model edits rebuild the base cache conservatively", {
 
 
 test_that("conservative invalidation produces same simulation as full invalidation", {
+  withr::local_options(list(sdbuildR.defer_codegen = FALSE))
+
   sfm <- sdbuildR("SIR") |>
     sim_settings(stop = 50)
 
@@ -89,6 +86,8 @@ test_that("conservative invalidation produces same simulation as full invalidati
 
 
 test_that("pre_assemble_components populates summary cache", {
+  withr::local_options(list(sdbuildR.defer_codegen = FALSE))
+
   sfm <- sdbuildR("SIR")
   expect_false(is.null(sfm[["assemble"]][["summary"]]))
   expect_true(is.list(sfm[["assemble"]][["summary"]]))
@@ -97,6 +96,8 @@ test_that("pre_assemble_components populates summary cache", {
 
 
 test_that("invalidate_assemble clears summary", {
+  withr::local_options(list(sdbuildR.defer_codegen = FALSE))
+
   sfm <- sdbuildR("SIR")
   sfm <- invalidate_assemble(sfm, "variables")
   expect_null(sfm[["assemble"]][["summary"]])

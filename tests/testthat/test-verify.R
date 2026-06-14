@@ -1057,7 +1057,7 @@ test_that("verify() augments sfm vars with test refs (fixes vars/only_stocks con
   # Add a test that references the flow 'drain' (not included in user vars)
   sfm2 <- unit_test(sfm2, label = "drain non-negative", expr = "all(drain >= 0)")
 
-  res <- silence(verify(sfm2, verbose = FALSE))
+  res <- silence(verify(sfm2))
 
   # Simulation data for the first condition must contain 'drain'
   sims_j1 <- res$sims[[1]]

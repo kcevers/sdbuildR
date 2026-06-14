@@ -5,16 +5,16 @@
 \title{Import Insight Maker model}
 \usage{
 import_insightmaker(
-  URL,
+  url,
   file,
   keep_nonnegative_flow = TRUE,
   keep_nonnegative_stock = FALSE
 )
 }
 \arguments{
-\item{URL}{URL to Insight Maker model. Character.}
+\item{url}{URL to Insight Maker model. Character.}
 
-\item{file}{File path to Insight Maker model. Only used if URL is not specified. Needs to be a character with suffix .InsightMaker or .json.}
+\item{file}{File path to Insight Maker model. Only used if url is not specified. Needs to be a character with suffix .InsightMaker or .json.}
 
 \item{keep_nonnegative_flow}{If TRUE, keeps original non-negativity setting of flows. Defaults to TRUE.}
 
@@ -33,7 +33,7 @@ Insight Maker models can be imported using a URL, Insight Maker file, or ModelJS
 \dontshow{if (has_internet() && Sys.getenv("NOT_CRAN") == "true") withAutoprint(\{ # examplesIf}
 # Load a model from Insight Maker
 sfm <- import_insightmaker(
-  URL =
+  url =
     "https://insightmaker.com/insight/43tz1nvUgbIiIOGSGtzIzj/Romeo-Juliet"
 )
 plot(sfm)

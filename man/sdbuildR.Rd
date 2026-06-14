@@ -28,7 +28,7 @@ If specified, \code{template} should be one of the available templates (case-ins
 }
 \value{
 A stock-and-flow model object of class \code{\link{sdbuildR}}. Its structure is based
-on \href{https://docs.oasis-open.org/sdbuildR/sdbuildR/v1.0/os/sdbuildR-v1.0-os.html}{XML Interchange Language for System Dynamics (XMILE)}. It is a nested list, containing:
+on \href{https://docs.oasis-open.org/xmile/xmile/v1.0/os/xmile-v1.0-os.html}{XML Interchange Language for System Dynamics (XMILE)}. It is a nested list, containing:
 \describe{
 \item{meta}{Meta-information about model. A list containing arguments listed in \code{\link[=meta]{meta()}}.}
 \item{sim_settings}{Simulation specifications. A list containing arguments listed in \code{\link[=sim_settings]{sim_settings()}}.}

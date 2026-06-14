@@ -22,51 +22,6 @@ knitr::opts_chunk$set(
   fig.align = "center", # Center all figures
   out.width = "80%" # Display figures at 80% of container width
 )
-
-trace_file <- Sys.getenv("SDBUILDR_VIGNETTE_TRACE_FILE", unset = "")
-if (nzchar(trace_file)) {
-  trace_dir <- dirname(trace_file)
-  if (nzchar(trace_dir) && !dir.exists(trace_dir)) {
-    dir.create(trace_dir, recursive = TRUE, showWarnings = FALSE)
-  }
-
-  trace_chunk <- function(stage, options) {
-    code <- trimws(options$code)
-    code <- code[nzchar(code)]
-    first_code <- if (length(code)) paste(utils::head(code, 3L), collapse = " | ") else ""
-    first_code <- substr(first_code, 1L, 240L)
-    line <- sprintf(
-      "%s\t%s\t%s\tpid=%s\t%s\n",
-      format(Sys.time(), "%Y-%m-%d %H:%M:%S %Z"),
-      stage,
-      options$label,
-      Sys.getpid(),
-      first_code
-    )
-    cat(line, file = trace_file, append = TRUE)
-    cat(line)
-    flush.console()
-    NULL
-  }
-
-  default_chunk_hook <- knitr::knit_hooks$get("chunk")
-  knitr::opts_hooks$set(
-    eval = function(options) {
-      if (isTRUE(options$eval)) {
-        trace_chunk("START", options)
-      }
-      options
-    }
-  )
-  knitr::knit_hooks$set(
-    chunk = function(x, options) {
-      if (isTRUE(options$eval)) {
-        trace_chunk("END", options)
-      }
-      default_chunk_hook(x, options)
-    }
-  )
-}
 ```
 
 Stock-and-flow models present an intuitive way to formalize psychological systems as dynamic processes that unfold over time. In this vignette, we will formalize Job Demands-Resources (JD-R) theory as a stock-and-flow model. JD-R theory is a prominent framework for understanding burnout and work engagement. Note that this vignette serves as online supplemental material B accompanying the paper *Formalizing Psychological Theory with stockflow: A Stock-and-Flow Modelling Tutorial in R* by Evers et al. (under review). To reproduce the figures in the paper, please see the corresponding .Rmd file.
@@ -1551,8 +1506,8 @@ verify(sfm)
 In general, behaviours should always be positive:
 
 ```{r}
-sfm <- unit_test(sfm, expr = all(proactive >= 0))
-sfm <- unit_test(sfm, expr = all(work >= 0))
+sfm <- unit_test(sfm, expr = all(proactive >= 0)) |>
+  unit_test(expr = all(work >= 0))
 
 verify(sfm)
 ```
@@ -1621,7 +1576,7 @@ unit_tests(sfm)
 
 Plot all tests:
 
-```{r}
+```{r, fig.height=8}
 verify(sfm) |> plot(nrows = 3)
 ```
 
@@ -1692,7 +1647,7 @@ sfm2 <- discard(sfm0, undermining)
 sim2 <- simulate(sfm2)
 pl2 <- plot(sim2, showlegend = FALSE)
 
-pl <- plotly::subplot(pl1, pl2, nrows = 1, shareY = TRUE)
+pl <- plotly::subplot(pl1, pl2, nrows = 2, shareY = TRUE)
 pl
 ```
 
@@ -1938,7 +1893,7 @@ Next, we create a pulse function that is 1 for a period of two weeks and 0 other
 
 ```{r intervention-pulse-model}
 sfm <- sfm |>
-  constant(start, eqn = 21) |>
+  constant(start, eqn = 14) |>
   constant(duration, eqn = 14) |>
   constant(intervention, eqn = pulse(times, start, width = duration)) |>
   flow(intervention_effect,
@@ -2131,7 +2086,6 @@ if (recreate_figs) {
   )
 
   sfm <- sim_settings(sfm, save_at = save_at_coarse)
-
 }
 ```
 
@@ -2139,7 +2093,7 @@ if (recreate_figs) {
 
 ### Informing Experimental and Statistical Design
 
-Finally, formal models are powerful tools for guiding experimental and statistical design. The derivation chain from theory to empirical test involves a multitude of decisions that the theory itself does not constrain. Though meta-analyses may quantify the impact of such decisions, they do not resolve whether discrepant findings reflect mere design artefacts or genuine challenges to the theory [@meehl_why_1990]. By contrast, a formally specified theory predicts what discrepancies are **implied by the theory itself**. As an illustration, we use our JD-R model to predict the results of a cross-lagged panel model, a widely used analysis in the JD-R literature [@upadyaya_job_2016; @hakanen_job_2008; @sorjonen_questionable_2024]. We assess the cross-lagged relationship between job demands and work engagement with **lavaan** [@rosseel_lavaan_2012] on an ensemble dataset (*n = 10,000*), sampled at day 20 (wave~1) and three months later at day 110 (wave~2). 
+Finally, formal models are powerful tools for guiding experimental and statistical design. The derivation chain from theory to empirical test involves a multitude of decisions that the theory itself does not constrain. Though meta-analyses may quantify the impact of such decisions, they do not resolve whether discrepant findings reflect mere design artefacts or genuine challenges to the theory [@meehl_why_1990]. By contrast, a formally specified theory predicts what discrepancies are **implied by the theory itself**. As an illustration, we use our JD-R model to predict the results of a cross-lagged panel model, a widely used analysis in the JD-R literature [@upadyaya_job_2016; @hakanen_job_2008; @sorjonen_questionable_2024]. We assess the cross-lagged relationship between job demands and work engagement with **lavaan** [@rosseel_lavaan_2012] on an ensemble dataset (*n = 10,000*), sampled at day 20 (wave 1) and three months later at day 110 (wave 2). 
 
 
 

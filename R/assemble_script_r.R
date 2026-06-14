@@ -6,7 +6,6 @@
 #' @noRd
 #'
 simulate_r <- function(object,
-                       verbose,
                        only_stocks,
                        vars = NULL) {
   # Compile script without plot - returns list with script and modified object
@@ -36,12 +35,12 @@ simulate_r <- function(object,
 
       end_t <- Sys.time()
 
-      if (verbose) {
-        elapsed <- round(as.numeric(end_t) - as.numeric(start_t), 4)
-        cli::cli_inform(c(
-          "v" = "Simulation completed in {.val {elapsed}} seconds."
-        ))
-      }
+      # if (verbose) {
+      #   elapsed <- round(as.numeric(end_t) - as.numeric(start_t), 4)
+      #   cli::cli_inform(c(
+      #     "v" = "Simulation completed in {.val {elapsed}} seconds."
+      #   ))
+      # }
 
       df <- envir[[P[["sim_df_name"]]]]
       df <- filter_sim_df_vars(df, vars)

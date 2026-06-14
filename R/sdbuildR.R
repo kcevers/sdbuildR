@@ -27,7 +27,7 @@
 #' }
 #'
 #' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR]. Its structure is based
-#'  on [XML Interchange Language for System Dynamics (XMILE)](https://docs.oasis-open.org/sdbuildR/sdbuildR/v1.0/os/sdbuildR-v1.0-os.html). It is a nested list, containing:
+#'  on [XML Interchange Language for System Dynamics (XMILE)](https://docs.oasis-open.org/xmile/xmile/v1.0/os/xmile-v1.0-os.html). It is a nested list, containing:
 #' \describe{
 #'  \item{meta}{Meta-information about model. A list containing arguments listed in [meta()].}
 #'  \item{sim_settings}{Simulation specifications. A list containing arguments listed in [sim_settings()].}
@@ -500,7 +500,7 @@ validate_layout <- function(object) {
 
   internal_error <- function(...) {
     cli::cli_abort(
-      c(..., "i" = "This is an internal sdbuildR error; please report it at {.url https://github.com/KCEvers/sdbuildR/issues}."),
+      c(..., "i" = "This is an internal sdbuildR error; please report it at {.url https://github.com/kcevers/sdbuildR/issues}."),
       class = "sdbuildR_layout_error"
     )
   }

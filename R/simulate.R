@@ -6,7 +6,6 @@
 #' @inheritParams update.sdbuildR
 #' @inheritParams sim_settings
 #' @param nsim Number of simulations to run (unused; see [ensemble()] for running multiple simulations).
-#' @param verbose If `TRUE`, print duration of simulation. Defaults to `FALSE`.
 #' @param ... Optional arguments passed to [sim_settings()]; these can be used to override the simulation specifications set in the model object.
 #'
 #' @returns Object of class [`simulate_sdbuildR`][simulate.sdbuildR()], a list containing:
@@ -42,7 +41,6 @@
 simulate.sdbuildR <- function(
   object,
   nsim = 1, seed = NULL,
-  verbose = FALSE,
   ...
 ) {
   check_sdbuildR(object)
@@ -69,14 +67,12 @@ simulate.sdbuildR <- function(
   if (tolower(object[["sim_settings"]][["language"]]) == "julia") {
     return(simulate_julia(object,
       only_stocks = only_stocks,
-      vars = vars,
-      verbose = verbose
+      vars = vars
     ))
   } else if (tolower(object[["sim_settings"]][["language"]]) == "r") {
     return(simulate_r(object,
       only_stocks = only_stocks,
-      vars = vars,
-      verbose = verbose
+      vars = vars
     ))
   }
 }

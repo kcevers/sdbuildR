@@ -4,7 +4,7 @@ test_that("stocks change over time in Julia", {
 
   # Import Romeo-Juliet model
   sfm <- suppressWarnings(import_insightmaker(
-    URL = "https://insightmaker.com/insight/43tz1nvUgbIiIOGSGtzIzj/Romeo-Juliet"
+    url = "https://insightmaker.com/insight/43tz1nvUgbIiIOGSGtzIzj/Romeo-Juliet"
   ))
 
   # Switch to Julia
@@ -31,7 +31,7 @@ test_that("switching Julia -> R works", {
   skip_if_julia_not_ready()
 
   sfm <- suppressWarnings(import_insightmaker(
-    URL = "https://insightmaker.com/insight/43tz1nvUgbIiIOGSGtzIzj/Romeo-Juliet"
+    url = "https://insightmaker.com/insight/43tz1nvUgbIiIOGSGtzIzj/Romeo-Juliet"
   ))
 
   # Start with Julia

@@ -42,27 +42,27 @@ test_that("expit() is inverse of logit()", {
 # Random functions ----
 
 test_that("rbool() returns logical", {
-  set.seed(123)
+  withr::local_seed(123)
   result <- rbool(0.5)
   expect_type(result, "logical")
   expect_length(result, 1)
 })
 
 test_that("rbool() respects extreme probabilities", {
-  set.seed(123)
+  withr::local_seed(123)
   expect_true(rbool(1))
   expect_false(rbool(0))
 })
 
 test_that("rdist() returns single sample", {
-  set.seed(123)
+  withr::local_seed(123)
   result <- rdist(c(1, 2, 3), c(0.5, 0.25, 0.25))
   expect_length(result, 1)
   expect_true(result %in% c(1, 2, 3))
 })
 
 test_that("rdist() respects probabilities", {
-  set.seed(123)
+  withr::local_seed(123)
   result <- rdist(c("a", "b"), c(1, 0))
   expect_equal(result, "a")
 })

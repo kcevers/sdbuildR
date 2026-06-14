@@ -4,12 +4,12 @@
 \alias{insightmaker_to_json}
 \title{Convert .InsightMaker file to .json file}
 \usage{
-insightmaker_to_json(URL, file, destfile = NULL)
+insightmaker_to_json(url, file, destfile = NULL)
 }
 \arguments{
-\item{URL}{URL to Insight Maker model. Character.}
+\item{url}{URL to Insight Maker model. Character.}
 
-\item{file}{File path to Insight Maker model. Only used if URL is not specified. Needs to be a character with suffix .InsightMaker.}
+\item{file}{File path to Insight Maker model. Only used if url is not specified. Needs to be a character with suffix .InsightMaker.}
 
 \item{destfile}{Output file path. Must have extension .json or no extension. Overwrites file if it already exists. If not provided, return model in json format.}
 }
@@ -27,7 +27,7 @@ Insight Maker models can be imported using a URL or Insight Maker file. Ensure t
 # Convert a model from Insight Maker to json
 destfile <- tempfile(fileext = ".json")
 json <- insightmaker_to_json(
-  URL =
+  url =
     "https://insightmaker.com/insight/43tz1nvUgbIiIOGSGtzIzj/Romeo-Juliet",
   destfile = destfile
 )

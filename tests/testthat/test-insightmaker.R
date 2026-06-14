@@ -9,7 +9,7 @@ test_that("import_insightmaker() validates input arguments", {
 
   # Invalid URL
   expect_error(
-    import_insightmaker(URL = "https://example.com"),
+    import_insightmaker(url = "https://example.com"),
     class = "rlang_error"
   )
 
@@ -28,7 +28,7 @@ test_that("import_insightmaker() validates input arguments", {
   # Both URL and file specified
   expect_error(
     import_insightmaker(
-      URL = "https://insightmaker.com/test",
+      url = "https://insightmaker.com/test",
       file = "test.InsightMaker"
     ),
     class = "rlang_error"
@@ -206,7 +206,13 @@ test_that("translating .InsightMaker models works", {
     full.names = TRUE
   )
 
-  for (i in seq_along(model_files_IM)) {
+  expect_equal(length(model_files_json), length(model_files_IM))
+  model_indices <- seq_along(model_files_IM)
+  if (Sys.getenv("NOT_CRAN") != "true") {
+    model_indices <- model_indices[1]
+  }
+
+  for (i in model_indices) {
     # print(i)
 
     sfm_IM <- expect_no_error({

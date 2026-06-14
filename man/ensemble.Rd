@@ -109,13 +109,14 @@ sfm <- update(sfm, c(predator, prey),
 )
 
 # For ensemble simulations, it is highly recommended to reduce the
-# returned output. For example, to save only 100 values per simulation:
-sfm <- sim_settings(sfm, save_n = 100)
+# returned output. For example, to save only 20 values per simulation:
+sfm <- sim_settings(sfm, save_n = 20)
 
-# Run ensemble simulation with 10 simulations
-sims <- ensemble(sfm, n = 10)
-plot(sims)
+# Run ensemble simulation with a small number of simulations
+sims <- ensemble(sfm, n = 3)
+if (interactive()) plot(sims)
 
+\dontshow{if (Sys.getenv("NOT_CRAN") == "true") withAutoprint(\{ # examplesIf}
 # To plot individual trajectories, rerun the ensemble with save_sims = TRUE.
 # Note that this can consume a lot of memory for large simulations.
 sims <- ensemble(sfm, n = 10, save_sims = TRUE)
@@ -127,7 +128,6 @@ plot(sims, which = "sims", sim = 1)
 # Plot the median with lighter individual trajectories
 plot(sims, central_tendency = "median", which = "sims", alpha = 0.1)
 
-\dontshow{if (Sys.getenv("NOT_CRAN") == "true") withAutoprint(\{ # examplesIf}
 # For larger ensembles, we can use parallelization with future
 if (requireNamespace("future", quietly = TRUE) &&
   requireNamespace("future.apply", quietly = TRUE)) {

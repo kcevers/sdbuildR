@@ -12,13 +12,13 @@ test_that("plot.ensemble_sdbuildR method exists", {
 # ============================================================================
 
 test_that("plot.ensemble_sdbuildR() rejects invalid which", {
-  sims <- make_r_ens()
+  sims <- make_r_ens(n = 2)
   expect_error(plot(sims, which = "NA"), "ust be.*summary.*sims")
 })
 
 test_that("plot.ensemble_sdbuildR() validates central_tendency", {
   withr::local_pdf(NULL)
-  sims <- make_r_ens()
+  sims <- make_r_ens(n = 2)
   expect_no_error(plot(sims, central_tendency = "median"))
   expect_error(
     plot(sims, central_tendency = "medians"),
@@ -27,24 +27,36 @@ test_that("plot.ensemble_sdbuildR() validates central_tendency", {
 })
 
 test_that("plot.ensemble_sdbuildR() rejects invalid condition with single condition", {
-  sims <- make_r_ens()
+  sims <- make_r_ens(n = 2)
   expect_error(plot(sims, condition = c(3, 6, 9)), "only one condition")
 })
 
 test_that("plot.ensemble_sdbuildR() rejects invalid condition with multiple conditions", {
-  sims <- make_r_ens_2cond()
+  sims <- make_r_ens_2cond(n = 2)
   expect_error(plot(sims, condition = 10), "be integers between")
 })
 
 test_that("plot.ensemble_sdbuildR() informs when sim used with summary", {
   withr::local_pdf(NULL)
-  sims <- make_r_ens(save_sims = TRUE)
+  sims <- make_r_ens(n = 2, save_sims = TRUE)
   expect_message(plot(sims, sim = 5), "sim.*argument is ignored")
 })
 
 test_that("plot.ensemble_sdbuildR() requires save_sims for which = 'sims'", {
-  sims <- make_r_ens(save_sims = FALSE)
+  sims <- make_r_ens(n = 2, save_sims = FALSE)
   expect_error(plot(sims, which = "sims"), "Individual simulation data is required")
+})
+
+
+# ============================================================================
+# BASIC OUTPUT TYPE (non-snapshot)
+# ============================================================================
+
+test_that("plot.ensemble_sdbuildR() creates a basic summary plot", {
+  sims <- make_r_ens(n = 2)
+  pl <- plot(sims)
+  expect_plotly(pl)
+  expect_true(nrow(plotly_traces(pl)) > 0)
 })
 
 

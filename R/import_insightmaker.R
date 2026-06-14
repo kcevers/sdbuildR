@@ -31,20 +31,20 @@
 #'
 #' @param ctx Import context.
 #' @param read_file Raw parsed source model.
-#' @param URL URL argument value.
+#' @param url URL argument value.
 #' @param file File argument value.
-#' @param URL_spec Logical; whether URL was supplied.
+#' @param url_spec Logical; whether `url` was supplied.
 #' @param file_spec Logical; whether file was supplied.
 #'
 #' @returns Updated import context.
 #' @noRd
-attach_import_source <- function(ctx, read_file, URL, file, URL_spec, file_spec) {
+attach_import_source <- function(ctx, read_file, url, file, url_spec, file_spec) {
   ctx$raw_model <- read_file
   ctx$file_path <- if (file_spec && !is.null(file)) file else NULL
-  ctx$url <- if (URL_spec && !is.null(URL)) URL else NULL
+  ctx$url <- if (url_spec && !is.null(url)) url else NULL
 
-  if (URL_spec) {
-    ctx$object[["meta"]][["URL"]] <- URL
+  if (url_spec) {
+    ctx$object[["meta"]][["URL"]] <- url
   }
 
   ctx
@@ -91,11 +91,13 @@ convert_imported_IM_object <- function(object, keep_nonnegative_flow, keep_nonne
     error_as = "i"
   )
 
-  .import_step(
+  object <- .import_step(
     split_aux_wrapper(object),
     x = "Failed to split auxiliary variables into constants and auxiliaries.",
     error_as = "i"
   )
+
+  object
 }
 
 
@@ -134,8 +136,8 @@ finalize_imported_IM_object <- function(ctx, object, keep_nonnegative_flow, keep
 #'
 #' Insight Maker models can be imported using a URL, Insight Maker file, or ModelJSON file. Ensure the URL refers to a public (not private) model. To download a model file from Insight Maker, first clone the model if it is not your own. Then, go to "Share" (top right), "Export", and "Download Insight Maker file" or "ModelJSON File".
 #'
-#' @param URL URL to Insight Maker model. Character.
-#' @param file File path to Insight Maker model. Only used if URL is not specified. Needs to be a character with suffix .InsightMaker or .json.
+#' @param url URL to Insight Maker model. Character.
+#' @param file File path to Insight Maker model. Only used if url is not specified. Needs to be a character with suffix .InsightMaker or .json.
 #' @param keep_nonnegative_flow If TRUE, keeps original non-negativity setting of flows. Defaults to TRUE.
 #' @param keep_nonnegative_stock If TRUE, keeps original non-negativity setting of stocks. Defaults to FALSE.
 #'
@@ -147,7 +149,7 @@ finalize_imported_IM_object <- function(ctx, object, keep_nonnegative_flow, keep
 #' @examplesIf has_internet() && Sys.getenv("NOT_CRAN") == "true"
 #' # Load a model from Insight Maker
 #' sfm <- import_insightmaker(
-#'   URL =
+#'   url =
 #'     "https://insightmaker.com/insight/43tz1nvUgbIiIOGSGtzIzj/Romeo-Juliet"
 #' )
 #' plot(sfm)
@@ -160,20 +162,20 @@ finalize_imported_IM_object <- function(ctx, object, keep_nonnegative_flow, keep
 #' sim <- simulate(sfm)
 #' plot(sim)
 #'
-import_insightmaker <- function(URL,
+import_insightmaker <- function(url,
                                 file,
                                 keep_nonnegative_flow = TRUE,
                                 keep_nonnegative_stock = FALSE) {
-  URL_spec <- !missing(URL)
+  url_spec <- !missing(url)
   file_spec <- !missing(file)
 
   if (P[["debug"]]) {
-    cli::cli_inform(c("i" = "URL: {URL}"))
+    cli::cli_inform(c("i" = "url: {url}"))
     cli::cli_inform(c("i" = "file: {file}"))
   }
 
   # Get Insight Maker model
-  out <- get_IM_model(URL, file)
+  out <- get_IM_model(url, file)
   read_file <- out[["read_file"]]
   ext <- out[["ext"]]
 
@@ -190,7 +192,7 @@ import_insightmaker <- function(URL,
     i = "Check for unsupported Insight Maker syntax or model structure."
   )
 
-  ctx <- attach_import_source(ctx, read_file, URL, file, URL_spec, file_spec)
+  ctx <- attach_import_source(ctx, read_file, url, file, url_spec, file_spec)
 
   # Extract object for convenience (conversion functions work on object)
   object <- ctx$object

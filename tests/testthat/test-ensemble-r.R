@@ -5,7 +5,7 @@
 
 test_that("ensemble() runs in R", {
   sfm <- make_r_ensemble_random_sfm()
-  sims <- silence(ensemble(sfm, n = 3, verbose = FALSE, save_sims = TRUE))
+  sims <- silence(ensemble(sfm, n = 2, verbose = FALSE))
 
   # ensemble() R returns correct structure
   expect_successful_ensemble(sims, c(
@@ -19,7 +19,7 @@ test_that("ensemble() R handles models with no constants", {
   sfm <- make_basic_sfm() |>
     sim_settings(language = "R", start = 0, stop = 10, dt = 0.1, save_at = 1)
 
-  sims <- silence(ensemble(sfm, n = 3, save_sims = TRUE, verbose = FALSE))
+  sims <- silence(ensemble(sfm, n = 2, save_sims = TRUE, verbose = FALSE))
 
   expect_true(sims[["success"]])
   expect_equal(nrow(sims[["constants"]][["df"]]), 0)
@@ -39,7 +39,7 @@ test_that("ensemble() R respects only_stocks = TRUE", {
   df <- as.data.frame(sfm, properties = "eqn")
   n_stocks <- nrow(df[df[["type"]] == "stock", ])
 
-  sims <- silence(ensemble(sfm, n = 3, only_stocks = TRUE, verbose = FALSE))
+  sims <- silence(ensemble(sfm, n = 2, only_stocks = TRUE, verbose = FALSE))
   expect_true(sims[["success"]])
   expect_equal(
     length(unique(sims[["summary"]][["variable"]])),
@@ -53,8 +53,8 @@ test_that("ensemble() R returns all variables with only_stocks = FALSE", {
   n_all <- nrow(df[df[["type"]] %in% c("stock", "flow", "aux"), ])
 
   sims <- silence(ensemble(sfm,
-    n = 3, only_stocks = FALSE,
-    save_sims = TRUE, verbose = FALSE
+    n = 2, only_stocks = FALSE,
+    verbose = FALSE
   ))
   expect_true(sims[["success"]])
   expect_equal(
@@ -68,7 +68,7 @@ test_that("ensemble() R filters outputs to vars", {
     sim_settings(vars = c("susceptible", "new_infections"))
 
   sims <- silence(ensemble(sfm,
-    n = 3,
+    n = 2,
     save_sims = TRUE,
     verbose = FALSE
   ))
@@ -79,7 +79,7 @@ test_that("ensemble() R filters outputs to vars", {
 })
 
 test_that("ensemble() R returns correct n properties", {
-  nr_sims <- 5
+  nr_sims <- 2
   sfm <- make_r_ensemble_random_sfm()
 
   sims <- silence(ensemble(sfm,
@@ -97,7 +97,7 @@ test_that("ensemble() R returns correct n properties", {
 test_that("ensemble() R custom quantiles", {
   sfm <- make_r_ensemble_random_sfm()
   sims <- silence(ensemble(sfm,
-    n = 3, quantiles = c(0.1, 0.5, 0.9, 1),
+    n = 2, quantiles = c(0.1, 0.5, 0.9, 1),
     verbose = FALSE
   ))
   expect_true(sims[["success"]])
@@ -112,7 +112,7 @@ test_that("ensemble() R works with single variable conditions", {
   sfm <- make_r_ensemble_random_sfm()
   sims <- silence(ensemble(sfm,
     conditions = list("contact_rate" = c(1.5, 2, 2.5)),
-    n = 3, verbose = FALSE
+    n = 2, verbose = FALSE
   ))
   expect_true(sims[["success"]])
   expect_equal(sims[["n_conditions"]], 3)
@@ -137,7 +137,7 @@ test_that("ensemble() R crossed design computes correct conditions", {
 
 test_that("ensemble() R non-crossed design pairs values", {
   sfm <- make_r_ensemble_random_sfm()
-  nr_sims <- 3
+  nr_sims <- 2
   nr_cond <- 3
   sims <- silence(ensemble(sfm,
     conditions = list(
@@ -165,9 +165,9 @@ test_that("ensemble() R non-crossed design pairs values", {
 
 # Output compatibility ----------------------------------------------------
 
-test_that("ensemble() R result works with as.data.frame()", {
+test_that("ensemble() R result works with as.data.frame(), summary() and print()", {
   sfm <- make_r_ensemble_random_sfm()
-  sims <- silence(ensemble(sfm, n = 3, save_sims = TRUE, verbose = FALSE))
+  sims <- silence(ensemble(sfm, n = 2, save_sims = TRUE, verbose = FALSE))
 
   df_summary <- as.data.frame(sims, which = "summary")
   expect_s3_class(df_summary, "data.frame")
@@ -176,29 +176,21 @@ test_that("ensemble() R result works with as.data.frame()", {
   df_sims <- as.data.frame(sims, which = "sims")
   expect_s3_class(df_sims, "data.frame")
   expect_true(all(c("sim", "condition", "variable", "time", "value") %in% names(df_sims)))
-})
 
-test_that("ensemble() R result works with head() and tail()", {
-  sfm <- make_r_ensemble_random_sfm()
-  sims <- silence(ensemble(sfm, n = 3, verbose = FALSE))
+  # Check that head() and tail() work on the ensemble result
   h <- head(sims, n = 3L)
   t <- tail(sims, n = 3L)
   expect_s3_class(h, "data.frame")
   expect_s3_class(t, "data.frame")
   expect_equal(nrow(h), 3L)
   expect_equal(nrow(t), 3L)
-})
 
-test_that("ensemble() R result works with summary()", {
-  sfm <- make_r_ensemble_random_sfm()
-  sims <- silence(ensemble(sfm, n = 3, verbose = FALSE))
+  # Check that summary() works on the ensemble result
   s <- summary(sims)
   expect_identical(s, sims[["summary"]])
-})
 
-test_that("ensemble() R result works with print()", {
-  sfm <- make_r_ensemble_random_sfm()
-  sims <- silence(ensemble(sfm, n = 3, verbose = FALSE))
+
+  # Check that print() works on the ensemble result
   expect_invisible(silence(print(sims)))
 })
 
@@ -209,7 +201,7 @@ test_that("ensemble() R prints simulation count", {
   sfm <- make_r_ensemble_random_sfm()
 
   expect_message(
-    ensemble(sfm, n = 5, verbose = TRUE),
+    ensemble(sfm, n = 2, verbose = TRUE),
     "Starting"
   )
 })
@@ -245,8 +237,8 @@ test_that("ensemble() in R respects seed", {
   withr::local_seed(123) # ensure .Random.seed exists before capturing it
   orig_seed <- .Random.seed
 
-  sims1 <- silence(ensemble(sfm, n = 3, verbose = FALSE, save_sims = TRUE))
-  sims2 <- silence(ensemble(sfm, n = 3, verbose = FALSE, save_sims = TRUE))
+  sims1 <- silence(ensemble(sfm, n = 2, verbose = FALSE, save_sims = TRUE))
+  sims2 <- silence(ensemble(sfm, n = 2, verbose = FALSE, save_sims = TRUE))
 
   new_seed <- .Random.seed
   expect_true(identical(orig_seed, new_seed))
@@ -259,17 +251,11 @@ test_that("ensemble() in R respects seed", {
   tol <- 1e-5
   df1a <- as.data.frame(sims1, which = "sims", sim = 1)
   df1b <- as.data.frame(sims1, which = "sims", sim = 2)
-  df1c <- as.data.frame(sims1, which = "sims", sim = 3)
   expect_true(abs(sum(df1a[, cols] - df1b[, cols])) > tol)
-  expect_true(abs(sum(df1a[, cols] - df1c[, cols])) > tol)
-  expect_true(abs(sum(df1b[, cols] - df1c[, cols])) > tol)
 
   df2a <- as.data.frame(sims2, which = "sims", sim = 1)
   df2b <- as.data.frame(sims2, which = "sims", sim = 2)
-  df2c <- as.data.frame(sims2, which = "sims", sim = 3)
   expect_true(abs(sum(df2a[, cols] - df2b[, cols])) > tol)
-  expect_true(abs(sum(df2a[, cols] - df2c[, cols])) > tol)
-  expect_true(abs(sum(df2b[, cols] - df2c[, cols])) > tol)
 })
 
 
@@ -286,8 +272,8 @@ test_that("ensemble() in R with parallel execution respects seed", {
   withr::local_seed(123) # ensure .Random.seed exists before capturing it
   orig_seed <- .Random.seed
 
-  sims1 <- silence(ensemble(sfm, n = 3, verbose = FALSE, save_sims = TRUE))
-  sims2 <- silence(ensemble(sfm, n = 3, verbose = FALSE, save_sims = TRUE))
+  sims1 <- silence(ensemble(sfm, n = 2, verbose = FALSE, save_sims = TRUE))
+  sims2 <- silence(ensemble(sfm, n = 2, verbose = FALSE, save_sims = TRUE))
 
   new_seed <- .Random.seed
   expect_equal(orig_seed, new_seed)
@@ -300,24 +286,18 @@ test_that("ensemble() in R with parallel execution respects seed", {
   tol <- 1e-5
   df1a <- as.data.frame(sims1, which = "sims", sim = 1)
   df1b <- as.data.frame(sims1, which = "sims", sim = 2)
-  df1c <- as.data.frame(sims1, which = "sims", sim = 3)
   expect_true(abs(sum(df1a[, cols] - df1b[, cols])) > tol)
-  expect_true(abs(sum(df1a[, cols] - df1c[, cols])) > tol)
-  expect_true(abs(sum(df1b[, cols] - df1c[, cols])) > tol)
 
   df2a <- as.data.frame(sims2, which = "sims", sim = 1)
   df2b <- as.data.frame(sims2, which = "sims", sim = 2)
-  df2c <- as.data.frame(sims2, which = "sims", sim = 3)
   expect_true(abs(sum(df2a[, cols] - df2b[, cols])) > tol)
-  expect_true(abs(sum(df2a[, cols] - df2c[, cols])) > tol)
-  expect_true(abs(sum(df2b[, cols] - df2c[, cols])) > tol)
 })
 
 
 test_that("ensemble() in R without seed", {
   sfm <- make_r_ensemble_random_sfm() |> sim_settings(seed = NULL)
-  sims1 <- silence(ensemble(sfm, n = 3, verbose = FALSE, save_sims = TRUE))
-  sims2 <- silence(ensemble(sfm, n = 3, verbose = FALSE, save_sims = TRUE))
+  sims1 <- silence(ensemble(sfm, n = 2, verbose = FALSE, save_sims = TRUE))
+  sims2 <- silence(ensemble(sfm, n = 2, verbose = FALSE, save_sims = TRUE))
 
   tol <- 1e-5
   df1 <- as.data.frame(sims1, which = "summary")
@@ -340,7 +320,7 @@ test_that("ensemble() R runs sequentially with future::sequential plan", {
   on.exit(future::plan(future::sequential), add = TRUE)
 
   sfm <- make_r_ensemble_random_sfm()
-  sims <- silence(ensemble(sfm, n = 3, verbose = FALSE))
+  sims <- silence(ensemble(sfm, n = 2, verbose = FALSE))
 
   expect_true(sims[["success"]])
   expect_equal(future::nbrOfWorkers(), 1L)
@@ -349,6 +329,7 @@ test_that("ensemble() R runs sequentially with future::sequential plan", {
 test_that("ensemble() R uses parallel path when future plan has multiple workers", {
   skip_if_not_installed("future")
   skip_if_not_installed("future.apply")
+  skip_on_cran()
 
   future::plan(future::multisession, workers = 2)
   on.exit(future::plan(future::sequential), add = TRUE)

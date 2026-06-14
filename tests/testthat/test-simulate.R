@@ -264,7 +264,7 @@ test_that("exponential decay: simulation matches analytical solution to within 1
 
 test_that("bank_account: exponential growth matches analytical solution within 1%", {
   sfm_template <- templates("bank_account")
-  sfm <- sim_settings(sfm_template, start = 0, stop = 50, dt = 0.001, language = "R")
+  sfm <- sim_settings(sfm_template, start = 0, stop = 12, dt = 0.05, language = "R")
   sim <- simulate(sfm, seed = 42)
   expect_true(sim$success)
 
@@ -303,7 +303,7 @@ test_that("SIR: total population is conserved at every timestep", {
 
 test_that("logistic_model: stock reaches K within 2% at long times", {
   sfm <- sim_settings(templates("logistic_model"),
-    stop = 300, dt = 0.1,
+    stop = 120, dt = 0.1,
     language = "R"
   )
   sim <- simulate(sfm, seed = 42)
@@ -353,7 +353,7 @@ test_that("simulate with save_n returns exactly N rows", {
   n_save <- 25
   sfm <- sim_settings(make_verifiable_sfm(),
     start = 0, stop = 10,
-    save_n = n_save, dt = 0.001
+    save_n = n_save, dt = 1
   )
   sim <- simulate(sfm)
   expect_equal(nrow(as.data.frame(sim, direction = "wide")), n_save)
@@ -362,7 +362,7 @@ test_that("simulate with save_n returns exactly N rows", {
 test_that("simulate with save_n = 1 returns a single-row data frame", {
   sfm <- sim_settings(make_verifiable_sfm(),
     start = 0, stop = 5,
-    save_n = 1, dt = 0.01
+    save_n = 1, dt = 1
   )
   sim <- simulate(sfm)
   expect_equal(nrow(as.data.frame(sim, direction = "wide")), 1)

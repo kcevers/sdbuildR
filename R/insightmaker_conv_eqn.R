@@ -19,6 +19,7 @@ convert_equations_IM <- function(type,
                                  var_names) {
   if (P[["debug"]]) {
     cli::cli_inform(c(" " = ""))
+    cli::cli_inform(c("i" = type))
     cli::cli_inform(c("i" = name))
     cli::cli_inform(c("i" = eqn))
   }
@@ -195,8 +196,7 @@ report_unsupported_IM_functions <- function(eqn, name, var_names, syntax_df_unsu
   }
 
   syntax4 <- syntax_df_unsupp[
-    syntax_df_unsupp[["syntax"]] %in% c("syntax4", "syntax4b"),
-    ,
+    syntax_df_unsupp[["syntax"]] %in% c("syntax4", "syntax4b"), ,
     drop = FALSE
   ]
   idx_ABM <- stringr::str_detect(eqn_no_names, syntax4[["insightmaker_regex"]])
@@ -209,8 +209,7 @@ report_unsupported_IM_functions <- function(eqn, name, var_names, syntax_df_unsu
   }
 
   syntax5 <- syntax_df_unsupp[
-    syntax_df_unsupp[["syntax"]] %in% c("syntax5", "syntax5b"),
-    ,
+    syntax_df_unsupp[["syntax"]] %in% c("syntax5", "syntax5b"), ,
     drop = FALSE
   ]
   idx5 <- stringr::str_detect(eqn_no_names, syntax5[["insightmaker_regex"]])
@@ -310,7 +309,8 @@ build_IM_builtin_replacement <- function(eqn, idx_func, arg, name, var_names, tr
 
     envir <- environment()
     call_args <- eval(parse(text = idx_func[["R"]])) |>
-      formals() |> as.list() |>
+      formals() |>
+      as.list() |>
       utils::modifyList(list(
         func = tolower(idx_func[["insightmaker"]]),
         arg = arg

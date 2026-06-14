@@ -20,7 +20,7 @@ Instantiate the Julia environment for sdbuildR to run stock-and-flow models usin
 \itemize{
 \item Start a Julia session
 \item Activate a Julia environment using sdbuildR's Project.toml
-\item Install StockFlowRSupport.jl from GitHub (https://github.com/KCEvers/StockFlowRSupport.jl)
+\item Install StockFlowRSupport.jl from GitHub (https://github.com/kcevers/StockFlowRSupport.jl)
 \item Install all other required Julia packages
 \item Create Manifest.toml
 \item Precompile packages for faster subsequent loading

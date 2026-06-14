@@ -645,3 +645,20 @@ sir_model_deSolve <- function(t, state, parameters) {
     list(c(dS, dI, dR))
   })
 }
+
+
+expect_empty_assemble_cache <- function(assemble) {
+  expect_equal(length(assemble), length(empty_assemble()))
+  expect_setequal(names(assemble), names(empty_assemble()))
+  expect_null(assemble[["language"]])
+  expect_null(assemble[["input_hash"]])
+  expect_null(assemble[["eqn_cache"]])
+  expect_null(assemble[["ordering"]])
+  expect_equal(assemble[["times"]], "")
+  expect_equal(assemble[["static"]][["script"]], "")
+}
+
+
+julia_ast_vnames <- function() {
+  c("r", "X", "K", "a", "b", "c", "d", "x", "y", "gf1", "Stock1", "dt")
+}

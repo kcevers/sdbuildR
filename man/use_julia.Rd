@@ -27,8 +27,8 @@ In every R session, \code{\link[=use_julia]{use_julia()}} needs to be run once (
 # Start a Julia session and activate the Julia environment for sdbuildR
 use_julia()
 
-# Start Julia with 4 threads (only works if threading is supported)
-use_julia(nthreads = 4)
+# Start Julia with 2 threads (only works if threading is supported)
+use_julia(nthreads = 2)
 
 # Restart Julia session (in case of issues)
 use_julia(restart = TRUE)

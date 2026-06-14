@@ -7,8 +7,7 @@
 #'
 simulate_julia <- function(object,
                            only_stocks,
-                           vars = NULL,
-                           verbose) {
+                           vars = NULL) {
   # Get output filepaths
   filepath_sim <- get_tempfile(fileext = ".csv")
   filepath <- get_tempfile(fileext = ".jl")
@@ -45,12 +44,12 @@ simulate_julia <- function(object,
 
       end_t <- Sys.time()
 
-      if (verbose) {
-        elapsed <- round(as.numeric(end_t) - as.numeric(start_t), 4)
-        cli::cli_inform(c(
-          "v" = "Simulation completed in {.val {elapsed}} seconds."
-        ))
-      }
+      # if (verbose) {
+      #   elapsed <- round(as.numeric(end_t) - as.numeric(start_t), 4)
+      #   cli::cli_inform(c(
+      #     "v" = "Simulation completed in {.val {elapsed}} seconds."
+      #   ))
+      # }
 
       # Read the constants
       constants <- as.numeric(julia_eval(P[["parameter_name"]]))

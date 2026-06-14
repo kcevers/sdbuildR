@@ -2,7 +2,7 @@
 #'
 #' Create XML string from Insight Maker URL. For internal use; use `import_insightmaker()` to import an Insight Maker model.
 #'
-#' @param URL String with URL to an Insight Maker model
+#' @param url String with URL to an Insight Maker model
 #' @param file If specified, file path to save Insight Maker model to. If NULL, do not save model.
 #'
 #' @returns XML string with Insight Maker model
@@ -10,16 +10,16 @@
 #' @export
 #' @concept importExport
 #' @examplesIf has_internet()
-#' URL <- "https://insightmaker.com/insight/43tz1nvUgbIiIOGSGtzIzj/Romeo-Juliet"
-#' xml <- url_to_insightmaker(URL)
+#' url <- "https://insightmaker.com/insight/43tz1nvUgbIiIOGSGtzIzj/Romeo-Juliet"
+#' xml <- url_to_insightmaker(url)
 #'
 #' # Save model to file
 #' file <- tempfile(fileext = ".InsightMaker")
-#' xml <- url_to_insightmaker(URL, file = file)
+#' xml <- url_to_insightmaker(url, file = file)
 #' file.remove(file)
-url_to_insightmaker <- function(URL, file = NULL) {
+url_to_insightmaker <- function(url, file = NULL) {
   # Read URL
-  url_data <- xml2::read_html(URL)
+  url_data <- xml2::read_html(url)
 
   # Get link from page
   iframe_src <- url_data |>
@@ -27,7 +27,7 @@ url_to_insightmaker <- function(URL, file = NULL) {
     xml2::xml_attr("src")
 
   # Create absolute link out of relative link
-  full_iframe_url <- xml2::url_absolute(iframe_src, URL)
+  full_iframe_url <- xml2::url_absolute(iframe_src, url)
   iframe_page <- xml2::read_html(full_iframe_url)
 
   # Get elements with <script tag
@@ -171,40 +171,40 @@ read_IM_file <- function(file, fileext) {
 }
 
 
-get_IM_model <- function(URL, file, fileext = c("InsightMaker", "json")) {
+get_IM_model <- function(url, file, fileext = c("InsightMaker", "json")) {
   # Validate inputs
-  URL_spec <- !missing(URL) && !is.null(URL) && !is.na(URL)
+  url_spec <- !missing(url) && !is.null(url) && !is.na(url)
   file_spec <- !missing(file) && !is.null(file) && !is.na(file)
-  if (!URL_spec && !file_spec) {
+  if (!url_spec && !file_spec) {
     cli::cli_abort(c(
       "Missing required arguments.",
-      "x" = "Either {.arg URL} or {.arg file} must be specified.",
+      "x" = "Either {.arg url} or {.arg file} must be specified.",
       ">" = "Provide one of these arguments to import a model."
     ))
   }
 
-  if (URL_spec && file_spec) {
+  if (url_spec && file_spec) {
     cli::cli_abort(c(
       "Too many arguments specified.",
-      "x" = "Both {.arg URL} and {.arg file} were specified.",
+      "x" = "Both {.arg url} and {.arg file} were specified.",
       "i" = "Only one input method can be used at a time.",
-      ">" = "Specify either {.arg URL} or {.arg file}, not both."
+      ">" = "Specify either {.arg url} or {.arg file}, not both."
     ))
   }
 
   # Load XML file
-  if (URL_spec) {
+  if (url_spec) {
     file <- NULL
 
-    is_valid_URL <- stringr::str_detect(
-      URL,
+    is_valid_url <- stringr::str_detect(
+      url,
       stringr::regex("http[s]?\\:\\/\\/[www\\.]?insightmaker")
     )
 
-    if (!is_valid_URL) {
+    if (!is_valid_url) {
       cli::cli_abort(c(
         "Invalid {.pkg InsightMaker} URL.",
-        "x" = "The {.arg URL} is not a valid {.pkg InsightMaker} model URL.",
+        "x" = "The {.arg url} is not a valid {.pkg InsightMaker} model URL.",
         "i" = "URLs must start with {.code http://insightmaker} or {.code https://insightmaker}.",
         ">" = "Provide a valid {.pkg InsightMaker} URL."
       ))
@@ -213,7 +213,7 @@ get_IM_model <- function(URL, file, fileext = c("InsightMaker", "json")) {
     ext <- "InsightMaker"
     tryCatch(
       {
-        read_file <- url_to_insightmaker(URL, file)
+        read_file <- url_to_insightmaker(url, file)
       },
       error = function(e) {
         cli::cli_abort(c(
@@ -338,8 +338,8 @@ validate_json_path <- function(path, add_fileext = TRUE) {
 #'
 #' Insight Maker models can be imported using a URL or Insight Maker file. Ensure the URL refers to a public (not private) model. To download a model file from Insight Maker, first clone the model if it is not your own. Then, go to "Share" (top right), "Export", and "Download Insight Maker file".
 #'
-#' @param URL URL to Insight Maker model. Character.
-#' @param file File path to Insight Maker model. Only used if URL is not specified. Needs to be a character with suffix .InsightMaker.
+#' @param url URL to Insight Maker model. Character.
+#' @param file File path to Insight Maker model. Only used if url is not specified. Needs to be a character with suffix .InsightMaker.
 #' @param destfile Output file path. Must have extension .json or no extension. Overwrites file if it already exists. If not provided, return model in json format.
 #'
 #' @returns If destfile is not provided; object of class "json". If destfile provided, invisibly returns destfile (character string).
@@ -350,13 +350,13 @@ validate_json_path <- function(path, add_fileext = TRUE) {
 #' # Convert a model from Insight Maker to json
 #' destfile <- tempfile(fileext = ".json")
 #' json <- insightmaker_to_json(
-#'   URL =
+#'   url =
 #'     "https://insightmaker.com/insight/43tz1nvUgbIiIOGSGtzIzj/Romeo-Juliet",
 #'   destfile = destfile
 #' )
 #' file.remove(destfile)
 #'
-insightmaker_to_json <- function(URL, file, destfile = NULL) {
+insightmaker_to_json <- function(url, file, destfile = NULL) {
   if (!is.null(destfile)) {
     destfile <- validate_json_path(destfile)
     save_file <- TRUE
@@ -365,7 +365,7 @@ insightmaker_to_json <- function(URL, file, destfile = NULL) {
   }
 
   # Read .InsightMaker file
-  out <- get_IM_model(URL, file, fileext = "InsightMaker")
+  out <- get_IM_model(url, file, fileext = "InsightMaker")
   read_file <- out[["read_file"]]
 
   # Prepare .InsightMaker file into more common intermediate format
@@ -817,7 +817,7 @@ prep_model_elements_IM <- function(children_attrs, node_types, type = c("Insight
     }
 
     # Rename constraints
-  if (adapter[["type"]] == "InsightMaker") {
+    if (adapter[["type"]] == "InsightMaker") {
       # Constraints are no longer supported
       # if ("minconstraint" %in% names(x)) {
       #   x[["min"]] <- ifelse(x[["minconstraintused"]] == "true", x[["minconstraint"]], "")

@@ -5,7 +5,7 @@
 #' `install_julia_env()` will:
 #' * Start a Julia session
 #' * Activate a Julia environment using sdbuildR's Project.toml
-#' * Install StockFlowRSupport.jl from GitHub (https://github.com/KCEvers/StockFlowRSupport.jl)
+#' * Install StockFlowRSupport.jl from GitHub (https://github.com/kcevers/StockFlowRSupport.jl)
 #' * Install all other required Julia packages
 #' * Create Manifest.toml
 #' * Precompile packages for faster subsequent loading
@@ -133,8 +133,8 @@ install_julia_env <- function(remove = FALSE) {
 #' # Start a Julia session and activate the Julia environment for sdbuildR
 #' use_julia()
 #'
-#' # Start Julia with 4 threads (only works if threading is supported)
-#' use_julia(nthreads = 4)
+#' # Start Julia with 2 threads (only works if threading is supported)
+#' use_julia(nthreads = 2)
 #'
 #' # Restart Julia session (in case of issues)
 #' use_julia(restart = TRUE)

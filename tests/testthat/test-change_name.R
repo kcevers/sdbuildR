@@ -1,6 +1,6 @@
-withr::local_options(list(sdbuildR.defer_codegen = FALSE))
-
 test_that("change_name updates dependencies correctly", {
+  withr::local_options(list(sdbuildR.defer_codegen = FALSE))
+
   sfm <- sdbuildR() |>
     update("a", "constant", eqn = 1) |>
     update("b", "aux", eqn = "a * 2") |>
@@ -29,6 +29,8 @@ test_that("change_name updates dependencies correctly", {
 })
 
 test_that("change_name clears and rebuilds cache", {
+  withr::local_options(list(sdbuildR.defer_codegen = FALSE))
+
   sfm <- sdbuildR() |>
     update("x", "stock", eqn = 10) |>
     update("flow_in", "flow", eqn = "rate", to = "x") |>
@@ -52,6 +54,8 @@ test_that("change_name clears and rebuilds cache", {
 })
 
 test_that("change_name updates flow to/from references in dependencies", {
+  withr::local_options(list(sdbuildR.defer_codegen = FALSE))
+
   sfm <- sdbuildR() |>
     update("population", "stock", eqn = 100) |>
     update("births", "flow", eqn = "birth_rate * population", to = "population") |>
@@ -76,6 +80,8 @@ test_that("change_name updates flow to/from references in dependencies", {
 })
 
 test_that("change_name updates graphical function source", {
+  withr::local_options(list(sdbuildR.defer_codegen = FALSE))
+
   sfm <- sdbuildR() |>
     update("input_var", "aux", eqn = "Time") |>
     update("lookup1", "lookup",

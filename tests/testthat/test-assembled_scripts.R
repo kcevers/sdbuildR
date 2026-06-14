@@ -1,6 +1,6 @@
-withr::local_options(list(sdbuildR.defer_codegen = FALSE))
-
 test_that("assemble cache keeps canonical structure after invalidation", {
+  withr::local_options(list(sdbuildR.defer_codegen = FALSE))
+
   sfm <- sdbuildR()
   sfm$assemble <- sfm$assemble[setdiff(
     names(sfm$assemble),
@@ -15,15 +15,32 @@ test_that("assemble cache keeps canonical structure after invalidation", {
 
 
 test_that("R script components are pre-cached in sfm after sim_settings", {
+  withr::local_options(list(sdbuildR.defer_codegen = FALSE))
+
   sfm <- sdbuildR("SIR") |>
     sim_settings(language = "R", start = 0, stop = 10, dt = 0.1)
 
+  # Check that all standard fields exist
+  expect_equal(length(sfm$assemble), length(empty_assemble()))
+  expect_setequal(names(sfm$assemble), names(empty_assemble()))
+
+  # Check that components are already cached in sfm BEFORE simulate
+  expect_true(!is.null(sfm$assemble$language))
   expect_equal(sfm$assemble$language, "R")
+
+  req_names <- names(empty_assemble())
+  for (name in req_names) {
+    expect_true(name %in% names(sfm$assemble))
+    expect_false(is.null(sfm$assemble[[name]]))
+  }
+
   expect_true(nzchar(sfm$assemble$times))
   expect_true(nzchar(sfm$assemble$static$script))
 })
 
 test_that("R script components persist through simulation", {
+  withr::local_options(list(sdbuildR.defer_codegen = FALSE))
+
   sfm <- sdbuildR("SIR") |>
     sim_settings(language = "R", start = 0, stop = 10, dt = 0.1)
 
@@ -33,12 +50,26 @@ test_that("R script components persist through simulation", {
   # Run simulation
   sim <- simulate(sfm, only_stocks = TRUE)
 
+  # Check that NO NEW fields were added during simulate
+  fields_after <- names(sim$object$assemble)
+  expect_setequal(fields_before, fields_after)
+  expect_equal(length(fields_after), length(empty_assemble()))
+
+  # Check that components still exist in sim$object
+  req_names <- names(empty_assemble())
+  for (name in req_names) {
+    expect_true(name %in% names(sim$object$assemble))
+    expect_false(is.null(sim$object$assemble[[name]]))
+  }
+
   expect_setequal(fields_before, names(sim$object$assemble))
   expect_true(sim$success)
 })
 
 
 test_that("R funcs are pre-cached in assemble", {
+  withr::local_options(list(sdbuildR.defer_codegen = FALSE))
+
   sfm <- sdbuildR() |>
     update("S", "stock", eqn = 100) |>
     update("I", "stock", eqn = 1) |>
@@ -49,23 +80,36 @@ test_that("R funcs are pre-cached in assemble", {
   # Check that funcs are cached BEFORE simulate
   expect_true(nzchar(sfm$assemble$funcs))
   expect_true(grepl("infection_rate", sfm$assemble$funcs, fixed = TRUE))
+
+  # Check structure is preserved (test succeeds without simulating)
+  expect_equal(length(sfm$assemble), length(empty_assemble()))
 })
 
 
 # Julia Script Assembly Tests ---------------------------------------------------
 
 test_that("Julia script components are pre-cached after sim_settings", {
+  withr::local_options(list(sdbuildR.defer_codegen = FALSE))
+
   skip_if_julia_not_ready()
 
   sfm <- sdbuildR("SIR") |>
     sim_settings(language = "Julia", start = 0, stop = 10, dt = 0.1)
 
+  expect_true(!is.null(sfm$assemble$language))
   expect_equal(sfm$assemble$language, "Julia")
+
+  # Check that all standard fields exist (same as R)
+  expect_equal(length(sfm$assemble), length(empty_assemble()))
+  expect_setequal(names(sfm$assemble), names(empty_assemble()))
+
   expect_true(nzchar(sfm$assemble$times))
   expect_true(nzchar(sfm$assemble$static$script))
 })
 
 test_that("Julia script components persist through simulation", {
+  withr::local_options(list(sdbuildR.defer_codegen = FALSE))
+
   skip_if_julia_not_ready()
 
   sfm <- sdbuildR("SIR") |>
@@ -77,11 +121,25 @@ test_that("Julia script components persist through simulation", {
   # Trigger compilation
   sim <- simulate(sfm, only_stocks = TRUE)
 
-  expect_equal(sort(fields_before), sort(names(sim$object$assemble)))
+  # Check that NO NEW fields were added during simulate
+  fields_after <- names(sim$object$assemble)
+  expect_equal(sort(fields_before), sort(fields_after))
+  expect_equal(length(fields_after), length(empty_assemble()))
+
+  # Check that components are still cached after simulate
+  req_names <- names(empty_assemble())
+  for (name in req_names) {
+    expect_true(name %in% names(sim$object$assemble))
+    expect_false(is.null(sim$object$assemble[[name]]))
+  }
+
   expect_equal(sim$success, TRUE)
+  expect_setequal(fields_before, names(sim$object$assemble))
 })
 
 test_that("Julia and R have identical assemble structure fields", {
+  withr::local_options(list(sdbuildR.defer_codegen = FALSE))
+
   skip_if_julia_not_ready()
 
   sfm_r <- sdbuildR("SIR") |>
@@ -92,10 +150,14 @@ test_that("Julia and R have identical assemble structure fields", {
 
   # Both should have identical field names
   expect_equal(sort(names(sfm_r$assemble)), sort(names(sfm_julia$assemble)))
+  expect_equal(length(sfm_r$assemble), length(empty_assemble()))
+  expect_equal(length(sfm_julia$assemble), length(empty_assemble()))
 })
 
 
 test_that("Julia equations differ from R equations in cached components", {
+  withr::local_options(list(sdbuildR.defer_codegen = FALSE))
+
   skip_if_julia_not_ready()
 
   sfm_r <- sdbuildR("SIR") |>
@@ -114,6 +176,8 @@ test_that("Julia equations differ from R equations in cached components", {
 
 
 test_that("cache invalidates when sim_settings parameters change", {
+  withr::local_options(list(sdbuildR.defer_codegen = FALSE))
+
   sfm <- sdbuildR() |>
     update(name = "S", type = "stock", eqn = "100") |>
     update(name = "births", type = "flow", eqn = "0.1 * S", to = "S")

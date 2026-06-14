@@ -4,10 +4,10 @@
 \alias{url_to_insightmaker}
 \title{Extract Insight Maker model from URL}
 \usage{
-url_to_insightmaker(URL, file = NULL)
+url_to_insightmaker(url, file = NULL)
 }
 \arguments{
-\item{URL}{String with URL to an Insight Maker model}
+\item{url}{String with URL to an Insight Maker model}
 
 \item{file}{If specified, file path to save Insight Maker model to. If NULL, do not save model.}
 }
@@ -19,12 +19,12 @@ Create XML string from Insight Maker URL. For internal use; use \code{import_ins
 }
 \examples{
 \dontshow{if (has_internet()) withAutoprint(\{ # examplesIf}
-URL <- "https://insightmaker.com/insight/43tz1nvUgbIiIOGSGtzIzj/Romeo-Juliet"
-xml <- url_to_insightmaker(URL)
+url <- "https://insightmaker.com/insight/43tz1nvUgbIiIOGSGtzIzj/Romeo-Juliet"
+xml <- url_to_insightmaker(url)
 
 # Save model to file
 file <- tempfile(fileext = ".InsightMaker")
-xml <- url_to_insightmaker(URL, file = file)
+xml <- url_to_insightmaker(url, file = file)
 file.remove(file)
 \dontshow{\}) # examplesIf}
 }

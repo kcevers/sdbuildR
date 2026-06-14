@@ -4,7 +4,7 @@
 \alias{simulate.sdbuildR}
 \title{Simulate stock-and-flow model}
 \usage{
-\method{simulate}{sdbuildR}(object, nsim = 1, seed = NULL, verbose = FALSE, ...)
+\method{simulate}{sdbuildR}(object, nsim = 1, seed = NULL, ...)
 }
 \arguments{
 \item{object}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
@@ -13,8 +13,6 @@
 
 \item{seed}{Seed number to ensure reproducibility across runs in case of
 random elements. Must be an integer. Defaults to \code{NULL} (no seed).}
-
-\item{verbose}{If \code{TRUE}, print duration of simulation. Defaults to \code{FALSE}.}
 
 \item{...}{Optional arguments passed to \code{\link[=sim_settings]{sim_settings()}}; these can be used to override the simulation specifications set in the model object.}
 }

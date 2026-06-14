@@ -37,7 +37,7 @@ Pass the URL of any public Insight Maker model:
 
 ```{r eval=FALSE}
 sfm <- import_insightmaker(
-  URL = "https://insightmaker.com/insight/43tz1nvUgbIiIOGSGtzIzj/Romeo-Juliet"
+  url = "https://insightmaker.com/insight/43tz1nvUgbIiIOGSGtzIzj/Romeo-Juliet"
 )
 ```
 

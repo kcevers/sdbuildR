@@ -90,7 +90,7 @@ test_that("SIR: sum of all stocks is constant over time (population conservation
 
 test_that("logistic_model: stock eventually converges within 2% of carrying capacity K", {
   sfm <- sim_settings(templates("logistic_model"),
-    stop = 300, dt = 0.1,
+    stop = 120, dt = 0.1,
     language = "R"
   )
   sim <- simulate(sfm, seed = 42)

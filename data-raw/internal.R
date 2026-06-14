@@ -588,7 +588,7 @@ get_syntax_julia <- function() {
 fetch_jl_Project_toml <- function(use_github_release = TRUE) {
   ref <- ifelse(use_github_release, paste0("v", P[["jl_pkg_version_github_release"]]), "main")
   url <- sprintf(
-    "https://raw.githubusercontent.com/KCEvers/%s.jl/%s/Project.toml",
+    "https://raw.githubusercontent.com/kcevers/%s.jl/%s/Project.toml",
     P[["jl_pkg_name"]], ref
   )
 
@@ -638,7 +638,7 @@ Pkg.activate(env_path)
 
 # Install %s from GitHub
 println("\\nInstalling %s.jl from GitHub...")
-Pkg.add(url="https://github.com/KCEvers/%s.jl"%s)
+Pkg.add(url="https://github.com/kcevers/%s.jl"%s)
 
 # Install all other dependencies from Project.toml
 println("\\nInstalling dependencies from Project.toml...")
@@ -749,7 +749,7 @@ create_julia_project_toml_init <- function(use_github_release = TRUE) {
 fetch_jl_functions <- function(use_github_release = TRUE) {
   ref <- ifelse(use_github_release, paste0("v", P[["jl_pkg_version_github_release"]]), "main")
   url <- sprintf(
-    "https://raw.githubusercontent.com/KCEvers/%s.jl/%s/src/%s.jl",
+    "https://raw.githubusercontent.com/kcevers/%s.jl/%s/src/%s.jl",
     P[["jl_pkg_name"]], ref, P[["jl_pkg_name"]]
   )
 

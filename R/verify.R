@@ -26,11 +26,10 @@ verify <- function(object, ...) {
 #' For repeated-run robustness testing use [ensemble()] instead.
 #'
 #' @param object An [`sdbuildR`][sdbuildR] object.
-#' @param verbose If `TRUE` (default), print results to the console.
 #' @param test Integer vector of test number(s) to run (numbers-based, as shown by [unit_tests()]).
 #'   Defaults to `NULL` (run all tests).
 #' @param ... Additional arguments passed to [sim_settings()] (e.g., `seed`,
-#'   `dt`) and then to [simulate.sdbuildR()].
+#'   `dt`).
 #'
 #' @returns An object of class `verify_sdbuildR`, returned invisibly. Use
 #'   [as.data.frame()] to extract results as a data frame and [plot()] to
@@ -66,7 +65,7 @@ verify <- function(object, ...) {
 #'   )
 #'
 #' verify(sfm)
-verify.sdbuildR <- function(object, verbose = TRUE, test = NULL, ...) {
+verify.sdbuildR <- function(object, test = NULL, ...) {
   check_sdbuildR(object)
 
   # Override sim_settings with any arguments passed via ...
@@ -192,8 +191,8 @@ verify.sdbuildR <- function(object, verbose = TRUE, test = NULL, ...) {
     n_conditions = n_conditions,
     test_indices = test_indices
   )
-  if (verbose) print(result_obj)
-  invisible(result_obj)
+  # invisible(result_obj)
+  result_obj
 }
 
 

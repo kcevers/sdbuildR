@@ -97,8 +97,10 @@ test_that("Julia conversion rejects or handles previously unchecked edge cases",
   expect_equal(conv("sample.int(n, 2)"), "StatsBase.sample(seq(1.0, n), round_(2.0), replace=false)")
   expect_equal(conv("break"), "break")
   expect_equal(conv("next"), "continue")
-  expect_equal(conv("repeat { x <- x + 1; if (x > 10) break }"),
-    "while true\nx = x .+ 1.0\nif x .> 10.0\nbreak\nend\nend")
+  expect_equal(
+    conv("repeat { x <- x + 1; if (x > 10) break }"),
+    "while true\nx = x .+ 1.0\nif x .> 10.0\nbreak\nend\nend"
+  )
   expect_equal(conv("x[c(1, 2)]"), "x[[1, 2]]")
   expect_equal(conv("base::sum(x)"), "sum(x)")
   expect_equal(conv("stats::median(x)"), "Statistics.median(x)")
