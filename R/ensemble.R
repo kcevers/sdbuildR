@@ -191,13 +191,13 @@ ensemble <- function(object,
     sim_word <- ifelse(total_sims == 1, "simulation", "simulations")
     if (is.null(conditions)) {
       msg <- c(
-        "Starting ensemble simulation in {.val {stringr::str_to_title(language)}} with {.val {total_sims}} {sim_word}."
+        "Starting ensemble simulation in {.val {title_case_ascii(language)}} with {.val {total_sims}} {sim_word}."
       )
     } else {
       cond_word <- ifelse(n_conditions == 1, "condition", "conditions")
       sim_per_word <- ifelse(n == 1, "simulation", "simulations")
       msg <- c(
-        "Starting ensemble simulation in {.val {stringr::str_to_title(language)}} with {.val {total_sims}} {sim_word} in total.",
+        "Starting ensemble simulation in {.val {title_case_ascii(language)}} with {.val {total_sims}} {sim_word} in total.",
         "i" = "{.val {n_conditions}} {cond_word} x {.val {n}} {sim_per_word} per condition."
       )
     }

@@ -101,6 +101,7 @@ test_that("length_IM() counts string characters", {
   expect_equal(length_IM("abcdef"), 6)
   expect_equal(length_IM("test"), 4)
   expect_equal(length_IM(""), 0)
+  expect_equal(length_IM(NA_character_), NA_integer_)
 })
 
 test_that("contains_IM() checks vector membership", {

@@ -70,6 +70,38 @@ test_that("clean_name() ensures unique names", {
   expect_equal(length(unique(result)), 3)
 })
 
+test_that("clean_name() replaces literal periods after make.names()", {
+  expect_equal(clean_name(c("Rate.One", "has space")), c("Rate_One", "has_space"))
+})
+
+test_that("parse_args() preserves nested commas, strings, and empty values", {
+  expect_equal(parse_args('a, c(1, 2), "x,y", fun(b, c)'), c("a", "c(1, 2)", '"x,y"', "fun(b, c)"))
+  expect_equal(parse_args(""), "")
+  expect_error(suppressWarnings(parse_args(NA_character_)))
+})
+
+test_that("get_range_names() respects brackets, metacharacters, and quotes", {
+  result <- get_range_names('alpha + alpha1 + [Rate.One] + "alpha"', c("alpha", "alpha1", "Rate.One"), TRUE)
+  expect_equal(result[["start"]], 18)
+  expect_equal(result[["end"]], 27)
+  expect_equal(result[["name"]], "Rate.One")
+
+  unbracketed <- get_range_names('alpha + alpha1 + Rate.One + "alpha"', c("alpha", "alpha1", "Rate.One"))
+  expect_equal(unbracketed[["name"]], c("alpha", "alpha1", "Rate.One"))
+})
+
+test_that("apply_replacements_reversed() keeps replacement positions stable", {
+  spans <- data.frame(start = c(2, 5), end = c(3, 6), replacement = c("XX", "YY"))
+  expect_equal(apply_replacements_reversed("abcdef", spans), "aXXdYY")
+  expect_equal(apply_replacements_reversed("abc", spans[0, ]), "abc")
+})
+
+test_that("apply_operator_replacements() avoids strings and protected names", {
+  op <- c("\\band\\b" = "&&", "=" = "==")
+  result <- apply_operator_replacements('a = b and "c and d"', c("c and d"), op, ignore_case = TRUE)
+  expect_equal(result, 'a == b && "c and d"')
+})
+
 # Validation functions ----
 
 test_that("is_defined() returns FALSE for empty vectors", {
@@ -114,6 +146,11 @@ test_that("clean_language() accepts valid languages", {
 test_that("clean_language() handles whitespace", {
   expect_equal(clean_language("  r  "), "R")
   expect_equal(clean_language(" julia "), "Julia")
+})
+
+test_that("title_case_ascii() preserves controlled title-case semantics", {
+  expect_equal(title_case_ascii(c("mean", "median", "julia", "r", "")), c("Mean", "Median", "Julia", "R", ""))
+  expect_equal(title_case_ascii(NA_character_), NA_character_)
 })
 
 test_that("clean_language() rejects invalid languages", {

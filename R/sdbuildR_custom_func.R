@@ -143,7 +143,7 @@ indexof <- function(haystack, needle) {
 #' length_IM("abcdef") # 6
 length_IM <- function(x) {
   if (length(x) == 1 && is.character(x)) {
-    return(stringr::str_length(x))
+    return(nchar(x, type = "chars", allowNA = TRUE, keepNA = TRUE))
   } else {
     return(length(x))
   }

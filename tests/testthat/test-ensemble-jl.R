@@ -233,8 +233,8 @@ test_that("ensemble() only_stocks = FALSE returns correct n properties and full 
   expect_equal(sims[["n"]], nr_sims)
   expect_equal(sims[["n_total"]], nr_sims)
   expect_equal(sims[["n_conditions"]], 1)
-  expect_equal(sort(unique(sims[["df"]][["condition"]])), 1)
-  expect_equal(sort(unique(sims[["summary"]][["condition"]])), 1)
+  expect_unique_values(sims[["df"]], "condition", 1)
+  expect_unique_values(sims[["summary"]], "condition", 1)
 
   # constants and init summaries
   expect_equal(
@@ -254,9 +254,7 @@ test_that("ensemble() only_stocks = FALSE returns correct n properties and full 
   stock_names <- stock_names[stock_names[["type"]] == "stock", "name", drop = TRUE]
   non_stock_names <- setdiff(unique(df[["variable"]]), stock_names)
 
-  expect_equal(sort(unique(df[["sim"]])), seq_len(nr_sims))
-  expect_equal(sort(unique(constants_df[["sim"]])), seq_len(nr_sims))
-  expect_equal(sort(unique(init_df[["sim"]])), seq_len(nr_sims))
+  expect_ensemble_sim_coverage(nr_sims, df, constants_df, init_df)
 
   for (nm in stock_names) {
     i_vals <- sort(unique(df[df[["variable"]] == nm, "sim", drop = TRUE]))
@@ -294,9 +292,7 @@ test_that("ensemble() only_stocks = TRUE keeps full sim coverage for stocks cons
 
   expect_equal(sort(unique(df[["variable"]])), sort(stock_names))
   expect_equal(length(unique(sims[["summary"]][["variable"]])), length(stock_names))
-  expect_equal(sort(unique(df[["sim"]])), seq_len(nr_sims))
-  expect_equal(sort(unique(constants_df[["sim"]])), seq_len(nr_sims))
-  expect_equal(sort(unique(init_df[["sim"]])), seq_len(nr_sims))
+  expect_ensemble_sim_coverage(nr_sims, df, constants_df, init_df)
 
   for (nm in stock_names) {
     i_vals <- sort(unique(df[df[["variable"]] == nm, "sim", drop = TRUE]))

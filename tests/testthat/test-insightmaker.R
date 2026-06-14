@@ -36,6 +36,19 @@ test_that("import_insightmaker() validates input arguments", {
 })
 
 
+test_that("replace_safely() avoids strings, protected names, and partial overlaps", {
+  dict <- c("\\bfoo\\b" = "bar")
+  expect_equal(
+    replace_safely('Foo + food + "foo" + [Foo]', dict, var_names = "Foo", ignore_case = TRUE),
+    'Foo + food + "foo" + [Foo]'
+  )
+  expect_equal(
+    replace_safely("foo + food + my_foo", dict, var_names = character(0), ignore_case = TRUE),
+    "bar + food + my_foo"
+  )
+})
+
+
 test_that("import_metadata structure is created correctly", {
   # Get path to the cran folder with test models
   folder <- test_path("testdata", "insightmaker", "cran")

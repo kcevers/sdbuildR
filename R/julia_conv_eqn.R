@@ -204,10 +204,10 @@ convert_equations_julia <- function(type, name, eqn, var_names) {
     # <- -> =
 
     # Remove spaces in front of new lines
-    eqn <- stringr::str_replace_all(eqn, "[ ]*\n", "\n")
+    eqn <- gsub("[ ]*\n", "\n", eqn)
 
     # Replace single with double quotation marks
-    eqn <- stringr::str_replace_all(eqn, "\'", "\"")
+    eqn <- gsub("'", "\"", eqn, fixed = TRUE)
 
     return(list(
       eqn = eqn,

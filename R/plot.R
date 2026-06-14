@@ -295,11 +295,11 @@ plot.sdbuildR <- function(x,
   }
 
   if (format_label) {
+    formatted_label <- gsub("_", " ", df[["label"]], fixed = TRUE)
+    formatted_label <- gsub(".", " ", formatted_label, fixed = TRUE)
+    formatted_label <- gsub("  ", " ", formatted_label, fixed = TRUE)
     df[["label"]] <- ifelse(df[["name"]] == df[["label"]],
-      stringr::str_replace_all(
-        df[["label"]],
-        c("_" = " ", "\\." = " ", "  " = " ")
-      ), df[["label"]]
+      formatted_label, df[["label"]]
     )
   }
 
@@ -308,10 +308,9 @@ plot.sdbuildR <- function(x,
   dict <- stats::setNames(df[["label"]], df[["name"]])
 
   # Get equations and remove quotation marks from unit strings
-  dict_eqn <- stats::setNames(stringr::str_replace_all(
-    df[["eqn"]],
-    c("'" = "", "\"" = "")
-  ), df[["name"]])
+  eqn_label <- gsub("'", "", df[["eqn"]], fixed = TRUE)
+  eqn_label <- gsub("\"", "", eqn_label, fixed = TRUE)
+  dict_eqn <- stats::setNames(eqn_label, df[["name"]])
 
   # Categorize variables by type
   stock_names <- df[df[["type"]] == "stock", "name"]
@@ -1007,7 +1006,7 @@ plot.ensemble_sdbuildR <- function(x,
   default_sub <- if (which == "summary") {
     paste0(
       ifelse(isFALSE(central_tendency), "",
-        paste0(stringr::str_to_title(central_tendency), " with ")
+        paste0(title_case_ascii(central_tendency), " with ")
       ), "[",
       min(x[["quantiles"]]), ", ", max(x[["quantiles"]]),
       "] confidence interval of ", x[["n"]], " simulation",
@@ -1016,7 +1015,7 @@ plot.ensemble_sdbuildR <- function(x,
   } else if (which == "sims") {
     paste0(
       ifelse(isFALSE(central_tendency), "",
-        paste0(stringr::str_to_title(central_tendency), " with ")
+        paste0(title_case_ascii(central_tendency), " with ")
       ),
       length(sim), "/", x[["n"]], " simulation",
       ifelse(x[["n"]] == 1, "", "s")

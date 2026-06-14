@@ -179,6 +179,19 @@ expect_successful_ensemble <- function(x, expected_fields = NULL) {
   invisible(x)
 }
 
+
+expect_unique_values <- function(df, column, expected) {
+  expect_equal(sort(unique(df[[column]])), expected)
+}
+
+
+expect_ensemble_sim_coverage <- function(n, ...) {
+  dfs <- list(...)
+  for (df in dfs) {
+    expect_unique_values(df, "sim", seq_len(n))
+  }
+}
+
 #' Execute code quietly (suppressing messages and warnings)
 #'
 #' @noRd

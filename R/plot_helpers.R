@@ -123,11 +123,11 @@ validate_plot_params <- function(showlegend = NULL,
 prepare_labels <- function(names_df, wrap_width, format_label = FALSE, deduplicate = TRUE) {
   # Apply default formatting if requested (remove underscores and periods)
   if (format_label) {
+    formatted_label <- gsub("_", " ", names_df[["label"]], fixed = TRUE)
+    formatted_label <- gsub(".", " ", formatted_label, fixed = TRUE)
+    formatted_label <- gsub("  ", " ", formatted_label, fixed = TRUE)
     names_df[["label"]] <- ifelse(names_df[["name"]] == names_df[["label"]],
-      stringr::str_replace_all(
-        names_df[["label"]],
-        c("_" = " ", "\\." = " ", "  " = " ")
-      ), names_df[["label"]]
+      formatted_label, names_df[["label"]]
     )
   }
 

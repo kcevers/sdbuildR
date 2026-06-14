@@ -2367,6 +2367,14 @@ if (recreate_figs) {
 }
 ```
 
+
+Stop Julia session:
+
+```{r}
+use_julia(stop = TRUE)
+```
+
+
 ## Session Information
 
 ```{r echo=TRUE}

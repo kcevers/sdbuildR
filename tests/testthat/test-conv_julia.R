@@ -296,6 +296,11 @@ test_that("converting statements", {
   expected <- "if a > b \n\t a + b\nend # test () {}"
   expect_equal(result, expected)
 
+  eqn <- "if(a > b){\n\t print('brace { in quote')\n}"
+  result <- convert_all_statements_julia(eqn, var_names)
+  expected <- "if a > b \n\t print('brace { in quote')\nend"
+  expect_equal(result, expected)
+
   eqn <- "if (a + min(c(1, 2)) < 0){\n\t print(a)\n} else {\n\t  print(b)\n}"
   result <- convert_all_statements_julia(eqn, var_names)
   expected <- "if  a + min(c(1, 2)) < 0 \n\t print(a)\n else \n\t  print(b)\nend"
@@ -670,6 +675,7 @@ test_that("removing scientific notation", {
   expect_equal(scientific_notation(".1e+02"), "10")
   expect_equal(scientific_notation("e-2 + 1e-02"), "e-2 + 0.01")
   expect_equal(scientific_notation(" 1e-12"), " 0.000000000001")
+  expect_equal(scientific_notation(c("1e+02", NA_character_)), c("100", NA_character_))
 })
 
 

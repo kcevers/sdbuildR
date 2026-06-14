@@ -148,16 +148,14 @@ lang_adapter_julia <- function() {
       if (inherits(xpts_val, "numeric")) {
         xpts_str <- paste0("[", paste0(as.character(xpts_val), collapse = ", "), "]")
       } else {
-        xpts_str <- stringr::str_replace_all(xpts_val, "^c\\(", "[") |>
-          stringr::str_replace_all("\\)$", "]")
+        xpts_str <- sub("\\)$", "]", sub("^c\\(", "[", xpts_val))
       }
 
       ypts_val <- row[["ypts"]][[1]]
       if (inherits(ypts_val, "numeric")) {
         ypts_str <- paste0("[", paste0(as.character(ypts_val), collapse = ", "), "]")
       } else {
-        ypts_str <- stringr::str_replace_all(ypts_val, "^c\\(", "[") |>
-          stringr::str_replace_all("\\)$", "]")
+        ypts_str <- sub("\\)$", "]", sub("^c\\(", "[", ypts_val))
       }
 
       sprintf(

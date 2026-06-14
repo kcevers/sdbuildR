@@ -89,9 +89,9 @@ test_that("ensemble() R returns correct n properties", {
   expect_equal(sims[["n"]], nr_sims)
   expect_equal(sims[["n_total"]], nr_sims)
   expect_equal(sims[["n_conditions"]], 1)
-  expect_equal(sort(unique(sims[["df"]][["sim"]])), 1:nr_sims)
-  expect_equal(sort(unique(sims[["df"]][["condition"]])), 1)
-  expect_equal(sort(unique(sims[["summary"]][["condition"]])), 1)
+  expect_unique_values(sims[["df"]], "sim", seq_len(nr_sims))
+  expect_unique_values(sims[["df"]], "condition", 1)
+  expect_unique_values(sims[["summary"]], "condition", 1)
 })
 
 test_that("ensemble() R custom quantiles", {
@@ -149,8 +149,8 @@ test_that("ensemble() R non-crossed design pairs values", {
   expect_true(sims[["success"]])
   expect_equal(sims[["n"]], nr_sims)
   expect_equal(sims[["n_total"]], nr_sims * nr_cond)
-  expect_equal(sort(unique(sims[["df"]][["sim"]])), 1:nr_sims)
-  expect_equal(sort(unique(sims[["df"]][["condition"]])), 1:nr_cond)
+  expect_unique_values(sims[["df"]], "sim", seq_len(nr_sims))
+  expect_unique_values(sims[["df"]], "condition", seq_len(nr_cond))
 
 
   # ensemble() R conditions data frame is correct

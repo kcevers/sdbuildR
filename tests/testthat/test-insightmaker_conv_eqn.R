@@ -124,6 +124,16 @@ test_that("convert_equations_IM empty and NULL cases", {
 })
 
 
+test_that("convert_all_statements() preserves strings and adds missing else branches", {
+  var_names <- c("x", "y")
+  eqn <- "If x > 0 Then\n  y <- \"comma, only\"\nEnd If"
+  result <- convert_all_statements(eqn, var_names)
+  expect_match(result, '"comma, only"', fixed = TRUE)
+  expect_match(result, "else")
+  expect_match(result, "0")
+})
+
+
 test_that("convert_builtin_functions_IM string functions", {
   sfm <- sdbuildR("predator_prey")
   var_names <- get_model_var(sfm)

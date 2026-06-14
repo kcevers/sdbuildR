@@ -398,6 +398,14 @@ str_wrap_ <- function(str, width) {
   out
 }
 
+title_case_ascii <- function(value) {
+  value <- as.character(value)
+  out <- value
+  idx <- !is.na(value) & nzchar(value)
+  out[idx] <- paste0(toupper(substr(value[idx], 1, 1)), substr(value[idx], 2, nchar(value[idx], type = "chars")))
+  out
+}
+
 #' Ensure length of arg is same as target
 #'
 #' @param arg Vector
@@ -470,7 +478,7 @@ clean_language <- function(language) {
       ">" = "Use {.code 'Julia'} or {.code 'R'}."
     ))
   } else {
-    language <- stringr::str_to_title(language)
+    language <- title_case_ascii(language)
     language <- ifelse(language == "Jl", "Julia", language)
   }
 
@@ -597,10 +605,10 @@ clean_name <- function(new, protected = NULL) {
   protected_names_complete <- c(protected_names, as.character(stats::na.omit(protected)))
   new_names <- make.names(c(protected_names_complete, trimws(new)), unique = TRUE)
   # For Julia translation, remove names with a period
-  new_names <- stringr::str_replace_all(new_names, "\\.", "_")
+  new_names <- gsub(".", "_", new_names, fixed = TRUE)
   # This may cause overlap in names, so repeat
   new_names <- make.names(new_names, unique = TRUE)
-  new_names <- stringr::str_replace_all(new_names, "\\.", "_")
+  new_names <- gsub(".", "_", new_names, fixed = TRUE)
   new_names <- make.names(new_names, unique = TRUE)[-seq_along(protected_names_complete)] # Remove protected names
 
   new_names
