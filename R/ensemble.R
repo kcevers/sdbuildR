@@ -173,11 +173,9 @@ ensemble <- function(object,
   # Persistent meta-setting: read save_sims from sim_settings AFTER applying varargs
   save_sims <- isTRUE(object[["sim_settings"]][["save_sims"]])
 
-  if (!is.null(vars)) {
-    vars <- validate_sim_vars(object, vars)
-    stock_names <- get_variables_by_type(object, "stock")[["name"]]
-    only_stocks <- all(vars %in% stock_names)
-  }
+  output_args <- resolve_sim_output_args(object, only_stocks, vars)
+  only_stocks <- output_args[["only_stocks"]]
+  vars <- output_args[["vars"]]
 
   validate_ensemble_args(n = n, quantiles = quantiles, cross = cross)
   normalized_conditions <- normalize_ensemble_conditions(

@@ -51,77 +51,77 @@ sprintf_arg <- function(template, values) {
 }
 font_family <- "Times New Roman"
 
+# Plotting parameters
+filepath_base <- this.path::this.dir()
+filepath_figs <- file.path(filepath_base, "figs_tutorial2026")
+
 if (recreate_figs) {
-  # Plotting parameters
-  filepath_base <- this.path::this.dir()
-  filepath_figs <- file.path(filepath_base, "figs_tutorial2026")
+  dir.create(filepath_figs, showWarnings = FALSE)
+}
 
-  dir.create(filepath_figs)
+VARS <- c("engagement", "performance", "energy", "demands", "resources", "motivation_rate")
+PALETTE <- c("Geyser", "Temps", "Spectral", "Zissou 1", "Roma")[5]
+COLORS <- grDevices::hcl.colors(n = 50, palette = PALETTE)
 
-  VARS <- c("engagement", "performance", "energy", "demands", "resources", "motivation_rate")
-  PALETTE <- c("Geyser", "Temps", "Spectral", "Zissou 1", "Roma")[5]
-  COLORS <- grDevices::hcl.colors(n = 50, palette = PALETTE)
+inflow_col <- adjustcolor(COLORS[10], alpha.f = 1)
+outflow_col <- adjustcolor(COLORS[3], alpha.f = 1)
 
-  inflow_col <- adjustcolor(COLORS[10], alpha.f = 1)
-  outflow_col <- adjustcolor(COLORS[3], alpha.f = 1)
+COLORS_alpha <- adjustcolor(COLORS, alpha.f = .25)
 
-  COLORS_alpha <- adjustcolor(COLORS, alpha.f = .25)
-
-  COLORS <- COLORS[c(37, 9, 32, 1, 47, 17)]
-  stock_col <- adjustcolor(COLORS[1], alpha.f = .75)
-  flow_col <- COLORS[6]
+COLORS <- COLORS[c(37, 9, 32, 1, 47, 17)]
+stock_col <- adjustcolor(COLORS[1], alpha.f = .75)
+flow_col <- COLORS[6]
 
 
-  health_path <- adjustcolor(COLORS[4], alpha.f = .75)
-  motivation_path <- adjustcolor(COLORS[1], alpha.f = .85)
-  health_path_fill <- adjustcolor(COLORS[4], alpha.f = .25)
-  motivation_path_fill <- adjustcolor(COLORS[1], alpha.f = .25)
-  performance_path <- adjustcolor(COLORS[2], alpha.f = .75)
-  performance_path_fill <- adjustcolor(COLORS[2], alpha.f = .25)
+health_path <- adjustcolor(COLORS[4], alpha.f = .75)
+motivation_path <- adjustcolor(COLORS[1], alpha.f = .85)
+health_path_fill <- adjustcolor(COLORS[4], alpha.f = .25)
+motivation_path_fill <- adjustcolor(COLORS[1], alpha.f = .25)
+performance_path <- adjustcolor(COLORS[2], alpha.f = .75)
+performance_path_fill <- adjustcolor(COLORS[2], alpha.f = .25)
 
-  font_size <- 16
-  font_size_xlab <- round(font_size * 1.4)
-  font_size_legend <- round(font_size * 1.1)
-  font_size_subplot <- font_size # round(font_size * 1.5)
-  xlab <- "Time (days)"
+font_size <- 16
+font_size_xlab <- round(font_size * 1.4)
+font_size_legend <- round(font_size * 1.1)
+font_size_subplot <- font_size # round(font_size * 1.5)
+xlab <- "Time (days)"
 
-  # Finer-grained simulation
-  save_at <- .1 # .01
+# Finer-grained simulation
+save_at <- .1 # .01
 
-  # Annotation template
-  annot <- list(xanchor = "center", yanchor = "middle", showarrow = FALSE, xref = "paper", yref = "paper", font = list(size = font_size_subplot, family = font_family))
-  annot_font <- list(family = font_family, size = font_size)
-  annot_legend <- list(
-    orientation = "h", # orientation
-    x = 0.5, # Center horizontally
-    y = -0.15, # Below the plot
-    xanchor = "center",
-    yanchor = "top",
-    # traceorder = "normal",
-    # tracegroupgap = 0,
-    # itemwidth = 15,
-    font = list(size = font_size_legend)
+# Annotation template
+annot <- list(xanchor = "center", yanchor = "middle", showarrow = FALSE, xref = "paper", yref = "paper", font = list(size = font_size_subplot, family = font_family))
+annot_font <- list(family = font_family, size = font_size)
+annot_legend <- list(
+  orientation = "h", # orientation
+  x = 0.5, # Center horizontally
+  y = -0.15, # Below the plot
+  xanchor = "center",
+  yanchor = "top",
+  # traceorder = "normal",
+  # tracegroupgap = 0,
+  # itemwidth = 15,
+  font = list(size = font_size_legend)
+)
+annot_xlab <- list(
+  text = xlab,
+  font = list(
+    family = font_family,
+    size = font_size_xlab
+  ),
+  xref = "paper",
+  yref = "paper",
+  xanchor = "center",
+  yanchor = "top",
+  x = 0.5, y = -.1,
+  showarrow = FALSE
+)
+
+rm_grid <- function(pl) {
+  plotly::layout(pl,
+    xaxis = list(showgrid = FALSE, showline = TRUE),
+    yaxis = list(showgrid = FALSE, showline = TRUE)
   )
-  annot_xlab <- list(
-    text = xlab,
-    font = list(
-      family = font_family,
-      size = font_size_xlab
-    ),
-    xref = "paper",
-    yref = "paper",
-    xanchor = "center",
-    yanchor = "top",
-    x = 0.5, y = -.1,
-    showarrow = FALSE
-  )
-
-  rm_grid <- function(pl) {
-    plotly::layout(pl,
-      xaxis = list(showgrid = FALSE, showline = TRUE),
-      yaxis = list(showgrid = FALSE, showline = TRUE)
-    )
-  }
 }
 ```
 
@@ -216,9 +216,9 @@ sfm_big <- sdbuildR() |>
 }
 
 
+pl <- DiagrammeR::grViz(viz_str)
+
 if (recreate_figs) {
-  pl <- DiagrammeR::grViz(viz_str)
-  pl
   export_plot(pl, file.path(filepath_figs, "sfm.pdf"))
 }
 
@@ -272,7 +272,9 @@ pl_sim <- plotly::subplot(pl_list,
     )
   )
 print(pl_sim)
+```
 
+```{r, echo = FALSE, eval = has_internet(), error = TRUE}
 if (recreate_figs) {
   export_plot(pl_sim, file.path(filepath_figs, "sfm_sim.pdf"),
     width = 3.25, height = 5.5
@@ -439,7 +441,7 @@ if (recreate_figs) {
 ```
 
 
-```{r include=FALSE}
+```{r include=FALSE, eval = has_internet(), error = TRUE}
 if (recreate_figs) {
   # Create subplot figure
   pl_list <- list()

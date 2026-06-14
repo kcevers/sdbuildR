@@ -429,34 +429,54 @@ compile_script_sections <- function(object, ode, run_ode, post) {
 }
 
 
-#' Build Julia saveat expression from simulation settings
+#' Normalize save schedule settings
 #'
 #' @param ss Simulation settings list.
+#'
+#' @returns List with save schedule type, value, and scalar flag.
+#' @noRd
+save_schedule <- function(ss) {
+  save_type <- ss[["save_type"]] %||% "all"
+  value <- switch(save_type,
+    "all" = NULL,
+    "save_at" = ss[["save_at"]],
+    "save_n" = ss[["save_n"]]
+  )
+
+  list(
+    type = save_type,
+    value = value,
+    is_scalar = !is.null(value) && length(value) == 1L
+  )
+}
+
+
+#' Build Julia saveat expression from simulation settings
+#'
+#' @inheritParams save_schedule
 #'
 #' @returns Julia expression used to define saveat.
 #' @noRd
 julia_saveat_expr <- function(ss) {
-  save_type <- ss[["save_type"]] %||% "all"
-  save_at <- ss[["save_at"]]
-  save_n <- ss[["save_n"]]
+  schedule <- save_schedule(ss)
 
-  switch(save_type,
+  switch(schedule[["type"]],
     "all" = P[["tstops_name"]],
-    "save_at" = if (length(save_at) == 1) {
+    "save_at" = if (schedule[["is_scalar"]]) {
       sprintf(
         "%s[1]:%s:%s[2]",
-        P[["times_name"]], save_at, P[["times_name"]]
+        P[["times_name"]], schedule[["value"]], P[["times_name"]]
       )
     } else {
-      paste0("[", paste(save_at, collapse = ", "), "]")
+      paste0("[", paste(schedule[["value"]], collapse = ", "), "]")
     },
     "save_n" = {
-      if (as.integer(save_n) == 1L) {
+      if (as.integer(schedule[["value"]]) == 1L) {
         sprintf("[%s[2]]", P[["times_name"]])
       } else {
         sprintf(
           "range(%s[1], %s[2], length=%s)",
-          P[["times_name"]], P[["times_name"]], save_n
+          P[["times_name"]], P[["times_name"]], schedule[["value"]]
         )
       }
     }
@@ -466,29 +486,71 @@ julia_saveat_expr <- function(ss) {
 
 #' Build R saveat post-processing script from simulation settings
 #'
-#' @param ss Simulation settings list.
+#' @inheritParams save_schedule
 #'
 #' @returns R script that filters/interpolates solver output times.
 #' @noRd
 r_saveat_script <- function(ss) {
-  save_type <- ss[["save_type"]] %||% "all"
-  save_at <- ss[["save_at"]]
-  save_n <- ss[["save_n"]]
+  schedule <- save_schedule(ss)
 
-  switch(save_type,
+  switch(schedule[["type"]],
     "all" = "",
-    "save_at" = if (length(save_at) == 1) {
-      fmt_script("saveat_interval", "R", ss, save_at_val = save_at)
+    "save_at" = if (schedule[["is_scalar"]]) {
+      fmt_script("saveat_interval", "R", ss, save_at_val = schedule[["value"]])
     } else {
       fmt_script("saveat_explicit", "R", ss,
-        save_at_str = paste(save_at, collapse = ", ")
+        save_at_str = paste(schedule[["value"]], collapse = ", ")
       )
     },
-    "save_n" = if (as.integer(save_n) == 1L) {
+    "save_n" = if (as.integer(schedule[["value"]]) == 1L) {
       fmt_script("saveat_n1", "R", ss)
     } else {
-      fmt_script("saveat_n", "R", ss, save_n_val = save_n)
+      fmt_script("saveat_n", "R", ss, save_n_val = schedule[["value"]])
     }
+  )
+}
+
+
+#' Build Julia output-selection arguments for clean_df()
+#'
+#' @inheritParams update.sdbuildR
+#' @param vars Character vector of requested output variables, or NULL.
+#'
+#' @returns List of Julia code snippets for selected stocks, intermediaries, and
+#'   final output variable filtering.
+#' @noRd
+julia_output_selection_args <- function(object, vars = NULL) {
+  if (is.null(vars)) {
+    return(list(
+      save_idx_arg = "nothing",
+      intermediary_names_arg = paste0(P[["model_setup_name"]], ".", P[["intermediary_names"]]),
+      selected_var_names_arg = "nothing"
+    ))
+  }
+
+  vars <- validate_sim_vars(object, vars)
+  stock_names <- get_variables_by_type(object, "stock")[["name"]]
+  intermediaries <- object[["assemble"]][["intermediaries"]]
+
+  selected_stock_names <- vars[vars %in% stock_names]
+  save_idx <- which(stock_names %in% selected_stock_names)
+  save_idx_arg <- if (length(save_idx) > 0) {
+    paste0("[", paste0(save_idx, collapse = ", "), "]")
+  } else {
+    "Int[]"
+  }
+
+  selected_inter_names <- vars[vars %in% intermediaries[["names"]]]
+  intermediary_names_arg <- if (length(selected_inter_names) > 0) {
+    paste0("[:", paste0(selected_inter_names, collapse = ", :"), "]")
+  } else {
+    "Symbol[]"
+  }
+
+  list(
+    save_idx_arg = save_idx_arg,
+    intermediary_names_arg = intermediary_names_arg,
+    selected_var_names_arg = paste0("[:", paste0(vars, collapse = ", :"), "]")
   )
 }
 

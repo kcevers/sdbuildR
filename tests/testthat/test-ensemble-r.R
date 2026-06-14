@@ -6,22 +6,13 @@
 test_that("ensemble() runs in R", {
   sfm <- make_r_ensemble_random_sfm()
   sims <- silence(ensemble(sfm, n = 3, verbose = FALSE, save_sims = TRUE))
-  expect_s3_class(sims, "ensemble_sdbuildR")
-  expect_true(sims[["success"]])
-  expect_false(is.null(sims[["summary"]]))
 
   # ensemble() R returns correct structure
-  expected_fields <- c(
+  expect_successful_ensemble(sims, c(
     "success", "df", "summary", "n", "n_total",
     "n_conditions", "conditions", "init", "constants",
     "duration"
-  )
-  for (field in expected_fields) {
-    expect_true(
-      field %in% names(sims),
-      info = paste("Missing field:", field)
-    )
-  }
+  ))
 })
 
 test_that("ensemble() R handles models with no constants", {

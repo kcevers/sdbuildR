@@ -160,6 +160,25 @@ expect_successful_simulation <- function(sfm, ...) {
   invisible(sim)
 }
 
+
+expect_named_elements <- function(x, expected) {
+  missing <- setdiff(expected, names(x))
+  expect_equal(missing, character(0), info = paste("Missing field(s):", paste(missing, collapse = ", ")))
+}
+
+
+expect_successful_ensemble <- function(x, expected_fields = NULL) {
+  expect_s3_class(x, "ensemble_sdbuildR")
+  expect_true(x[["success"]])
+  expect_false(is.null(x[["summary"]]))
+
+  if (!is.null(expected_fields)) {
+    expect_named_elements(x, expected_fields)
+  }
+
+  invisible(x)
+}
+
 #' Execute code quietly (suppressing messages and warnings)
 #'
 #' @noRd

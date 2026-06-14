@@ -72,11 +72,9 @@ compile <- function(object, only_stocks = FALSE,
                     vars = NULL) {
   language <- object[["sim_settings"]][["language"]]
 
-  if (!is.null(vars)) {
-    vars <- validate_sim_vars(object, vars)
-    stock_names <- get_variables_by_type(object, "stock")[["name"]]
-    only_stocks <- all(vars %in% stock_names)
-  }
+  output_args <- resolve_sim_output_args(object, only_stocks, vars)
+  only_stocks <- output_args[["only_stocks"]]
+  vars <- output_args[["vars"]]
 
   # Populate the model structure cache (ordering, times, funcs, static, ode, etc.)
   object <- pre_assemble_components(object)
@@ -426,38 +424,14 @@ compile_post <- function(object, filepath_sim = NULL, language, vars = NULL) {
     )
   } else if (language == "Julia") {
     intermediaries_or_nothing <- ifelse(save_intermediaries, P[["intermediaries"]], "nothing")
-
-    stock_names <- get_variables_by_type(object, "stock")[["name"]]
-    if (!is.null(vars)) {
-      vars <- validate_sim_vars(object, vars)
-      selected_stock_names <- vars[vars %in% stock_names]
-      save_idx <- which(stock_names %in% selected_stock_names)
-      save_idx_arg <- if (length(save_idx) > 0) {
-        paste0("[", paste0(save_idx, collapse = ", "), "]")
-      } else {
-        "Int[]"
-      }
-
-      selected_inter_names <- vars[vars %in% intermediaries[["names"]]]
-      intermediary_names_arg <- if (length(selected_inter_names) > 0) {
-        paste0("[:", paste0(selected_inter_names, collapse = ", :"), "]")
-      } else {
-        "Symbol[]"
-      }
-
-      selected_var_names_arg <- paste0("[:", paste0(vars, collapse = ", :"), "]")
-    } else {
-      save_idx_arg <- "nothing"
-      intermediary_names_arg <- paste0(P[["model_setup_name"]], ".", P[["intermediary_names"]])
-      selected_var_names_arg <- "nothing"
-    }
+    selection <- julia_output_selection_args(object, vars)
 
     script <- fmt_script("post_ode", language,
       intermediaries_or_nothing = intermediaries_or_nothing,
       filepath_sim = filepath_sim,
-      intermediary_names_arg = intermediary_names_arg,
-      save_idx_arg = save_idx_arg,
-      selected_var_names_arg = selected_var_names_arg
+      intermediary_names_arg = selection[["intermediary_names_arg"]],
+      save_idx_arg = selection[["save_idx_arg"]],
+      selected_var_names_arg = selection[["selected_var_names_arg"]]
     )
   }
 

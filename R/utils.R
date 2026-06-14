@@ -691,6 +691,32 @@ validate_sim_vars <- function(object, vars) {
 }
 
 
+#' Resolve simulation output variable settings
+#'
+#' If `vars` is supplied, it overrides `only_stocks`: stock-only output remains
+#' TRUE only when all requested variables are stocks.
+#'
+#' @inheritParams update.sdbuildR
+#' @param only_stocks Logical stock-only output setting.
+#' @param vars Character vector of variable names, or NULL.
+#'
+#' @returns List with validated `vars` and resolved `only_stocks`.
+#' @noRd
+resolve_sim_output_args <- function(object, only_stocks, vars) {
+  if (is.null(vars)) {
+    return(list(only_stocks = only_stocks, vars = NULL))
+  }
+
+  vars <- validate_sim_vars(object, vars)
+  stock_names <- get_variables_by_type(object, "stock")[["name"]]
+
+  list(
+    only_stocks = all(vars %in% stock_names),
+    vars = vars
+  )
+}
+
+
 #' Filter long simulation data frame by selected variables
 #'
 #' @param df Data frame with a "variable" column.
@@ -1662,7 +1688,7 @@ ctx_add_variables <- function(ctx) {
   # Add temporary columns to object$variables if they don't exist yet
   for (col in temp_cols) {
     if (!col %in% colnames(ctx$object[["variables"]])) {
-      ctx$object[["variables"]][[col]] <- NA
+      ctx$object[["variables"]][[col]] <- rep(NA_character_, nrow(ctx$object[["variables"]]))
     }
   }
 

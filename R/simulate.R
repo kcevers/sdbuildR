@@ -62,11 +62,9 @@ simulate.sdbuildR <- function(
   only_stocks <- object[["sim_settings"]][["only_stocks"]]
   vars <- object[["sim_settings"]][["vars"]]
 
-  if (!is.null(vars)) {
-    vars <- validate_sim_vars(object, vars)
-    stock_names <- get_variables_by_type(object, "stock")[["name"]]
-    only_stocks <- all(vars %in% stock_names)
-  }
+  output_args <- resolve_sim_output_args(object, only_stocks, vars)
+  only_stocks <- output_args[["only_stocks"]]
+  vars <- output_args[["vars"]]
 
   if (tolower(object[["sim_settings"]][["language"]]) == "julia") {
     return(simulate_julia(object,

@@ -1005,6 +1005,198 @@ prep_json <- function(read_file) {
 }
 
 
+#' Add parsed Insight Maker metadata to import context
+#'
+#' @param ctx Import context.
+#' @param settings Parsed simulation settings.
+#' @param meta Parsed model metadata.
+#' @param macros Raw macro text.
+#'
+#' @returns Updated import context.
+#' @noRd
+ctx_add_parsed_IM_info <- function(ctx, settings, meta, macros) {
+  ctx$settings <- settings
+  ctx$meta <- meta
+  ctx$macros_raw <- macros %||% ""
+
+  if (!is.null(settings)) {
+    ctx$object <- sim_settings_IM(ctx$object,
+      method = settings[["method"]],
+      time_units = settings[["time_units"]],
+      start = settings[["start"]],
+      length = settings[["length"]],
+      dt = settings[["dt"]]
+    )
+  }
+
+  if (!is.null(meta)) {
+    ctx <- ctx_add_meta(ctx, meta)
+
+    vendor_fields <- c(
+      "insightmaker_version", "insightmaker_method",
+      "insightmaker_author_id", "insightmaker_model_id"
+    )
+    for (field in vendor_fields) {
+      if (field %in% names(meta)) {
+        ctx$vendor_meta[[field]] <- meta[[field]]
+      }
+    }
+  }
+
+  ctx
+}
+
+
+#' Remove comments from imported model element equations
+#'
+#' @param model_elements List of normalized source model elements.
+#'
+#' @returns Updated model element list.
+#' @noRd
+prep_model_element_equations_IM <- function(model_elements) {
+  lapply(model_elements, function(x) {
+    if (is_defined(x[["eqn_insightmaker"]])) {
+      out <- prep_eqn_IM(x[["eqn_insightmaker"]])
+      x[["eqn_insightmaker"]] <- out[["eqn"]]
+      x[["doc"]] <- paste0(x[["doc"]], out[["doc"]])
+    }
+    x
+  })
+}
+
+
+#' Convert source element types to sdbuildR import types
+#'
+#' @param model_elements List of normalized source model elements.
+#' @param model_element_types Original source element types.
+#'
+#' @returns Updated model element list.
+#' @noRd
+normalize_model_element_types_IM <- function(model_elements, model_element_types) {
+  idx <- model_element_types == "converter"
+  model_elements[idx] <- lapply(model_elements[idx], function(x) {
+    x[["type"]] <- "lookup"
+
+    x[["interpolation"]] <- tolower(x[["interpolation"]])
+    if (x[["interpolation"]] == "none") {
+      x[["interpolation"]] <- "constant"
+    }
+    x[["extrapolation"]] <- "nearest"
+    x[["eqn_insightmaker"]] <- NULL
+
+    x
+  })
+
+  idx <- model_element_types == "variable"
+  model_elements[idx] <- lapply(model_elements[idx], function(x) {
+    x[["type"]] <- "aux"
+    x
+  })
+
+  idx <- model_element_types == "stock"
+  any_conveyors <- any(vapply(model_elements[idx], function(x) {
+    is_defined(x[["stockmode"]]) && tolower(x[["stockmode"]]) == "conveyor"
+  }, logical(1)))
+  if (any_conveyors) {
+    cli::cli_inform(c(
+      "!" = "Conveyor stocks detected.",
+      "i" = "sdbuildR does not support conveyors; they will be treated as regular stocks."
+    ))
+  }
+
+  model_elements
+}
+
+
+#' Keep only import properties used downstream
+#'
+#' @param model_elements List of normalized model elements.
+#'
+#' @returns Filtered model element list.
+#' @noRd
+keep_import_model_properties_IM <- function(model_elements) {
+  keep_prop <- get_building_block_prop()
+  all_prop <- c(
+    unique(unlist(keep_prop)),
+    "eqn_insightmaker", "name_insightmaker", "id_insightmaker"
+  )
+
+  lapply(model_elements, function(x) x[names(x) %in% all_prop])
+}
+
+
+#' Order imported model elements for object construction
+#'
+#' @param model_elements List of normalized model elements.
+#'
+#' @returns Ordered model element list.
+#' @noRd
+order_import_model_elements_IM <- function(model_elements) {
+  model_elements <- stats::setNames(
+    model_elements,
+    unname(get_map(model_elements, "name"))
+  )
+
+  final_types <- vapply(model_elements, function(x) x[["type"]] %||% "", character(1))
+  c(
+    model_elements[final_types == "stock"],
+    model_elements[final_types == "aux"],
+    model_elements[final_types == "flow"],
+    model_elements[final_types == "lookup"]
+  )
+}
+
+
+#' Prepare imported model elements for adding to context
+#'
+#' @param model_elements List of parsed source model elements.
+#'
+#' @returns Ordered import-ready model element list.
+#' @noRd
+prepare_import_model_elements_IM <- function(model_elements) {
+  model_element_types <- vapply(model_elements, function(x) x[["type"]] %||% "", character(1))
+
+  model_elements <- prep_model_element_equations_IM(model_elements)
+  model_elements <- normalize_model_element_types_IM(model_elements, model_element_types)
+  model_elements <- keep_import_model_properties_IM(model_elements)
+  order_import_model_elements_IM(model_elements)
+}
+
+
+#' Print debug summary for imported model context
+#'
+#' @param ctx Import context.
+#'
+#' @returns Invisibly returns NULL.
+#' @noRd
+debug_import_context_IM <- function(ctx) {
+  if (!P[["debug"]]) {
+    return(invisible(NULL))
+  }
+
+  n_stocks <- sum(ctx$object[["variables"]][["type"]] == "stock")
+  n_flows <- sum(ctx$object[["variables"]][["type"]] == "flow")
+  n_auxs <- sum(ctx$object[["variables"]][["type"]] == "aux")
+  n_gfs <- sum(ctx$object[["variables"]][["type"]] == "lookup")
+
+  cli::cli_inform(c(
+    "Model elements detected:",
+    "i" = "Stocks: {.val {n_stocks}}",
+    "i" = "Flows: {.val {n_flows}}",
+    "i" = "Auxiliaries: {.val {n_auxs}}",
+    "i" = "Graphical Functions: {.val {n_gfs}}"
+  ))
+
+  if (!is.null(ctx$object[["macros_temp"]]) && nzchar(ctx$object[["macros_temp"]][["eqn"]])) {
+    cli::cli_inform(c("i" = "User-defined macros and globals detected in model."))
+  } else {
+    cli::cli_inform(c("i" = "No user-defined macros or globals detected."))
+  }
+
+  invisible(NULL)
+}
+
+
 #' Convert .InsightMaker or .json file to import context
 #'
 #' Parses the file and populates an import context with the intermediate
@@ -1034,146 +1226,10 @@ file_to_sdbuildR <- function(read_file, ext) {
   model_elements <- out[["model_elements"]]
   macros <- out[["macros"]]
 
-  # Store settings and meta in context
-  ctx$settings <- settings
-  ctx$meta <- meta
-  ctx$macros_raw <- macros %||% ""
-
-  # Add sim_settings to object (ready immediately)
-  if (!is.null(settings)) {
-    ctx$object <- sim_settings_IM(ctx$object,
-      method = settings[["method"]],
-      time_units = settings[["time_units"]],
-      start = settings[["start"]],
-      length = settings[["length"]],
-      dt = settings[["dt"]]
-    )
-  }
-
-  # Add meta to object (ready immediately)
-  if (!is.null(meta)) {
-    ctx$object[["meta"]] <- utils::modifyList(ctx$object[["meta"]], meta)
-  }
-
-  # Extract vendor meta info for import_metadata
-  if (!is.null(meta)) {
-    vendor_fields <- c(
-      "insightmaker_version", "insightmaker_method",
-      "insightmaker_author_id", "insightmaker_model_id"
-    )
-    for (field in vendor_fields) {
-      if (field %in% names(meta)) {
-        ctx$vendor_meta[[field]] <- meta[[field]]
-      }
-    }
-  }
-
-  # Get types from within each element (not from list names)
-  model_element_types <- vapply(model_elements, function(x) x[["type"]] %||% "", character(1))
-
-  # Remove comments from equations
-  model_elements <- lapply(model_elements, function(x) {
-    # Graphical functions won't have an equation
-    if (is_defined(x[["eqn_insightmaker"]])) {
-      out <- prep_eqn_IM(x[["eqn_insightmaker"]])
-      x[["eqn_insightmaker"]] <- out[["eqn"]]
-      x[["doc"]] <- paste0(x[["doc"]], out[["doc"]])
-    }
-    return(x)
-  })
-
-  # Converters -> graphical functions (gf)
-  idx <- model_element_types == "converter"
-  model_elements[idx] <-
-    lapply(model_elements[idx], function(x) {
-      x[["type"]] <- "lookup"
-
-      x[["interpolation"]] <- tolower(x[["interpolation"]])
-      if (x[["interpolation"]] == "none") {
-        x[["interpolation"]] <- "constant"
-      }
-      x[["extrapolation"]] <- "nearest" # Default
-
-      # Remove equation
-      x[["eqn_insightmaker"]] <- NULL
-
-      return(x)
-    })
-
-  # Variables -> Auxiliaries
-  idx <- model_element_types == "variable"
-  model_elements[idx] <- lapply(model_elements[idx], function(x) {
-    x[["type"]] <- "aux"
-    return(x)
-  })
-
-  # Stocks
-  idx <- "stock" == model_element_types
-  any_conveyors <- any(vapply(model_elements[idx], function(x) {
-    is_defined(x[["stockmode"]]) && tolower(x[["stockmode"]]) == "conveyor"
-  }, logical(1)))
-  if (any_conveyors) {
-    cli::cli_inform(c(
-      "!" = "Conveyor stocks detected.",
-      "i" = "sdbuildR does not support conveyors; they will be treated as regular stocks."
-    ))
-  }
-
-  # model_elements[idx] <-
-  #   lapply(model_elements[idx], function(x) {
-  #     if (is_defined(x[["stockmode"]])) {
-  #       if (tolower(x[["stockmode"]]) == "conveyor") {
-  #         x[["conveyor"]] <- TRUE
-  #         x[["len"]] <- x[["delay"]] # ** check name delay in .json
-  #       }
-  #     }
-  #     return(x)
-  #   })
-
-  # Only keep selected properties
-  keep_prop <- get_building_block_prop()
-
-  all_prop <- c(
-    unique(unlist(keep_prop)),
-    "eqn_insightmaker", "name_insightmaker", "id_insightmaker"
-    # "conveyor", "len" # keep for prep_conveyor_IM()
-  )
-
-  model_elements <- lapply(model_elements, function(x) {
-    return(x[names(x) %in% all_prop])
-  })
-
-  # Name elements by variable name
-  model_elements <- stats::setNames(
-    model_elements,
-    unname(get_map(model_elements, "name"))
-  )
-
-  # Combine all model elements into a single list (ordered by type)
-  # Use the types we extracted earlier (before type transformations)
-  # But account for the type changes: converter -> gf, variable -> aux
-  final_types <- vapply(model_elements, function(x) x[["type"]] %||% "", character(1))
-  all_elements <- c(
-    model_elements[final_types == "stock"],
-    model_elements[final_types == "aux"],
-    model_elements[final_types == "flow"],
-    model_elements[final_types == "lookup"]
-  )
+  ctx <- ctx_add_parsed_IM_info(ctx, settings, meta, macros)
 
   # Store variables in context
-  ctx$variables <- all_elements
-
-  # Initialize temporary columns that will be used during conversion
-  # These columns will be preserved by add_variable_row() and removed at the end
-  cols <- c(
-    "eqn_insightmaker",
-    "name_insightmaker", "id_insightmaker"
-    # "conveyor", "len"
-  )
-  # Add each temporary column to the empty variables data frame
-  for (col in cols) {
-    ctx$object[["variables"]][[col]] <- character(0)
-  }
+  ctx$variables <- prepare_import_model_elements_IM(model_elements)
 
   # Capture original variable info for import_metadata BEFORE any conversions
   ctx <- ctx_capture_original_variables(ctx)
@@ -1190,30 +1246,7 @@ file_to_sdbuildR <- function(read_file, ext) {
   ctx$object <- prep_globals_IM(ctx$object, macros)
   ctx$object <- prep_converters_IM(ctx$object)
 
-  if (P[["debug"]]) {
-    n_stocks <- sum(ctx$object[["variables"]][["type"]] == "stock")
-    n_flows <- sum(ctx$object[["variables"]][["type"]] == "flow")
-    n_auxs <- sum(ctx$object[["variables"]][["type"]] == "aux")
-    n_gfs <- sum(ctx$object[["variables"]][["type"]] == "lookup")
-
-    cli::cli_inform(c(
-      "Model elements detected:",
-      "i" = "Stocks: {.val {n_stocks}}",
-      "i" = "Flows: {.val {n_flows}}",
-      "i" = "Auxiliaries: {.val {n_auxs}}",
-      "i" = "Graphical Functions: {.val {n_gfs}}"
-    ))
-
-    if (!is.null(ctx$object[["macros_temp"]]) && nzchar(ctx$object[["macros_temp"]][["eqn"]])) {
-      cli::cli_inform(c(
-        "i" = "User-defined macros and globals detected in model."
-      ))
-    } else {
-      cli::cli_inform(c(
-        "i" = "No user-defined macros or globals detected."
-      ))
-    }
-  }
+  debug_import_context_IM(ctx)
 
   ctx
 }

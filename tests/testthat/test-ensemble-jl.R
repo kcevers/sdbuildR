@@ -96,21 +96,13 @@ test_that("ensemble() runs successfully", {
   sfm <- make_jl_ensemble_sfm()
 
   sims <- silence(ensemble(sfm, n = 3))
-  expect_true(sims[["success"]])
-  expect_false(is.null(sims[["summary"]]))
 
   # correct structure
-  expected_fields <- c(
+  expect_successful_ensemble(sims, c(
     "success", "df", "summary", "n", "n_total",
     "n_conditions", "conditions", "init", "constants",
     "script", "duration"
-  )
-  for (field in expected_fields) {
-    expect_true(
-      field %in% names(sims),
-      info = paste("Missing field:", field)
-    )
-  }
+  ))
 })
 
 

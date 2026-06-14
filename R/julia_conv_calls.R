@@ -11,7 +11,7 @@ emit_julia_call <- function(node, fname, args, var_names) {
   if (is.null(syntax_row)) {
     # Unknown function (user custom func, graphical function reference, or a
     # passthrough like return()): emit verbatim so later substitution applies.
-    return(emit_unknown_julia_call(fname, arg_strings))
+    return(paste0(fname, "(", paste(arg_strings, collapse = ", "), ")"))
   }
 
   emit_mapped_julia_call(syntax_row, arg_strings, var_names)
@@ -49,12 +49,6 @@ emit_julia_call_args <- function(args, var_names) {
   ifelse(nzchar(arg_names), paste0(arg_names, " = ", emitted), emitted)
 }
 
-
-#' Emit an unknown function call verbatim
-#' @noRd
-emit_unknown_julia_call <- function(fname, arg_strings) {
-  paste0(fname, "(", paste(arg_strings, collapse = ", "), ")")
-}
 
 #' Emit a known mapped Julia function call
 #' @noRd

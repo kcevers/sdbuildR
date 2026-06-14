@@ -378,7 +378,7 @@ pl_func_form <- plotly::subplot(pl_linear, pl_hill,
 print(pl_func_form)
 ```
 
-```{r, include=FALSE}
+```{r, include=FALSE, eval = has_internet(), error = TRUE}
 # Functional forms revision figure
 if (recreate_figs) {
   # Functional forms
@@ -786,7 +786,7 @@ if (recreate_figs) {
 
 
 
-```{r include=FALSE}
+```{r include=FALSE, eval = has_internet(), error = TRUE}
 if (recreate_figs) {
   # Create subplot figure
   pl_list <- list()
@@ -1366,7 +1366,7 @@ if (recreate_figs) {
 
 
 
-```{r include=FALSE}
+```{r include=FALSE, eval = has_internet(), error = TRUE}
 if (recreate_figs) {
   # Create subplot figure
   pl_list <- list()
@@ -1625,7 +1625,7 @@ plot(sim, vars = vars)
 ```
 
 
-```{r include=FALSE}
+```{r include=FALSE, eval = has_internet(), error = TRUE}
 if (recreate_figs) {
   show_vars <- c("engagement", "resources", "energy", "demands", "performance")
   vars_ <- VARS[VARS %in% show_vars]
@@ -1721,7 +1721,7 @@ pl
 
 
 
-```{r include=FALSE}
+```{r include=FALSE, eval = has_internet(), error = TRUE}
 if (recreate_figs) {
   # Model boundary
   show_vars <- c("engagement", "demands", "performance")
@@ -1983,7 +1983,7 @@ print(tab2)
 ```
 
 
-```{r learning-figure-ensembles, include=FALSE}
+```{r learning-figure-ensembles, include=FALSE, eval = has_internet(), error = TRUE}
 if (recreate_figs) {
   show_vars <- c("engagement", "demands") |> rev()
   vars_ <- VARS[VARS %in% show_vars]
@@ -2162,13 +2162,14 @@ sfm <- update(sfm, df = df)
 # This modified model can now be used for the ensemble simulation, which will yield a dataset with variability in both initial conditions and parameters.
 
 # Simulation study
-vars <- c("energy", "demands", "engagement", "resources", "performance")
+# vars <- c("energy", "demands", "engagement", "resources", "performance")
+vars <- c("demands", "engagement")
 sfm <- sim_settings(sfm,
   save_at = 1,
   # Modify stop to a round value so the last value is included
   stop = round(365 / 2), vars = vars, save_sims = TRUE
 )
-n <- 100 # 10000
+n <- ifelse(interactive(), 10000, 1000)
 
 sims <- ensemble(sfm, n = n, save_sims = TRUE)
 plot(sims, vars = vars, which = "summary")
@@ -2185,6 +2186,7 @@ x2 <- "demands"
 lags <- seq(10, as.numeric(sfm$sim_settings$stop) - wave1, by = 1)
 
 df <- as.data.frame(sims, direction = "wide", which = "sims")
+rm(sims)
 dfX <- df[, c("sim", "time", x1)]
 dfD <- df[, c("sim", "time", x2)]
 dfX_wave1 <- dfX[dfX$time == wave1, setdiff(names(dfX), "time")]
@@ -2356,7 +2358,7 @@ pl <- plotly::plot_ly(results_df,
 print(pl)
 ```
 
-```{r include=FALSE}
+```{r include=FALSE, eval = has_internet(), error = TRUE}
 if (recreate_figs) {
   export_plot(pl,
     file.path(filepath_figs, "JDR_SEM_across_lags.pdf"),
