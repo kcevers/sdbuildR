@@ -22,3 +22,4 @@
 ^tests/testthat/testdata/psychomodels($|/)
 ^CRAN-SUBMISSION$
 ^\.claude($|/)
+^vignettes/articles$

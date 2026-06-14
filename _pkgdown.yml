@@ -6,6 +6,7 @@ articles:
 - title: Vignettes
   navbar: ~
   contents:
+  - articles/a_test
   - articles/build
   - articles/ensemble
   - articles/unit-tests

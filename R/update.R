@@ -1708,7 +1708,7 @@ check_var_existence <- function(name, var_names) {
   if (any(!idx_exist)) {
     missing_vars <- name[!idx_exist]
     cli::cli_abort(c(
-      "Variable{cli::qty(length(missing_vars))}{?s} not found in model.",
+      "{cli::qty(length(missing_vars))}Variable{?s} not found in model.",
       "x" = "{.code {missing_vars}} {cli::qty(length(missing_vars))}{?does/do} not exist."
     ))
   }
