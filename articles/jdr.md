@@ -616,13 +616,6 @@ test:
 ``` r
 
 verify(sfm) |> plot(status = "fail")
-#> 
-#> ── Stock-and-Flow Unit Test Results ────────────────────────────────────────────
-#> 1/2 tests passed.
-#> ✔ 1. undermining is at least 0 (for all values)
-#> ✖ 2. the last 1 value of performance is less than 0.1 (demands = 0,
-#>   exo_demand_rate = 0, undermining_rate = 0)
-#>   Expected: TRUE Actual: FALSE
 ```
 
 Despite demands being zero throughout the simulation, performance
@@ -710,8 +703,8 @@ In general, behaviours should always be positive:
 
 ``` r
 
-sfm <- unit_test(sfm, expr = all(proactive >= 0))
-sfm <- unit_test(sfm, expr = all(work >= 0))
+sfm <- unit_test(sfm, expr = all(proactive >= 0)) |>
+  unit_test(expr = all(work >= 0))
 
 verify(sfm)
 #> 
@@ -792,6 +785,7 @@ sfm <- unit_test(sfm,
 )
 
 result <- verify(sfm)
+print(result)
 #> 
 #> ── Stock-and-Flow Unit Test Results ────────────────────────────────────────────
 #> 11/11 tests passed.
@@ -808,14 +802,6 @@ result <- verify(sfm)
 #> ✔ 10. the last 1 value of engagement is less than 0.01 (resources = 0,
 #>   exo_resource_rate = 0)
 #> ✔ 11. is.finite([engagement, resources, energy, demands]) (for all values)
-#>   (engagement = 0, resources = 0, energy = 0, demands = 0)
-print(result)
-#> 
-#> ── Stock-and-Flow Unit Test Results ────────────────────────────────────────────
-#> 11/11 tests passed.
-#> ✔ 1. undermining is at least 0 (for all values)✔ 2. the last 1 value of performance is less than 0.1 (demands = 0,
-#>   exo_demand_rate = 0, undermining_rate = 0)✔ 3. the correlation between demands and energy is less than -0.2✔ 4. the correlation between resources and energy is greater than 0.2✔ 5. the correlation between engagement and performance is greater than 0.2✔ 6. the correlation between performance and energy is greater than 0.2✔ 7. proactive is at least 0 (for all values)✔ 8. work is at least 0 (for all values)✔ 9. motivation is equal to 0 (for all values) (motivation_rate = 0)✔ 10. the last 1 value of engagement is less than 0.01 (resources = 0,
-#>   exo_resource_rate = 0)✔ 11. is.finite([engagement, resources, energy, demands]) (for all values)
 #>   (engagement = 0, resources = 0, energy = 0, demands = 0)
 ```
 
@@ -835,6 +821,7 @@ sfm <- unit_test(sfm,
 )
 
 result <- verify(sfm)
+print(result)
 #> 
 #> ── Stock-and-Flow Unit Test Results ────────────────────────────────────────────
 #> 12/12 tests passed.
@@ -853,15 +840,6 @@ result <- verify(sfm)
 #> ✔ 11. is.finite([engagement, resources, energy, demands]) (for all values)
 #>   (engagement = 0, resources = 0, energy = 0, demands = 0)
 #> ✔ 12. is.finite([engagement, resources, energy, demands]) (for all values)
-#>   (engagement = 5, resources = 5, energy = 5, demands = 5)
-print(result)
-#> 
-#> ── Stock-and-Flow Unit Test Results ────────────────────────────────────────────
-#> 12/12 tests passed.
-#> ✔ 1. undermining is at least 0 (for all values)✔ 2. the last 1 value of performance is less than 0.1 (demands = 0,
-#>   exo_demand_rate = 0, undermining_rate = 0)✔ 3. the correlation between demands and energy is less than -0.2✔ 4. the correlation between resources and energy is greater than 0.2✔ 5. the correlation between engagement and performance is greater than 0.2✔ 6. the correlation between performance and energy is greater than 0.2✔ 7. proactive is at least 0 (for all values)✔ 8. work is at least 0 (for all values)✔ 9. motivation is equal to 0 (for all values) (motivation_rate = 0)✔ 10. the last 1 value of engagement is less than 0.01 (resources = 0,
-#>   exo_resource_rate = 0)✔ 11. is.finite([engagement, resources, energy, demands]) (for all values)
-#>   (engagement = 0, resources = 0, energy = 0, demands = 0)✔ 12. is.finite([engagement, resources, energy, demands]) (for all values)
 #>   (engagement = 5, resources = 5, energy = 5, demands = 5)
 ```
 
@@ -918,25 +896,6 @@ Plot all tests:
 ``` r
 
 verify(sfm) |> plot(nrows = 3)
-#> 
-#> ── Stock-and-Flow Unit Test Results ────────────────────────────────────────────
-#> 12/12 tests passed.
-#> ✔ 1. undermining is at least 0 (for all values)
-#> ✔ 2. the last 1 value of performance is less than 0.1 (demands = 0,
-#>   exo_demand_rate = 0, undermining_rate = 0)
-#> ✔ 3. the correlation between demands and energy is less than -0.2
-#> ✔ 4. the correlation between resources and energy is greater than 0.2
-#> ✔ 5. the correlation between engagement and performance is greater than 0.2
-#> ✔ 6. the correlation between performance and energy is greater than 0.2
-#> ✔ 7. proactive is at least 0 (for all values)
-#> ✔ 8. work is at least 0 (for all values)
-#> ✔ 9. motivation is equal to 0 (for all values) (motivation_rate = 0)
-#> ✔ 10. the last 1 value of engagement is less than 0.01 (resources = 0,
-#>   exo_resource_rate = 0)
-#> ✔ 11. is.finite([engagement, resources, energy, demands]) (for all values)
-#>   (engagement = 0, resources = 0, energy = 0, demands = 0)
-#> ✔ 12. is.finite([engagement, resources, energy, demands]) (for all values)
-#>   (engagement = 5, resources = 5, energy = 5, demands = 5)
 ```
 
 ### Uncertainty
@@ -999,7 +958,7 @@ sfm2 <- discard(sfm0, undermining)
 sim2 <- simulate(sfm2)
 pl2 <- plot(sim2, showlegend = FALSE)
 
-pl <- plotly::subplot(pl1, pl2, nrows = 1, shareY = TRUE)
+pl <- plotly::subplot(pl1, pl2, nrows = 2, shareY = TRUE)
 pl
 ```
 
@@ -1189,7 +1148,7 @@ model for a thousand iterations:
 
 sims <- ensemble(sfm, n = 1000)
 #> Starting ensemble simulation in "Julia" with 1000 simulations.
-#> ✔ Ensemble simulation completed in 15.2645 seconds.
+#> ✔ Ensemble simulation completed in 14.7345 seconds.
 plot(sims, vars = c("engagement", "demands"))
 ```
 
@@ -1219,7 +1178,7 @@ n <- 100
 sims <- ensemble(sfm, n = n, conditions = conditions)
 #> Starting ensemble simulation in "Julia" with 300 simulations in total.
 #> ℹ 3 conditions x 100 simulations per condition.
-#> ✔ Ensemble simulation completed in 3.5735 seconds.
+#> ✔ Ensemble simulation completed in 3.4059 seconds.
 
 # Plot all trajectories
 plot(sims,
@@ -1268,7 +1227,7 @@ functions.
 ``` r
 
 sfm <- sfm |>
-  constant(start, eqn = 21) |>
+  constant(start, eqn = 14) |>
   constant(duration, eqn = 14) |>
   constant(intervention, eqn = pulse(times, start, width = duration)) |>
   flow(intervention_effect,
@@ -1291,7 +1250,7 @@ Run an ensemble simulation:
 sfm <- sim_settings(sfm, save_sims = TRUE)
 sims <- ensemble(sfm, n = n)
 #> Starting ensemble simulation in "Julia" with 100 simulations.
-#> ✔ Ensemble simulation completed in 2.5534 seconds.
+#> ✔ Ensemble simulation completed in 2.4835 seconds.
 plot(sims,
   which = "sims", sim = 1:n, alpha = .75, central_tendency = FALSE,
   vars = c("engagement", "demands", "motivation_rate")
@@ -1310,7 +1269,7 @@ sfm <- sim_settings(sfm,
 )
 sims <- ensemble(sfm, n = n)
 #> Starting ensemble simulation in "Julia" with 1000 simulations.
-#> ✔ Ensemble simulation completed in 28.6305 seconds.
+#> ✔ Ensemble simulation completed in 27.4234 seconds.
 df <- as.data.frame(sims, direction = "wide", which = "sims")
 tab <- table(round(df$engagement)) |>
   prop.table() |>
@@ -1318,8 +1277,8 @@ tab <- table(round(df$engagement)) |>
 colnames(tab) <- c("Engagement", "Proportion")
 print(tab)
 #>   Engagement Proportion
-#> 1          0     0.2115
-#> 2          1     0.6710
+#> 1          0     0.1895
+#> 2          1     0.6930
 #> 3          2     0.1175
 ```
 
@@ -1330,7 +1289,7 @@ A shorter intervention is not as effective.
 sfm2 <- update(sfm, duration, eqn = 7)
 sims2 <- ensemble(sfm2, n = n)
 #> Starting ensemble simulation in "Julia" with 1000 simulations.
-#> ✔ Ensemble simulation completed in 29.0774 seconds.
+#> ✔ Ensemble simulation completed in 27.7954 seconds.
 df2 <- as.data.frame(sims2, direction = "wide", which = "sims")
 tab2 <- table(round(df2$engagement)) |>
   prop.table() |>
@@ -1338,8 +1297,8 @@ tab2 <- table(round(df2$engagement)) |>
 colnames(tab2) <- c("Engagement", "Proportion")
 print(tab2)
 #>   Engagement Proportion
-#> 1          0     0.2265
-#> 2          1     0.6560
+#> 1          0     0.2050
+#> 2          1     0.6775
 #> 3          2     0.1175
 ```
 
@@ -1357,8 +1316,8 @@ model to predict the results of a cross-lagged panel model, a widely
 used analysis in the JD-R literature (Upadyaya et al. 2016; Hakanen et
 al. 2008; Sorjonen et al. 2024). We assess the cross-lagged relationship
 between job demands and work engagement with **lavaan** (Rosseel 2012)
-on an ensemble dataset (*n = 10,000*), sampled at day 20 (wave~1) and
-three months later at day 110 (wave~2).
+on an ensemble dataset (*n = 10,000*), sampled at day 20 (wave 1) and
+three months later at day 110 (wave 2).
 
 As shown above, our model implies that engagement has a strong positive
 effect on itself, whereas demands have little effect on future demands.

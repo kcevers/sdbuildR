@@ -124,12 +124,6 @@ sfm <- sdbuildR("SIR") |>
     conditions = list(infection_rate = 0.1)
   )
 res <- verify(sfm)
-#> 
-#> ── Stock-and-Flow Unit Test Results ────────────────────────────────────────────
-#> 1/2 tests passed.
-#> ✔ 1. susceptible is at least 0 (for all values)
-#> ✖ 2. lower infection rate
-#>   Expected: TRUE Actual: FALSE
 
 # Test results (default)
 as.data.frame(res)

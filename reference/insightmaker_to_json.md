@@ -8,18 +8,18 @@ models is not supported.
 ## Usage
 
 ``` r
-insightmaker_to_json(URL, file, destfile = NULL)
+insightmaker_to_json(url, file, destfile = NULL)
 ```
 
 ## Arguments
 
-- URL:
+- url:
 
   URL to Insight Maker model. Character.
 
 - file:
 
-  File path to Insight Maker model. Only used if URL is not specified.
+  File path to Insight Maker model. Only used if url is not specified.
   Needs to be a character with suffix .InsightMaker.
 
 - destfile:
@@ -47,7 +47,7 @@ Maker file".
 # Convert a model from Insight Maker to json
 destfile <- tempfile(fileext = ".json")
 json <- insightmaker_to_json(
-  URL =
+  url =
     "https://insightmaker.com/insight/43tz1nvUgbIiIOGSGtzIzj/Romeo-Juliet",
   destfile = destfile
 )

@@ -53,7 +53,7 @@ unit_test() to define tests; use unit_tests() to display them."></head><body>
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="co"># S3 method for class 'sdbuildR'</span></span>
-<span><span class="fu"><a href="verify.html">verify</a></span><span class="op">(</span><span class="va">object</span>, verbose <span class="op">=</span> <span class="cn">TRUE</span>, test <span class="op">=</span> <span class="cn">NULL</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="verify.html">verify</a></span><span class="op">(</span><span class="va">object</span>, test <span class="op">=</span> <span class="cn">NULL</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -64,10 +64,6 @@ unit_test() to define tests; use unit_tests() to display them."></head><body>
 <dd><p>An <code><a href="sdbuildR.html">sdbuildR</a></code> object.</p></dd>
 
 
-<dt id="arg-verbose">verbose<a class="anchor" aria-label="anchor" href="#arg-verbose"></a></dt>
-<dd><p>If <code>TRUE</code> (default), print results to the console.</p></dd>
-
-
 <dt id="arg-test">test<a class="anchor" aria-label="anchor" href="#arg-test"></a></dt>
 <dd><p>Integer vector of test number(s) to run (numbers-based, as shown by <code><a href="unit_tests.html">unit_tests()</a></code>).
 Defaults to <code>NULL</code> (run all tests).</p></dd>
@@ -75,7 +71,7 @@ Defaults to <code>NULL</code> (run all tests).</p></dd>
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Additional arguments passed to <code><a href="sim_settings.html">sim_settings()</a></code> (e.g., <code>seed</code>,
-<code>dt</code>) and then to <code><a href="simulate.sdbuildR.html">simulate.sdbuildR()</a></code>.</p></dd>
+<code>dt</code>).</p></dd>
 
 </dl></div>
     <div class="section level2">

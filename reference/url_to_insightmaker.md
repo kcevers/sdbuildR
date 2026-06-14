@@ -7,12 +7,12 @@ to import an Insight Maker model.
 ## Usage
 
 ``` r
-url_to_insightmaker(URL, file = NULL)
+url_to_insightmaker(url, file = NULL)
 ```
 
 ## Arguments
 
-- URL:
+- url:
 
   String with URL to an Insight Maker model
 
@@ -32,12 +32,12 @@ XML string with Insight Maker model
 ## Examples
 
 ``` r
-URL <- "https://insightmaker.com/insight/43tz1nvUgbIiIOGSGtzIzj/Romeo-Juliet"
-xml <- url_to_insightmaker(URL)
+url <- "https://insightmaker.com/insight/43tz1nvUgbIiIOGSGtzIzj/Romeo-Juliet"
+xml <- url_to_insightmaker(url)
 
 # Save model to file
 file <- tempfile(fileext = ".InsightMaker")
-xml <- url_to_insightmaker(URL, file = file)
+xml <- url_to_insightmaker(url, file = file)
 file.remove(file)
 #> [1] TRUE
 ```

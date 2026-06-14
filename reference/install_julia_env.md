@@ -31,7 +31,7 @@ Invisibly returns `NULL` after instantiating the Julia environment.
 - Activate a Julia environment using sdbuildR's Project.toml
 
 - Install StockFlowRSupport.jl from GitHub
-  (https://github.com/KCEvers/StockFlowRSupport.jl)
+  (https://github.com/kcevers/StockFlowRSupport.jl)
 
 - Install all other required Julia packages
 

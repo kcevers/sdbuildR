@@ -10,7 +10,7 @@ to display them.
 
 ``` r
 # S3 method for class 'sdbuildR'
-verify(object, verbose = TRUE, test = NULL, ...)
+verify(object, test = NULL, ...)
 ```
 
 ## Arguments
@@ -20,10 +20,6 @@ verify(object, verbose = TRUE, test = NULL, ...)
   An
   [`sdbuildR`](https://kcevers.github.io/sdbuildR/reference/sdbuildR.md)
   object.
-
-- verbose:
-
-  If `TRUE` (default), print results to the console.
 
 - test:
 
@@ -35,8 +31,7 @@ verify(object, verbose = TRUE, test = NULL, ...)
 
   Additional arguments passed to
   [`sim_settings()`](https://kcevers.github.io/sdbuildR/reference/sim_settings.md)
-  (e.g., `seed`, `dt`) and then to
-  [`simulate.sdbuildR()`](https://kcevers.github.io/sdbuildR/reference/simulate.sdbuildR.md).
+  (e.g., `seed`, `dt`).
 
 ## Value
 

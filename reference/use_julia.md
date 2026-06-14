@@ -57,11 +57,11 @@ use_julia()
 #>   /home/runner/work/_temp/Library/sdbuildR...
 #> ✔ Julia environment ready.
 
-# Start Julia with 4 threads (only works if threading is supported)
-use_julia(nthreads = 4)
+# Start Julia with 2 threads (only works if threading is supported)
+use_julia(nthreads = 2)
 #> ℹ Activating Julia environment for sdbuildR at
 #>   /home/runner/work/_temp/Library/sdbuildR...
-#> ✔ Julia environment ready with 4 threads.
+#> ✔ Julia environment ready with 2 threads.
 
 # Restart Julia session (in case of issues)
 use_julia(restart = TRUE)

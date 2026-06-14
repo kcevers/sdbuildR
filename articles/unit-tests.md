@@ -370,14 +370,6 @@ The simulations used for testing can be retrieved and inspected:
 ``` r
 
 res <- verify(sfm)
-#> 
-#> ── Stock-and-Flow Unit Test Results ────────────────────────────────────────────
-#> 3/3 tests passed.
-#> ✔ 1. Susceptible is non-negative
-#> ✔ 2. Population is conserved
-#> ✔ 3. susceptible is equal to 0 (for all values) and infected is equal to 0 (for
-#>   all values) and the successive differences of recovered is equal to 0 (for
-#>   all values) (susceptible = 0, infected = 0, recovered = 1)
 plot(res)
 ```
 
@@ -464,6 +456,7 @@ This should lead some unit tests to fail:
 ``` r
 
 res <- verify(sfm)
+print(res)
 #> 
 #> ── Stock-and-Flow Unit Test Results ────────────────────────────────────────────
 #> 1/3 tests passed.
@@ -473,15 +466,6 @@ res <- verify(sfm)
 #> ✖ 2. Population is conserved
 #>   Expected: TRUE Actual: FALSE
 #> 
-#> ✔ 3. susceptible is equal to 0 (for all values) and infected is equal to 0 (for
-#>   all values) and the successive differences of recovered is equal to 0 (for
-#>   all values) (susceptible = 0, infected = 0, recovered = 1)
-print(res)
-#> 
-#> ── Stock-and-Flow Unit Test Results ────────────────────────────────────────────
-#> 1/3 tests passed.
-#> ✖ 1. Susceptible is non-negative  Expected: TRUE Actual: FALSE
-#> ✖ 2. Population is conserved  Expected: TRUE Actual: FALSE
 #> ✔ 3. susceptible is equal to 0 (for all values) and infected is equal to 0 (for
 #>   all values) and the successive differences of recovered is equal to 0 (for
 #>   all values) (susceptible = 0, infected = 0, recovered = 1)

@@ -36,10 +36,6 @@ A `data.frame`.
 sfm <- sdbuildR("SIR") |>
   unit_test(expr = all(susceptible >= 0))
 res <- verify(sfm)
-#> 
-#> ── Stock-and-Flow Unit Test Results ────────────────────────────────────────────
-#> 1/1 test passed.
-#> ✔ 1. susceptible is at least 0 (for all values)
 tail(res)
 #>   test                                      label status outcome
 #> 1    1 susceptible is at least 0 (for all values)   pass    TRUE
