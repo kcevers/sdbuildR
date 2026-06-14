@@ -1,6 +1,6 @@
 Package: sdbuildR
 Title: Easily Build, Simulate, and Explore Stock-and-Flow Models
-Version: 1.0.8.9000
+Version: 1.0.8.9001
 Date: 2025-10-23
 Authors@R: 
     person("Kyra Caitlin", "Evers", , "kyra.c.evers@gmail.com", role = c("aut", "cre", "cph"),
