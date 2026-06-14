@@ -2,23 +2,20 @@
 # Need help debugging build failures? Start at https://github.com/r-lib/actions#where-to-find-help
 on:
   push:
-    branches: [main, master, stockflow]
+    branches: [stockflow]
   pull_request:
   release:
     types: [published]
   workflow_dispatch:
 
-name: pkgdown.yaml
+name: debug-jdr.yaml
 
 permissions: read-all
 
 jobs:
-  pkgdown:
+  debug-jdr:
     runs-on: ubuntu-latest
-    # Only restrict concurrency for non-PR jobs
-    concurrency:
-      group: pkgdown-${{ github.event_name == 'pull_request' && github.run_id || github.ref }}
-      cancel-in-progress: false
+    timeout-minutes: 60
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       NOT_CRAN: "true"
@@ -26,8 +23,6 @@ jobs:
       SDBUILDR_CREATE_TEST_FIGS: "true"
       SDBUILDR_VIGNETTE_TRACE_FILE: "jdr-render-trace.log"
 
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v5
 
@@ -39,7 +34,7 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::pkgdown, local::.
+          extra-packages: any::pkgdown, any::rmarkdown, local::.
           needs: website
 
       # Necessary to prevent CHOLMOD error
@@ -48,7 +43,6 @@ jobs:
         with:
           version: '1.12.6'
 
-      # Print Julia environment variables
       - name: Print Julia environment
         run: |
           echo "JULIA_BINDIR: $JULIA_BINDIR"
@@ -57,7 +51,7 @@ jobs:
           julia --version
         shell: bash
 
-      - name: Build site
+      - name: Render jdr article only
         run: |
           : > "$SDBUILDR_VIGNETTE_TRACE_FILE"
           tail -n +1 -f "$SDBUILDR_VIGNETTE_TRACE_FILE" &
@@ -78,33 +72,15 @@ jobs:
           }
 
           trap cleanup EXIT
-          trap 'echo "Received termination signal while building pkgdown"; cleanup' TERM INT
+          trap 'echo "Received termination signal while rendering jdr"; cleanup' TERM INT
 
-          Rscript -e 'pkgdown::build_site_github_pages(new_process = FALSE, install = FALSE)'
+          Rscript -e 'pkgload::load_all(); rmarkdown::render("vignettes/articles/jdr.Rmd", output_dir = tempfile(), quiet = FALSE)'
         shell: bash
 
-      - name: Print vignette trace
-        if: always()
-        run: |
-          if [ -f "$SDBUILDR_VIGNETTE_TRACE_FILE" ]; then
-            cat "$SDBUILDR_VIGNETTE_TRACE_FILE"
-          else
-            echo "No vignette trace file found at $SDBUILDR_VIGNETTE_TRACE_FILE"
-          fi
-        shell: bash
-
-      - name: Upload vignette trace
+      - name: Upload jdr trace
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: jdr-render-trace
           path: ${{ env.SDBUILDR_VIGNETTE_TRACE_FILE }}
           if-no-files-found: ignore
-
-      - name: Deploy to GitHub pages 🚀
-        if: github.event_name != 'pull_request'
-        uses: JamesIves/github-pages-deploy-action@v4.5.0
-        with:
-          clean: false
-          branch: gh-pages
-          folder: docs
