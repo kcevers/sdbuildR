@@ -2142,7 +2142,7 @@ sfm <- sim_settings(sfm,
   # Modify stop to a round value so the last value is included
   stop = round(365 / 2), vars = vars, save_sims = TRUE
 )
-n <- 10000
+n <- 100 # 10000
 
 sims <- ensemble(sfm, n = n, save_sims = TRUE)
 plot(sims, vars = vars, which = "summary")

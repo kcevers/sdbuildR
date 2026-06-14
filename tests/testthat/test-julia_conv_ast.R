@@ -42,14 +42,39 @@ test_that("distributions reuse the existing reparameterisation", {
     convert_equations_julia("aux", "z", "rnorm(1, dt)", vn)[["eqn"]])
 })
 
-test_that("unsupported constructs return NULL (caller falls back)", {
-  expect_null(convert_eqn_ast_julia("for (i in 1:3) {\n x <- i \n}", vn))
-  expect_null(convert_eqn_ast_julia("a %% b", vn)) # unhandled infix operator
-  expect_null(convert_eqn_ast_julia("if (a) b else c", vn))
-  expect_null(convert_eqn_ast_julia("1:10", vn)) # range
-  expect_null(convert_eqn_ast_julia("x[1]", vn)) # indexing
-  expect_null(convert_eqn_ast_julia("a %in% b", vn))
-  expect_null(convert_eqn_ast_julia("a$b", vn))
+test_that("ranges, indexing and special operators translate", {
+  expect_equal(convert_eqn_ast_julia("a:b", vn), "a:b")
+  expect_equal(convert_eqn_ast_julia("1:n", vn), "1:n") # integer range bound
+  expect_equal(convert_eqn_ast_julia("v[1]", vn), "v[1]") # integer index (not v[1.0])
+  expect_equal(convert_eqn_ast_julia("v[i]", vn), "v[i]")
+  expect_equal(convert_eqn_ast_julia("a %/% b", vn), "a \\u2298 b")
+  expect_equal(convert_eqn_ast_julia("a %% b", vn), "a \\u2295 b")
+  expect_equal(convert_eqn_ast_julia("a %in% b", vn), "a in b")
+  expect_equal(convert_eqn_ast_julia("a %*% b", vn), "a * b")
+})
+
+test_that("control flow and function definitions translate", {
+  expect_equal(
+    convert_eqn_ast_julia("if (a) b else c", vn),
+    "if a\nb\nelse\nc\nend"
+  )
+  expect_equal(
+    convert_eqn_ast_julia("for (i in 1:n) { s <- s + i }", c(vn, "s")),
+    "for i in 1:n\ns = s .+ i\nend"
+  )
+  expect_equal(
+    convert_eqn_ast_julia("while (x > 1) { x <- x / 2 }", vn),
+    "while x .> 1.0\nx = x ./ 2.0\nend"
+  )
+  # name = function(...) {...} becomes a named Julia function definition
+  out <- convert_eqn_ast_julia("f = function(x, p = 2) { return(x^p) }", vn)
+  expect_match(out, "^function f\\(x, p = 2\\.0\\)")
+  expect_match(out, "end$")
+})
+
+test_that("genuinely unsupported constructs return NULL (caller falls back)", {
+  expect_null(convert_eqn_ast_julia("a$b", vn)) # field access
+  expect_null(convert_eqn_ast_julia("a@b", vn)) # slot access
 })
 
 test_that("non-finite and missing literals are handled or fall back", {

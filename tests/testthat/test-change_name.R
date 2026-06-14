@@ -1,3 +1,5 @@
+withr::local_options(list(sdbuildR.defer_codegen = FALSE))
+
 test_that("change_name updates dependencies correctly", {
   sfm <- sdbuildR() |>
     update("a", "constant", eqn = 1) |>

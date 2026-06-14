@@ -259,15 +259,10 @@ sim_settings <- function(object,
     }
   }
 
-  # Selectively invalidate based on what changed
-  time_related <- c(
-    "start", "stop", "dt", "save_at", "save_n", "save_type",
-    "time_units", "method" # , "seed"
-  )
-  if (all(names(argg) %in% c("language", time_related))) {
-    object <- invalidate_assemble(object, "times")
-  } else {
-    # keep_nonnegative_stock/flow affect equation formatting
+  # Invalidate only for settings that affect the base generated code. Runtime
+  # output choices (seed, vars, only_stocks, save_sims) are handled at compile or
+  # simulate time and do not invalidate the base cache.
+  if (!language_changed && any(names(argg) %in% codegen_sim_setting_names())) {
     object <- invalidate_assemble(object, "all")
   }
 

@@ -172,10 +172,7 @@ test_that("plot() filters variables correctly", {
   expect_true(all(edges$to %in% var_names))
   expect_true(length(unique(nodes$id)) == nrow(nodes))
 
-  expect_snapshot_plot(
-    "sdbuildR-filtered-variables",
-    pl
-  )
+  pl_filtered <- pl
 
   var_names <- c("susceptible")
   pl <- plot(sfm, vars = var_names, show_aux = TRUE, show_constants = TRUE)
@@ -186,8 +183,8 @@ test_that("plot() filters variables correctly", {
   expect_true(nrow(edges) == 0)
 
   expect_snapshot_plot(
-    "sdbuildR-single-variable-filter",
-    pl
+    c("sdbuildR-filtered-variables", "sdbuildR-single-variable-filter"),
+    list(pl_filtered, pl)
   )
 })
 

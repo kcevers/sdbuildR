@@ -2,65 +2,104 @@
 expect_snapshot_plot <- function(name, code, fileext = NULL, width = 4, height = 4) {
   withr::local_pdf(NULL)
 
-  pl <- code
-  if (is.null(fileext)) {
-    if (inherits(pl, "plotly")) {
-      fileext <- ".png"
-      plotly_object <- TRUE
-    } else if (inherits(pl, "grViz")) {
-      fileext <- ".svg"
-      plotly_object <- FALSE
-    } else {
-      stop("Unable to determine file extension for plot snapshot. Please specify fileext.")
-    }
+  if (!is.character(name) || length(name) == 0L || any(!nzchar(name))) {
+    stop("Snapshot name must be a non-empty character vector.")
   }
 
-  # Announce the file before touching skips or running `code`. This way,
-  # if the skips are active, testthat will not auto-delete the corresponding snapshot file.
-  if (plotly_object) {
-    announce_snapshot_file(name = paste0(name, ".json"))
-    announce_snapshot_file(name = paste0(name, ".png"))
+  plots <- if (length(name) == 1L) {
+    list(code)
+  } else {
+    if (!is.list(code) || inherits(code, c("plotly", "grViz"))) {
+      stop("When name has length > 1, code must be a list of plot objects with the same length.")
+    }
+    code
+  }
+
+  if (length(plots) != length(name)) {
+    stop("name and code must have the same length.")
+  }
+
+  plot_types <- vapply(plots, function(pl) {
+    if (inherits(pl, "plotly")) {
+      "plotly"
+    } else if (inherits(pl, "grViz")) {
+      "grViz"
+    } else {
+      NA_character_
+    }
+  }, character(1))
+
+  if (anyNA(plot_types)) {
+    stop("Unable to determine file extension for plot snapshot. Please specify fileext.")
+  }
+
+  if (is.null(fileext)) {
+    fileext <- ifelse(plot_types == "plotly", ".png", ".svg")
+  } else {
+    fileext <- rep_len(fileext, length(plots))
+  }
+  width <- rep_len(width, length(plots))
+  height <- rep_len(height, length(plots))
+
+  plotly_idx <- which(plot_types == "plotly")
+
+  # Announce all plotly files before touching skips. This way, if a skip aborts
+  # the test, testthat will not auto-delete later snapshot files from the group.
+  if (length(plotly_idx) > 0L) {
+    for (i in plotly_idx) {
+      announce_snapshot_file(name = paste0(name[[i]], ".json"))
+      announce_snapshot_file(name = paste0(name[[i]], ".png"))
+    }
   }
 
   skip_on_cran()
   skip_if(
-    plotly_object && !has_internet(),
+    length(plotly_idx) > 0L && !has_internet(),
     "No internet connection for plot snapshot test"
   )
 
-  if (!plotly_object) {
-    # DiagrammeR
-    expect_snapshot_value(pl[["x"]][["diagram"]], style = "json")
-  } else {
-    # skip_on_os("mac") # floating point differences cause snapshot failures on GitHub Actions macOS runners
-    # skip_on_os("linux")
+  for (i in seq_along(plots)) {
+    pl <- plots[[i]]
 
-    # Stable assertion on structure
-    json <- normalize_plotly(pl) |> jsonlite::toJSON(pretty = TRUE, auto_unbox = TRUE)
+    if (plot_types[[i]] == "grViz") {
+      # DiagrammeR
+      expect_snapshot_value(pl[["x"]][["diagram"]], style = "json")
+    } else {
+      # skip_on_os("mac") # floating point differences cause snapshot failures on GitHub Actions macOS runners
+      # skip_on_os("linux")
 
-    json_path <- tempfile(fileext = ".json")
-    writeLines(json, json_path)
-    expect_snapshot_file(json_path, name = paste0(name, ".json"))
+      # Stable assertion on structure
+      json <- normalize_plotly(pl) |> jsonlite::toJSON(pretty = TRUE, auto_unbox = TRUE)
 
-    # Visual artifact for manual inspection, never fails
+      json_path <- tempfile(fileext = ".json")
+      writeLines(json, json_path)
+      expect_snapshot_file(json_path, name = paste0(name[[i]], ".json"))
+    }
+  }
+
+  # Visual artifacts for manual inspection, never fail. Run these only after all
+  # stable JSON snapshots have been compared.
+  if (length(plotly_idx) > 0L) {
     skip_if(
       Sys.getenv("SDBUILDR_CREATE_TEST_FIGS") != "true",
       "Skipping plot snapshot creation (SDBUILDR_CREATE_TEST_FIGS not set to 'true')"
     )
 
-    img_path <- tempfile(fileext = ".png")
-    tryCatch(
-      {
-        export_plot(pl, file = img_path, width = width, height = height)
-        expect_snapshot_file(img_path,
-          name = paste0(name, ".png"),
-          compare = function(old, new) TRUE
-        )
-      },
-      stockflow_export_error = function(e) {
-        testthat::skip(paste("Plot export unavailable:", conditionMessage(e)))
-      }
-    )
+    for (i in plotly_idx) {
+      img_path <- tempfile(fileext = fileext[[i]])
+      tryCatch(
+        {
+          export_plot(plots[[i]], file = img_path, width = width[[i]], height = height[[i]])
+          expect_snapshot_file(img_path,
+            name = paste0(name[[i]], fileext[[i]]),
+            compare = function(old, new) TRUE
+          )
+        },
+        stockflow_export_error = function(e) {
+          testthat::skip(paste("Plot export unavailable:", conditionMessage(e)))
+        }
+      )
+    }
   }
 
   invisible()

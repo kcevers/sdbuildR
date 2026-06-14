@@ -90,16 +90,12 @@ compile <- function(object, only_stocks = FALSE,
 
   # --- R: compile ODE (depends on only_stocks, not pre-assembled) ------------
   if (language == "R") {
-    no_assemble <- empty_assemble()
-    ode_undefined <- identical(object[["assemble"]][["ode"]], no_assemble[["ode"]])
-    if (ode_undefined) {
-      object[["assemble"]][["ode"]] <- compile_ode(object,
-        only_stocks = only_stocks,
-        language = language,
-        is_ensemble = FALSE,
-        vars = vars
-      )
-    }
+    object[["assemble"]][["ode"]] <- compile_ode(object,
+      only_stocks = only_stocks,
+      language = language,
+      is_ensemble = FALSE,
+      vars = vars
+    )
   }
 
   ode <- object[["assemble"]][["ode"]]

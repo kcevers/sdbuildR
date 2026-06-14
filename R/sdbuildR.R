@@ -67,7 +67,7 @@ sdbuildR <- function(template = NULL) {
 empty_assemble <- function() {
   list(
     language = NULL,
-    input_hash = NULL, # hash of model inputs; mismatch => cache is stale
+    input_hash = NULL, # hash of base codegen inputs; mismatch => cache is stale
     eqn_cache = NULL, # per-variable memoized R->Julia translations
     ordering = NULL, # Contains deps_by_name for incremental updates
     funcs = "",
@@ -86,6 +86,25 @@ empty_assemble <- function() {
 }
 
 
+#' Complete assemble cache structure
+#' @returns Assemble cache with canonical empty_assemble() fields
+#' @noRd
+complete_assemble <- function(assemble) {
+  no_assemble <- empty_assemble()
+
+  if (!is.list(assemble)) {
+    return(no_assemble)
+  }
+
+  keep_names <- intersect(names(no_assemble), names(assemble))
+  for (name in keep_names) {
+    no_assemble[name] <- assemble[name]
+  }
+
+  no_assemble
+}
+
+
 # User-authored input columns of the variables table. The model hash is taken
 # over exactly these (a whitelist), so any column that assembly *derives* (e.g.
 # eqn_str, sum_eqn, sum_name, inflow, outflow, preceding_eqn) cannot perturb the
@@ -98,17 +117,26 @@ input_var_cols <- function() {
 }
 
 
-#' Hash the user-authored inputs that determine generated code
+# Base simulation settings that affect pre-assembled code. Runtime/output-only
+# settings (seed, vars, only_stocks, save_sims) are intentionally excluded.
+codegen_sim_setting_names <- function() {
+  c(
+    "method", "start", "stop", "dt", "save_type", "save_at", "save_n",
+    "time_units", "language", "keep_nonnegative_stock", "keep_nonnegative_flow"
+  )
+}
+
+
+#' Hash the user-authored inputs that determine base generated code
 #'
-#' The assembly cache is valid iff this hash is unchanged. Hashing the inputs
-#' (rather than tracking which components each mutator dirties) makes cache
-#' invalidation automatic and correct by construction: any change to a stock,
-#' flow, equation, simulation setting or unit test changes the hash, forcing a
-#' rebuild; meta-only changes do not.
+#' The base assembly cache is valid iff this hash is unchanged. Runtime/output
+#' choices such as {.arg vars}, {.arg only_stocks}, {.arg seed}, and
+#' {.arg save_sims} are excluded because they do not affect the pre-assembled
+#' model structure.
 #'
 #' Custom-function bodies live in the `eqn` of `func`-type rows, so hashing the
-#' input columns of `variables` covers them too. `meta` and `import_metadata` do
-#' not affect generated code and are excluded.
+#' input columns of `variables` covers them too. `meta`, `import_metadata`, and
+#' unit tests do not affect base generated simulation code and are excluded.
 #'
 #' @inheritParams update.sdbuildR
 #' @returns A scalar hash string.
@@ -116,10 +144,12 @@ input_var_cols <- function() {
 compute_model_hash <- function(object) {
   vars <- object[["variables"]]
   input_cols <- intersect(input_var_cols(), colnames(vars))
+  sim_settings <- object[["sim_settings"]]
+  setting_names <- intersect(codegen_sim_setting_names(), names(sim_settings))
+
   rlang::hash(list(
     variables = vars[, input_cols, drop = FALSE],
-    sim_settings = object[["sim_settings"]],
-    unit_tests = object[["unit_tests"]]
+    sim_settings = sim_settings[setting_names]
   ))
 }
 

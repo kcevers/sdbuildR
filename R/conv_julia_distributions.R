@@ -38,6 +38,22 @@ reparam_rate_distribution <- function(arg, distribution) {
 #'
 #' @inheritParams sort_args
 #' @param julia_func String with Julia function
+#' @param R_func String with R function, e.g., "rnorm()".
+#' @param distribution String with Julia distribution call
+#'
+#' @returns String with Julia code
+#' @noRd
+#' @keywords internal
+#'
+conv_distribution <- function(arg, R_func, julia_func, distribution) {
+  conv_distribution_julia(arg, R_func, julia_func, distribution)
+}
+
+
+#' Convert random number generation in R to Julia
+#'
+#' @inheritParams sort_args
+#' @param julia_func String with Julia function
 #' @param R_func String with R function, e.g., "runif", "rnorm"
 #' @param distribution String with Julia distribution call
 #' @param arg Character vector with parsed arguments
@@ -184,6 +200,20 @@ conv_seq_julia <- function(arg, R_func, julia_func) {
 }
 
 
+#' Convert sequence in R to Julia
+#'
+#' @inheritParams sort_args
+#' @param R_func String with R function, e.g., "seq", "seq_along"
+#' @param julia_func String with Julia function
+#'
+#' @returns String with Julia code
+#' @noRd
+#'
+conv_seq <- function(arg, R_func, julia_func) {
+  conv_seq_julia(arg, R_func, julia_func)
+}
+
+
 #' Convert R sample() to Julia StatsBase.sample()
 #'
 #' @param arg Named list with parsed arguments
@@ -214,4 +244,15 @@ conv_sample_julia <- function(arg, R_func, julia_func) {
   }
 
   return(julia_str)
+}
+
+
+#' Convert R sample() to Julia StatsBase.sample()
+#'
+#' @inheritParams conv_seq
+#'
+#' @returns String with Julia code
+#' @noRd
+conv_sample <- function(arg, R_func, julia_func) {
+  conv_sample_julia(arg, R_func, julia_func)
 }

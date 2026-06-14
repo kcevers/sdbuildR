@@ -5,75 +5,20 @@
 # are used by both R and Julia assembly paths via the language adapter pattern.
 
 
-#' Selectively invalidate assembly cache components
+#' Invalidate assembly cache components
 #'
-#' Instead of wiping the entire cache, only clear components affected by a change.
-#' This allows compile() to skip regenerating unaffected components.
+#' The current cache policy is deliberately conservative: any invalidation clears
+#' the whole base assembly cache. Component-level invalidation should only be
+#' added back for profiled bottlenecks with component-specific hashes.
 #'
 #' @param object Stock-and-flow model
-#' @param what Character vector of categories to invalidate. Options:
-#'   \describe{
-#'     \item{"all"}{Wipe entire cache (equivalent to empty_assemble())}
-#'     \item{"variables"}{Clear all variable-dependent components: ordering, static, ode, callback, intermediaries, nonneg_stocks, ensemble, unit_tests}
-#'     \item{"static"}{Clear only static equations (constants, stock initial values, gf definitions)}
-#'     \item{"dynamic"}{Clear only dynamic equations (ode, callback, intermediaries)}
-#'     \item{"times"}{Clear time sequence}
-#'     \item{"funcs"}{Clear func definitions}
-
-#'     \item{"nonneg"}{Clear non-negative stock handling}
-#'     \item{"unit_tests"}{Clear cached unit test dependencies}
-#'   }
+#' @param what Character vector of invalidation categories. Currently accepted
+#'   for call-site readability only; all categories clear the whole cache.
 #'
-#' @returns A stock-and-flow model with selectively cleared assembly cache
+#' @returns A stock-and-flow model with an empty assembly cache
 #' @noRd
 invalidate_assemble <- function(object, what = "all") {
-  no_assemble <- empty_assemble()
-
-  if ("all" %in% what) {
-    object[["assemble"]] <- no_assemble
-    return(object)
-  }
-
-  a <- object[["assemble"]]
-
-  if ("variables" %in% what) {
-    a[["ordering"]] <- no_assemble[["ordering"]]
-    a[["static"]] <- no_assemble[["static"]]
-    a[["ode"]] <- no_assemble[["ode"]]
-    a[["callback"]] <- no_assemble[["callback"]]
-    a[["intermediaries"]] <- no_assemble[["intermediaries"]]
-    a[["nonneg_stocks"]] <- no_assemble[["nonneg_stocks"]]
-    a[["ensemble"]] <- no_assemble[["ensemble"]]
-    a[["summary"]] <- no_assemble[["summary"]]
-  }
-  if ("static" %in% what && !"variables" %in% what) {
-    a[["static"]] <- no_assemble[["static"]]
-  }
-  if ("dynamic" %in% what && !"variables" %in% what) {
-    a[["ode"]] <- no_assemble[["ode"]]
-    a[["callback"]] <- no_assemble[["callback"]]
-    a[["intermediaries"]] <- no_assemble[["intermediaries"]]
-  }
-  if ("times" %in% what) {
-    a[["times"]] <- no_assemble[["times"]]
-  }
-  if ("funcs" %in% what) {
-    a[["funcs"]] <- no_assemble[["funcs"]]
-  }
-  if ("nonneg" %in% what) {
-    a[["nonneg_stocks"]] <- no_assemble[["nonneg_stocks"]]
-  }
-  if ("unit_tests" %in% what) {
-    a[["unit_tests"]] <- no_assemble[["unit_tests"]]
-  }
-
-  # Any partial invalidation makes the cache no longer "fully assembled", so drop
-  # the input_hash completion signal -- otherwise pre_assemble_components() could
-  # early-return on a half-cleared cache when the inputs happen to hash the same
-  # (e.g. a no-op property change that still invalidated components).
-  a[["input_hash"]] <- NULL
-
-  object[["assemble"]] <- a
+  object[["assemble"]] <- empty_assemble()
   object
 }
 
@@ -556,13 +501,14 @@ pre_assemble_components <- function(object) {
     return(object)
   }
 
+  object[["assemble"]] <- complete_assemble(object[["assemble"]])
+
   language <- object[["sim_settings"]][["language"]]
 
-  # Content-hash short-circuit, FIRST thing (before any per-call scanning such as
-  # check_no_keyword_arg). input_hash is set only at the END of a successful
-  # assembly, so a match here means the entire derived cache is already built for
-  # these exact inputs -> return immediately. This makes a repeated
-  # compile()/simulate()/summary() with no intervening edits essentially free.
+  # Content-hash short-circuit. input_hash is set only at the END of a
+  # successful assembly, so a match here means the base cache is already built
+  # for these exact inputs -> return immediately. This makes a repeated
+  # compile()/simulate() with no intervening edits essentially free.
   current_hash <- compute_model_hash(object)
   if (!is.null(object[["assemble"]][["input_hash"]]) &&
     identical(object[["assemble"]][["input_hash"]], current_hash) &&
@@ -576,58 +522,39 @@ pre_assemble_components <- function(object) {
     check_no_keyword_arg(object, var_names)
   }
 
-  # --- Cache validation ------------------------------------------------------
-  no_assemble <- empty_assemble()
-  undefined_assemble <- vapply(
-    stats::setNames(nm = names(no_assemble)),
-    \(comp) identical(object[["assemble"]][[comp]], no_assemble[[comp]]),
-    logical(1)
-  )
-
-  # Reaching here means a rebuild is required; force every component to recompute.
-  cache_valid <- FALSE
+  # Reaching here means a full base-cache rebuild is required.
   object[["assemble"]][["language"]] <- language
-  object[["assemble"]][["input_hash"]] <- NULL # cleared until assembly completes
+  object[["assemble"]]["input_hash"] <- list(NULL) # cleared until assembly completes
 
   # --- Ordering --------------------------------------------------------------
-  if (!cache_valid || undefined_assemble[["ordering"]]) {
-    object[["assemble"]][["ordering"]] <- order_equations(object)
-  }
+  object[["assemble"]][["ordering"]] <- order_equations(object)
 
   # --- Compile times ---------------------------------------------------------
-  if (!cache_valid || undefined_assemble[["times"]]) {
-    object[["assemble"]][["times"]] <- compile_times(object, language = language)
-  }
+  object[["assemble"]][["times"]] <- compile_times(object, language = language)
 
   # --- Compile funcs ---------------------------------------------------------
-  if (!cache_valid || undefined_assemble[["funcs"]]) {
-    object[["assemble"]][["funcs"]] <- compile_funcs(object, language = language)
-  }
+  object[["assemble"]][["funcs"]] <- compile_funcs(object, language = language)
 
   # --- Prepare equations and stock changes -----------------------------------
-  if (!cache_valid) {
-    object <- prep_equations_variables(object)
-    object <- prep_stock_change(object)
-  }
+  object <- prep_equations_variables(object)
+  object <- prep_stock_change(object)
 
   # --- Julia: intermediaries -------------------------------------------------
-  if (language == "Julia" && (!cache_valid || undefined_assemble[["intermediaries"]])) {
+  if (language == "Julia") {
     object[["assemble"]][["intermediaries"]] <- prep_intermediary_variables(object, language = language)
   }
 
   # --- Compile static equations ----------------------------------------------
-  if (!cache_valid || undefined_assemble[["static"]]) {
-    object[["assemble"]][["static"]] <- compile_static(object, language = language)
-  }
+  object[["assemble"]][["static"]] <- compile_static(object, language = language)
 
 
   # --- R: compile nonneg stocks ----------------------------------------------
-  if (language == "R" && (!cache_valid || undefined_assemble[["nonneg_stocks"]])) {
+  if (language == "R") {
     object[["assemble"]][["nonneg_stocks"]] <- compile_nonneg_stocks(object, language = language)
   }
 
   # --- Julia: compile ODE (Julia ODE does not depend on only_stocks) ---------
-  if (language == "Julia" && (!cache_valid || undefined_assemble[["ode"]])) {
+  if (language == "Julia") {
     object[["assemble"]][["ode"]] <- compile_ode(object,
       only_stocks = FALSE,
       language = language,
@@ -655,7 +582,7 @@ pre_assemble_components <- function(object) {
 #'
 #' Mutators (`update()`, `sim_settings()`) call this so the assembly cache is
 #' ready immediately. Because the cache is now hash-gated, the codegen can be
-#' safely deferred to the next consumer (`compile()`/`simulate()`/`summary()`):
+#' safely deferred to the next codegen consumer (`compile()`/`simulate()`):
 #' set `options(sdbuildR.defer_codegen = TRUE)` to skip the eager pass and only
 #' assemble on demand. The default preserves the original eager behaviour.
 #'

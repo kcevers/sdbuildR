@@ -57,23 +57,76 @@ test_that("converting equations to Julia", {
   result <- convert_equations_julia(
     type, name, "for (i in 1:9){\n\tprint(i)\n}", var_names
   )
-  expected <- "for  i in 1.0:9.0\n\tprintln(i)\nend"
+  expected <- "for i in 1:9\nprintln(i)\nend"
   expect_equal(result$eqn, expected)
 
   result <- convert_equations_julia(
     type, name, "if(t<2020){\n\tgf<-0.07\n} else if (t<2025){\n\tgf<-0.03\n} else {\n\tgf<-0.02\n}", var_names
   )
-  expected <- "if t .< 2020.0\n\tgf = 0.07\nelseif t .< 2025.0\n\tgf = 0.03\n else\n\tgf = 0.02\nend"
+  expected <- "if t .< 2020.0\ngf = 0.07\nelseif t .< 2025.0\ngf = 0.03\nelse\ngf = 0.02\nend"
   expect_equal(result$eqn, expected)
 
   # while
   result <- convert_equations_julia(
     type, name, "while(a < 0){\n\tif (prey >0){\n\t\ta <- 0\n\t} else {\n\ta = 1\n\t}\n}", var_names
   )
-  expected <- "while a .< 0.0\n\tif prey .> 0.0\n\t\ta = 0.0\n\t else\n\ta = 1.0\n\tend\nend"
+  expected <- "while a .< 0.0\nif prey .> 0.0\na = 0.0\nelse\na = 1.0\nend\nend"
   expect_equal(result$eqn, expected)
 
   # oneliner if ***
+})
+
+
+test_that("R integer literals convert to Julia-safe numeric or index forms", {
+  var_names <- c("x", "n")
+
+  conv <- function(expr) convert_equations_julia("aux", "z", expr, var_names)[["eqn"]]
+
+  expect_equal(conv("1L"), "1.0")
+  expect_equal(conv("c(1L, 2L)"), "[1.0, 2.0]")
+  expect_equal(conv("x[1L]"), "x[1]")
+  expect_equal(conv("1L:3L"), "1:3")
+  expect_equal(conv("seq(1L, 3L)"), "range(1.0, 3.0, step=1.0)")
+})
+
+
+test_that("Julia conversion rejects or handles previously unchecked edge cases", {
+  var_names <- c("x", "n", "a", "b")
+  conv <- function(expr) convert_equations_julia("aux", "z", expr, var_names)[["eqn"]]
+
+  expect_equal(conv("sample.int(n, 2)"), "StatsBase.sample(seq(1.0, n), round_(2.0), replace=false)")
+  expect_equal(conv("break"), "break")
+  expect_equal(conv("next"), "continue")
+  expect_equal(conv("repeat { x <- x + 1; if (x > 10) break }"),
+    "while true\nx = x .+ 1.0\nif x .> 10.0\nbreak\nend\nend")
+  expect_equal(conv("x[c(1, 2)]"), "x[[1, 2]]")
+  expect_equal(conv("base::sum(x)"), "sum(x)")
+  expect_equal(conv("stats::median(x)"), "Statistics.median(x)")
+
+  expect_error(
+    conv("pkg::unknown(x)"),
+    "Unsupported namespaced function"
+  )
+  expect_error(
+    conv("x[-1]"),
+    "Negative R-style indices"
+  )
+  expect_error(
+    conv("x[TRUE]"),
+    "Logical R-style indices"
+  )
+  expect_error(
+    conv("x[1.5]"),
+    "Non-integer indices"
+  )
+  expect_error(
+    conv("x$y"),
+    "Field and slot access"
+  )
+  expect_error(
+    conv("x@y"),
+    "Field and slot access"
+  )
 })
 
 
@@ -118,6 +171,11 @@ test_that("converting functions to Julia with named arguments", {
   # Error for na.rm
   expect_error(
     convert_equations_julia(type, name, "sd(x = test, na.rm = T)", var_names),
+    "na\\.rm.*not supported"
+  )
+
+  expect_error(
+    lang_adapter("Julia")$convert_eqn(type, name, "sd(x = test, na.rm = TRUE)", var_names),
     "na\\.rm.*not supported"
   )
 
@@ -191,7 +249,7 @@ test_that("custom function definitons work", {
     "func", "myfunc",
     paste0("myfunc = ", func_eqn), var_names
   )
-  expect_equal(result$eqn, "function myfunc(x, y = 1.0, z = 2.0)\n x .+ y\nend")
+  expect_equal(result$eqn, "function myfunc(x, y = 1.0, z = 2.0)\nx .+ y\nend")
 
   # Is the function usable in R?
   sfm <- sfm |>

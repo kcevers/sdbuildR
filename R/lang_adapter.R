@@ -128,17 +128,9 @@ lang_adapter_julia <- function() {
   list(
     language = "Julia",
 
-    # Convert R equation syntax to Julia. Try the fast AST translator first; it
-    # returns NULL for any construct it does not handle, in which case fall back
-    # to the proven regex translator. Set options(sdbuildR.use_ast = FALSE) to
-    # force the legacy path.
+    # Convert R equation syntax to Julia. convert_equations_julia() uses the AST
+    # path internally and falls back for constructs it does not handle.
     convert_eqn = function(type, name, eqn, var_names) {
-      if (!identical(getOption("sdbuildR.use_ast", TRUE), FALSE)) {
-        ast <- convert_eqn_ast_julia(eqn, var_names)
-        if (!is.null(ast)) {
-          return(ast)
-        }
-      }
       result <- convert_equations_julia(
         type = type, name = name, eqn = eqn,
         var_names = var_names

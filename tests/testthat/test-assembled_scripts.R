@@ -1,3 +1,19 @@
+withr::local_options(list(sdbuildR.defer_codegen = FALSE))
+
+test_that("assemble cache keeps canonical structure after invalidation", {
+  sfm <- sdbuildR()
+  sfm$assemble <- sfm$assemble[setdiff(
+    names(sfm$assemble),
+    c("eqn_cache", "summary", "run")
+  )]
+
+  sfm <- invalidate_assemble(sfm, "variables")
+
+  expect_equal(length(sfm$assemble), length(empty_assemble()))
+  expect_setequal(names(sfm$assemble), names(empty_assemble()))
+})
+
+
 test_that("R script components are pre-cached in sfm after sim_settings", {
   sfm <- sdbuildR("SIR") |>
     sim_settings(language = "R", start = 0, stop = 10, dt = 0.1)

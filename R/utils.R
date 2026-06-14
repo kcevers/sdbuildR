@@ -931,6 +931,11 @@ sort_args <- function(arg, func_name, default_arg = NULL, var_names = NULL,
       # Ensure digits become floats for Julia
       for (name in names(arg_R)) {
         if (!is.null(arg_R[[name]])) {
+          if (is.language(arg_R[[name]])) {
+            arg_R[[name]] <- paste(deparse(arg_R[[name]]), collapse = "")
+          } else {
+            arg_R[[name]] <- as.character(arg_R[[name]])
+          }
           arg_R[[name]] <- replace_digits_with_floats(arg_R[[name]], var_names)
         }
       }

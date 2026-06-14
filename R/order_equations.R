@@ -179,7 +179,7 @@ dependencies <- function(object, name = NULL, type = NULL, reverse = FALSE) {
     }
   }
 
-  dep <- _dependencies(object, eqns = NULL, only_var = TRUE, only_model_var = TRUE)
+  dep <- .dependencies(object, eqns = NULL, only_var = TRUE, only_model_var = TRUE)
 
   if (reverse) {
     dep <- reverse_dep(dep)
@@ -267,73 +267,71 @@ reverse_dep <- function(dep) {
 #' @returns Vector of dependencies (variable names in equation)
 #' @noRd
 #'
-_dependencies <- function(object, eqns = NULL, only_var = TRUE, only_model_var = TRUE) {
+.dependencies <- function(object, eqns = NULL, only_var = TRUE, only_model_var = TRUE) {
   var_names <- get_model_var(object)
 
   # Funcs and graphical functions can be functions
   gf_names <- object[["variables"]][object[["variables"]][["type"]] == "lookup", "name"]
   func_names <- get_funcs(object)[["name"]]
-  possible_func_in_model <- c(
-    func_names,
-    gf_names,
-    var_names
-  ) # Some aux are also functions, such as pulse/step/ramp/seasonal
+  possible_func_in_model <- c(func_names, gf_names, var_names)
 
   # If no equations are provided, use all equations in the model
   if (is.null(eqns)) {
-    # Get equations from variables data frame
-    eqn_idx <- object[["variables"]][["type"]] %in% c("stock", "flow", "aux", "constant")
-    eqns <- object[["variables"]][eqn_idx, "eqn"]
-    names(eqns) <- object[["variables"]][eqn_idx, "name"]
+    vars <- object[["variables"]]
+
+    eqn_idx <- vars[["type"]] %in% c("stock", "flow", "aux", "constant")
+    eqns <- vars[eqn_idx, "eqn"]
+    names(eqns) <- vars[eqn_idx, "name"]
 
     # Add graphical function dependencies on source
-    gf_idx <- object[["variables"]][["type"]] == "lookup"
+    gf_idx <- vars[["type"]] == "lookup"
     if (any(gf_idx)) {
-      gf_source <- object[["variables"]][gf_idx, "source"]
-      gf_source <- gf_source[nzchar(gf_source)]
-      gf_names <- object[["variables"]][gf_idx, "name"]
-      gf_source <- stats::setNames(gf_source, gf_names[nzchar(gf_source)])
-      eqns <- c(eqns, gf_source)
+      gf_source <- vars[gf_idx, "source"]
+      gf_names_all <- vars[gf_idx, "name"]
+      has_source <- nzchar(gf_source)
+      eqns <- c(eqns, stats::setNames(gf_source[has_source], gf_names_all[has_source]))
     }
   }
 
-  # Find dependencies in each equation
-  deps <- lapply(eqns, function(eqn) {
-    d <- NA
+  deps <- vector("list", length(eqns))
+  eqn_names <- names(eqns)
 
-    # Parse the line as an expression
+  for (i in seq_along(eqns)) {
+    eqn <- eqns[[i]]
     expr <- tryCatch(parse(text = eqn), error = function(e) NULL)
 
-    # If parsing was successful, extract variable names from equations
-    if (!is.null(expr)) {
-      # Omit variables that are defined in the expression itself
-      new_var <- find_newly_defined_var(eqn)
-
-      # Get all dependencies
-      all_d <- setdiff(all.names(expr, functions = TRUE, unique = TRUE), new_var)
-      d <- setdiff(all.names(expr, functions = FALSE, unique = TRUE), new_var)
-      d_func <- setdiff(all_d, d)
-
-      if (only_model_var) {
-        d <- c(d[d %in% var_names], d_func[d_func %in% possible_func_in_model])
-      } else if (!only_var) {
-        d <- all_d
-      }
+    if (is.null(expr)) {
+      deps[[i]] <- character(0)
+      next
     }
 
-    # Normalize: drop NA and duplicates
-    if (length(d) == 1 && all(is.na(d))) {
-      d <- character(0)
+    # Omit variables that are defined in the expression itself. Most equations
+    # do not contain assignments, so avoid the more expensive local scan unless
+    # it can matter.
+    new_var <- if (grepl("=", eqn, fixed = TRUE)) {
+      find_newly_defined_var(eqn)
     } else {
-      d <- unique(d)
+      character(0)
     }
+    d <- setdiff(all.names(expr, functions = FALSE, unique = TRUE), new_var)
 
-    return(d)
-  })
+    if (only_model_var) {
+      all_d <- setdiff(all.names(expr, functions = TRUE, unique = TRUE), new_var)
+      d_func <- setdiff(all_d, d)
+      deps[[i]] <- unique(c(
+        d[d %in% var_names],
+        d_func[d_func %in% possible_func_in_model]
+      ))
+    } else if (!only_var) {
+      deps[[i]] <- unique(setdiff(all.names(expr, functions = TRUE, unique = TRUE), new_var))
+    } else {
+      deps[[i]] <- unique(d)
+    }
+  }
 
   # Preserve names (if eqns were named); helps plotting dependencies
-  if (!is.null(names(eqns))) {
-    names(deps) <- names(eqns)
+  if (!is.null(eqn_names)) {
+    names(deps) <- eqn_names
   }
 
   deps
@@ -368,7 +366,7 @@ order_equations <- function(object, print_msg = TRUE) {
   deps <- split(vars_to_order, seq_len(nrow(vars_to_order))) |>
     lapply(function(x) {
       if (is_defined(x[["eqn"]])) {
-        d <- unlist(_dependencies(object, x[["eqn"]],
+        d <- unlist(.dependencies(object, x[["eqn"]],
           only_var = TRUE, only_model_var = TRUE
         ))
       } else {

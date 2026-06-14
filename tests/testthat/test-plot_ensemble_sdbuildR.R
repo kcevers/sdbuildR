@@ -189,8 +189,13 @@ test_that("plot.ensemble_sdbuildR() nrows works", {
   expect_equal(info$nrows, 2L)
   expect_equal(info$ncols, 1L)
 
-  expect_snapshot_plot("ens-nrows-1", plot(sims, nrows = 1L))
-  expect_snapshot_plot("ens-nrows-2", plot(sims, nrows = 2L))
+  expect_snapshot_plot(
+    c("ens-nrows-1", "ens-nrows-2"),
+    list(
+      plot(sims, nrows = 1L),
+      plot(sims, nrows = 2L)
+    )
+  )
 })
 
 test_that("plot.ensemble_sdbuildR() shareX and shareY works", {
@@ -223,10 +228,20 @@ test_that("plot.ensemble_sdbuildR() shareX and shareY works", {
   expect_false(info$shareY)
 
   # Snapshot last
-  expect_snapshot_plot("ens-sharex-true-sharey-true", plot(sims, shareX = TRUE, shareY = TRUE, nrows = nrows))
-  expect_snapshot_plot("ens-sharex-true-sharey-false", plot(sims, shareX = TRUE, shareY = FALSE, nrows = nrows))
-  expect_snapshot_plot("ens-sharex-false-sharey-true", plot(sims, shareX = FALSE, shareY = TRUE, nrows = nrows))
-  expect_snapshot_plot("ens-sharex-false-sharey-false", plot(sims, shareX = FALSE, shareY = FALSE, nrows = nrows))
+  expect_snapshot_plot(
+    c(
+      "ens-sharex-true-sharey-true",
+      "ens-sharex-true-sharey-false",
+      "ens-sharex-false-sharey-true",
+      "ens-sharex-false-sharey-false"
+    ),
+    list(
+      plot(sims, shareX = TRUE, shareY = TRUE, nrows = nrows),
+      plot(sims, shareX = TRUE, shareY = FALSE, nrows = nrows),
+      plot(sims, shareX = FALSE, shareY = TRUE, nrows = nrows),
+      plot(sims, shareX = FALSE, shareY = FALSE, nrows = nrows)
+    )
+  )
 })
 
 

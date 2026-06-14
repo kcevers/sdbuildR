@@ -174,8 +174,10 @@ test_that("plot.simulate_sdbuildR() respects showlegend", {
   expect_true(all(!(traces_false$showlegend)))
 
   # Snapshots last
-  expect_snapshot_plot("sim-showlegend-true", pl_true)
-  expect_snapshot_plot("sim-showlegend-false", pl_false)
+  expect_snapshot_plot(
+    c("sim-showlegend-true", "sim-showlegend-false"),
+    list(pl_true, pl_false)
+  )
 })
 
 test_that("plot.simulate_sdbuildR() respects vars argument", {
@@ -194,8 +196,10 @@ test_that("plot.simulate_sdbuildR() respects vars argument", {
   expect_setequal(trace_names_filtered, sus_infected_labels)
 
   # Snapshots last
-  expect_snapshot_plot("sim-single-variable", pl_single)
-  expect_snapshot_plot("sim-filtered-vars", pl_filtered)
+  expect_snapshot_plot(
+    c("sim-single-variable", "sim-filtered-vars"),
+    list(pl_single, pl_filtered)
+  )
 })
 
 test_that("plot.simulate_sdbuildR() with custom palette", {
@@ -308,8 +312,10 @@ test_that("plot.simulate_sdbuildR() respects show_constants", {
   traces_no_const <- plotly_traces(pl_without_constants)
   expect_true(all(!(const_label %in% traces_no_const[["name"]])))
 
-  expect_snapshot_plot("sim-with-constants", pl_with_constants)
-  expect_snapshot_plot("sim-without-constants", pl_without_constants)
+  expect_snapshot_plot(
+    c("sim-with-constants", "sim-without-constants"),
+    list(pl_with_constants, pl_without_constants)
+  )
 })
 
 # ============================================================================

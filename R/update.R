@@ -658,54 +658,21 @@ update_variable_row <- function(object, type, name,
 #' Prepare model variables for assembly/simulation
 #'
 #' Updates prepared equation strings (eqn_str, sum_eqn, sum_name) based on
-#' the current language in sim_settings. Selectively invalidates assembly cache
-#' components based on what changed.
+#' the current language in sim_settings. Conservatively invalidates the base
+#' assembly cache after any model-variable edit.
 #'
 #' @param object Stock-and-flow model
 #' @param modified_names Character vector of variable names that were modified.
 #'   If NULL (default), all variables are processed (full regeneration). If provided,
 #'   only the specified variables are updated for incremental performance.
 #' @param sanitize Logical: whether to run sanitize_sdbuildR()
-#' @param is_new_var Logical: whether any modified variable is new (not existing)
-#' @param modified_types Character vector of types of the modified variables
-#' @param deps_changed Logical or NULL: whether dependencies changed for modified variables
-#' @param connectivity_changed Logical: whether flow to/from connections changed
-#' @param nonneg_changed Logical: whether non_negative flag changed
 #' @noRd
-.prepare_model_for_assembly <- function(object, modified_names = NULL, sanitize = TRUE,
-                                        is_new_var = FALSE, modified_types = NULL,
-                                        deps_changed = NULL,
-                                        connectivity_changed = FALSE,
-                                        nonneg_changed = FALSE) {
+.prepare_model_for_assembly <- function(object, modified_names = NULL, sanitize = TRUE) {
   # Prepare equations for current language (adapter handles R vs Julia)
   object <- prep_equations_variables(object, modified_names = modified_names)
   object <- prep_stock_change(object, modified_names = modified_names)
 
-  # Selectively invalidate assembly cache based on what changed
-  if (is_new_var || is.null(object[["assemble"]][["ordering"]])) {
-    # New variable or no cached ordering: full variable-dependent invalidation
-    object <- invalidate_assemble(object, "variables")
-  } else if (isTRUE(deps_changed) || connectivity_changed) {
-    # Dependencies or flow connectivity changed: ordering may be affected
-    object <- invalidate_assemble(object, "variables")
-  } else if (!is.null(modified_types)) {
-    # Dependencies unchanged: only invalidate affected component type
-    cats <- character(0)
-    if (any(modified_types %in% c("constant", "stock", "lookup"))) {
-      cats <- c(cats, "static")
-    }
-    if (any(modified_types %in% c("aux", "flow"))) {
-      cats <- c(cats, "dynamic")
-    }
-    if (nonneg_changed) {
-      cats <- c(cats, "nonneg")
-    }
-    if (length(cats) == 0) cats <- "variables"
-    object <- invalidate_assemble(object, cats)
-  } else {
-    # Fallback: full variable-dependent invalidation
-    object <- invalidate_assemble(object, "variables")
-  }
+  object <- invalidate_assemble(object, "variables")
 
   if (sanitize) {
     object <- sanitize_sdbuildR(object)
@@ -1442,50 +1409,10 @@ update.sdbuildR <- function(object, name, type = NULL,
     return(object)
   }
 
-  # --- Determine invalidation scope for assembly cache ----------------------
-  is_new_var <- any(!idx_exist)
-  deps_changed <- NULL
-  modified_types <- NULL
-  connectivity_changed <- FALSE
-  nonneg_changed <- "non_negative" %in% passed_arg
-
-  if (!is_new_var && !is.null(object[["assemble"]][["ordering"]][["deps_by_name"]])) {
-    old_deps <- object[["assemble"]][["ordering"]][["deps_by_name"]]
-
-    # Compute new dependencies for just the modified variables
-    mod_rows <- object[["variables"]][match(args[["name"]], object[["variables"]][["name"]]), , drop = FALSE]
-    mod_eqns <- stats::setNames(mod_rows[["eqn"]], mod_rows[["name"]])
-    # GFs use source as dependency input
-    gf_mask <- mod_rows[["type"]] == "lookup"
-    if (any(gf_mask)) {
-      mod_eqns[mod_rows[gf_mask, "name"]] <- mod_rows[gf_mask, "source"]
-    }
-    new_deps <- _dependencies(object,
-      eqns = mod_eqns,
-      only_var = TRUE, only_model_var = TRUE
-    )
-
-    # Check if any modified variable's dependencies changed
-    deps_changed <- !all(vapply(args[["name"]], function(nm) {
-      identical(
-        sort(old_deps[[nm]] %||% character(0)),
-        sort(new_deps[[nm]] %||% character(0))
-      )
-    }, logical(1)))
-
-    modified_types <- mod_rows[["type"]]
-    connectivity_changed <- any(c("to", "from") %in% passed_arg)
-  }
-
   # Prepare model for assembly/simulation
   object <- .prepare_model_for_assembly(object,
     modified_names = name,
-    sanitize = TRUE,
-    is_new_var = is_new_var,
-    modified_types = modified_types,
-    deps_changed = deps_changed,
-    connectivity_changed = connectivity_changed,
-    nonneg_changed = nonneg_changed
+    sanitize = TRUE
   )
 
   # Pre-assemble components (deferrable; see maybe_pre_assemble)
