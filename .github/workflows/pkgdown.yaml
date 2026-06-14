@@ -23,6 +23,7 @@ jobs:
       NOT_CRAN: "true"
       SDBUILDR_INSTALL_JULIA_ENV: "true"
       SDBUILDR_CREATE_TEST_FIGS: "true"
+      SDBUILDR_TRACE_VIGNETTE_CHUNKS: "true"
 
     permissions:
       contents: write

@@ -387,6 +387,112 @@ gather_dynamic_equations <- function(object, ordering, separator = "\n\t\t") {
 }
 
 
+#' Join complete simulation script sections
+#'
+#' @param sections Character vector of script sections, possibly including NULL
+#'   values for language-specific sections.
+#'
+#' @returns A single script string.
+#' @noRd
+join_script_sections <- function(sections) {
+  sections <- unlist(sections, use.names = FALSE)
+  paste0(sections, collapse = "\n")
+}
+
+
+#' Compile final non-ensemble script from prepared sections
+#'
+#' The base assembly cache owns language-neutral section order. Runtime-specific
+#' callers provide the ODE, solve, and post-processing sections.
+#'
+#' @inheritParams update.sdbuildR
+#' @param ode Compiled ODE section.
+#' @param run_ode Compiled solve section.
+#' @param post Compiled post-processing section.
+#'
+#' @returns A complete script string.
+#' @noRd
+compile_script_sections <- function(object, ode, run_ode, post) {
+  language <- object[["sim_settings"]][["language"]]
+  assemble <- object[["assemble"]]
+
+  join_script_sections(c(
+    if (language == "R") "# Load packages\nlibrary(sdbuildR)" else NULL,
+    assemble[["times"]],
+    assemble[["funcs"]],
+    if (language == "R") assemble[["nonneg_stocks"]][["func_def"]] else NULL,
+    ode,
+    assemble[["static"]][["script"]],
+    run_ode,
+    post
+  ))
+}
+
+
+#' Build Julia saveat expression from simulation settings
+#'
+#' @param ss Simulation settings list.
+#'
+#' @returns Julia expression used to define saveat.
+#' @noRd
+julia_saveat_expr <- function(ss) {
+  save_type <- ss[["save_type"]] %||% "all"
+  save_at <- ss[["save_at"]]
+  save_n <- ss[["save_n"]]
+
+  switch(save_type,
+    "all" = P[["tstops_name"]],
+    "save_at" = if (length(save_at) == 1) {
+      sprintf(
+        "%s[1]:%s:%s[2]",
+        P[["times_name"]], save_at, P[["times_name"]]
+      )
+    } else {
+      paste0("[", paste(save_at, collapse = ", "), "]")
+    },
+    "save_n" = {
+      if (as.integer(save_n) == 1L) {
+        sprintf("[%s[2]]", P[["times_name"]])
+      } else {
+        sprintf(
+          "range(%s[1], %s[2], length=%s)",
+          P[["times_name"]], P[["times_name"]], save_n
+        )
+      }
+    }
+  )
+}
+
+
+#' Build R saveat post-processing script from simulation settings
+#'
+#' @param ss Simulation settings list.
+#'
+#' @returns R script that filters/interpolates solver output times.
+#' @noRd
+r_saveat_script <- function(ss) {
+  save_type <- ss[["save_type"]] %||% "all"
+  save_at <- ss[["save_at"]]
+  save_n <- ss[["save_n"]]
+
+  switch(save_type,
+    "all" = "",
+    "save_at" = if (length(save_at) == 1) {
+      fmt_script("saveat_interval", "R", ss, save_at_val = save_at)
+    } else {
+      fmt_script("saveat_explicit", "R", ss,
+        save_at_str = paste(save_at, collapse = ", ")
+      )
+    },
+    "save_n" = if (as.integer(save_n) == 1L) {
+      fmt_script("saveat_n1", "R", ss)
+    } else {
+      fmt_script("saveat_n", "R", ss, save_n_val = save_n)
+    }
+  )
+}
+
+
 #' Build gf name to gf(source) mapping
 #'
 #' For each graphical function that has a source, builds a named character

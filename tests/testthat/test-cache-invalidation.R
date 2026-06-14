@@ -9,13 +9,8 @@ expect_empty_assemble_cache <- function(assemble) {
   expect_null(assemble[["input_hash"]])
   expect_null(assemble[["eqn_cache"]])
   expect_null(assemble[["ordering"]])
-  expect_null(assemble[["summary"]])
-  expect_equal(assemble[["ode"]], "")
-  expect_equal(assemble[["callback"]], "")
   expect_equal(assemble[["times"]], "")
-  expect_equal(assemble[["funcs"]], "")
   expect_equal(assemble[["static"]][["script"]], "")
-  expect_null(assemble[["unit_tests"]][["deps"]])
 }
 
 

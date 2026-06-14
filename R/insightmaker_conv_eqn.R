@@ -19,69 +19,325 @@ convert_equations_IM <- function(type,
                                  var_names) {
   if (P[["debug"]]) {
     cli::cli_inform(c(" " = ""))
-    # cli::cli_inform(c("i" = type))
     cli::cli_inform(c("i" = name))
     cli::cli_inform(c("i" = eqn))
   }
 
-  # Check whether eqn is empty or NULL
   if (is.null(eqn) || !nzchar(eqn)) {
-    return(list(
-      eqn = "",
-      translated_func = c(),
-      add_vars = data.frame(),
-      doc = ""
-    ))
+    return(empty_IM_conversion())
   }
 
-  # If equation is now empty, don't run rest of functions but set equation to zero
-  if (!nzchar(eqn)) {
-    eqn <- "0"
-    translated_func <- c()
-    add_vars <- data.frame()
-  } else {
-    # Step 2. Syntax (bracket types, destructuring assignment)
-    # Replace curly brackets {} with c()
-    eqn <- curly_to_vector_brackets(eqn, var_names)
+  eqn <- prepare_syntax_IM(eqn, var_names)
+  eqn <- convert_statements_IM(eqn, var_names)
+  eqn <- convert_operators_IM(eqn, var_names)
 
-    # Step 3. Statements (if, for, while, functions, try)
-    eqn <- convert_all_statements(eqn, var_names)
+  conv_list <- convert_builtin_functions_IM(type, name, eqn, var_names)
+  eqn <- postprocess_equation_IM(conv_list[["eqn"]], name)
 
-    # Step 4. Operators (booleans, logical operators, addition of strings)
-    eqn <- eqn |>
-      # # Convert addition of strings to paste0
-      # convert_addition_of_strings(var_names) |>
-      # Replace logical operators (true, false, = (but not if in function()))
-      replace_op_IM(var_names) |>
-      # Replace range, e.g., 0:2:10; replace other colons : with =
-      replace_colon(var_names)
-
-    # Step 5. Replace built-in functions
-    conv_list <- convert_builtin_functions_IM(type, name, eqn, var_names)
-    eqn <- conv_list[["eqn"]]
-    add_vars <- conv_list[["add_vars"]]
-    translated_func <- conv_list[["translated_func"]]
-
-    # Replace two consecutive newlines and trim white space
-    eqn <- stringr::str_replace_all(trimws(eqn), "\\\n[ ]*\\\n", "\n")
-
-    # If it is a multi-line statement, surround by brackets in case they aren't macros
-    eqn <- trimws(eqn)
-    if (stringr::str_detect(eqn, stringr::fixed("\n")) && !(name %in% P[["func_name"]])) {
-      eqn <- paste0("{\n", eqn, "\n}")
-    }
-
-    if (P[["debug"]]) {
-      cli::cli_inform(c("i" = eqn))
-    }
+  if (P[["debug"]]) {
+    cli::cli_inform(c("i" = eqn))
   }
 
   list(
     eqn = eqn,
-    translated_func = translated_func,
-    add_vars = add_vars,
+    translated_func = conv_list[["translated_func"]],
+    add_vars = conv_list[["add_vars"]],
     doc = ""
   )
+}
+
+
+#' Empty Insight Maker equation conversion result
+#'
+#' @returns Standard empty conversion result.
+#' @noRd
+empty_IM_conversion <- function() {
+  list(
+    eqn = "",
+    translated_func = c(),
+    add_vars = data.frame(),
+    doc = ""
+  )
+}
+
+
+#' Prepare Insight Maker syntax before statement conversion
+#'
+#' @inheritParams convert_equations_IM
+#' @returns Updated equation string.
+#' @noRd
+prepare_syntax_IM <- function(eqn, var_names) {
+  curly_to_vector_brackets(eqn, var_names)
+}
+
+
+#' Convert Insight Maker statements to R statements
+#'
+#' @inheritParams convert_equations_IM
+#' @returns Updated equation string.
+#' @noRd
+convert_statements_IM <- function(eqn, var_names) {
+  convert_all_statements(eqn, var_names)
+}
+
+
+#' Convert Insight Maker operators to R operators
+#'
+#' @inheritParams convert_equations_IM
+#' @returns Updated equation string.
+#' @noRd
+convert_operators_IM <- function(eqn, var_names) {
+  eqn |>
+    replace_op_IM(var_names) |>
+    replace_colon(var_names)
+}
+
+
+#' Post-process converted Insight Maker equation text
+#'
+#' @inheritParams convert_equations_IM
+#' @returns Updated equation string.
+#' @noRd
+postprocess_equation_IM <- function(eqn, name) {
+  eqn <- stringr::str_replace_all(trimws(eqn), "\\\n[ ]*\\\n", "\n")
+
+  eqn <- trimws(eqn)
+  if (stringr::str_detect(eqn, stringr::fixed("\n")) && !(name %in% P[["func_name"]])) {
+    eqn <- paste0("{\n", eqn, "\n}")
+  }
+
+  eqn
+}
+
+
+#' Collect candidate Insight Maker builtin-function matches
+#'
+#' @inheritParams convert_equations_IM
+#' @param syntax_df Syntax table for supported functions.
+#' @param IM_regex Compiled regex used for this matching pass.
+#'
+#' @returns List with match data frame, keep index, and rows per syntax.
+#' @noRd
+collect_IM_function_matches <- function(eqn, syntax_df, IM_regex, var_names) {
+  idx_list <- stringr::str_locate_all(eqn, IM_regex)
+  nrow_per_idx <- vapply(idx_list, nrow, integer(1))
+  idx_keep <- nrow_per_idx > 0
+  idx_list <- idx_list[idx_keep]
+
+  if (length(idx_list) == 0) {
+    return(list(
+      idx_df = data.frame(),
+      idx_keep = idx_keep,
+      nrow_per_idx = nrow_per_idx
+    ))
+  }
+
+  rep_syntax_df <- syntax_df[idx_keep, ]
+  rep_syntax_df <- rep_syntax_df[rep(seq_len(nrow(rep_syntax_df)), nrow_per_idx[idx_keep]), ]
+
+  idx_df <- cbind(rep_syntax_df, bind_rows_(idx_list))
+  idx_df <- idx_df[order(idx_df[["insightmaker"]], idx_df[["start"]], -idx_df[["end"]]), ]
+  idx_df <- idx_df[!duplicated(idx_df[, c("insightmaker", "start")]), ]
+  rownames(idx_df) <- NULL
+
+  idxs_exclude <- get_seq_exclude(eqn, var_names, names_with_brackets = TRUE)
+  if (nrow(idx_df) > 0) {
+    idx_df <- idx_df[!(idx_df[["start"]] %in% idxs_exclude | idx_df[["end"]] %in% idxs_exclude), ]
+  }
+
+  list(
+    idx_df = idx_df,
+    idx_keep = idx_keep,
+    nrow_per_idx = nrow_per_idx
+  )
+}
+
+
+#' Mark matched Insight Maker functions before replacement
+#'
+#' Adds a temporary `_replace` suffix to detected functions so builtins whose R
+#' and InsightMaker names are identical do not loop forever.
+#'
+#' @inheritParams convert_equations_IM
+#' @param idx_df Match data frame from collect_IM_function_matches().
+#'
+#' @returns Updated equation string.
+#' @noRd
+mark_IM_function_matches <- function(eqn, idx_df) {
+  idx_df <- idx_df[order(idx_df[["start"]]), ]
+  idx_df[["insightmaker_regex"]] <- stringr::str_replace_all(
+    idx_df[["insightmaker_regex"]],
+    stringr::fixed(c(
+      "(?:^|(?<=\\W))" = "", "(?=(?:\\W|$))" = "",
+      "\\b" = "", "\\(" = "(", "\\)" = ")"
+    ))
+  )
+
+  apply_replacements_reversed(eqn, idx_df, idx_df[["insightmaker_regex"]])
+}
+
+
+#' Report unsupported Insight Maker functions remaining in an equation
+#'
+#' @inheritParams convert_equations_IM
+#' @param syntax_df_unsupp Syntax table for unsupported functions.
+#'
+#' @returns Invisibly returns NULL.
+#' @noRd
+report_unsupported_IM_functions <- function(eqn, name, var_names, syntax_df_unsupp) {
+  eqn_split <- strsplit(eqn, "")[[1]]
+
+  idxs_exclude <- get_seq_exclude(eqn, var_names, names_with_brackets = TRUE)
+  if (!is.null(idxs_exclude)) {
+    eqn_no_names <- paste0(eqn_split[-idxs_exclude], collapse = "")
+  } else {
+    eqn_no_names <- paste0(eqn_split, collapse = "")
+  }
+
+  syntax4 <- syntax_df_unsupp[
+    syntax_df_unsupp[["syntax"]] %in% c("syntax4", "syntax4b"),
+    ,
+    drop = FALSE
+  ]
+  idx_ABM <- stringr::str_detect(eqn_no_names, syntax4[["insightmaker_regex"]])
+
+  if (any(idx_ABM)) {
+    cli::cli_inform(c(
+      "!" = "Agent-Based Modelling functions were detected in equation of {name}, and won't be translated:",
+      ">" = paste0(paste0(syntax4[idx_ABM, "insightmaker"], ")"), collapse = ", ")
+    ))
+  }
+
+  syntax5 <- syntax_df_unsupp[
+    syntax_df_unsupp[["syntax"]] %in% c("syntax5", "syntax5b"),
+    ,
+    drop = FALSE
+  ]
+  idx5 <- stringr::str_detect(eqn_no_names, syntax5[["insightmaker_regex"]])
+
+  if (any(idx5)) {
+    cli::cli_inform(
+      "Unsupported Insight Maker functions were detected in equation of ",
+      name, ", and won't be translated: "
+    )
+    cli::cli_inform(paste0(syntax5[idx5, "insightmaker"], ")"))
+  }
+
+  invisible(NULL)
+}
+
+
+#' Build a replacement for a matched Insight Maker builtin
+#'
+#' @inheritParams convert_equations_IM
+#' @param idx_func One matched function row from select_innermost_function().
+#' @param arg Parsed arguments for the matched function.
+#' @param translated_func Functions already translated in this equation.
+#'
+#' @returns List with replacement text, replacement bounds, and add_var.
+#' @noRd
+build_IM_builtin_replacement <- function(eqn, idx_func, arg, name, var_names, translated_func) {
+  add_var <- data.frame()
+
+  if (idx_func[["syntax"]] %in% c("syntax0", "syntax0b")) {
+    return(list(
+      replacement = idx_func[["R"]],
+      start_idx = idx_func[["start"]],
+      end_idx = idx_func[["end"]],
+      add_var = add_var
+    ))
+  }
+
+  if (idx_func[["syntax"]] == "syntax1") {
+    if (as.logical(idx_func[["add_c()"]]) && length(arg) > 1) {
+      arg <- paste0("c(", paste0(arg, collapse = ", "), ")")
+    } else {
+      arg <- paste0(arg, collapse = ", ")
+    }
+
+    return(list(
+      replacement = sprintf(
+        "%s(%s%s%s)",
+        idx_func[["R"]],
+        idx_func[["add_first_arg"]],
+        ifelse(nzchar(idx_func[["add_first_arg"]]) & nzchar(arg), ", ", ""),
+        arg
+      ),
+      start_idx = idx_func[["start"]],
+      end_idx = idx_func[["end"]],
+      add_var = add_var
+    ))
+  }
+
+  if (idx_func[["syntax"]] == "syntax1b") {
+    return(list(
+      replacement = sprintf("%s(%s)", idx_func[["R"]], idx_func[["add_first_arg"]]),
+      start_idx = idx_func[["start"]],
+      end_idx = idx_func[["end"]],
+      add_var = add_var
+    ))
+  }
+
+  if (idx_func[["syntax"]] == "syntax2") {
+    prefunc_arg <- extract_prefunc_args(eqn, var_names,
+      start_func = idx_func[["start"]],
+      names_with_brackets = TRUE
+    )
+
+    return(list(
+      replacement = sprintf(
+        "%s(%s%s%s%s%s)",
+        idx_func[["R"]],
+        idx_func[["add_first_arg"]],
+        ifelse(nzchar(idx_func[["add_first_arg"]]), ", ", ""),
+        prefunc_arg,
+        ifelse(nzchar(arg[1]), ", ", ""),
+        paste0(arg, collapse = ", ")
+      ),
+      start_idx = idx_func[["start"]] - stringr::str_length(prefunc_arg),
+      end_idx = idx_func[["end"]],
+      add_var = add_var
+    ))
+  }
+
+  if (idx_func[["syntax"]] == "syntax3") {
+    match_idx <- if (length(translated_func) == 0) {
+      1
+    } else {
+      length(translated_func[translated_func == idx_func[["insightmaker"]]]) + 1
+    }
+    match_idx <- ifelse(match_idx == 1, "", match_idx)
+
+    envir <- environment()
+    call_args <- eval(parse(text = idx_func[["R"]])) |>
+      formals() |> as.list() |>
+      utils::modifyList(list(
+        func = tolower(idx_func[["insightmaker"]]),
+        arg = arg
+      ))
+
+    call_args <- lapply(seq_along(call_args), function(y) {
+      if (is.name(call_args[[y]])) {
+        envir[[names(call_args)[y]]]
+      } else {
+        call_args[[y]]
+      }
+    }) |>
+      stats::setNames(names(call_args))
+
+    out <- do.call(idx_func[["R"]], call_args)
+
+    return(list(
+      replacement = out[["replacement"]],
+      start_idx = idx_func[["start"]],
+      end_idx = idx_func[["end"]],
+      add_var = out[["add_var"]]
+    ))
+  }
+
+  cli::cli_abort(c(
+    "Unsupported Insight Maker syntax class: {.val {idx_func[['syntax']]}}."
+  ))
 }
 
 
@@ -666,51 +922,23 @@ convert_builtin_functions_IM <- function(type, name, eqn, var_names) {
     )
 
     while (!done) {
-      idx_df <- stringr::str_locate_all(eqn, IM_regex)
+      matches <- collect_IM_function_matches(eqn, syntax_df, IM_regex, var_names)
+      idx_df <- matches[["idx_df"]]
+      idx_keep <- matches[["idx_keep"]]
 
-      # Remove NULL entries
-      nrow_per_idx <- vapply(idx_df, nrow, integer(1))
-      idx_keep <- nrow_per_idx > 0
-      idx_df <- idx_df[idx_keep]
-
-      if (length(idx_df) == 0) {
+      if (nrow(idx_df) == 0 && i > 1) {
         done <- TRUE
         next
       }
 
-      rep_syntax_df <- syntax_df[idx_keep, ]
-      rep_syntax_df <- rep_syntax_df[rep(seq_len(nrow(rep_syntax_df)), nrow_per_idx[idx_keep]), ]
-
-      idx_df <- cbind(
-        # dplyr::bind_cols(
-        rep_syntax_df,
-        # as.data.frame(do.call(rbind, idx_df))
-        bind_rows_(idx_df)
-      )
-
-      # Double matches in case of functions that don't need brackets, e.g., Days() -> select one with longest end, as we want to match Days() over Days
-      idx_df <- idx_df[order(idx_df[["insightmaker"]], idx_df[["start"]], -idx_df[["end"]]), ]
-      idx_df <- idx_df[!duplicated(idx_df[, c("insightmaker", "start")]), ]
-      rownames(idx_df) <- NULL
-
-      # Remove those matches that are in quotation marks or names
-      idxs_exclude <- get_seq_exclude(eqn, var_names, names_with_brackets = TRUE)
-
-      if (nrow(idx_df) > 0) idx_df <- idx_df[!(idx_df[["start"]] %in% idxs_exclude | idx_df[["end"]] %in% idxs_exclude), ]
+      if (nrow(idx_df) == 0) {
+        done <- TRUE
+        next
+      }
 
       # For the first iteration, add _replace to all detected functions, so we don't end in an infinite loop (some insightmaker and R functions have the same name)
       if (i == 1 && nrow(idx_df) > 0) {
-        idx_df <- idx_df[order(idx_df[["start"]]), ]
-        idx_df[["insightmaker_regex"]] <- stringr::str_replace_all(
-          idx_df[["insightmaker_regex"]],
-          # Remove regex characters
-          stringr::fixed(c(
-            "(?:^|(?<=\\W))" = "", "(?=(?:\\W|$))" = "",
-            "\\b" = "", "\\(" = "(", "\\)" = ")"
-          ))
-        )
-
-        eqn <- apply_replacements_reversed(eqn, idx_df, idx_df[["insightmaker_regex"]])
+        eqn <- mark_IM_function_matches(eqn, idx_df)
       }
 
       if (i == 1) {
@@ -745,107 +973,24 @@ convert_builtin_functions_IM <- function(type, name, eqn, var_names) {
         bracket_arg <- stringr::str_sub(eqn, idx_func[["start_bracket"]] + 1, idx_func[["end"]] - 1)
         arg <- parse_args(bracket_arg)
 
-        # Replace entire string, no arguments
-        if (idx_func[["syntax"]] %in% c("syntax0", "syntax0b")) {
-          replacement <- idx_func[["R"]]
+        replacement_info <- build_IM_builtin_replacement(
+          eqn = eqn,
+          idx_func = idx_func,
+          arg = arg,
+          name = name,
+          var_names = var_names,
+          translated_func = translated_func
+        )
+        replacement <- replacement_info[["replacement"]]
+        start_idx <- replacement_info[["start_idx"]]
+        end_idx <- replacement_info[["end_idx"]]
+        add_var <- replacement_info[["add_var"]]
 
-          # Indices of replacement in eqn
-          start_idx <- idx_func[["start"]]
-          end_idx <- idx_func[["end"]]
-        } else if (idx_func[["syntax"]] == "syntax1") {
-          # Add vector brackets if needed
-          if (as.logical(idx_func[["add_c()"]]) && length(arg) > 1) {
-            arg <- paste0("c(", paste0(arg, collapse = ", "), ")")
-          } else {
-            arg <- paste0(arg, collapse = ", ")
-          }
+        if (nrow(add_var)) {
+          add_vars <- rbind(add_vars, add_var)
 
-          replacement <- sprintf(
-            "%s(%s%s%s)",
-            idx_func[["R"]],
-            idx_func[["add_first_arg"]],
-            ifelse(nzchar(idx_func[["add_first_arg"]]) & nzchar(arg), ", ", ""),
-            arg
-          )
-
-          # Indices of replacement in eqn
-          start_idx <- idx_func[["start"]]
-          end_idx <- idx_func[["end"]]
-        } else if (idx_func[["syntax"]] == "syntax1b") {
-          replacement <- sprintf(
-            "%s(%s)",
-            idx_func[["R"]],
-            idx_func[["add_first_arg"]]
-          )
-
-          # Indices of replacement in eqn
-          start_idx <- idx_func[["start"]]
-          end_idx <- idx_func[["end"]]
-        } else if (idx_func[["syntax"]] == "syntax2") {
-          # Extract argument before function
-          prefunc_arg <- extract_prefunc_args(eqn, var_names,
-            start_func = idx_func[["start"]],
-            names_with_brackets = TRUE
-          )
-          start_idx <- idx_func[["start"]] - stringr::str_length(prefunc_arg)
-
-          replacement <- sprintf(
-            "%s(%s%s%s%s%s)",
-            idx_func[["R"]],
-            idx_func[["add_first_arg"]],
-            ifelse(nzchar(idx_func[["add_first_arg"]]), ", ", ""),
-            prefunc_arg,
-            ifelse(nzchar(arg[1]), ", ", ""),
-            paste0(arg, collapse = ", ")
-          )
-
-          # End index of replacement in eqn
-          end_idx <- idx_func[["end"]]
-        } else if (idx_func[["syntax"]] == "syntax3") {
-          # If it's the first function of this kind, no id is needed
-          if (length(translated_func) == 0) {
-            match_idx <- 1
-          } else {
-            match_idx <- length(translated_func[translated_func == idx_func[["insightmaker"]]]) + 1
-          }
-          match_idx <- ifelse(match_idx == 1, "", match_idx)
-
-          # Get environment and create list of arguments needed by the function
-          envir <- environment()
-          call_args <- eval(parse(text = idx_func[["R"]])) |>
-            # Get the formal arguments needed by the function
-            formals() |> as.list() |>
-            # Add own arguments
-            utils::modifyList(list(
-              func = tolower(idx_func[["insightmaker"]]),
-              arg = arg
-            ))
-
-          call_args2 <- lapply(seq_along(call_args), function(y) {
-            if (is.name(call_args[[y]])) {
-              return(envir[[names(call_args)[y]]])
-            } else {
-              return(call_args[[y]])
-            }
-          })
-
-          rm(envir)
-          call_args <- stats::setNames(call_args2, names(call_args))
-
-          out <- do.call(idx_func[["R"]], call_args)
-
-          # Indices of replacement in eqn
-          start_idx <- idx_func[["start"]]
-          end_idx <- idx_func[["end"]]
-          replacement <- out[["replacement"]]
-          add_var <- out[["add_var"]]
-
-          if (nrow(add_var)) {
-            add_vars <- rbind(add_vars, add_var)
-
-            # Add newly created variables to names_df so that they are safe from replacement, e.g., if a variable contains the word "Time"
-            var_names <- c(var_names, add_var[["name"]])
-          }
+          # Add newly created variables to names_df so that they are safe from replacement, e.g., if a variable contains the word "Time"
+          var_names <- c(var_names, add_var[["name"]])
         }
 
         if (P[["debug"]]) {
@@ -861,45 +1006,7 @@ convert_builtin_functions_IM <- function(type, name, eqn, var_names) {
       }
     }
 
-    # Check for unsupported functions
-    eqn_split <- strsplit(eqn, "")[[1]]
-
-    # Remove those matches that are in quotation marks or names
-    idxs_exclude <- get_seq_exclude(eqn, var_names, names_with_brackets = TRUE)
-    if (!is.null(idxs_exclude)) {
-      eqn_no_names <- paste0(eqn_split[-idxs_exclude], collapse = "")
-    } else {
-      eqn_no_names <- paste0(eqn_split, collapse = "")
-    }
-
-    # Syntax 4: Agent-based functions, which are not translated but flagged
-    syntax4 <- syntax_df_unsupp[
-      syntax_df_unsupp[["syntax"]] %in% c("syntax4", "syntax4b"), ,
-      drop = FALSE
-    ]
-    idx_ABM <- stringr::str_detect(eqn_no_names, syntax4[["insightmaker_regex"]])
-
-    if (any(idx_ABM)) {
-      cli::cli_inform(c(
-        "!" = "Agent-Based Modelling functions were detected in equation of {name}, and won't be translated:",
-        ">" = paste0(paste0(syntax4[idx_ABM, "insightmaker"], ")"), collapse = ", ")
-      ))
-    }
-
-    # Syntax 5: Unsupported Insight Maker functions
-    syntax5 <- syntax_df_unsupp[
-      syntax_df_unsupp[["syntax"]] %in% c("syntax5", "syntax5b"), ,
-      drop = FALSE
-    ]
-    idx5 <- stringr::str_detect(eqn_no_names, syntax5[["insightmaker_regex"]])
-
-    if (any(idx5)) {
-      cli::cli_inform(
-        "Unsupported Insight Maker functions were detected in equation of ",
-        name, ", and won't be translated: "
-      )
-      cli::cli_inform(paste0(syntax5[idx5, "insightmaker"], ")"))
-    }
+    report_unsupported_IM_functions(eqn, name, var_names, syntax_df_unsupp)
   }
 
   list(

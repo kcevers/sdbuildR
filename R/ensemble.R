@@ -179,139 +179,14 @@ ensemble <- function(object,
     only_stocks <- all(vars %in% stock_names)
   }
 
-  if (!is.numeric(n)) {
-    cli::cli_abort(c(
-      "x" = "The {.arg n} argument must be {.cls numeric}.",
-      "i" = "Received: {.cls {typeof(n)}}"
-    ))
-  }
-
-  if (n <= 0) {
-    cli::cli_abort(c(
-      "x" = "The {.arg n} argument must be greater than {.val {0}}."
-    ))
-  }
-
-  if (!is.numeric(quantiles)) {
-    cli::cli_abort(c(
-      "x" = "The {.arg quantiles} argument must be {.cls numeric}.",
-      "i" = "Received: {.cls {typeof(quantiles)}}",
-      ">" = "Use a numeric vector, e.g., {.code quantiles = c(0.025, 0.975)}."
-    ))
-  }
-
-  if (length(unique(quantiles)) < 2) {
-    cli::cli_abort(c(
-      "x" = "The {.arg quantiles} argument must have at least {.val {2}} unique values.",
-      "i" = "Received {.val {length(unique(quantiles))}} unique value(s).",
-      ">" = "Provide at least 2 quantiles, e.g., {.code quantiles = c(0.025, 0.975)}."
-    ))
-  }
-
-  if (any(quantiles < 0 | quantiles > 1)) {
-    cli::cli_abort(c(
-      "x" = "All values in {.arg quantiles} must be between {.val {0}} and {.val {1}}.",
-      "i" = "Quantiles represent probabilities and must be proportions.",
-      ">" = "Use values like {.code c(0.025, 0.5, 0.975)} for 2.5%, 50%, 97.5% quantiles."
-    ))
-  }
-
-  if (!is.logical(cross)) {
-    cli::cli_abort(c(
-      "x" = "The {.arg cross} argument must be {.code TRUE} or {.code FALSE}.",
-      "i" = "Received: {.val {cross}}",
-      ">" = "Use {.code cross = TRUE} for all combinations or {.code cross = FALSE} for paired values."
-    ))
-  }
-
-
-  if (!is.null(conditions)) {
-    if (!is.list(conditions)) {
-      cli::cli_abort(c(
-        "x" = "The {.arg conditions} argument must be a {.cls list}.",
-        "i" = "Received: {.cls {typeof(conditions)}}",
-        ">" = "Use format: {.code conditions = list(param1 = c(1, 2), param2 = c(10, 20))}."
-      ))
-    }
-
-    if (length(conditions) == 0) {
-      cli::cli_abort(c(
-        "x" = "The {.arg conditions} argument must have at least one parameter.",
-        ">" = "Specify like: {.code conditions = list(param = c(1, 2, 3))}."
-      ))
-    }
-
-    if (is.null(names(conditions))) {
-      cli::cli_abort(c(
-        "x" = "The {.arg conditions} list elements must be named.",
-        "i" = "Names correspond to parameter/stock names in your model.",
-        ">" = "Use: {.code conditions = list(paramname = values, ...)}."
-      ))
-    }
-
-    # All must be numerical values
-    if (!all(vapply(conditions, is.numeric, logical(1)))) {
-      cli::cli_abort(c(
-        "x" = "All {.arg conditions} elements must be {.cls numeric} vectors.",
-        ">" = "Example: {.code conditions = list(param1 = c(1, 2, 3))}."
-      ))
-    }
-
-    # Test that names are unique
-    if (length(unique(names(conditions))) != length(conditions)) {
-      cli::cli_abort(c(
-        "x" = "All {.arg conditions} names must be unique."
-      ))
-    }
-
-    # All varied elements must exist in the model
-    names_df <- get_names(object)
-    names_conditions <- names(conditions)
-    allowed_names <- names_df[names_df[["type"]] %in% c("stock", "constant"), "name"]
-    idx <- names_conditions %in% names_df[["name"]]
-    if (any(!idx)) {
-      missing_names <- names_conditions[!idx]
-      cli::cli_abort(c(
-        "x" = "Unknown parameters in {.arg conditions}.",
-        "i" = "The following parameters do not exist in the model: {paste0('{.code ', missing_names, '}', collapse = ', ')}.",
-        ">" = "Available variables to vary: {paste0(allowed_names, collapse = ', ')}"
-      ))
-    }
-
-    # All varied elements must be a stock or constant
-    idx <- names_conditions %in% c(names_df[names_df[["type"]] %in% c("stock", "constant"), "name"])
-    if (any(!idx)) {
-      invalid_names <- names_conditions[!idx]
-      cli::cli_abort(c(
-        "x" = "Flows or auxiliaries cannot be varied, only stocks and constants.",
-        "i" = "Cannot vary: {paste0('{.code ', invalid_names, '}', collapse = ', ')}.",
-        ">" = "Available variables to vary: {paste0(allowed_names, collapse = ', ')}"
-      ))
-    }
-
-    # All conditions vectors must be of the same length if not a crossed design
-    conditions_lengths <- vapply(conditions, length, numeric(1))
-    if (!cross) {
-      if (length(unique(conditions_lengths)) != 1) {
-        cli::cli_abort(c(
-          "x" = "Mismatched conditions lengths with {.arg cross = FALSE}.",
-          "i" = "When {.arg cross = FALSE}, all conditions vectors must have equal length.",
-          "i" = "Found lengths: {paste0(unique(conditions_lengths), collapse = ', ')} for parameters {paste0(names(conditions), collapse = ', ')}.",
-          ">" = "Either use {.code cross = TRUE} or equalize all conditions vectors."
-        ))
-      }
-
-      n_conditions <- unique(conditions_lengths)
-    } else {
-      # Compute the total number of conditions
-      n_conditions <- prod(conditions_lengths)
-    }
-
-    # Alphabetically sort the ensemble parameters
-    conditions <- conditions[sort(names(conditions))]
-  } else {
-    n_conditions <- 1
-  }
+  validate_ensemble_args(n = n, quantiles = quantiles, cross = cross)
+  normalized_conditions <- normalize_ensemble_conditions(
+    object = object,
+    conditions = conditions,
+    cross = cross
+  )
+  conditions <- normalized_conditions[["conditions"]]
+  n_conditions <- normalized_conditions[["n_conditions"]]
 
   total_sims <- n * n_conditions
   if (verbose) {
@@ -356,6 +231,167 @@ ensemble <- function(object,
 
   validate_ensemble_sdbuildR(out)
   out
+}
+
+
+#' Validate ensemble control arguments
+#'
+#' @inheritParams ensemble
+#'
+#' @returns Invisibly returns NULL.
+#' @noRd
+validate_ensemble_args <- function(n, quantiles, cross) {
+  if (!is.numeric(n)) {
+    abort_ensemble(c(
+      "x" = "The {.arg n} argument must be {.cls numeric}.",
+      "i" = "Received: {.cls {typeof(n)}}"
+    ))
+  }
+
+  if (n <= 0) {
+    abort_ensemble(c(
+      "x" = "The {.arg n} argument must be greater than {.val {0}}."
+    ))
+  }
+
+  if (!is.numeric(quantiles)) {
+    abort_ensemble(c(
+      "x" = "The {.arg quantiles} argument must be {.cls numeric}.",
+      "i" = "Received: {.cls {typeof(quantiles)}}",
+      ">" = "Use a numeric vector, e.g., {.code quantiles = c(0.025, 0.975)}."
+    ))
+  }
+
+  if (length(unique(quantiles)) < 2) {
+    abort_ensemble(c(
+      "x" = "The {.arg quantiles} argument must have at least {.val {2}} unique values.",
+      "i" = "Received {.val {length(unique(quantiles))}} unique value(s).",
+      ">" = "Provide at least 2 quantiles, e.g., {.code quantiles = c(0.025, 0.975)}."
+    ))
+  }
+
+  if (any(quantiles < 0 | quantiles > 1)) {
+    abort_ensemble(c(
+      "x" = "All values in {.arg quantiles} must be between {.val {0}} and {.val {1}}.",
+      "i" = "Quantiles represent probabilities and must be proportions.",
+      ">" = "Use values like {.code c(0.025, 0.5, 0.975)} for 2.5%, 50%, 97.5% quantiles."
+    ))
+  }
+
+  if (!is.logical(cross)) {
+    abort_ensemble(c(
+      "x" = "The {.arg cross} argument must be {.code TRUE} or {.code FALSE}.",
+      "i" = "Received: {.val {cross}}",
+      ">" = "Use {.code cross = TRUE} for all combinations or {.code cross = FALSE} for paired values."
+    ))
+  }
+
+  invisible(NULL)
+}
+
+
+#' Validate and normalize ensemble conditions
+#'
+#' @inheritParams ensemble
+#'
+#' @returns List with sorted `conditions` and scalar `n_conditions`.
+#' @noRd
+normalize_ensemble_conditions <- function(object, conditions, cross) {
+  if (is.null(conditions)) {
+    return(list(conditions = NULL, n_conditions = 1))
+  }
+
+  if (!is.list(conditions)) {
+    abort_ensemble(c(
+      "x" = "The {.arg conditions} argument must be a {.cls list}.",
+      "i" = "Received: {.cls {typeof(conditions)}}",
+      ">" = "Use format: {.code conditions = list(param1 = c(1, 2), param2 = c(10, 20))}."
+    ))
+  }
+
+  if (length(conditions) == 0) {
+    abort_ensemble(c(
+      "x" = "The {.arg conditions} argument must have at least one parameter.",
+      ">" = "Specify like: {.code conditions = list(param = c(1, 2, 3))}."
+    ))
+  }
+
+  if (is.null(names(conditions))) {
+    abort_ensemble(c(
+      "x" = "The {.arg conditions} list elements must be named.",
+      "i" = "Names correspond to parameter/stock names in your model.",
+      ">" = "Use: {.code conditions = list(paramname = values, ...)}."
+    ))
+  }
+
+  if (!all(vapply(conditions, is.numeric, logical(1)))) {
+    abort_ensemble(c(
+      "x" = "All {.arg conditions} elements must be {.cls numeric} vectors.",
+      ">" = "Example: {.code conditions = list(param1 = c(1, 2, 3))}."
+    ))
+  }
+
+  if (length(unique(names(conditions))) != length(conditions)) {
+    abort_ensemble(c(
+      "x" = "All {.arg conditions} names must be unique."
+    ))
+  }
+
+  names_df <- get_names(object)
+  names_conditions <- names(conditions)
+  allowed_names <- names_df[names_df[["type"]] %in% c("stock", "constant"), "name"]
+
+  idx <- names_conditions %in% names_df[["name"]]
+  if (any(!idx)) {
+    missing_names <- names_conditions[!idx]
+    abort_ensemble(c(
+      "x" = "Unknown parameters in {.arg conditions}.",
+      "i" = "The following parameters do not exist in the model: {paste0('{.code ', missing_names, '}', collapse = ', ')}.",
+      ">" = "Available variables to vary: {paste0(allowed_names, collapse = ', ')}"
+    ))
+  }
+
+  idx <- names_conditions %in% allowed_names
+  if (any(!idx)) {
+    invalid_names <- names_conditions[!idx]
+    abort_ensemble(c(
+      "x" = "Flows or auxiliaries cannot be varied, only stocks and constants.",
+      "i" = "Cannot vary: {paste0('{.code ', invalid_names, '}', collapse = ', ')}.",
+      ">" = "Available variables to vary: {paste0(allowed_names, collapse = ', ')}"
+    ))
+  }
+
+  conditions_lengths <- vapply(conditions, length, numeric(1))
+  if (!cross) {
+    if (length(unique(conditions_lengths)) != 1) {
+      abort_ensemble(c(
+        "x" = "Mismatched conditions lengths with {.arg cross = FALSE}.",
+        "i" = "When {.arg cross = FALSE}, all conditions vectors must have equal length.",
+        "i" = "Found lengths: {paste0(unique(conditions_lengths), collapse = ', ')} for parameters {paste0(names(conditions), collapse = ', ')}.",
+        ">" = "Either use {.code cross = TRUE} or equalize all conditions vectors."
+      ))
+    }
+
+    n_conditions <- unique(conditions_lengths)
+  } else {
+    n_conditions <- prod(conditions_lengths)
+  }
+
+  list(
+    conditions = conditions[sort(names(conditions))],
+    n_conditions = n_conditions
+  )
+}
+
+
+#' Abort from ensemble internals while reporting the public call
+#'
+#' @param message cli message vector.
+#'
+#' @returns Never returns; throws an error.
+#' @noRd
+abort_ensemble <- function(message) {
+  cli::cli_abort(message, call = quote(ensemble()), .envir = parent.frame())
 }
 
 

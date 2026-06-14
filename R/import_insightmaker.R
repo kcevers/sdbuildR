@@ -27,6 +27,107 @@
 }
 
 
+#' Attach raw source information to an import context
+#'
+#' @param ctx Import context.
+#' @param read_file Raw parsed source model.
+#' @param URL URL argument value.
+#' @param file File argument value.
+#' @param URL_spec Logical; whether URL was supplied.
+#' @param file_spec Logical; whether file was supplied.
+#'
+#' @returns Updated import context.
+#' @noRd
+attach_import_source <- function(ctx, read_file, URL, file, URL_spec, file_spec) {
+  ctx$raw_model <- read_file
+  ctx$file_path <- if (file_spec && !is.null(file)) file else NULL
+  ctx$url <- if (URL_spec && !is.null(URL)) URL else NULL
+
+  if (URL_spec) {
+    ctx$object[["meta"]][["URL"]] <- URL
+  }
+
+  ctx
+}
+
+
+#' Convert imported Insight Maker temporary fields to model-ready equations
+#'
+#' @param object Stock-and-flow object from the import context.
+#' @inheritParams import_insightmaker
+#'
+#' @returns Converted stock-and-flow object.
+#' @noRd
+convert_imported_IM_object <- function(object, keep_nonnegative_flow, keep_nonnegative_stock) {
+  object <- .import_step(
+    check_nonnegativity(object, keep_nonnegative_flow, keep_nonnegative_stock),
+    x = "Failed to check non-negativity constraints.",
+    i = "Review your keep_nonnegative_flow and keep_nonnegative_stock settings."
+  )
+
+  if (P[["debug"]]) {
+    cli::cli_inform(c("i" = "Converting macros"))
+  }
+
+  object <- .import_step(
+    convert_macros_IM_wrapper(object),
+    x = "Failed to convert macros from Insight Maker format.",
+    i = "Check for unsupported macro syntax or functions."
+  )
+
+  if (P[["debug"]]) {
+    cli::cli_inform(c("i" = "Converting equations"))
+  }
+
+  object <- .import_step(
+    convert_equations_IM_wrapper(object),
+    x = "Failed to convert equations from Insight Maker format.",
+    i = "Check for unsupported functions or syntax in your model equations."
+  )
+
+  object <- .import_step(
+    remove_brackets_from_names(object),
+    x = "Failed to clean variable names.",
+    error_as = "i"
+  )
+
+  .import_step(
+    split_aux_wrapper(object),
+    x = "Failed to split auxiliary variables into constants and auxiliaries.",
+    error_as = "i"
+  )
+}
+
+
+#' Finalize an imported Insight Maker object
+#'
+#' @param ctx Import context.
+#' @param object Converted stock-and-flow object.
+#' @inheritParams import_insightmaker
+#'
+#' @returns Final validated stock-and-flow object.
+#' @noRd
+finalize_imported_IM_object <- function(ctx, object, keep_nonnegative_flow, keep_nonnegative_stock) {
+  object <- prep_equations_variables(object)
+  object <- prep_stock_change(object)
+  object <- sim_settings(object,
+    keep_nonnegative_flow = keep_nonnegative_flow,
+    keep_nonnegative_stock = keep_nonnegative_stock
+  )
+
+  allowed_cols <- colnames(empty_variables())
+  object[["variables"]] <- object[["variables"]][, colnames(object[["variables"]]) %in% allowed_cols]
+
+  ctx$object <- object
+  object[["import_metadata"]] <- ctx_build_import_metadata(ctx)
+
+  object <- sanitize_sdbuildR(object)
+  validate_sdbuildR(object)
+
+  object
+}
+
+
 #' Import Insight Maker model
 #'
 #' Import a stock-and-flow model from [Insight Maker](https://insightmaker.com/). Models may be your own or another user's. Importing causal loop diagrams or agent-based models is not supported.
@@ -63,6 +164,9 @@ import_insightmaker <- function(URL,
                                 file,
                                 keep_nonnegative_flow = TRUE,
                                 keep_nonnegative_stock = FALSE) {
+  URL_spec <- !missing(URL)
+  file_spec <- !missing(file)
+
   if (P[["debug"]]) {
     cli::cli_inform(c("i" = "URL: {URL}"))
     cli::cli_inform(c("i" = "file: {file}"))
@@ -86,77 +190,11 @@ import_insightmaker <- function(URL,
     i = "Check for unsupported Insight Maker syntax or model structure."
   )
 
-  # Store raw model and source info in context for import_metadata
-  ctx$raw_model <- read_file
-  ctx$file_path <- if (!missing(file) && !is.null(file)) file else NULL
-  ctx$url <- if (!missing(URL) && !is.null(URL)) URL else NULL
-
-  # Add URL to meta
-  if (!missing(URL)) {
-    ctx$object[["meta"]][["URL"]] <- URL
-  }
+  ctx <- attach_import_source(ctx, read_file, URL, file, URL_spec, file_spec)
 
   # Extract object for convenience (conversion functions work on object)
   object <- ctx$object
 
-  # Check non-negativity for flows and stocks
-  object <- .import_step(
-    check_nonnegativity(object, keep_nonnegative_flow, keep_nonnegative_stock),
-    x = "Failed to check non-negativity constraints.",
-    i = "Review your keep_nonnegative_flow and keep_nonnegative_stock settings."
-  )
-
-  # Convert macros
-  if (P[["debug"]]) {
-    cli::cli_inform(c("i" = "Converting macros"))
-  }
-
-  object <- .import_step(
-    convert_macros_IM_wrapper(object),
-    x = "Failed to convert macros from Insight Maker format.",
-    i = "Check for unsupported macro syntax or functions."
-  )
-
-  # Convert equations in model variables (IM format -> R format)
-  if (P[["debug"]]) {
-    cli::cli_inform(c("i" = "Converting equations"))
-  }
-
-  object <- .import_step(
-    convert_equations_IM_wrapper(object),
-    x = "Failed to convert equations from Insight Maker format.",
-    i = "Check for unsupported functions or syntax in your model equations."
-  )
-
-  # Finalize equations by removing brackets from names
-  object <- .import_step(
-    remove_brackets_from_names(object),
-    x = "Failed to clean variable names.",
-    error_as = "i"
-  )
-
-  # Split auxiliaries into constants and auxiliaries
-  object <- .import_step(
-    split_aux_wrapper(object),
-    x = "Failed to split auxiliary variables into constants and auxiliaries.",
-    error_as = "i"
-  )
-
-  object <- prep_equations_variables(object)
-  object <- prep_stock_change(object)
-  object <- sim_settings(object, keep_nonnegative_flow = keep_nonnegative_flow, keep_nonnegative_stock = keep_nonnegative_stock)
-
-  allowed_cols <- colnames(empty_variables())
-  object[["variables"]] <- object[["variables"]][, colnames(object[["variables"]]) %in% allowed_cols]
-
-  # Update context with converted object
-  ctx$object <- object
-
-  # Build import_metadata from context and attach to object
-  object[["import_metadata"]] <- ctx_build_import_metadata(ctx)
-
-  object <- sanitize_sdbuildR(object)
-  validate_sdbuildR(object)
-
-  object
+  object <- convert_imported_IM_object(object, keep_nonnegative_flow, keep_nonnegative_stock)
+  finalize_imported_IM_object(ctx, object, keep_nonnegative_flow, keep_nonnegative_stock)
 }

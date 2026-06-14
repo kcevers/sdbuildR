@@ -99,7 +99,6 @@ compile <- function(object, only_stocks = FALSE,
   }
 
   ode <- object[["assemble"]][["ode"]]
-  static <- object[["assemble"]][["static"]]
 
   # --- Compile run ODE and post ----------------------------------------------
   run_ode <- compile_run_ode(object,
@@ -115,29 +114,7 @@ compile <- function(object, only_stocks = FALSE,
   )
 
   # --- Assemble final script -------------------------------------------------
-  if (language == "R") {
-    script <- paste0(c(
-      "# Load packages\nlibrary(sdbuildR)",
-      # seed_str,
-      object[["assemble"]][["times"]],
-      object[["assemble"]][["funcs"]],
-      object[["assemble"]][["nonneg_stocks"]][["func_def"]],
-      ode,
-      static[["script"]],
-      run_ode,
-      post
-    ), collapse = "\n")
-  } else {
-    script <- paste0(c(
-      # seed_str,
-      object[["assemble"]][["times"]],
-      object[["assemble"]][["funcs"]],
-      ode,
-      static[["script"]],
-      run_ode,
-      post
-    ), collapse = "\n")
-  }
+  script <- compile_script_sections(object, ode = ode, run_ode = run_ode, post = post)
 
   list(script = script, object = object)
 }
@@ -156,41 +133,8 @@ compile_times <- function(object, language) {
   if (language == "R") {
     script <- fmt_script("times", "R", ss)
   } else if (language == "Julia") {
-    save_type <- ss[["save_type"]] %||% "all"
-    save_at <- ss[["save_at"]]
-    save_n <- ss[["save_n"]]
-
-    saveat_expr <- switch(save_type,
-      "all" = {
-        # Save at every dt step: use tstops (ensures all dt steps are stored)
-        P[["tstops_name"]]
-      },
-      "save_at" = if (length(save_at) == 1) {
-        # Scalar interval: Julia range evaluated natively
-        sprintf(
-          "%s[1]:%s:%s[2]",
-          P[["times_name"]], save_at, P[["times_name"]]
-        )
-      } else {
-        # Explicit vector
-        paste0("[", paste(save_at, collapse = ", "), "]")
-      },
-      "save_n" = {
-        if (as.integer(save_n) == 1L) {
-          # Only save the final time point
-          sprintf("[%s[2]]", P[["times_name"]])
-        } else {
-          # range() evaluated in Julia — avoids R rounding issues
-          sprintf(
-            "range(%s[1], %s[2], length=%s)",
-            P[["times_name"]], P[["times_name"]], save_n
-          )
-        }
-      }
-    )
-
     script <- fmt_script("times", "julia", ss,
-      saveat_expr = saveat_expr
+      saveat_expr = julia_saveat_expr(ss)
     )
   }
 
@@ -476,30 +420,9 @@ compile_post <- function(object, filepath_sim = NULL, language, vars = NULL) {
   save_intermediaries <- length(intermediaries[["names"]]) > 0
 
   if (language == "R") {
-    ss <- object[["sim_settings"]]
-    save_type <- ss[["save_type"]] %||% "all"
-    save_at <- ss[["save_at"]]
-    save_n <- ss[["save_n"]]
-
-    saveat_script <- switch(save_type,
-      "all" = "",
-      "save_at" = if (length(save_at) == 1) {
-        fmt_script("saveat_interval", language, ss, save_at_val = save_at)
-      } else {
-        fmt_script("saveat_explicit", language, ss,
-          save_at_str = paste(save_at, collapse = ", ")
-        )
-      },
-      "save_n" = if (as.integer(save_n) == 1L) {
-        fmt_script("saveat_n1", language, ss)
-      } else {
-        fmt_script("saveat_n", language, ss, save_n_val = save_n)
-      }
-    )
-
     # Process ODE output
     script <- fmt_script("post_ode", language,
-      saveat_script = saveat_script
+      saveat_script = r_saveat_script(object[["sim_settings"]])
     )
   } else if (language == "Julia") {
     intermediaries_or_nothing <- ifelse(save_intermediaries, P[["intermediaries"]], "nothing")
@@ -777,7 +700,7 @@ compile_ode <- function(object,
       # Callback setup (only define if not ensemble)
       callback_setup <- ifelse(is_ensemble, "", paste0(
         P[["intermediaries"]], " = SavedValues(",
-        "eltype(", P[["time_name"]], "), Any)\n",
+        "typeof(float(", P[["time_name"]], ")), Any)\n",
         P[["callback_name"]], " = SavingCallback(",
         P[["callback_func_name"]], ", ", P[["intermediaries"]],
         ", saveat = ", P[["saveat_name"]],

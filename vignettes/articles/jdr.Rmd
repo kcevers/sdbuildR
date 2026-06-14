@@ -22,6 +22,32 @@ knitr::opts_chunk$set(
   fig.align = "center", # Center all figures
   out.width = "80%" # Display figures at 80% of container width
 )
+
+if (identical(Sys.getenv("SDBUILDR_TRACE_VIGNETTE_CHUNKS"), "true")) {
+  knitr::opts_knit$set(progress = TRUE, verbose = TRUE)
+  knitr::knit_hooks$set(
+    before = function(options) {
+      if (isTRUE(options$eval)) {
+        cat(sprintf(
+          "\n>>> START chunk: %s at %s\n",
+          options$label,
+          format(Sys.time(), "%Y-%m-%d %H:%M:%S %Z")
+        ), file = stderr())
+      }
+      NULL
+    },
+    after = function(options) {
+      if (isTRUE(options$eval)) {
+        cat(sprintf(
+          "<<< END chunk: %s at %s\n\n",
+          options$label,
+          format(Sys.time(), "%Y-%m-%d %H:%M:%S %Z")
+        ), file = stderr())
+      }
+      NULL
+    }
+  )
+}
 ```
 
 Stock-and-flow models present an intuitive way to formalize psychological systems as dynamic processes that unfold over time. In this vignette, we will formalize Job Demands-Resources (JD-R) theory as a stock-and-flow model. JD-R theory is a prominent framework for understanding burnout and work engagement. Note that this vignette serves as online supplemental material B accompanying the paper *Formalizing Psychological Theory with stockflow: A Stock-and-Flow Modelling Tutorial in R* by Evers et al. (under review). To reproduce the figures in the paper, please see the corresponding .Rmd file.
@@ -52,81 +78,81 @@ sprintf_arg <- function(template, values) {
 }
 font_family <- "Times New Roman"
 
+# Plotting parameters
+filepath_base <- this.path::this.dir()
+filepath_figs <- file.path(filepath_base, "figs_tutorial2026")
+
 if (recreate_figs) {
-  # Plotting parameters
-  filepath_base <- this.path::this.dir()
-  filepath_figs <- file.path(filepath_base, "figs_tutorial2026")
+  dir.create(filepath_figs, showWarnings = FALSE)
+}
 
-  dir.create(filepath_figs)
+VARS <- c("engagement", "performance", "energy", "demands", "resources", "motivation_rate")
+PALETTE <- c("Geyser", "Temps", "Spectral", "Zissou 1", "Roma")[5]
+COLORS <- grDevices::hcl.colors(n = 50, palette = PALETTE)
 
-  VARS <- c("engagement", "performance", "energy", "demands", "resources", "motivation_rate")
-  PALETTE <- c("Geyser", "Temps", "Spectral", "Zissou 1", "Roma")[5]
-  COLORS <- grDevices::hcl.colors(n = 50, palette = PALETTE)
+inflow_col <- adjustcolor(COLORS[10], alpha.f = 1)
+outflow_col <- adjustcolor(COLORS[3], alpha.f = 1)
 
-  inflow_col <- adjustcolor(COLORS[10], alpha.f = 1)
-  outflow_col <- adjustcolor(COLORS[3], alpha.f = 1)
+COLORS_alpha <- adjustcolor(COLORS, alpha.f = .25)
 
-  COLORS_alpha <- adjustcolor(COLORS, alpha.f = .25)
+COLORS <- COLORS[c(37, 9, 32, 1, 47, 17)]
+stock_col <- adjustcolor(COLORS[1], alpha.f = .75)
+flow_col <- COLORS[6]
 
-  COLORS <- COLORS[c(37, 9, 32, 1, 47, 17)]
-  stock_col <- adjustcolor(COLORS[1], alpha.f = .75)
-  flow_col <- COLORS[6]
+health_path <- adjustcolor(COLORS[4], alpha.f = .75)
+motivation_path <- adjustcolor(COLORS[1], alpha.f = .85)
+health_path_fill <- adjustcolor(COLORS[4], alpha.f = .25)
+motivation_path_fill <- adjustcolor(COLORS[1], alpha.f = .25)
+performance_path <- adjustcolor(COLORS[2], alpha.f = .75)
+performance_path_fill <- adjustcolor(COLORS[2], alpha.f = .25)
 
-  health_path <- adjustcolor(COLORS[4], alpha.f = .75)
-  motivation_path <- adjustcolor(COLORS[1], alpha.f = .85)
-  health_path_fill <- adjustcolor(COLORS[4], alpha.f = .25)
-  motivation_path_fill <- adjustcolor(COLORS[1], alpha.f = .25)
-  performance_path <- adjustcolor(COLORS[2], alpha.f = .75)
-  performance_path_fill <- adjustcolor(COLORS[2], alpha.f = .25)
+font_size <- 16
+font_size_xlab <- round(font_size * 1.4)
+font_size_legend <- round(font_size * 1.1)
+font_size_subplot <- font_size # round(font_size * 1.5)
+xlab <- "Time (days)"
 
-  font_size <- 16
-  font_size_xlab <- round(font_size * 1.4)
-  font_size_legend <- round(font_size * 1.1)
-  font_size_subplot <- font_size # round(font_size * 1.5)
-  xlab <- "Time (days)"
+# Finer-grained simulation
+save_at <- .1 # .01
 
-  # Finer-grained simulation
-  save_at <- .1 # .01
+# Annotation template
+annot <- list(xanchor = "center", yanchor = "middle", showarrow = FALSE, xref = "paper", yref = "paper", font = list(size = font_size_subplot, family = font_family))
+annot_font <- list(family = font_family, size = font_size)
 
-  # Annotation template
-  annot <- list(xanchor = "center", yanchor = "middle", showarrow = FALSE, xref = "paper", yref = "paper", font = list(size = font_size_subplot, family = font_family))
-  annot_font <- list(family = font_family, size = font_size)
+# Default legend
+annot_legend <- list(
+  orientation = "h", # orientation
+  x = 0.5, # Center horizontally
+  y = -0.15, # Below the plot
+  xanchor = "center",
+  yanchor = "top",
+  # traceorder = "normal",
+  # tracegroupgap = 0,
+  # itemwidth = 15,
+  font = list(size = font_size_legend)
+)
 
-  # Default legend
-  annot_legend <- list(
-    orientation = "h", # orientation
-    x = 0.5, # Center horizontally
-    y = -0.15, # Below the plot
-    xanchor = "center",
-    yanchor = "top",
-    # traceorder = "normal",
-    # tracegroupgap = 0,
-    # itemwidth = 15,
-    font = list(size = font_size_legend)
+# Default x label annotation
+annot_xlab <- list(
+  text = xlab,
+  font = list(
+    family = font_family,
+    size = font_size_xlab
+  ),
+  xref = "paper",
+  yref = "paper",
+  xanchor = "center",
+  yanchor = "top",
+  x = 0.5, y = -.1,
+  showarrow = FALSE
+)
+
+# Remove axis grid from plotly ploy
+rm_grid <- function(pl) {
+  plotly::layout(pl,
+    xaxis = list(showgrid = FALSE, showline = TRUE),
+    yaxis = list(showgrid = FALSE, showline = TRUE)
   )
-
-  # Default x label annotation
-  annot_xlab <- list(
-    text = xlab,
-    font = list(
-      family = font_family,
-      size = font_size_xlab
-    ),
-    xref = "paper",
-    yref = "paper",
-    xanchor = "center",
-    yanchor = "top",
-    x = 0.5, y = -.1,
-    showarrow = FALSE
-  )
-
-  # Remove axis grid from plotly ploy
-  rm_grid <- function(pl) {
-    plotly::layout(pl,
-      xaxis = list(showgrid = FALSE, showline = TRUE),
-      yaxis = list(showgrid = FALSE, showline = TRUE)
-    )
-  }
 }
 ```
 
@@ -1782,7 +1808,7 @@ For even greater computational efficiency, ensemble simulations can be conducted
 
 To enable Julia simulations in **stockflow**, Julia and a specific environment needs to be configured, as detailed in the vignette [Julia setup](https://kcevers.github.io/sdbuildR/articles/julia-setup.html). Once completed, the Julia environment can be activated (note that this needs to be repeated in each new R session):
 
-```{r}
+```{r julia-start}
 use_julia()
 ```
 
@@ -1794,7 +1820,7 @@ use_julia(nthreads = parallelly::availableCores() - 1)
 
 By default, the simulation engine is R, which should be changed in the simulation settings to make use of Julia:
 
-```{r}
+```{r julia-set-language}
 sfm <- sfm0 <- sim_settings(sfm0, language = "Julia")
 ```
 
@@ -1818,7 +1844,7 @@ In summary, ensemble simulations are more efficient with reduced output size and
 
 A first assessment of the target phenomenon's robustness may involve evaluating its dependence on initial conditions. Though we already simulated the model with several initial conditions, this can be more systematically examined with an ensemble simulation, where we run the model for a thousand iterations:
 
-```{r}
+```{r ensemble-initial-conditions-julia}
 sims <- ensemble(sfm, n = 1000)
 plot(sims, vars = c("engagement", "demands"))
 ```
@@ -1849,7 +1875,7 @@ The mean and 95\% confidence interval across all simulations is shown above. The
 
 Parameters (i.e., constants) are often of greater theoretical interest than initial conditions, as their variation can for instance represent individual differences, contextual factors, or uncertainty in the theory's assumptions. Parameters in ensemble simulations can be varied by redefining their `eqn` to draw from a distribution, or by passing a set of values to vary. For example, we can simulate three values of `motivation_rate`, the rate at which resources increase engagement. 
 
-```{r, fig.height = 8}
+```{r ensemble-parameter-variation-julia, fig.height = 8}
 # Define values to vary
 conditions <- list(motivation_rate = c(0.2, 0.7, 4))
 
@@ -1882,13 +1908,13 @@ if (recreate_figs) {
 
 Our ensemble simulations revealed that boosting the rate at which resources increase engagement could be an effective intervention to prevent burnout. For example, we may imagine that this parameter could be targeted by a training that teaches employees to make better use of their existing resources [@bakker_personal_2021]. To develop an intuition of the system's response to increasing `motivation_rate`, we can simulate an idealized intervention which is active for a particular time period (more realistic implementations can be explored at later modelling stages; @Sterman2000BusinessWorld). To implement this, `motivation_rate` first needs to be converted from a constant to a stock, as it should increase over the time course of the simulation:
 
-```{r}
+```{r intervention-change-motivation-rate}
 sfm <- change_type(sfm0, motivation_rate, new_type = "stock")
 ```
 
 Next, we create a pulse function that is 1 for a period of two weeks and 0 otherwise. The use of input and interpolation functions should be preferred over using if-statements. Floating-point precision errors introduce small numerical inaccuracies in the solver. As a result, hard logical conditions like `if (t == 0.5)` can yield unpredictable results, where the condition may fail to occur at all. In contrast, interpolation functions make the model more robust to numerical errors. In `pulse()`, we set the starting time of the intervention to 21 days and its duration to 14 days. Additionally, we pass the global variable `times` as its first argument, which specifies the simulation time vector. Other types of external inputs can be created with the `step()`, `ramp()`, and `pulse()` functions.
 
-```{r}
+```{r intervention-pulse-model}
 sfm <- sfm |>
   constant(start, eqn = 21) |>
   constant(duration, eqn = 14) |>
@@ -1902,13 +1928,13 @@ sfm <- sfm |>
 
 Run a single simulation:
 
-```{r}
+```{r intervention-single-simulation}
 simulate(sfm) |> plot()
 ```
 
 Run an ensemble simulation:
 
-```{r}
+```{r intervention-ensemble-julia}
 sfm <- sim_settings(sfm, save_sims = TRUE)
 sims <- ensemble(sfm, n = n)
 plot(sims,
@@ -1928,7 +1954,7 @@ if (recreate_figs) {
 
 To compute the effectiveness of the intervention, we increase the simulation length and only save the last timepoint.
 
-```{r}
+```{r intervention-effectiveness-long-julia}
 n <- 1000
 sfm <- sim_settings(sfm,
   # Only save engagement at the last time point
@@ -1945,7 +1971,7 @@ print(tab)
 
 A shorter intervention is not as effective.
 
-```{r}
+```{r intervention-shorter-duration-long-julia}
 sfm2 <- update(sfm, duration, eqn = 7)
 sims2 <- ensemble(sfm2, n = n)
 df2 <- as.data.frame(sims2, direction = "wide", which = "sims")
@@ -1957,7 +1983,7 @@ print(tab2)
 ```
 
 
-```{r include=FALSE}
+```{r learning-figure-ensembles, include=FALSE}
 if (recreate_figs) {
   show_vars <- c("engagement", "demands") |> rev()
   vars_ <- VARS[VARS %in% show_vars]
@@ -2132,7 +2158,7 @@ sfm <- update(sfm, df = df)
 ```
 
 
-```{r include= FALSE}
+```{r sem-simulation-study, include= FALSE}
 # This modified model can now be used for the ensemble simulation, which will yield a dataset with variability in both initial conditions and parameters.
 
 # Simulation study

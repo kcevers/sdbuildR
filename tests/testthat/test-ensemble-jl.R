@@ -194,6 +194,23 @@ test_that("ensemble() with Julia vars overrides only_stocks", {
   expect_equal(unique(sims[["df"]][["variable"]]), "Satiety")
 })
 
+test_that("ensemble() with Julia handles integer start and fractional dt with intermediaries", {
+  skip_if_julia_not_ready()
+
+  sfm <- withr::with_options(new = c(sdbuildR.defer_codegen = TRUE), {
+    sdbuildR() |>
+      sim_settings(language = "Julia", start = 0, stop = 0.02, dt = 0.01, save_sims = TRUE) |>
+      update("k", type = "constant", eqn = "0.1") |>
+      update("s", type = "stock", eqn = "runif(1, 0.9, 1.1)") |>
+      update("f", type = "flow", eqn = "k * s * (1.0 + exp(-s))", from = "s")
+  })
+
+  sims <- silence(ensemble(sfm, n = 2, verbose = FALSE))
+
+  expect_true(sims[["success"]])
+  expect_equal(sort(unique(sims[["df"]][["time"]])), c(0, 0.01, 0.02), tolerance = 1e-12)
+})
+
 test_that("ensemble() summary has consistent timeseries lengths", {
   skip_if_julia_not_ready()
 

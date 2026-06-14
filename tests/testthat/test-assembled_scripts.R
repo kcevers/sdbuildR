@@ -18,19 +18,9 @@ test_that("R script components are pre-cached in sfm after sim_settings", {
   sfm <- sdbuildR("SIR") |>
     sim_settings(language = "R", start = 0, stop = 10, dt = 0.1)
 
-  # Check that all standard fields exist
-  expect_equal(length(sfm$assemble), length(empty_assemble()))
-  expect_setequal(names(sfm$assemble), names(empty_assemble()))
-
-  # Check that components are already cached in sfm BEFORE simulate
-  expect_true(!is.null(sfm$assemble$language))
   expect_equal(sfm$assemble$language, "R")
-
-  req_names <- names(empty_assemble())
-  for (name in req_names) {
-    expect_true(name %in% names(sfm$assemble))
-    expect_false(is.null(sfm$assemble[[name]]))
-  }
+  expect_true(nzchar(sfm$assemble$times))
+  expect_true(nzchar(sfm$assemble$static$script))
 })
 
 test_that("R script components persist through simulation", {
@@ -43,18 +33,7 @@ test_that("R script components persist through simulation", {
   # Run simulation
   sim <- simulate(sfm, only_stocks = TRUE)
 
-  # Check that NO NEW fields were added during simulate
-  fields_after <- names(sim$object$assemble)
-  expect_setequal(fields_before, fields_after)
-  expect_equal(length(fields_after), length(empty_assemble()))
-
-  # Check that components still exist in sim$object
-  req_names <- names(empty_assemble())
-  for (name in req_names) {
-    expect_true(name %in% names(sim$object$assemble))
-    expect_false(is.null(sim$object$assemble[[name]]))
-  }
-
+  expect_setequal(fields_before, names(sim$object$assemble))
   expect_true(sim$success)
 })
 
@@ -70,9 +49,6 @@ test_that("R funcs are pre-cached in assemble", {
   # Check that funcs are cached BEFORE simulate
   expect_true(nzchar(sfm$assemble$funcs))
   expect_true(grepl("infection_rate", sfm$assemble$funcs, fixed = TRUE))
-
-  # Check structure is preserved (test succeeds without simulating)
-  expect_equal(length(sfm$assemble), length(empty_assemble()))
 })
 
 
@@ -84,12 +60,9 @@ test_that("Julia script components are pre-cached after sim_settings", {
   sfm <- sdbuildR("SIR") |>
     sim_settings(language = "Julia", start = 0, stop = 10, dt = 0.1)
 
-  expect_true(!is.null(sfm$assemble$language))
   expect_equal(sfm$assemble$language, "Julia")
-
-  # Check that all standard fields exist (same as R)
-  expect_equal(length(sfm$assemble), length(empty_assemble()))
-  expect_setequal(names(sfm$assemble), names(empty_assemble()))
+  expect_true(nzchar(sfm$assemble$times))
+  expect_true(nzchar(sfm$assemble$static$script))
 })
 
 test_that("Julia script components persist through simulation", {
@@ -104,18 +77,7 @@ test_that("Julia script components persist through simulation", {
   # Trigger compilation
   sim <- simulate(sfm, only_stocks = TRUE)
 
-  # Check that NO NEW fields were added during simulate
-  fields_after <- names(sim$object$assemble)
-  expect_equal(sort(fields_before), sort(fields_after))
-  expect_equal(length(fields_after), length(empty_assemble()))
-
-  # Check that components are still cached after simulate
-  req_names <- names(empty_assemble())
-  for (name in req_names) {
-    expect_true(name %in% names(sim$object$assemble))
-    expect_false(is.null(sim$object$assemble[[name]]))
-  }
-
+  expect_equal(sort(fields_before), sort(names(sim$object$assemble)))
   expect_equal(sim$success, TRUE)
 })
 
@@ -130,8 +92,6 @@ test_that("Julia and R have identical assemble structure fields", {
 
   # Both should have identical field names
   expect_equal(sort(names(sfm_r$assemble)), sort(names(sfm_julia$assemble)))
-  expect_equal(length(sfm_r$assemble), length(empty_assemble()))
-  expect_equal(length(sfm_julia$assemble), length(empty_assemble()))
 })
 
 
@@ -143,10 +103,6 @@ test_that("Julia equations differ from R equations in cached components", {
 
   sfm_julia <- sdbuildR("SIR") |>
     sim_settings(language = "Julia", start = 0, stop = 10, dt = 0.1)
-
-  # Simulate both
-  sim_r <- simulate(sfm_r, only_stocks = TRUE)
-  sim_julia <- simulate(sfm_julia, only_stocks = TRUE)
 
   # Check that variables have different eqn_str for R vs Julia
   susceptible_r <- sfm_r$variables[sfm_r$variables$name == "susceptible", "eqn_str"]

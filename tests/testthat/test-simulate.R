@@ -213,6 +213,24 @@ test_that("simulate() with Julia vars overrides only_stocks", {
   expect_equal(unique(sim$df$variable), "new_recoveries")
 })
 
+test_that("simulate() with Julia saves intermediaries with integer start and fractional dt", {
+  skip_if_julia_not_ready()
+
+  sfm <- withr::with_options(new = c(sdbuildR.defer_codegen = TRUE), {
+    sdbuildR() |>
+      sim_settings(language = "Julia", start = 0, stop = 0.02, dt = 0.01) |>
+      update("k", type = "constant", eqn = "0.1") |>
+      update("s", type = "stock", eqn = "1") |>
+      update("f", type = "flow", eqn = "k * s * (1.0 + exp(-s))", from = "s")
+  })
+
+  sim <- simulate(sfm, only_stocks = FALSE)
+
+  expect_true(sim$success)
+  expect_true("f" %in% unique(sim$df$variable))
+  expect_equal(sort(unique(sim$df$time)), c(0, 0.01, 0.02), tolerance = 1e-12)
+})
+
 # Precision / accuracy tests for simulate.R
 # Covers: analytical solutions, conservation laws, save_at, save_n, seed
 

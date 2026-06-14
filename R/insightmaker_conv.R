@@ -625,9 +625,77 @@ prep_IM <- function(read_file) {
 }
 
 
+#' Source-specific field mapping for Insight Maker imports
+#'
+#' @param type Source type, either `.InsightMaker` XML or ModelJSON.
+#'
+#' @returns List of source-specific field names and policies.
+#' @noRd
+im_source_adapter <- function(type = c("InsightMaker", "json")) {
+  type <- match.arg(type)
+
+  if (type == "InsightMaker") {
+    list(
+      type = type,
+      settings_replacements = c(
+        "solutionalgorithm" = "method", "timestart" = "start",
+        "timeunits" = "time_units",
+        "timelength" = "length", "timestep" = "dt"
+      ),
+      eqn_fields = list(
+        variable = "equation",
+        stock = "initialvalue",
+        flow = "flowrate"
+      ),
+      doc_field = "note",
+      connector_source_field = "source",
+      connector_target_field = "target",
+      flow_connector_id_field = "id",
+      converter_source_field = "source",
+      use_id_for_names = TRUE,
+      meta_from_header = TRUE
+    )
+  } else {
+    list(
+      type = type,
+      settings_replacements = c(
+        "algorithm" = "method", "time_start" = "start",
+        "time_length" = "length", "time_step" = "dt"
+      ),
+      eqn_fields = list(
+        variable = "value",
+        stock = "initial_value",
+        flow = "value"
+      ),
+      doc_field = "description",
+      connector_source_field = "from",
+      connector_target_field = "to",
+      flow_connector_id_field = "name",
+      converter_source_field = "input_element",
+      use_id_for_names = FALSE,
+      meta_from_header = FALSE
+    )
+  }
+}
+
+
+#' Equation field for a source element type
+#'
+#' @param adapter Source adapter from im_source_adapter().
+#' @param element_type Element type.
+#'
+#' @returns Source field name or "none".
+#' @noRd
+im_eqn_field <- function(adapter, element_type) {
+  adapter[["eqn_fields"]][[element_type]] %||% "none"
+}
+
+
 prep_meta_IM <- function(meta_str, settings, name, caption,
                          type = c("InsightMaker", "json")) {
-  if (type == "InsightMaker") {
+  adapter <- im_source_adapter(type)
+
+  if (adapter[["meta_from_header"]]) {
     if (length(meta_str) > 0) {
       # Step 1: Split by comma and trim spaces
       pairs <- strsplit(meta_str, ",\\s*")[[1]]
@@ -659,7 +727,7 @@ prep_meta_IM <- function(meta_str, settings, name, caption,
     # Add version to meta
     meta[["insightmaker_version"]] <- settings[["version"]]
     meta[["insightmaker_method"]] <- settings[["method"]]
-  } else if (type == "json") {
+  } else {
     meta <- list()
     meta[["name"]] <- name
     meta[["caption"]] <- caption
@@ -672,25 +740,16 @@ prep_meta_IM <- function(meta_str, settings, name, caption,
 
 
 prep_settings_IM <- function(settings, type = c("InsightMaker", "json")) {
+  adapter <- im_source_adapter(type)
+
   if (!is.null(settings)) {
-    if (type == "InsightMaker") {
-      replacements <- c(
-        "solutionalgorithm" = "method", "timestart" = "start",
-        "timeunits" = "time_units",
-        "timelength" = "length", "timestep" = "dt"
-      )
-    } else if (type == "json") {
-      replacements <- c(
-        "algorithm" = "method", "time_start" = "start",
-        "time_length" = "length", "time_step" = "dt"
-      )
-    }
+    replacements <- adapter[["settings_replacements"]]
     names(settings) <- ifelse(names(settings) %in% names(replacements),
       replacements[names(settings)], names(settings)
     )
   }
 
-  if (type == "InsightMaker") {
+  if (adapter[["type"]] == "InsightMaker") {
     # Check whether the model uses an early version of Insight Maker
     if (as.numeric(settings[["version"]]) < 37) {
       cli::cli_warn(c(
@@ -717,38 +776,18 @@ prep_settings_IM <- function(settings, type = c("InsightMaker", "json")) {
 
 
 prep_model_elements_IM <- function(children_attrs, node_types, type = c("InsightMaker", "json")) {
+  adapter <- im_source_adapter(type)
+
   keep_idx <- node_types %in% c("variable", "converter", "stock", "flow")
   model_elements <- children_attrs[keep_idx]
   model_element_types <- node_types[keep_idx]
-
-  if (type == "InsightMaker") {
-    eqn_name_f <- function(x) {
-      switch(x,
-        "variable" = "equation",
-        "stock" = "initialvalue",
-        "flow" = "flowrate",
-        "none"
-      )
-    }
-    doc_name <- "note"
-  } else if (type == "json") {
-    eqn_name_f <- function(x) {
-      switch(x,
-        "variable" = "value",
-        "stock" = "initial_value",
-        "flow" = "value",
-        "none"
-      )
-    }
-    doc_name <- "description"
-  }
 
   model_elements <- lapply(seq_along(model_elements), function(y) {
     x <- model_elements[[y]]
 
     x[["type"]] <- model_element_types[y]
 
-    eqn_name <- eqn_name_f(x[["type"]])
+    eqn_name <- im_eqn_field(adapter, x[["type"]])
 
 
     if (eqn_name != "none") {
@@ -769,6 +808,7 @@ prep_model_elements_IM <- function(children_attrs, node_types, type = c("Insight
 
 
     # Rename note to doc
+    doc_name <- adapter[["doc_field"]]
     if (doc_name %in% names(x)) {
       x[["doc"]] <- clean_doc(x[[doc_name]])
       x[[doc_name]] <- NULL
@@ -777,7 +817,7 @@ prep_model_elements_IM <- function(children_attrs, node_types, type = c("Insight
     }
 
     # Rename constraints
-    if (type == "InsightMaker") {
+  if (adapter[["type"]] == "InsightMaker") {
       # Constraints are no longer supported
       # if ("minconstraint" %in% names(x)) {
       #   x[["min"]] <- ifelse(x[["minconstraintused"]] == "true", x[["minconstraint"]], "")
@@ -837,7 +877,7 @@ prep_model_elements_IM <- function(children_attrs, node_types, type = c("Insight
           x[["source"]] <- P[["time_name"]]
         }
       }
-    } else if (type == "json") {
+    } else {
       if (!is_defined(x[["non_negative"]])) {
         x[["non_negative"]] <- FALSE
       } else {
@@ -1288,22 +1328,27 @@ new_names_IM <- function(old_names) {
 get_source_target_IM <- function(children_attrs, node_types,
                                  type = c("InsightMaker", "json")) {
   # Construct dictionary for replacement of id
+  adapter <- im_source_adapter(type)
 
-  if (type == "InsightMaker") {
-    # Change links to access_ids
-    keep_idx <- node_types %in% c("link", "flow")
-    children_connectors <- children_attrs[keep_idx]
-    connector_names <- node_types[keep_idx]
+  keep_idx <- node_types %in% c("link", "flow")
+  children_connectors <- children_attrs[keep_idx]
+  connector_names <- node_types[keep_idx]
 
+  sources <- get_map(children_connectors, adapter[["connector_source_field"]])
+  targets <- get_map(children_connectors, adapter[["connector_target_field"]])
+  flow_ids <- get_map(children_connectors, adapter[["flow_connector_id_field"]])
+
+  add_stock_sources <- c(sources[connector_names == "flow"], targets[connector_names == "flow"])
+  add_stock_targets <- c(flow_ids[connector_names == "flow"], flow_ids[connector_names == "flow"])
+
+  keep_idx <- node_types %in% c("converter")
+  converters <- children_attrs[keep_idx]
+  converter_names <- get_map(converters, "name")
+  converter_sources <- get_map(converters, adapter[["converter_source_field"]])
+
+  if (adapter[["type"]] == "InsightMaker") {
     # Bidirectional links and flows
     bidirectional <- get_map(children_connectors, "bidirectional")
-    ids <- get_map(children_connectors, "id")
-    sources <- get_map(children_connectors, "source")
-    targets <- get_map(children_connectors, "target")
-
-    # Add stocks as sources for flows as targets
-    add_stock_sources <- c(sources[connector_names == "flow"], targets[connector_names == "flow"])
-    add_stock_targets <- c(ids[connector_names == "flow"], ids[connector_names == "flow"])
 
     # Replace ghost ids with original
     if (any(node_types == "ghost")) {
@@ -1318,36 +1363,12 @@ get_source_target_IM <- function(children_attrs, node_types,
     add_bi_targets <- sources[bidirectional == "true"]
     add_bi_sources <- targets[bidirectional == "true"]
 
-    # Add sources from converters
-    keep_idx <- node_types %in% c("converter")
-    converters <- children_attrs[keep_idx]
-    converter_names <- get_map(converters, "name")
-    converter_sources <- get_map(converters, "source")
     idx <- tolower(converter_sources) == "time"
     converter_sources[idx] <- ""
 
     targets <- c(targets, add_bi_targets, add_stock_targets, converter_names)
     sources <- c(sources, add_bi_sources, add_stock_sources, converter_sources)
-  } else if (type == "json") {
-    # In JSON, flows are unidirectional only
-    keep_idx <- node_types %in% c("link", "flow")
-    children_connectors <- children_attrs[keep_idx]
-    connector_names <- node_types[keep_idx]
-
-    sources <- get_map(children_connectors, "from")
-    targets <- get_map(children_connectors, "to")
-    names <- get_map(children_connectors, "name")
-
-    # Add stocks as sources for flows as targets
-    add_stock_sources <- c(sources[connector_names == "flow"], targets[connector_names == "flow"])
-    add_stock_targets <- c(names[connector_names == "flow"], names[connector_names == "flow"])
-
-    # Add sources from converters
-    keep_idx <- node_types %in% c("converter")
-    converters <- children_attrs[keep_idx]
-    converter_names <- get_map(converters, "name")
-    converter_sources <- get_map(converters, "input_element")
-
+  } else {
     targets <- c(targets, add_stock_targets, converter_names)
     sources <- c(sources, add_stock_sources, converter_sources)
 
@@ -1390,6 +1411,7 @@ get_source_target_IM <- function(children_attrs, node_types,
 
 change_names_IM <- function(model_elements, source_target_dict,
                             type = c("InsightMaker", "json")) {
+  adapter <- im_source_adapter(type)
   sources <- source_target_dict[["sources"]]
   targets <- source_target_dict[["targets"]]
 
@@ -1405,11 +1427,7 @@ change_names_IM <- function(model_elements, source_target_dict,
     return(x)
   })
 
-  if (type == "InsightMaker") {
-    use_id <- TRUE
-  } else if (type == "json") {
-    use_id <- FALSE
-  }
+  use_id <- adapter[["use_id_for_names"]]
 
   find_name <- function(old, access_ids, use_id) {
     if (use_id) {

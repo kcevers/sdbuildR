@@ -318,15 +318,15 @@ compile_run_ode_ensemble <- function(object, ensemble_pars, static, only_stocks)
     intermediaries_setup <- paste0(
       "\n\n# Set up intermediaries for saving in callback\n",
       P[["intermediaries"]],
-      " = Vector{SavedValues{eltype(",
-      P[["time_name"]], "), Any}}(undef, ",
+      " = Vector{SavedValues{typeof(float(",
+      P[["time_name"]], ")), Any}}(undef, ",
       P[["ensemble_total_n"]],
       ")\n\n# Populate the vector above with something to avoid undef\n",
       "for ", P[["ensemble_iter"]], " in eachindex(",
       P[["intermediaries"]], ")\n\t",
       P[["intermediaries"]], "[",
-      P[["ensemble_iter"]], "] = SavedValues(eltype(",
-      P[["time_name"]], "), Any)\nend\n\n"
+      P[["ensemble_iter"]], "] = SavedValues(typeof(float(",
+      P[["time_name"]], ")), Any)\nend\n\n"
     )
     intermediaries_callback <- paste0(
       "\n\t", P[["callback_name"]],

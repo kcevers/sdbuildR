@@ -68,7 +68,7 @@ convert_eqn_ast_julia <- function(eqn, var_names) {
 #' @noRd
 num_to_julia <- function(x, as_int = FALSE) {
   if (is.logical(x)) {
-    if (is.na(x)) .ast_bail() # NA -> let the legacy translator decide
+    if (is.na(x)) return("missing")
     return(if (isTRUE(x)) "true" else "false")
   }
   if (is.nan(x)) {
@@ -77,7 +77,7 @@ num_to_julia <- function(x, as_int = FALSE) {
   if (is.infinite(x)) {
     return(if (x > 0) "Inf" else "-Inf")
   }
-  if (is.na(x)) .ast_bail() # NA_real_ / NA_integer_ -> fall back
+  if (is.na(x)) return("missing")
   s <- format(x, scientific = FALSE, trim = TRUE)
   if (as_int && x == round(x)) {
     return(format(as.integer(round(x)), scientific = FALSE, trim = TRUE))
@@ -194,8 +194,7 @@ emit_julia_function <- function(fn_node, name, var_names) {
 #' Recursively emit Julia for a parsed R node
 #' @noRd
 emit_julia_node <- function(node, var_names) {
-  # NULL -> let legacy decide (it maps to `nothing`)
-  if (is.null(node)) .ast_bail()
+  if (is.null(node)) return("nothing")
 
   # Literals: numbers, logicals, strings
   if (rlang::is_syntactic_literal(node)) {
@@ -208,6 +207,12 @@ emit_julia_node <- function(node, var_names) {
   # Bare names (variables, constants like pi); R loop keywords -> Julia
   if (is.symbol(node)) {
     nm <- as.character(node)
+    if (nm == "T") {
+      return("true")
+    }
+    if (nm == "F") {
+      return("false")
+    }
     if (nm == "next") {
       return("continue")
     }

@@ -83,9 +83,10 @@ test_that("non-finite and missing literals are handled or fall back", {
   expect_equal(convert_eqn_ast_julia("NaN", vn), "NaN")
   expect_equal(convert_eqn_ast_julia("1e10", vn), "10000000000.0")
   expect_equal(convert_eqn_ast_julia("2.5e-3", vn), "0.0025")
-  # NA / NULL are left to the legacy translator (never emitted as bogus Julia)
-  expect_null(convert_eqn_ast_julia("NA", vn))
-  expect_null(convert_eqn_ast_julia("NULL", vn))
+  expect_equal(convert_eqn_ast_julia("NA", vn), "missing")
+  expect_equal(convert_eqn_ast_julia("NULL", vn), "nothing")
+  expect_equal(convert_eqn_ast_julia("c(NULL, NA)", vn), "[nothing, missing]")
+  expect_equal(convert_eqn_ast_julia("c(T, F, TRUE, FALSE)", vn), "[true, false, true, false]")
 })
 
 test_that("AST and legacy translators agree on deterministic template equations", {

@@ -50,6 +50,107 @@ conv_distribution <- function(arg, R_func, julia_func, distribution) {
 }
 
 
+#' Format a Julia distribution constructor call
+#'
+#' @param distribution String with Julia distribution constructor.
+#' @param params Character vector of distribution parameters.
+#'
+#' @returns String with Julia distribution call.
+#' @noRd
+format_julia_distribution <- function(distribution, params) {
+  sprintf("%s(%s)", distribution, paste0(params, collapse = ", "))
+}
+
+
+#' Format a Julia distribution evaluation call
+#'
+#' @param julia_func String with Julia function.
+#' @param distribution String with Julia distribution constructor.
+#' @param params Character vector of distribution parameters.
+#' @param value Distribution evaluation value.
+#'
+#' @returns String with Julia distribution evaluation call.
+#' @noRd
+format_julia_distribution_eval <- function(julia_func, distribution, params, value) {
+  sprintf(
+    "%s(%s, %d)",
+    julia_func,
+    format_julia_distribution(distribution, params),
+    value
+  )
+}
+
+
+#' Extract distribution parameters after dropping value and tail args
+#'
+#' @param arg Unnamed argument list.
+#' @param drop_tail Number of trailing non-parameter arguments to remove.
+#'
+#' @returns Character vector of distribution parameters.
+#' @noRd
+distribution_params <- function(arg, drop_tail = 0L) {
+  drop_idx <- 1L
+  if (drop_tail > 0L) {
+    drop_idx <- c(drop_idx, seq.int(length(arg) - drop_tail + 1L, length(arg)))
+  }
+
+  unlist(arg[-drop_idx], use.names = FALSE)
+}
+
+
+#' Format rand() for a Julia distribution
+#'
+#' @param arg Unnamed argument list.
+#' @param julia_func String with Julia function.
+#' @param distribution String with Julia distribution constructor.
+#'
+#' @returns String with Julia random draw call.
+#' @noRd
+format_julia_rand_distribution <- function(arg, julia_func, distribution) {
+  dist_call <- format_julia_distribution(distribution, distribution_params(arg))
+
+  if (arg[[1]] == 1 && julia_func == "rand") {
+    sprintf("%s(%s)", julia_func, dist_call)
+  } else {
+    sprintf("%s(%s, %d)", julia_func, dist_call, arg[[1]])
+  }
+}
+
+
+#' Format cdf/pdf/quantile calls for Julia distributions
+#'
+#' @param arg Unnamed argument list.
+#' @param julia_func String with Julia function.
+#' @param distribution String with Julia distribution constructor.
+#'
+#' @returns String with Julia distribution evaluation call.
+#' @noRd
+format_julia_distribution_function <- function(arg, julia_func, distribution) {
+  drop_tail <- if (julia_func == "Distributions.pdf.") 1L else 2L
+  params <- distribution_params(arg, drop_tail = drop_tail)
+  log_scale <- identical(arg[[length(arg)]], "TRUE")
+
+  if (julia_func == "Distributions.quantile." && log_scale) {
+    return(sprintf(
+      "invlogcdf(%s, %d)",
+      format_julia_distribution(distribution, params),
+      arg[[1]]
+    ))
+  }
+
+  if (log_scale) {
+    julia_func <- paste0("log", julia_func)
+  }
+
+  format_julia_distribution_eval(
+    julia_func = julia_func,
+    distribution = distribution,
+    params = params,
+    value = arg[[1]]
+  )
+}
+
+
 #' Convert random number generation in R to Julia
 #'
 #' @inheritParams sort_args
@@ -78,72 +179,21 @@ conv_distribution_julia <- function(arg, R_func, julia_func, distribution) {
   arg <- reparam_rate_distribution(arg, distribution)
   arg <- unname(arg)
 
-  # If n = 1, don't include it, as rand(..., 1) generates a vector. n is the first argument.
-  julia_str <- sprintf(
-    "%s(%s(%s), %d)",
-    julia_func, distribution,
-    # Don't include names of arguments
-    paste0(arg[-1], collapse = ", "), arg[[1]]
-  )
-
-  if (arg[1] == 1 && julia_func == "rand") {
-    julia_str <- sprintf(
-      "%s(%s(%s))",
-      julia_func, distribution,
-      # Don't include names of arguments
-      paste0(arg[-1], collapse = ", ")
+  if (julia_func == "rand") {
+    julia_str <- format_julia_rand_distribution(arg, julia_func, distribution)
+  } else if (julia_func %in% c(
+    "Distributions.cdf.",
+    "Distributions.pdf.",
+    "Distributions.quantile."
+  )) {
+    julia_str <- format_julia_distribution_function(arg, julia_func, distribution)
+  } else {
+    julia_str <- format_julia_distribution_eval(
+      julia_func = julia_func,
+      distribution = distribution,
+      params = distribution_params(arg),
+      value = arg[[1]]
     )
-  } else if (julia_func == "Distributions.cdf.") {
-    # log = TRUE
-    if (arg[length(arg)] == "TRUE") {
-      julia_str <- sprintf(
-        "log%s(%s(%s), %d)",
-        julia_func, distribution,
-        # Don't include names of arguments; skip log
-        paste0(arg[-c(1, length(arg) - 1, length(arg))], collapse = ", "), arg[[1]]
-      )
-    } else {
-      julia_str <- sprintf(
-        "%s(%s(%s), %d)",
-        julia_func, distribution,
-        # Don't include names of arguments; skip log
-        paste0(arg[-c(1, length(arg) - 1, length(arg))], collapse = ", "), arg[[1]]
-      )
-    }
-  } else if (julia_func == "Distributions.pdf.") {
-    # log.p = TRUE
-    if (arg[length(arg)] == "TRUE") {
-      julia_str <- sprintf(
-        "log%s(%s(%s), %d)",
-        julia_func, distribution,
-        # Don't include names of arguments; skip lower.tail and log.p
-        paste0(arg[-c(1, length(arg))], collapse = ", "), arg[[1]]
-      )
-    } else {
-      julia_str <- sprintf(
-        "%s(%s(%s), %d)",
-        julia_func, distribution,
-        # Don't include names of arguments; skip lower.tail and log.p
-        paste0(arg[-c(1, length(arg))], collapse = ", "), arg[[1]]
-      )
-    }
-  } else if (julia_func == "Distributions.quantile.") {
-    # log = TRUE
-    if (arg[length(arg)] == "TRUE") {
-      julia_str <- sprintf(
-        "invlogcdf(%s(%s), %d)",
-        distribution,
-        # Don't include names of arguments; skip lower.tail and log.p
-        paste0(arg[-c(1, length(arg) - 1, length(arg))], collapse = ", "), arg[[1]]
-      )
-    } else {
-      julia_str <- sprintf(
-        "%s(%s(%s), %d)",
-        julia_func, distribution,
-        # Don't include names of arguments; skip lower.tail and log.p
-        paste0(arg[-c(1, length(arg) - 1, length(arg))], collapse = ", "), arg[[1]]
-      )
-    }
   }
 
   return(julia_str)
