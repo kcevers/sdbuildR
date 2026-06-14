@@ -179,7 +179,7 @@ dependencies <- function(object, name = NULL, type = NULL, reverse = FALSE) {
     }
   }
 
-  dep <- dependencies_(object, eqns = NULL, only_var = TRUE, only_model_var = TRUE)
+  dep <- _dependencies(object, eqns = NULL, only_var = TRUE, only_model_var = TRUE)
 
   if (reverse) {
     dep <- reverse_dep(dep)
@@ -267,7 +267,7 @@ reverse_dep <- function(dep) {
 #' @returns Vector of dependencies (variable names in equation)
 #' @noRd
 #'
-dependencies_ <- function(object, eqns = NULL, only_var = TRUE, only_model_var = TRUE) {
+_dependencies <- function(object, eqns = NULL, only_var = TRUE, only_model_var = TRUE) {
   var_names <- get_model_var(object)
 
   # Funcs and graphical functions can be functions
@@ -368,7 +368,7 @@ order_equations <- function(object, print_msg = TRUE) {
   deps <- split(vars_to_order, seq_len(nrow(vars_to_order))) |>
     lapply(function(x) {
       if (is_defined(x[["eqn"]])) {
-        d <- unlist(dependencies_(object, x[["eqn"]],
+        d <- unlist(_dependencies(object, x[["eqn"]],
           only_var = TRUE, only_model_var = TRUE
         ))
       } else {

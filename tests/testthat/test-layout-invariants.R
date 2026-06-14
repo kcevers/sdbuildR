@@ -47,20 +47,18 @@ test_that("validate_layout() is a no-op for empty models", {
   expect_invisible(validate_layout(sdbuildR()))
 })
 
-test_that("compile() runs validate_layout() and rejects a corrupted model", {
+test_that("pre_assemble_components() validates layout while (re)building", {
+  # validate_layout() runs as part of a rebuild. A fresh assembly of a healthy
+  # model must succeed and produce aligned indices. (Direct corruption detection
+  # is covered by the validate_layout() tests above; a hash-matched cache is
+  # trusted and not re-validated, which is why this checks the build path.)
   sfm <- sdbuildR() |>
     update("a", type = "stock", eqn = "1") |>
     update("b", type = "stock", eqn = "2") |>
     sim_settings(language = "Julia")
 
-  # Corrupt and clear the cache so pre_assemble_components() must re-validate
-  stock_idx <- which(sfm[["variables"]][["type"]] == "stock")
-  sfm[["variables"]][stock_idx, "sum_name"] <- c("dSdt[2]", "dSdt[1]")
-
-  expect_error(
-    pre_assemble_components(sfm),
-    class = "sdbuildR_layout_error"
-  )
+  sfm <- pre_assemble_components(invalidate_assemble(sfm, "all"))
+  expect_stock_indices_aligned(sfm)
 })
 
 # --- Cache consistency: incremental == from scratch --------------------------

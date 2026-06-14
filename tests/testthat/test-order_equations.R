@@ -1,4 +1,4 @@
-## Tests for dependencies and dependencies_
+## Tests for dependencies and _dependencies
 
 test_that("dependencies maps basic cross-type dependencies", {
   sfm <- sdbuildR()
@@ -23,67 +23,67 @@ test_that("dependencies includes gf source dependencies", {
   expect_equal(deps[["G"]], "S")
 })
 
-test_that("dependencies_ includes func names with only_model_var=TRUE", {
+test_that("_dependencies includes func names with only_model_var=TRUE", {
   sfm <- sdbuildR() |>
     custom_func("mfun", "function(x){ x }") |>
     update("x", "constant", eqn = "1") |>
     update("A", "aux", eqn = "mfun(x)")
 
-  deps <- dependencies_(sfm, eqns = c(A = "mfun(x)"), only_model_var = TRUE)
+  deps <- _dependencies(sfm, eqns = c(A = "mfun(x)"), only_model_var = TRUE)
   # Should include both variable and func name (as a dependency in model context)
   expect_true(all(c("x", "mfun") %in% deps[["A"]]))
 })
 
-test_that("dependencies_ extracts model variable dependencies", {
+test_that("_dependencies extracts model variable dependencies", {
   sfm <- sdbuildR()
   sfm1 <- update(sfm, "a", type = "constant", eqn = "5")
   sfm2 <- update(sfm1, "b", type = "constant", eqn = "a * 2")
   sfm3 <- update(sfm2, "c", type = "constant", eqn = "b + 1")
 
-  deps <- dependencies_(sfm3, eqns = c(b = "a * 2", c = "b + 1"))
+  deps <- _dependencies(sfm3, eqns = c(b = "a * 2", c = "b + 1"))
   expect_equal(deps[["b"]], c("a"))
   expect_equal(deps[["c"]], c("b"))
 })
 
-test_that("dependencies_ ignores non-model functions when only_model_var", {
+test_that("_dependencies ignores non-model functions when only_model_var", {
   sfm <- sdbuildR()
   sfm1 <- update(sfm, "x", type = "constant", eqn = "10")
   sfm2 <- update(sfm1, "y", type = "constant", eqn = "x")
 
-  deps <- dependencies_(sfm2, eqns = c(y = "sin(x) + 2"), only_model_var = TRUE)
+  deps <- _dependencies(sfm2, eqns = c(y = "sin(x) + 2"), only_model_var = TRUE)
   expect_equal(deps[["y"]], c("x"))
 })
 
-test_that("dependencies_ returns all names when only_model_var=FALSE and only_var=FALSE", {
+test_that("_dependencies returns all names when only_model_var=FALSE and only_var=FALSE", {
   sfm <- sdbuildR()
   sfm1 <- update(sfm, "x", type = "constant", eqn = "10")
   sfm2 <- update(sfm1, "y", type = "constant", eqn = "x")
 
-  deps <- dependencies_(sfm2, eqns = c(y = "sin(x) + 2"), only_model_var = FALSE, only_var = FALSE)
+  deps <- _dependencies(sfm2, eqns = c(y = "sin(x) + 2"), only_model_var = FALSE, only_var = FALSE)
   expect_true("sin" %in% deps[["y"]])
   expect_true("x" %in% deps[["y"]])
 })
 
-test_that("dependencies_ ignores names inside quotes", {
+test_that("_dependencies ignores names inside quotes", {
   sfm <- sdbuildR() |>
     update("Stock1", "stock", eqn = "10") |>
     update("A", "aux", eqn = "paste('Stock1')")
 
-  deps <- dependencies_(sfm, eqns = c(A = "paste('Stock1')"), only_model_var = TRUE)
+  deps <- _dependencies(sfm, eqns = c(A = "paste('Stock1')"), only_model_var = TRUE)
   expect_equal(length(deps[["A"]]), 0)
 })
 
 
-test_that("dependencies_ flag behavior: only_model_var=TRUE vs FALSE", {
+test_that("_dependencies flag behavior: only_model_var=TRUE vs FALSE", {
   sfm <- sdbuildR() |>
     update("x", "constant", eqn = "1")
 
   # Model-only vars should exclude non-model functions
-  deps1 <- dependencies_(sfm, eqns = c(y = "sin(x)"), only_model_var = TRUE)
+  deps1 <- _dependencies(sfm, eqns = c(y = "sin(x)"), only_model_var = TRUE)
   expect_equal(deps1[["y"]], "x")
 
   # Include function names when only_model_var=FALSE and only_var=FALSE
-  deps2 <- dependencies_(sfm,
+  deps2 <- _dependencies(sfm,
     eqns = c(y = "sin(x)"),
     only_model_var = FALSE, only_var = FALSE
   )
@@ -106,18 +106,18 @@ test_that("dependencies exported API returns full mapping and reverse mapping", 
   expect_true("A" %in% rev_deps[["S"]]) # S is used by A
 })
 
-test_that("dependencies_ self-reference behavior matches implementation", {
+test_that("_dependencies self-reference behavior matches implementation", {
   # Current implementation does not remove self-references from eqn
   sfm <- sdbuildR() |>
     update("A", "aux", eqn = "A + 1")
 
-  deps <- dependencies_(sfm, only_model_var = TRUE)
+  deps <- _dependencies(sfm, only_model_var = TRUE)
   expect_true("A" %in% deps[["A"]])
 })
 
-test_that("dependencies_ respects naming in input eqns", {
+test_that("_dependencies respects naming in input eqns", {
   sfm <- sdbuildR()
-  deps <- dependencies_(sfm, eqns = c(foo = "bar + baz"), only_model_var = FALSE)
+  deps <- _dependencies(sfm, eqns = c(foo = "bar + baz"), only_model_var = FALSE)
   expect_true("foo" %in% names(deps))
 })
 

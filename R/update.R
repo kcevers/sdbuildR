@@ -1460,7 +1460,7 @@ update.sdbuildR <- function(object, name, type = NULL,
     if (any(gf_mask)) {
       mod_eqns[mod_rows[gf_mask, "name"]] <- mod_rows[gf_mask, "source"]
     }
-    new_deps <- dependencies_(object,
+    new_deps <- _dependencies(object,
       eqns = mod_eqns,
       only_var = TRUE, only_model_var = TRUE
     )
@@ -1488,8 +1488,8 @@ update.sdbuildR <- function(object, name, type = NULL,
     nonneg_changed = nonneg_changed
   )
 
-  # Pre-assemble components
-  object <- pre_assemble_components(object)
+  # Pre-assemble components (deferrable; see maybe_pre_assemble)
+  object <- maybe_pre_assemble(object)
 
   object
 }

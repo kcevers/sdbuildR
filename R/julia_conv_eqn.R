@@ -471,6 +471,22 @@ convert_builtin_functions_julia <- function(type, name, eqn, var_names) {
     # data.frame with regular expressions for each built-in R function
     syntax_df <- syntax_julia[["syntax_df"]]
 
+    # Prefilter: only consider built-in functions whose name actually appears as
+    # a token in the equation. Each function's regex has a word boundary, so a
+    # function that does not appear as a whole-word token cannot match -- this is
+    # a safe superset of what the per-regex gregexpr scan below would find, and
+    # avoids running ~180 regexes when an equation uses only a handful. (Base
+    # name strips any namespace, e.g. stringr::str_to_title -> str_to_title.)
+    eqn_tokens <- unique(unlist(
+      regmatches(eqn, gregexpr("[A-Za-z_.][A-Za-z0-9_.]*", eqn, perl = TRUE))
+    ))
+    base_names <- sub(".*::", "", syntax_df[["R_first_iter"]])
+    syntax_df <- syntax_df[base_names %in% eqn_tokens, , drop = FALSE]
+
+    if (nrow(syntax_df) == 0) {
+      return(list(eqn = eqn, add_vars = data.frame(), doc = ""))
+    }
+
     # Preparation for first iteration
     done <- FALSE
     i <- 1

@@ -1,5 +1,7 @@
 # sdbuildR (development version)
 
+* Much faster R-to-Julia equation translation via a new AST-based translator that walks R's parse tree instead of regex string-rewriting (~14x faster on equation-heavy models). It falls back to the previous translator for any construct it does not handle, so behaviour is unchanged; namespaced calls such as `base::sum()` now translate correctly.
+* Faster, content-hashed assembly cache. Repeated `simulate()`/`compile()`/`summary()` with no intervening edits now return essentially instantly (the model's inputs are hashed; an unchanged hash short-circuits reassembly). The R->Julia translation of each equation is memoised per variable, so editing one equation only retranslates that equation. The first built-in-function pass also skips the ~180 function patterns an equation does not use.
 * Fixed a bug where converting a variable to a stock (or otherwise adding, removing, or renaming stocks) could misalign each stock's derivative slot with the state vector in Julia simulations, silently swapping stock dynamics. Stock derivative indices are now kept consistent with the state-vector order.
 * Added an internal structural validator that checks model layout (stock derivative alignment, unique variable names) before code generation, turning this class of inconsistency into an explicit error rather than a wrong result.
 * Fixed a temporary CSV file leak in single Julia simulations.

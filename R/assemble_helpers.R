@@ -67,6 +67,12 @@ invalidate_assemble <- function(object, what = "all") {
     a[["unit_tests"]] <- no_assemble[["unit_tests"]]
   }
 
+  # Any partial invalidation makes the cache no longer "fully assembled", so drop
+  # the input_hash completion signal -- otherwise pre_assemble_components() could
+  # early-return on a half-cleared cache when the inputs happen to hash the same
+  # (e.g. a no-op property change that still invalidated components).
+  a[["input_hash"]] <- NULL
+
   object[["assemble"]] <- a
   object
 }
@@ -145,12 +151,24 @@ prep_equations_variables <- function(object, modified_names = NULL) {
   eqn_converted <- character(nrow(object[["variables"]]))
   var_names <- get_model_var(object)
 
+  # Translation cache: convert_eqn (R->Julia) is the dominant cost. Memoize it
+  # per variable keyed on (eqn, type). The whole cache is reset when the set of
+  # model variable names changes, because translation can depend on var_names
+  # (which identifiers are variables vs. functions). Result: editing one
+  # equation retranslates only that one; resimulating retranslates nothing.
+  vn_hash <- rlang::hash(var_names)
+  eqn_cache <- object[["assemble"]][["eqn_cache"]]
+  if (is.null(eqn_cache) || !identical(eqn_cache[["vn_hash"]], vn_hash) ||
+    !identical(eqn_cache[["language"]], language)) {
+    eqn_cache <- list(vn_hash = vn_hash, language = language, by_name = list())
+  }
+
   for (i in process_indices) {
     type_i <- object[["variables"]][i, "type"]
     if (type_i == "func") next
     if (type_i %in% c("stock", "flow", "constant", "aux")) {
       eqn <- object[["variables"]][i, "eqn"]
-
+      nm <- object[["variables"]][i, "name"]
 
       if (any(grepl("^[ ]*function[ ]*\\(", eqn))) {
         cli::cli_abort(c(
@@ -160,14 +178,23 @@ prep_equations_variables <- function(object, modified_names = NULL) {
         ))
       }
 
-      eqn_converted[i] <- lang$convert_eqn(
-        type = type_i,
-        name = object[["variables"]][i, "name"],
-        eqn = eqn,
-        var_names = var_names
-      )
+      cached <- eqn_cache[["by_name"]][[nm]]
+      if (!is.null(cached) && identical(cached[["eqn"]], eqn) &&
+        identical(cached[["type"]], type_i)) {
+        eqn_converted[i] <- cached[["converted"]]
+      } else {
+        conv <- lang$convert_eqn(
+          type = type_i, name = nm, eqn = eqn, var_names = var_names
+        )
+        eqn_converted[i] <- conv
+        eqn_cache[["by_name"]][[nm]] <- list(
+          eqn = eqn, type = type_i, converted = conv
+        )
+      }
     }
   }
+
+  object[["assemble"]][["eqn_cache"]] <- eqn_cache
 
   # Replace bare gf name references with gf(source) in converted equations
   gf_dict <- build_gf_source_dict(object)
@@ -531,6 +558,18 @@ pre_assemble_components <- function(object) {
 
   language <- object[["sim_settings"]][["language"]]
 
+  # Content-hash short-circuit, FIRST thing (before any per-call scanning such as
+  # check_no_keyword_arg). input_hash is set only at the END of a successful
+  # assembly, so a match here means the entire derived cache is already built for
+  # these exact inputs -> return immediately. This makes a repeated
+  # compile()/simulate()/summary() with no intervening edits essentially free.
+  current_hash <- compute_model_hash(object)
+  if (!is.null(object[["assemble"]][["input_hash"]]) &&
+    identical(object[["assemble"]][["input_hash"]], current_hash) &&
+    identical(object[["assemble"]][["language"]], language)) {
+    return(object)
+  }
+
   # --- Julia-specific validation ---------------------------------------------
   if (language == "Julia") {
     var_names <- get_model_var(object)
@@ -545,9 +584,10 @@ pre_assemble_components <- function(object) {
     logical(1)
   )
 
-  cache_valid <- !undefined_assemble[["language"]] &&
-    object[["assemble"]][["language"]] == language
+  # Reaching here means a rebuild is required; force every component to recompute.
+  cache_valid <- FALSE
   object[["assemble"]][["language"]] <- language
+  object[["assemble"]][["input_hash"]] <- NULL # cleared until assembly completes
 
   # --- Ordering --------------------------------------------------------------
   if (!cache_valid || undefined_assemble[["ordering"]]) {
@@ -596,12 +636,35 @@ pre_assemble_components <- function(object) {
   }
 
   # --- Populate validation caches --------------------------------------------
-  if (is.null(object[["assemble"]][["summary"]])) {
-    object[["assemble"]][["summary"]] <- summary(object)
-  }
+  # Always recomputed on the rebuild path (inputs changed), so diagnostics never
+  # go stale relative to the model.
+  object[["assemble"]][["summary"]] <- summary(object)
 
   # --- Structural invariant check (cheap; guards codegen correctness) ---------
   validate_layout(object)
 
+  # Mark the cache as fully assembled for these inputs (enables the early-return
+  # short-circuit on the next call with no edits).
+  object[["assemble"]][["input_hash"]] <- current_hash
+
   object
+}
+
+
+#' Eagerly pre-assemble unless codegen is deferred
+#'
+#' Mutators (`update()`, `sim_settings()`) call this so the assembly cache is
+#' ready immediately. Because the cache is now hash-gated, the codegen can be
+#' safely deferred to the next consumer (`compile()`/`simulate()`/`summary()`):
+#' set `options(sdbuildR.defer_codegen = TRUE)` to skip the eager pass and only
+#' assemble on demand. The default preserves the original eager behaviour.
+#'
+#' @inheritParams update.sdbuildR
+#' @returns The model, with components pre-assembled unless deferral is enabled.
+#' @noRd
+maybe_pre_assemble <- function(object) {
+  if (isTRUE(getOption("sdbuildR.defer_codegen", FALSE))) {
+    return(object)
+  }
+  pre_assemble_components(object)
 }

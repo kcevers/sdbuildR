@@ -2237,7 +2237,7 @@ split_aux_wrapper <- function(object) {
   names(aux_eqns) <- object[["variables"]][aux_idx, "name"]
 
   # Separate auxiliary variables into static parameters and dynamically updated auxiliaries
-  deps <- dependencies_(object, eqns = aux_eqns, only_model_var = FALSE)
+  deps <- _dependencies(object, eqns = aux_eqns, only_model_var = FALSE)
 
   # Constants are not dependent on time, have no dependencies in names, or are only dependent on constants
   temp <- deps

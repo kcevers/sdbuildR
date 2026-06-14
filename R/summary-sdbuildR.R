@@ -359,13 +359,13 @@ detect_undefined_var <- function(object) {
     defined[, f] <- !is.na(col) & nzchar(col)
   }
 
-  # Batch dependencies_() calls — one per field instead of one per row per field
+  # Batch _dependencies() calls — one per field instead of one per row per field
   all_deps <- stats::setNames(vector("list", length(fields)), fields)
   for (f in fields) {
     idx <- which(defined[, f])
     if (length(idx) == 0L) next
     vals <- stats::setNames(vars_df[[f]][idx], vars_df[["name"]][idx])
-    all_deps[[f]] <- dependencies_(object, vals,
+    all_deps[[f]] <- _dependencies(object, vals,
       only_var = TRUE,
       only_model_var = FALSE
     )

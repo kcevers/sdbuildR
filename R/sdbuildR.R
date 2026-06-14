@@ -67,6 +67,8 @@ sdbuildR <- function(template = NULL) {
 empty_assemble <- function() {
   list(
     language = NULL,
+    input_hash = NULL, # hash of model inputs; mismatch => cache is stale
+    eqn_cache = NULL, # per-variable memoized R->Julia translations
     ordering = NULL, # Contains deps_by_name for incremental updates
     funcs = "",
     times = "",
@@ -81,6 +83,44 @@ empty_assemble <- function() {
     summary = NULL, # cached diagnostics result
     unit_tests = list(deps = NULL) # cached unit test dependencies (positionally indexed)
   )
+}
+
+
+# User-authored input columns of the variables table. The model hash is taken
+# over exactly these (a whitelist), so any column that assembly *derives* (e.g.
+# eqn_str, sum_eqn, sum_name, inflow, outflow, preceding_eqn) cannot perturb the
+# hash mid-assembly -- which would otherwise defeat the cache short-circuit.
+input_var_cols <- function() {
+  c(
+    "name", "type", "eqn", "label", "doc", "non_negative",
+    "to", "from", "source", "interpolation", "extrapolation", "xpts", "ypts"
+  )
+}
+
+
+#' Hash the user-authored inputs that determine generated code
+#'
+#' The assembly cache is valid iff this hash is unchanged. Hashing the inputs
+#' (rather than tracking which components each mutator dirties) makes cache
+#' invalidation automatic and correct by construction: any change to a stock,
+#' flow, equation, simulation setting or unit test changes the hash, forcing a
+#' rebuild; meta-only changes do not.
+#'
+#' Custom-function bodies live in the `eqn` of `func`-type rows, so hashing the
+#' input columns of `variables` covers them too. `meta` and `import_metadata` do
+#' not affect generated code and are excluded.
+#'
+#' @inheritParams update.sdbuildR
+#' @returns A scalar hash string.
+#' @noRd
+compute_model_hash <- function(object) {
+  vars <- object[["variables"]]
+  input_cols <- intersect(input_var_cols(), colnames(vars))
+  rlang::hash(list(
+    variables = vars[, input_cols, drop = FALSE],
+    sim_settings = object[["sim_settings"]],
+    unit_tests = object[["unit_tests"]]
+  ))
 }
 
 

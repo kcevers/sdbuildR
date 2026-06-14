@@ -286,8 +286,9 @@ sim_settings <- function(object,
     # Intentionally do not call invalidate_assemble(): this is a meta-setting only
   }
 
-  # Pre-assemble script components so they're available for modification before simulate()
-  object <- pre_assemble_components(object)
+  # Pre-assemble script components so they're available for modification before
+  # simulate() (deferrable; see maybe_pre_assemble)
+  object <- maybe_pre_assemble(object)
 
   object
 }
