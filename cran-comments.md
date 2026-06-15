@@ -6,4 +6,6 @@
 
 ## Reason for update
 
-Major change in API, as documented in NEWS.
+Major change in user interface and added functionality, as documented in NEWS.
+
+No reverse dependencies.
