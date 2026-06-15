@@ -1,4 +1,4 @@
-# sdbuildR (development version)
+# sdbuildR 2.0.0
 
 ## Breaking changes
 
