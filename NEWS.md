@@ -45,9 +45,10 @@
 * `use_julia(nthreads = )` now controls Julia threading. Code that used
   `use_threads()` should set the thread count with `use_julia()` instead.
 
-* Unit-specific helpers from 1.x, including `u()`, `convert_u()`, `drop_u()`,
+* Units are no longer supported. This means that unit-specific helpers from 1.x, 
+  including `u()`, `convert_u()`, `drop_u()`,
   `model_units()`, `unit_prefixes()`, `get_units()`, `get_regex_units()`, and
-  `get_regex_time_units()`, are no longer part of the public API.
+  `get_regex_time_units()`, are no longer available.
 
 ## New features
 
