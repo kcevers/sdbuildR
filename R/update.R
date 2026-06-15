@@ -1582,8 +1582,10 @@ change_name <- function(object, name, new_name) {
 #' @examples
 #' # Start with a simple predator-prey model
 #' sfm <- sdbuildR("predator_prey")
+#' 
 #' # Change the birth rate of predators from a constant to an auxiliary
 #' sfm <- change_type(sfm, delta, new_type = "aux")
+#' 
 #' # This allows us to introduce time-dependence in the birth rate
 #' # (e.g., seasonality with a sine function)
 #' sfm <- sfm |>
