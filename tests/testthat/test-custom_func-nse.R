@@ -1,5 +1,5 @@
 test_that("custom_func() accepts unquoted function expressions", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
 
   sfm1 <- custom_func(sfm, hills, eqn = function(x, slope, midpoint = 0.5) {
     x^slope / (midpoint^slope + x^slope)
@@ -14,7 +14,7 @@ test_that("custom_func() accepts unquoted function expressions", {
 })
 
 test_that("update()/custom_func() handles bang-bang injection of simple values", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
 
   a <- 1
   sfm1 <- custom_func(sfm, fval, eqn = !!a)
@@ -23,7 +23,7 @@ test_that("update()/custom_func() handles bang-bang injection of simple values",
 })
 
 test_that("update()/custom_func() handles bang-bang injection of function objects", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
 
   a <- function(x) x^2
   sfm1 <- custom_func(sfm, fobj, eqn = !!a)
@@ -33,7 +33,7 @@ test_that("update()/custom_func() handles bang-bang injection of function object
 })
 
 test_that("c() calls still return character vectors", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
 
   sfm1 <- custom_func(sfm, c(a, b), eqn = c("1", "2"))
   df <- as.data.frame(sfm1, type = "func", properties = c("name", "eqn"))

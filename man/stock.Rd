@@ -7,7 +7,7 @@
 stock(object, name, eqn = 0, label = name, doc = "", non_negative = FALSE)
 }
 \arguments{
-\item{object}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
+\item{object}{Stock-and-flow model, object of class \code{\link{stockflow}}.}
 
 \item{name}{Variable name. Accepts a bare symbol (e.g., \code{population}), a string (\code{"population"}), or a vector via \code{c()} (e.g., \code{c(a, b)} or \code{c("a", "b")}). Use \verb{!!} to inject from a variable.}
 
@@ -20,7 +20,7 @@ stock(object, name, eqn = 0, label = name, doc = "", non_negative = FALSE)
 \item{non_negative}{If TRUE, variable is enforced to be non-negative (i.e., strictly 0 or positive). Defaults to \code{FALSE}.}
 }
 \value{
-A stock-and-flow model object of class \code{\link{sdbuildR}}
+A stock-and-flow model object of class \code{\link{stockflow}}
 }
 \description{
 Stocks accumulate material or information over time, defining the state of
@@ -31,11 +31,11 @@ convenience wrapper around \code{\link[=update]{update()}} with \code{type = "st
 \examples{
 
 # Create a stock with an initial value
-sfm <- sdbuildR() |>
+sfm <- stockflow() |>
   stock(population, eqn = 100, label = "Population")
 
 # Multiple stocks
-sfm <- sdbuildR() |>
+sfm <- stockflow() |>
   stock(susceptible, eqn = 999, label = "susceptible") |>
   stock(infected, eqn = 1, label = "infected") |>
   stock(recovered, eqn = 0, label = "recovered")

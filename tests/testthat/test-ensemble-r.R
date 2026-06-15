@@ -345,7 +345,7 @@ test_that("ensemble() R uses parallel path when future plan has multiple workers
 
 
 test_that("ensemble respects sim_settings save_sims and per-call override via ...", {
-  sfm <- sdbuildR("SIR") |>
+  sfm <- stockflow("SIR") |>
     sim_settings(save_sims = TRUE)
 
   ens_keep <- ensemble(sfm, n = 2)

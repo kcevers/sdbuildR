@@ -21,7 +21,7 @@ import_insightmaker(
 \item{keep_nonnegative_stock}{If TRUE, keeps original non-negativity setting of stocks. Defaults to FALSE.}
 }
 \value{
-A stock-and-flow model object of class \code{\link{sdbuildR}}.
+A stock-and-flow model object of class \code{\link{stockflow}}.
 }
 \description{
 Import a stock-and-flow model from \href{https://insightmaker.com/}{Insight Maker}. Models may be your own or another user's. Importing causal loop diagrams or agent-based models is not supported.
@@ -48,6 +48,6 @@ plot(sim)
 \dontshow{\}) # examplesIf}
 }
 \seealso{
-\code{\link[=update]{update()}}, \code{\link[=sdbuildR]{sdbuildR()}}
+\code{\link[=update]{update()}}, \code{\link[=stockflow]{stockflow()}}
 }
 \concept{importExport}

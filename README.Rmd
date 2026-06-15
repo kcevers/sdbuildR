@@ -31,7 +31,7 @@ Load one of the dozens of models from the built-in library, such as the classic 
 library(sdbuildR)
 
 # Load stock-and-flow model
-sfm <- sdbuildR("SIR")
+sfm <- stockflow("SIR")
 
 # View the stock-and-flow diagram
 plot(sfm)
@@ -40,7 +40,7 @@ plot(sfm)
 ```{r sir-diagram, include=FALSE, eval=TRUE}
 library(sdbuildR)
 
-sfm <- sdbuildR("SIR")
+sfm <- stockflow("SIR")
 filepath <- file.path("man", "figures", "README-sir-diagram.svg")
 if (!file.exists(dirname(filepath))) {
   dir.create(dirname(filepath), recursive = TRUE)

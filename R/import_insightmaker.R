@@ -123,8 +123,8 @@ finalize_imported_IM_object <- function(ctx, object, keep_nonnegative_flow, keep
   ctx$object <- object
   object[["import_metadata"]] <- ctx_build_import_metadata(ctx)
 
-  object <- sanitize_sdbuildR(object)
-  validate_sdbuildR(object)
+  object <- sanitize_stockflow(object)
+  validate_stockflow(object)
 
   object
 }
@@ -141,10 +141,10 @@ finalize_imported_IM_object <- function(ctx, object, keep_nonnegative_flow, keep
 #' @param keep_nonnegative_flow If TRUE, keeps original non-negativity setting of flows. Defaults to TRUE.
 #' @param keep_nonnegative_stock If TRUE, keeps original non-negativity setting of stocks. Defaults to FALSE.
 #'
-#' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR].
+#' @returns A stock-and-flow model object of class [`stockflow`][stockflow].
 #' @export
 #' @concept importExport
-#' @seealso [update()], [sdbuildR()]
+#' @seealso [update()], [stockflow()]
 #'
 #' @examplesIf has_internet() && Sys.getenv("NOT_CRAN") == "true"
 #' # Load a model from Insight Maker
@@ -180,14 +180,14 @@ import_insightmaker <- function(url,
   ext <- out[["ext"]]
 
   # Parse model into import context
-  # file_to_sdbuildR() returns a context with:
+  # file_to_stockflow() returns a context with:
   # - ctx$object: object with sim_settings, meta, and variables added (no Julia conversion yet)
   # - ctx$variables: original variable list (for reference)
   # - ctx$original_variables: data frame for import_metadata
   # - ctx$original_macros: data frame for import_metadata
   # - ctx$vendor_meta: meta info for import_metadata
   ctx <- .import_step(
-    file_to_sdbuildR(read_file, ext),
+    file_to_stockflow(read_file, ext),
     x = "Failed to convert Insight Maker model structure to XMILE format.",
     i = "Check for unsupported Insight Maker syntax or model structure."
   )

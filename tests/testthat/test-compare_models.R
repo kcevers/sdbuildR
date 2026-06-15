@@ -1,4 +1,4 @@
-# Tests for sdbuildR.R — compare_models(), model_properties(),
+# Tests for  compare_models(), model_properties(),
 
 
 # ============================================================================
@@ -26,7 +26,7 @@ test_that("compare_models: detects added variable in sfm2", {
 
 test_that("compare_models: detects variable removed from sfm1", {
   sfm1 <- make_basic_sfm() # has stock S + flow Flow1
-  sfm2 <- sdbuildR() |> update("S", type = "stock", eqn = "1") # only stock S
+  sfm2 <- stockflow() |> update("S", type = "stock", eqn = "1") # only stock S
   diff <- compare_models(sfm1, sfm2)
   expect_equal(nrow(diff$removed), 1)
   expect_true("Flow1" %in% diff$removed$name)
@@ -51,9 +51,9 @@ test_that("compare_models: detects sim_settings change (stop time)", {
   expect_equal(as.numeric(diff$sim_settings_diff[["stop"]][["sfm2"]]), 200)
 })
 
-test_that("compare_models: returns a 'compare_sdbuildR' class object", {
+test_that("compare_models: returns a 'compare_stockflow' class object", {
   diff <- compare_models(make_basic_sfm(), make_basic_sfm())
-  expect_s3_class(diff, "compare_sdbuildR")
+  expect_s3_class(diff, "compare_stockflow")
 })
 
 test_that("compare_models: result contains 'properties' with per-model stats", {

@@ -1,7 +1,7 @@
 # simulate() tests --------------------------------------------------------
 
 test_that("simulate() requires stocks for simulation", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm1 <- update(sfm, "aux1", type = "aux", eqn = "5")
   sfm2 <- sim_settings(sfm1, language = "R")
 
@@ -14,20 +14,20 @@ test_that("simulate() requires stocks for simulation", {
 
 
 test_that("simulate() with R language works on simple model", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm1 <- update(sfm, "Pop", type = "stock", eqn = "100")
   sfm2 <- update(sfm1, "Growth", type = "flow", from = "Pop", eqn = "Pop * 0.05")
   sfm3 <- sim_settings(sfm2, language = "R", start = 0, stop = 10, dt = 1)
 
   result <- simulate(sfm3)
 
-  expect_s3_class(result, "simulate_sdbuildR")
+  expect_s3_class(result, "simulate_stockflow")
   expect_true("df" %in% names(result))
   expect_true(nrow(result$df) > 0)
 })
 
 test_that("simulate() result has correct structure", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm1 <- update(sfm, "Stock1", type = "stock", eqn = "10")
   sfm2 <- update(sfm1, "Flow1", type = "flow", from = "Stock1", eqn = "Stock1 * 0.1")
   sfm3 <- sim_settings(sfm2, language = "R", start = 0, stop = 5, dt = 1)
@@ -44,7 +44,7 @@ test_that("simulate() result has correct structure", {
 })
 
 test_that("simulate() returns data frame with time column", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm1 <- update(sfm, "S", type = "stock", eqn = "100")
   sfm2 <- update(sfm1, "Flow", type = "flow", from = "S", eqn = "0")
   sfm3 <- sim_settings(sfm2, language = "R", start = 0, stop = 10, dt = 1)
@@ -58,7 +58,7 @@ test_that("simulate() returns data frame with time column", {
 })
 
 test_that("simulate() respects save_at interval", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm1 <- update(sfm, "X", type = "stock", eqn = "1")
   sfm2 <- update(sfm1, "Flow", type = "flow", from = "X", eqn = "0")
   sfm3 <- sim_settings(sfm2, language = "R", start = 0, stop = 10, dt = 0.1, save_at = 1)
@@ -72,7 +72,7 @@ test_that("simulate() respects save_at interval", {
 })
 
 test_that("simulate() with constants", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm1 <- update(sfm, "rate", type = "constant", eqn = "0.05")
   sfm2 <- update(sfm1, "Stock", type = "stock", eqn = "100")
   sfm3 <- update(sfm2, "Flow", type = "flow", from = "Stock", eqn = "Stock * rate")
@@ -86,7 +86,7 @@ test_that("simulate() with constants", {
 })
 
 test_that("simulate() with auxiliaries", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm1 <- update(sfm, "S", type = "stock", eqn = "100")
   sfm2 <- update(sfm1, "rate", type = "aux", eqn = "0.1")
   sfm3 <- update(sfm2, "Flow", type = "flow", from = "S", eqn = "S * rate")
@@ -100,7 +100,7 @@ test_that("simulate() with auxiliaries", {
 })
 
 test_that("simulate() with multiple stocks", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm <- update(sfm, "S", type = "stock", eqn = "100")
   sfm <- update(sfm, "I", type = "stock", eqn = "10")
   sfm <- update(sfm, "infection", type = "flow", from = "S", to = "I", eqn = "0")
@@ -112,7 +112,7 @@ test_that("simulate() with multiple stocks", {
 })
 
 test_that("simulate() returns constants in result", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm1 <- update(sfm, "const_val", type = "constant", eqn = "42")
   sfm2 <- update(sfm1, "Stock", type = "stock", eqn = "10")
   sfm3 <- update(sfm2, "Flow", type = "flow", from = "Stock", eqn = "0")
@@ -126,7 +126,7 @@ test_that("simulate() returns constants in result", {
 })
 
 test_that("simulate() returns initial values", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm1 <- update(sfm, "Pop", type = "stock", eqn = "500")
   sfm2 <- update(sfm1, "Flow", type = "flow", from = "Pop", eqn = "0")
   sfm3 <- sim_settings(sfm2, language = "R", start = 0, stop = 10, dt = 1)
@@ -139,7 +139,7 @@ test_that("simulate() returns initial values", {
 
 
 test_that("simulate() with graphical function dependency", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm <- update(sfm,
     name = "gf1",
     type = "lookup",
@@ -159,7 +159,7 @@ test_that("simulate() with graphical function dependency", {
 })
 
 test_that("simulate() filters output to vars", {
-  sfm <- sdbuildR("SIR") |>
+  sfm <- stockflow("SIR") |>
     sim_settings(language = "R", vars = c("susceptible", "new_infections"))
 
   sim <- simulate(sfm)
@@ -168,7 +168,7 @@ test_that("simulate() filters output to vars", {
 })
 
 test_that("simulate() vars overrides only_stocks", {
-  sfm <- sdbuildR("SIR") |>
+  sfm <- stockflow("SIR") |>
     sim_settings(language = "R", only_stocks = TRUE, vars = c("new_infections"))
 
   sim <- simulate(sfm)
@@ -179,7 +179,7 @@ test_that("simulate() vars overrides only_stocks", {
 test_that("simulate() with Julia filters output to vars", {
   skip_if_julia_not_ready()
 
-  sfm <- sdbuildR("SIR") |>
+  sfm <- stockflow("SIR") |>
     sim_settings(
       language = "Julia",
       start = 0,
@@ -197,7 +197,7 @@ test_that("simulate() with Julia filters output to vars", {
 test_that("simulate() with Julia vars overrides only_stocks", {
   skip_if_julia_not_ready()
 
-  sfm <- sdbuildR("SIR") |>
+  sfm <- stockflow("SIR") |>
     sim_settings(
       language = "Julia",
       start = 0,
@@ -216,8 +216,8 @@ test_that("simulate() with Julia vars overrides only_stocks", {
 test_that("simulate() with Julia saves intermediaries with integer start and fractional dt", {
   skip_if_julia_not_ready()
 
-  sfm <- withr::with_options(new = c(sdbuildR.defer_codegen = TRUE), {
-    sdbuildR() |>
+  sfm <- withr::with_envvar(new = c(SDBUILDR_DEFER_CODEGEN = "true"), {
+    stockflow() |>
       sim_settings(language = "Julia", start = 0, stop = 0.02, dt = 0.01) |>
       update("k", type = "constant", eqn = "0.1") |>
       update("s", type = "stock", eqn = "1") |>
@@ -353,7 +353,7 @@ test_that("simulate with save_n returns exactly N rows", {
   n_save <- 25
   sfm <- sim_settings(make_verifiable_sfm(),
     start = 0, stop = 10,
-    save_n = n_save, dt = 1
+    save_n = n_save, dt = 0.01
   )
   sim <- simulate(sfm)
   expect_equal(nrow(as.data.frame(sim, direction = "wide")), n_save)
@@ -362,7 +362,7 @@ test_that("simulate with save_n returns exactly N rows", {
 test_that("simulate with save_n = 1 returns a single-row data frame", {
   sfm <- sim_settings(make_verifiable_sfm(),
     start = 0, stop = 5,
-    save_n = 1, dt = 1
+    save_n = 1, dt = 0.01
   )
   sim <- simulate(sfm)
   expect_equal(nrow(as.data.frame(sim, direction = "wide")), 1)
@@ -374,7 +374,7 @@ test_that("simulate with save_n = 1 returns a single-row data frame", {
 # ============================================================================
 
 test_that("simulation is reproducible with seed and random static and dynamic elements", {
-  sfm <- sim_settings(sdbuildR("SIR"),
+  sfm <- sim_settings(stockflow("SIR"),
     language = "R",
     # runif() should only be done with euler
     method = "euler"

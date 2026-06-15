@@ -61,20 +61,20 @@
 
 
 # ==============================================================================
-# GUARD: detect accidental double-passing of sdbuildR object as variable name
+# GUARD: detect accidental double-passing of stockflow object as variable name
 # ==============================================================================
 
-#' Abort with a helpful message when an sdbuildR object lands in the name slot
+#' Abort with a helpful message when a stockflow object lands in the name slot
 #' @noRd
-.abort_name_is_sdbuildR <- function() {
+.abort_name_is_stockflow <- function() {
   cli::cli_abort(c(
-    "An {.cls sdbuildR} model object was passed where a variable name was expected.",
+    "An {.cls stockflow} model object was passed where a variable name was expected.",
     "i" = "Did you accidentally pass the model twice?",
     ">" = "Use {.code sfm |> constant(A)} not {.code sfm |> constant(sfm, A)}."
   ))
 }
 
-#' Check that the name argument is not accidentally an sdbuildR model object.
+#' Check that the name argument is not accidentally a stockflow model object.
 #'
 #' For NSE functions, pass the unevaluated expression (from [rlang::enexpr()])
 #' and the caller's environment so the symbol can be looked up without forcing
@@ -85,9 +85,9 @@
 #' @param env The environment in which to look up bare symbols. Defaults to
 #'   [rlang::caller_env()].
 #' @noRd
-.check_name_not_sdbuildR <- function(name_or_expr,
-                                     env = rlang::caller_env()) {
-  is_sdbuildR_val <- function(x) inherits(x, "sdbuildR")
+.check_name_not_stockflow <- function(name_or_expr,
+                                      env = rlang::caller_env()) {
+  is_stockflow_val <- function(x) inherits(x, "stockflow")
 
   if (rlang::is_symbol(name_or_expr)) {
     # NSE path: expression not yet forced — look up the symbol in caller's env
@@ -96,12 +96,12 @@
       get(nm, envir = env, inherits = TRUE),
       error = function(e) NULL
     )
-    if (is_sdbuildR_val(candidate)) {
-      .abort_name_is_sdbuildR()
+    if (is_stockflow_val(candidate)) {
+      .abort_name_is_stockflow()
     }
-  } else if (is_sdbuildR_val(name_or_expr)) {
-    # Non-NSE path: value was already evaluated and is an sdbuildR object
-    .abort_name_is_sdbuildR()
+  } else if (is_stockflow_val(name_or_expr)) {
+    # Non-NSE path: value was already evaluated and is a stockflow object
+    .abort_name_is_stockflow()
   }
 }
 
@@ -153,7 +153,7 @@
   }
 
   type <- clean_type(type)
-  allowed_types <- .sdbuildR_types()
+  allowed_types <- .stockflow_types()
 
   if (!all(type %in% allowed_types)) {
     types_display <- paste0("'", allowed_types, "'", collapse = ", ")
@@ -609,7 +609,7 @@
 #' @param passed_arg Character vector of properties that were passed
 #' @return Updated object with properties updated for variable at index i
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #' @noRd
 update_variable_row <- function(object, type, name,
                                 eqn, label, doc,
@@ -665,7 +665,7 @@ update_variable_row <- function(object, type, name,
 #' @param modified_names Character vector of variable names that were modified.
 #'   If NULL (default), all variables are processed (full regeneration). If provided,
 #'   only the specified variables are updated for incremental performance.
-#' @param sanitize Logical: whether to run sanitize_sdbuildR()
+#' @param sanitize Logical: whether to run sanitize_stockflow()
 #' @noRd
 .prepare_model_for_assembly <- function(object, modified_names = NULL, sanitize = TRUE) {
   # Prepare equations for current language (adapter handles R vs Julia)
@@ -675,7 +675,7 @@ update_variable_row <- function(object, type, name,
   object <- invalidate_assemble(object, "variables")
 
   if (sanitize) {
-    object <- sanitize_sdbuildR(object)
+    object <- sanitize_stockflow(object)
   }
 
   object
@@ -689,8 +689,8 @@ update_variable_row <- function(object, type, name,
 #' convenience wrapper around [update()] with `type = "stock"`. See the
 #' **Stocks** section of [update()] for more details.
 #'
-#' @inheritParams update.sdbuildR
-#' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR]
+#' @inheritParams update.stockflow
+#' @returns A stock-and-flow model object of class [`stockflow`][stockflow]
 #' @seealso [update()], [discard()], [change_name()]
 #' @concept build
 #' @export
@@ -698,11 +698,11 @@ update_variable_row <- function(object, type, name,
 #' @examples
 #'
 #' # Create a stock with an initial value
-#' sfm <- sdbuildR() |>
+#' sfm <- stockflow() |>
 #'   stock(population, eqn = 100, label = "Population")
 #'
 #' # Multiple stocks
-#' sfm <- sdbuildR() |>
+#' sfm <- stockflow() |>
 #'   stock(susceptible, eqn = 999, label = "susceptible") |>
 #'   stock(infected, eqn = 1, label = "infected") |>
 #'   stock(recovered, eqn = 0, label = "recovered")
@@ -733,8 +733,8 @@ stock <- function(object, name,
 #' convenience wrapper around [update()] with `type = "flow"`. See the
 #' **Flows** section of [update()] for more details.
 #'
-#' @inheritParams update.sdbuildR
-#' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR]
+#' @inheritParams update.stockflow
+#' @returns A stock-and-flow model object of class [`stockflow`][stockflow]
 #' @seealso [update()], [discard()], [change_name()]
 #' @concept build
 #' @export
@@ -742,7 +742,7 @@ stock <- function(object, name,
 #' @examples
 #'
 #' # Create a flow into a stock
-#' sfm <- sdbuildR() |>
+#' sfm <- stockflow() |>
 #'   stock(population, eqn = 100) |>
 #'   flow(births, eqn = population * 0.1, to = population) |>
 #'   flow(deaths, eqn = population * 0.05, from = population)
@@ -772,8 +772,8 @@ flow <- function(object, name,
 #' convenience wrapper around [update()] with `type = "constant"`. See the
 #' **Constants** section of [update()] for more details.
 #'
-#' @inheritParams update.sdbuildR
-#' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR]
+#' @inheritParams update.stockflow
+#' @returns A stock-and-flow model object of class [`stockflow`][stockflow]
 #' @seealso [update()], [discard()], [change_name()]
 #' @concept build
 #' @export
@@ -781,7 +781,7 @@ flow <- function(object, name,
 #' @examples
 #'
 #' # Create constants for model parameters
-#' sfm <- sdbuildR() |>
+#' sfm <- stockflow() |>
 #'   constant(growth_rate, eqn = 0.1, label = "Growth Rate") |>
 #'   constant(carrying_capacity, eqn = 1000, label = "Carrying Capacity")
 #'
@@ -806,18 +806,18 @@ constant <- function(object, name,
 #' Auxiliaries are dynamic variables used for intermediate calculations in the
 #' system. [auxiliary()] adds or changes an auxiliary variable. This is a convenience
 #' wrapper around [update()] with `type = "aux"`. See the **Auxiliaries** section
-#' of [`update()`][update.sdbuildR()] for more details.
+#' of [`update()`][update.stockflow()] for more details.
 #'
-#' @inheritParams update.sdbuildR
-#' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR]
-#' @seealso [`update()`][update.sdbuildR()], [discard()], [change_name()]
+#' @inheritParams update.stockflow
+#' @returns A stock-and-flow model object of class [`stockflow`][stockflow]
+#' @seealso [`update()`][update.stockflow()], [discard()], [change_name()]
 #' @concept build
 #' @export
 #'
 #' @examples
 #'
 #' # Create an auxiliary for an intermediate calculation
-#' sfm <- sdbuildR() |>
+#' sfm <- stockflow() |>
 #'   stock(population, eqn = 100) |>
 #'   constant(carrying_capacity, eqn = 1000) |>
 #'   auxiliary(density, eqn = population / carrying_capacity, label = "Density")
@@ -850,30 +850,30 @@ aux <- auxiliary
 #' throughout a stock-and-flow model. [custom_func()] adds or changes a function. This is a convenience wrapper around [update()] with
 #' `type = "func"`.
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #' @param name Name of the function variable. The equation will be assigned to this name.
 #' @param eqn Equation of the function variable. A character vector. Defaults to `0`.
 #' @param doc Documentation. Defaults to "".
 #'
-#' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR]
-#' @seealso [`update()`][update.sdbuildR()], [discard()], [change_name()]
+#' @returns A stock-and-flow model object of class [`stockflow`][stockflow]
+#' @seealso [`update()`][update.stockflow()], [discard()], [change_name()]
 #' @concept build
 #' @export
 #'
 #' @examples
 #'
 #' # Simple function
-#' sfm <- sdbuildR() |>
+#' sfm <- stockflow() |>
 #'   custom_func(double, eqn = "function(x) x * 2") |>
 #'   constant(a, eqn = double(2))
 #'
 #' # Function with defaults
-#' sfm <- sdbuildR() |>
+#' sfm <- stockflow() |>
 #'   custom_func(scale, eqn = "function(x, factor = 10) x * factor") |>
 #'   constant(b, eqn = scale(2))
 #'
 #' # If the logistic() function did not exist, you could create it yourself:
-#' sfm <- sdbuildR() |>
+#' sfm <- stockflow() |>
 #'   custom_func(my_logistic, eqn = "function(x, slope = 1, midpoint = .5){
 #'    1 / (1 + exp(-slope*(x-midpoint)))
 #'  }") |>
@@ -892,15 +892,15 @@ custom_func <- function(object, name, eqn = 0,
 #'
 #' Lookup variables define piecewise relationships using specified (x, y) points. [lookup()] adds or changes a lookup variable. This is a convenience wrapper around [update()] with `type = "lookup"`. See the **Lookup Variables** section of [update()] for more details.
 #'
-#' @inheritParams update.sdbuildR
-#' @return A stock-and-flow model object of class [`sdbuildR`][sdbuildR()]
+#' @inheritParams update.stockflow
+#' @return A stock-and-flow model object of class [`stockflow`][stockflow()]
 #'
-#' @seealso [`update()`][update.sdbuildR()], [discard()], [change_name()]
+#' @seealso [`update()`][update.stockflow()], [discard()], [change_name()]
 #' @concept build
 #' @export
 #' @examples
 #' # Create a lookup variable for a non-linear relationship
-#' sfm <- sdbuildR() |>
+#' sfm <- stockflow() |>
 #'   lookup(output,
 #'     source = t,
 #'     xpts = c(0, 5, 10),
@@ -1093,7 +1093,7 @@ lookup <- function(object, name,
 #' `interpolation`, and `extrapolation` arguments are not affected by NSE
 #' and are evaluated normally.
 #'
-#' @param object Stock-and-flow model, object of class [`sdbuildR`][sdbuildR].
+#' @param object Stock-and-flow model, object of class [`stockflow`][stockflow].
 #' @param name Variable name. Accepts a bare symbol (e.g., `population`), a string (`"population"`), or a vector via `c()` (e.g., `c(a, b)` or `c("a", "b")`). Use `!!` to inject from a variable.
 #' @param type Type of building block(s); accepts a bare symbol or string. One of `stock`, `flow`, `constant`, `aux`, `lookup`, or `func`. Does not need to be specified to modify an existing variable.
 #' @param label Name of variable used for plotting. Defaults to the same as name.
@@ -1122,18 +1122,18 @@ lookup <- function(object, name,
 #' Columns not applicable to a variable type should be set to NA. See Examples for a complete demonstration.
 #' @param ... Additional arguments (currently unused).
 #'
-#' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR]
-#' @seealso [sdbuildR()] to initialize a model, [`simulate()`][simulate.sdbuildR()] to simulate a model, and [summary()] to run model diagnostics. Variable-specific helper functions [stock()], [flow()], [constant()], [aux()], and [lookup()] are also available as wrappers around update() that set the "type" argument for convenience. Further helper functions for modifying models are [change_name()] to rename a variable, [change_type()] to change a variable's type, and [discard()] to remove a variable.
+#' @returns A stock-and-flow model object of class [`stockflow`][stockflow]
+#' @seealso [stockflow()] to initialize a model, [`simulate()`][simulate.stockflow()] to simulate a model, and [summary()] to run model diagnostics. Variable-specific helper functions [stock()], [flow()], [constant()], [aux()], and [lookup()] are also available as wrappers around update() that set the "type" argument for convenience. Further helper functions for modifying models are [change_name()] to rename a variable, [change_type()] to change a variable's type, and [discard()] to remove a variable.
 #' @concept build
 #' @importFrom rlang enexpr is_symbol is_call as_name call_name call_args expr_deparse
 #' @importFrom stats update
-#' @method update sdbuildR
+#' @method update stockflow
 #' @export
 #'
 #' @examples
 #'
 #' # First initialize an empty model
-#' sfm <- sdbuildR()
+#' sfm <- stockflow()
 #' print(sfm)
 #' \dontshow{
 #' sfm <- sim_settings(sfm, save_at = .5)
@@ -1198,7 +1198,7 @@ lookup <- function(object, name,
 #'   to = c(NA, "X", NA, NA, NA),
 #'   from = c(NA, NA, "X", NA, NA)
 #' )
-#' sfm <- update(sdbuildR(), df = df)
+#' sfm <- update(stockflow(), df = df)
 #'
 #' # Run model diagnostics
 #' summary(sfm)
@@ -1212,22 +1212,22 @@ lookup <- function(object, name,
 #' # Strings also work
 #' sfm <- constant(sfm, "growth", eqn = 0.2)
 #'
-update.sdbuildR <- function(object, name, type = NULL,
-                            eqn = 0,
-                            label = name,
-                            doc = "",
-                            to = NULL, from = NULL,
-                            non_negative = FALSE,
-                            xpts = NULL, ypts = NULL,
-                            source = NULL,
-                            interpolation = "linear",
-                            extrapolation = "nearest",
-                            df = NULL, ...) {
+update.stockflow <- function(object, name, type = NULL,
+                             eqn = 0,
+                             label = name,
+                             doc = "",
+                             to = NULL, from = NULL,
+                             non_negative = FALSE,
+                             xpts = NULL, ypts = NULL,
+                             source = NULL,
+                             interpolation = "linear",
+                             extrapolation = "nearest",
+                             df = NULL, ...) {
   # Basic checks
   if (missing(object)) {
     missing_arg("object")
   }
-  check_sdbuildR(object)
+  check_stockflow(object)
 
   # Handle data frame input
   if (!is.null(df)) {
@@ -1244,7 +1244,7 @@ update.sdbuildR <- function(object, name, type = NULL,
   # Allows bare symbols and expressions: update(object, pop, eqn = a * b)
   # Use !! for injection from variables: update(object, !!my_name, "stock")
   name_expr <- rlang::enexpr(name)
-  .check_name_not_sdbuildR(name_expr, rlang::caller_env())
+  .check_name_not_stockflow(name_expr, rlang::caller_env())
   name <- .expr_to_char(name_expr)
   if (!missing(eqn)) eqn <- .expr_to_char(rlang::enexpr(eqn))
   if (!missing(to)) to <- .expr_to_char(rlang::enexpr(to))
@@ -1404,8 +1404,8 @@ update.sdbuildR <- function(object, name, type = NULL,
       .validate_func_eqn(args[["eqn"]], args[["name"]])
     }
     object <- invalidate_assemble(object, "funcs")
-    object <- sanitize_sdbuildR(object)
-    validate_sdbuildR(object)
+    object <- sanitize_stockflow(object)
+    validate_stockflow(object)
     return(object)
   }
 
@@ -1424,9 +1424,9 @@ update.sdbuildR <- function(object, name, type = NULL,
 
 #' Add and/or modify model from data frame
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #'
-#' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR]
+#' @returns A stock-and-flow model object of class [`stockflow`][stockflow]
 #' @noRd
 #'
 add_from_df <- function(object, df) {
@@ -1463,7 +1463,7 @@ add_from_df <- function(object, df) {
     ))
   }
 
-  # Add each row by calling update.sdbuildR
+  # Add each row by calling update.stockflow
   for (i in seq_len(nrow(df))) {
     arg <- as.list(df[i, ])
     arg <- arg[!is.na(arg)]
@@ -1472,11 +1472,11 @@ add_from_df <- function(object, df) {
     arg <- arg[names(arg) %in% prop[[arg[["type"]]]]]
 
     arg[["object"]] <- object
-    object <- do.call(update.sdbuildR, arg)
+    object <- do.call(update.stockflow, arg)
   }
 
-  object <- sanitize_sdbuildR(object)
-  validate_sdbuildR(object)
+  object <- sanitize_stockflow(object)
+  validate_stockflow(object)
   object
 }
 
@@ -1485,16 +1485,16 @@ add_from_df <- function(object, df) {
 #'
 #' Change the name of a variable throughout the model. This updates the data frame and all references in equations, flow connections, and labels.
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #' @param new_name New name. Character vector of the same length as `name`. Must be unique across all existing variables.
 #'
-#' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR] with the name changed throughout the model.
+#' @returns A stock-and-flow model object of class [`stockflow`][stockflow] with the name changed throughout the model.
 #'
 #' @seealso [update()], [discard()]
 #' @concept build
 #' @export
 #' @examples
-#' sfm <- sdbuildR("SIR")
+#' sfm <- stockflow("SIR")
 #' sfm <- change_name(sfm, c(susceptible, infected, recovered),
 #'   new_name = c(S, I, R)
 #' )
@@ -1508,7 +1508,7 @@ change_name <- function(object, name, new_name) {
   if (missing(object)) {
     missing_arg("object")
   }
-  check_sdbuildR(object)
+  check_stockflow(object)
 
   if (missing(name)) {
     missing_arg("name")
@@ -1520,7 +1520,7 @@ change_name <- function(object, name, new_name) {
 
   # NSE: allow bare symbols, e.g., change_name(object, old, new_name = new)
   name_expr <- rlang::enexpr(name)
-  .check_name_not_sdbuildR(name_expr, rlang::caller_env())
+  .check_name_not_stockflow(name_expr, rlang::caller_env())
   name <- .expr_to_char(name_expr)
   new_name <- .expr_to_char(rlang::enexpr(new_name))
 
@@ -1562,8 +1562,8 @@ change_name <- function(object, name, new_name) {
     object <- invalidate_assemble(object, "funcs")
   }
 
-  object <- sanitize_sdbuildR(object)
-  validate_sdbuildR(object)
+  object <- sanitize_stockflow(object)
+  validate_stockflow(object)
   object
 }
 
@@ -1572,20 +1572,20 @@ change_name <- function(object, name, new_name) {
 #'
 #' Change the type of a variable in a stock-and-flow model.
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #' @param new_type New variable type; one of `'stock'`, `'flow'`, `'constant'`, `'aux'`, `'gf'`, or `'func'`. Character vector of the same length as name.
 #'
-#' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR()] with the variable type changed throughout the model. Note that changing the type may result in changes to other properties (e.g., a flow must have "to" and/or "from" properties, so these will be added if not already present), and may require changes to the equations of connected variables.
+#' @returns A stock-and-flow model object of class [`stockflow`][stockflow()] with the variable type changed throughout the model. Note that changing the type may result in changes to other properties (e.g., a flow must have "to" and/or "from" properties, so these will be added if not already present), and may require changes to the equations of connected variables.
 #' @seealso [update()]
 #' @concept build
 #' @export
 #' @examples
 #' # Start with a simple predator-prey model
-#' sfm <- sdbuildR("predator_prey")
-#' 
+#' sfm <- stockflow("predator_prey")
+#'
 #' # Change the birth rate of predators from a constant to an auxiliary
 #' sfm <- change_type(sfm, delta, new_type = "aux")
-#' 
+#'
 #' # This allows us to introduce time-dependence in the birth rate
 #' # (e.g., seasonality with a sine function)
 #' sfm <- sfm |>
@@ -1598,7 +1598,7 @@ change_type <- function(object, name, new_type) {
   if (missing(object)) {
     missing_arg("object")
   }
-  check_sdbuildR(object)
+  check_stockflow(object)
 
   if (missing(name)) {
     missing_arg("name")
@@ -1610,7 +1610,7 @@ change_type <- function(object, name, new_type) {
 
   # NSE: allow bare symbols, e.g., change_type(object, delta, new_type = aux)
   name_expr <- rlang::enexpr(name)
-  .check_name_not_sdbuildR(name_expr, rlang::caller_env())
+  .check_name_not_stockflow(name_expr, rlang::caller_env())
   name <- .expr_to_char(name_expr)
   new_type <- .expr_to_char(rlang::enexpr(new_type))
 
@@ -1694,7 +1694,7 @@ change_type <- function(object, name, new_type) {
     object <- invalidate_assemble(object, "unit_tests")
   }
 
-  sanitize_sdbuildR(object)
+  sanitize_stockflow(object)
 }
 
 #' Check that variable(s) exist in the model
@@ -1723,17 +1723,17 @@ check_var_existence <- function(name, var_names) {
 #'
 #' Remove variable(s) from a stock-and-flow model. All references in flow connections and graphical function sources are also removed. A warning will be thrown if any lingering references to the removed name remain in the model.
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #' @param name Name(s) to remove. Accepts bare symbols (e.g., `x`), strings, or vectors via `c()`. Must be variable names.
 #' @param remove_references Where to remove references to the discarded variables. By default, references to discarded variables in `"to"`, `"from"`, `"source"`, and `"unit_test"` are removed. Set to `NULL` to keep all references (not recommended). Note that any lingering references in equations will cause errors in simulation and should be removed or updated with `update()` after discarding the variable.
-#' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR()]
+#' @returns A stock-and-flow model object of class [`stockflow`][stockflow()]
 #'
 #' @seealso [update()], [change_name()]
 #' @export
 #' @concept build
 #' @examples
 #' # Add stock
-#' sfm <- sdbuildR() |> stock(x)
+#' sfm <- stockflow() |> stock(x)
 #' print(sfm)
 #'
 #' # Remove stock
@@ -1742,7 +1742,7 @@ check_var_existence <- function(name, var_names) {
 discard <- function(object, name, remove_references = c("to", "from", "source", "unit_test")) {
   # NSE: allow bare symbols, e.g., discard(object, population)
   name_expr <- rlang::enexpr(name)
-  .check_name_not_sdbuildR(name_expr, rlang::caller_env())
+  .check_name_not_stockflow(name_expr, rlang::caller_env())
   name <- .expr_to_char(name_expr)
 
   # Determine if names are variables
@@ -1780,8 +1780,8 @@ discard <- function(object, name, remove_references = c("to", "from", "source", 
   object <- prep_equations_variables(object, modified_names = NULL)
   object <- prep_stock_change(object, modified_names = NULL)
   object <- invalidate_assemble(object, "variables")
-  object <- sanitize_sdbuildR(object)
-  validate_sdbuildR(object)
+  object <- sanitize_stockflow(object)
+  validate_stockflow(object)
 }
 
 
@@ -1789,9 +1789,9 @@ discard <- function(object, name, remove_references = c("to", "from", "source", 
 #'
 #' Internal function to remove a variable and all references to it in the model.
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #'
-#' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR]
+#' @returns A stock-and-flow model object of class [`stockflow`][stockflow]
 #' @noRd
 #'
 .discard <- function(object, name, remove_references) {

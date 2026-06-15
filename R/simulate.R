@@ -3,14 +3,14 @@
 #' Simulate a stock-and-flow model with simulation specifications defined by [sim_settings()]. If `sim_settings(language = "julia")`, the Julia environment will first be set up with [use_julia()]. If any problems are detected by [summary()], the model cannot be simulated.
 #'
 #' @inheritParams import_insightmaker
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #' @inheritParams sim_settings
 #' @param nsim Number of simulations to run (unused; see [ensemble()] for running multiple simulations).
 #' @param ... Optional arguments passed to [sim_settings()]; these can be used to override the simulation specifications set in the model object.
 #'
-#' @returns Object of class [`simulate_sdbuildR`][simulate.sdbuildR()], a list containing:
+#' @returns Object of class [`simulate_stockflow`][simulate.stockflow()], a list containing:
 #' \describe{
-#'   \item{object}{Stock-and-flow model object of class [`sdbuildR`][sdbuildR]}
+#'   \item{object}{Stock-and-flow model object of class [`stockflow`][stockflow]}
 #'   \item{df}{Data frame: simulation results (time, variable, value)}
 #'   \item{init}{Named vector: initial stock values}
 #'   \item{constants}{Named vector: constant parameters}
@@ -20,17 +20,17 @@
 #'   \item{error_message}{NULL if completed without errors}
 #' }
 #'
-#' Use [as.data.frame()][as.data.frame.simulate_sdbuildR()] to extract results, [plot()][plot.simulate_sdbuildR()] to visualize.
+#' Use [as.data.frame()][as.data.frame.simulate_stockflow()] to extract results, [plot()][plot.simulate_stockflow()] to visualize.
 #'
 #'
 #' @export
 #' @importFrom stats simulate
-#' @method simulate sdbuildR
+#' @method simulate stockflow
 #' @concept simulate
-#' @seealso [update()], [sdbuildR()], [summary()], [sim_settings()], [use_julia()]
+#' @seealso [update()], [stockflow()], [summary()], [sim_settings()], [use_julia()]
 #'
 #' @examples
-#' sfm <- sdbuildR("SIR")
+#' sfm <- stockflow("SIR")
 #' sim <- simulate(sfm)
 #' plot(sim)
 #'
@@ -38,12 +38,12 @@
 #' sim <- simulate(sim_settings(sfm, only_stocks = FALSE))
 #' plot(sim, show_constants = TRUE)
 #'
-simulate.sdbuildR <- function(
+simulate.stockflow <- function(
   object,
   nsim = 1, seed = NULL,
   ...
 ) {
-  check_sdbuildR(object)
+  check_stockflow(object)
 
   # Override sim_settings with any arguments passed via ...
   varargs <- list(...)
@@ -78,17 +78,17 @@ simulate.sdbuildR <- function(
 }
 
 
-#' Create new object of class [`simulate_sdbuildR`][simulate.sdbuildR()]
+#' Create new object of class [`simulate_stockflow`][simulate.stockflow()]
 #' @noRd
-new_simulate_sdbuildR <- function(success = FALSE,
-                                  error_message = NULL,
-                                  object = NULL,
-                                  df = NULL,
-                                  init = NULL,
-                                  constants = NULL,
-                                  script = NULL,
-                                  duration = NULL,
-                                  ...) {
+new_simulate_stockflow <- function(success = FALSE,
+                                   error_message = NULL,
+                                   object = NULL,
+                                   df = NULL,
+                                   init = NULL,
+                                   constants = NULL,
+                                   script = NULL,
+                                   duration = NULL,
+                                   ...) {
   obj <- list(
     success = success,
     error_message = error_message,
@@ -101,22 +101,22 @@ new_simulate_sdbuildR <- function(success = FALSE,
     ...
   )
 
-  structure(obj, class = "simulate_sdbuildR")
+  structure(obj, class = "simulate_stockflow")
 }
 
 
-#' Check class [`simulate_sdbuildR`][simulate.sdbuildR()]
+#' Check class [`simulate_stockflow`][simulate.stockflow()]
 #'
-#' @param x A simulation of a stock-and-flow model of class [`simulate_sdbuildR`][simulate.sdbuildR()]
+#' @param x A simulation of a stock-and-flow model of class [`simulate_stockflow`][simulate.stockflow()]
 #'
 #' @returns Invisible x if valid, otherwise an error is thrown
 #' @noRd
 #'
-check_simulate_sdbuildR <- function(x) {
-  if (!inherits(x, "simulate_sdbuildR")) {
+check_simulate_stockflow <- function(x) {
+  if (!inherits(x, "simulate_stockflow")) {
     cli::cli_abort(c(
       "Invalid object type.",
-      "x" = "Expected object of class {.cls simulate_sdbuildR}.",
+      "x" = "Expected object of class {.cls simulate_stockflow}.",
       "i" = "Use {.fn simulate} to create a valid simulation object."
     ))
   }
@@ -169,25 +169,25 @@ check_simulate_sdbuildR <- function(x) {
 #' Print simulation of a stock-and-flow model
 #'
 #' Prints the first rows of the simulation results in wide format. For a
-#' statistical summary per variable use [summary()][summary.simulate_sdbuildR()].
+#' statistical summary per variable use [summary()][summary.simulate_stockflow()].
 #'
-#' @param x A simulation result of class [`simulate_sdbuildR`][simulate.sdbuildR()]
+#' @param x A simulation result of class [`simulate_stockflow`][simulate.stockflow()]
 #' @param ... Additional arguments (unused)
 #'
 #' @returns Invisibly returns `x`
 #' @export
 #' @concept build
-#' @method print simulate_sdbuildR
-#' @seealso [simulate.sdbuildR()], [summary.simulate_sdbuildR()],
-#'   [plot.simulate_sdbuildR()], [as.data.frame.simulate_sdbuildR()]
+#' @method print simulate_stockflow
+#' @seealso [simulate.stockflow()], [summary.simulate_stockflow()],
+#'   [plot.simulate_stockflow()], [as.data.frame.simulate_stockflow()]
 #'
 #' @examples
-#' sfm <- sdbuildR("SIR")
+#' sfm <- stockflow("SIR")
 #' sim <- simulate(sfm)
 #' print(sim)
 #'
-print.simulate_sdbuildR <- function(x, ...) {
-  check_simulate_sdbuildR(x)
+print.simulate_stockflow <- function(x, ...) {
+  check_simulate_stockflow(x)
 
   model_name <- x[["object"]][["meta"]][["name"]]
   default_name <- formals(meta)[["name"]]
@@ -311,12 +311,12 @@ model_properties <- function(object) {
 #' Compare two stock-and-flow models
 #'
 #' Compares the structure, equations, and simulation settings of two
-#' `sdbuildR` models, and computes a nonlinearity score for each.
+#' `stockflow` models, and computes a nonlinearity score for each.
 #'
-#' @param sfm1 A stock-and-flow model of class [`sdbuildR`][sdbuildR()].
-#' @param sfm2 A stock-and-flow model of class [`sdbuildR`][sdbuildR()].
+#' @param sfm1 A stock-and-flow model of class [`stockflow`][stockflow()].
+#' @param sfm2 A stock-and-flow model of class [`stockflow`][stockflow()].
 #'
-#' @returns An object of class `compare_sdbuildR` (a list) containing:
+#' @returns An object of class `compare_stockflow` (a list) containing:
 #'   \describe{
 #'     \item{`labels`}{Names of the two model objects (captured expressions).}
 #'     \item{`added`}{Variables present in `sfm2` but not `sfm1`.}
@@ -326,11 +326,11 @@ model_properties <- function(object) {
 #'     \item{`sim_settings_diff`}{Simulation settings that differ.}
 #'     \item{`properties`}{Per-model counts and nonlinearity scores.}
 #'   }
-#' @seealso [`simulate()`][simulate.sdbuildR()], [`summary()`][summary.sdbuildR()]
+#' @seealso [`simulate()`][simulate.stockflow()], [`summary()`][summary.stockflow()]
 #' @concept build
 #' @export
 #' @examples
-#' sfm1 <- sdbuildR("SIR")
+#' sfm1 <- stockflow("SIR")
 #' sfm2 <- stock(sfm1, "susceptible", eqn = 0.5)
 #' compare_models(sfm1, sfm2)
 #'
@@ -338,8 +338,8 @@ compare_models <- function(sfm1, sfm2) {
   label1 <- rlang::expr_deparse(rlang::enexpr(sfm1))
   label2 <- rlang::expr_deparse(rlang::enexpr(sfm2))
 
-  check_sdbuildR(sfm1)
-  check_sdbuildR(sfm2)
+  check_stockflow(sfm1)
+  check_stockflow(sfm2)
 
   v1 <- sfm1[["variables"]]
   v2 <- sfm2[["variables"]]
@@ -426,22 +426,22 @@ compare_models <- function(sfm1, sfm2) {
     )
   )
 
-  class(result) <- "compare_sdbuildR"
+  class(result) <- "compare_stockflow"
   result
 }
 
 
 #' Print comparison of two stock-and-flow models
 #'
-#' @param x An object of class [`compare_sdbuildR`][compare_models()]
+#' @param x An object of class [`compare_stockflow`][compare_models()]
 #' @param ... Additional arguments (unused)
 #'
 #' @returns Invisibly returns `x`.
 #' @export
 #' @concept build
-#' @method print compare_sdbuildR
+#' @method print compare_stockflow
 #'
-print.compare_sdbuildR <- function(x, ...) {
+print.compare_stockflow <- function(x, ...) {
   l1 <- x[["labels"]][1]
   l2 <- x[["labels"]][2]
 
@@ -654,7 +654,7 @@ compare_sim <- function(sim1, sim2, tolerance = .00001) {
 #'
 #' Convert simulation results to a data.frame.
 #'
-#' @inheritParams plot.simulate_sdbuildR
+#' @inheritParams plot.simulate_stockflow
 #' @param direction Format of data frame, either "long" (default) or "wide".
 #' @param row.names NULL or a character vector giving the row names for the data frame. Missing values are not allowed.
 #' @param optional Ignored parameter.
@@ -664,12 +664,12 @@ compare_sim <- function(sim1, sim2, tolerance = .00001) {
 #'   For \code{direction = "wide"}, the data frame has columns \code{time} followed by
 #'   one column per variable.
 #' @export
-#' @seealso [`simulate()`][simulate.sdbuildR()], [sdbuildR()]
+#' @seealso [`simulate()`][simulate.stockflow()], [stockflow()]
 #' @concept build
-#' @method as.data.frame simulate_sdbuildR
+#' @method as.data.frame simulate_stockflow
 #'
 #' @examples
-#' sfm <- sdbuildR("SIR")
+#' sfm <- stockflow("SIR")
 #' sim <- simulate(sfm)
 #' df <- as.data.frame(sim)
 #' head(df)
@@ -678,10 +678,10 @@ compare_sim <- function(sim1, sim2, tolerance = .00001) {
 #' df_wide <- as.data.frame(sim, direction = "wide")
 #' head(df_wide)
 #'
-as.data.frame.simulate_sdbuildR <- function(x,
-                                            row.names = NULL, optional = FALSE,
-                                            direction = "long", ...) {
-  check_simulate_sdbuildR(x)
+as.data.frame.simulate_stockflow <- function(x,
+                                             row.names = NULL, optional = FALSE,
+                                             direction = "long", ...) {
+  check_simulate_stockflow(x)
 
   direction <- trimws(tolower(direction))
   if (!direction %in% c("long", "wide")) {
@@ -724,22 +724,22 @@ as.data.frame.simulate_sdbuildR <- function(x,
 
 #' Print first rows of a simulation
 #'
-#' Print the first rows of a simulation data frame of a stock-and-flow model. This is a wrapper around [head()] that first converts the simulation results to a data frame using [as.data.frame()][as.data.frame.simulate_sdbuildR()].
+#' Print the first rows of a simulation data frame of a stock-and-flow model. This is a wrapper around [head()] that first converts the simulation results to a data frame using [as.data.frame()][as.data.frame.simulate_stockflow()].
 #'
-#' @inheritParams as.data.frame.simulate_sdbuildR
+#' @inheritParams as.data.frame.simulate_stockflow
 #' @param n Number of rows to print. Defaults to 6.
-#' @param ... Other arguments passed to [as.data.frame.simulate_sdbuildR()].
+#' @param ... Other arguments passed to [as.data.frame.simulate_stockflow()].
 #'
 #' @returns A data.frame with the first rows of the simulation results.
 #' @export
 #' @concept simulate
 #' @importFrom utils head
 #' @examples
-#' sfm <- sdbuildR("SIR")
+#' sfm <- stockflow("SIR")
 #' sim <- simulate(sfm)
 #' head(sim)
-head.simulate_sdbuildR <- function(x, n = 6L, ...) {
-  check_simulate_sdbuildR(x)
+head.simulate_stockflow <- function(x, n = 6L, ...) {
+  check_simulate_stockflow(x)
 
   df <- as.data.frame(x, ...)
   head(df, n)
@@ -748,21 +748,21 @@ head.simulate_sdbuildR <- function(x, n = 6L, ...) {
 
 #' Print last rows of a simulation
 #'
-#' Print the last rows of a simulation data frame of a stock-and-flow model. This is a wrapper around [tail()] that first converts the simulation results to a data frame using [as.data.frame()][as.data.frame.simulate_sdbuildR()].
+#' Print the last rows of a simulation data frame of a stock-and-flow model. This is a wrapper around [tail()] that first converts the simulation results to a data frame using [as.data.frame()][as.data.frame.simulate_stockflow()].
 #'
-#' @inheritParams as.data.frame.simulate_sdbuildR
+#' @inheritParams as.data.frame.simulate_stockflow
 #' @param n Number of rows to print. Defaults to 6.
-#' @param ... Other arguments passed to [as.data.frame.simulate_sdbuildR()].
+#' @param ... Other arguments passed to [as.data.frame.simulate_stockflow()].
 #' @return A data.frame with the last rows of the simulation results.
 #' @export
 #' @concept simulate
 #' @importFrom utils tail
 #' @examples
-#' sfm <- sdbuildR("SIR")
+#' sfm <- stockflow("SIR")
 #' sim <- simulate(sfm)
 #' tail(sim)
-tail.simulate_sdbuildR <- function(x, n = 6L, ...) {
-  check_simulate_sdbuildR(x)
+tail.simulate_stockflow <- function(x, n = 6L, ...) {
+  check_simulate_stockflow(x)
 
   df <- as.data.frame(x, ...)
   tail(df, n)
@@ -774,22 +774,22 @@ tail.simulate_sdbuildR <- function(x, n = 6L, ...) {
 #' Returns a data frame with per-variable summary statistics (min, mean, max,
 #' and final value) over the simulated time range.
 #'
-#' @param object A simulation result of class [`simulate_sdbuildR`][simulate.sdbuildR()]
+#' @param object A simulation result of class [`simulate_stockflow`][simulate.stockflow()]
 #' @param ... Additional arguments (unused)
 #'
 #' @returns A `data.frame` with columns `variable`, `min`, `mean`, `max`, `final`.
 #' @export
 #' @concept simulate
-#' @method summary simulate_sdbuildR
-#' @seealso [print.simulate_sdbuildR()], [simulate.sdbuildR()]
+#' @method summary simulate_stockflow
+#' @seealso [print.simulate_stockflow()], [simulate.stockflow()]
 #'
 #' @examples
-#' sfm <- sdbuildR("SIR")
+#' sfm <- stockflow("SIR")
 #' sim <- simulate(sfm)
 #' summary(sim)
 #'
-summary.simulate_sdbuildR <- function(object, ...) {
-  check_simulate_sdbuildR(object)
+summary.simulate_stockflow <- function(object, ...) {
+  check_simulate_stockflow(object)
 
   if (!object[["success"]]) {
     cli::cli_abort(c(

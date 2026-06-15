@@ -1,10 +1,10 @@
 #' Export stock-and-flow model to Psychomodels JSON
 #'
-#' Convert a model of class [sdbuildR()] to a JSON format which can be uploaded to [Psychomodels](https://www.psychomodels.org/models/).
+#' Convert a model of class [stockflow()] to a JSON format which can be uploaded to [Psychomodels](https://www.psychomodels.org/models/).
 #' The output can be returned as JSON text or written to a `.json` file.
 #' Optionally appends a LaTeX equations section to the explanation field.
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #' @param include_latex If `TRUE`, append generated LaTeX equations to explanation.
 #' @param destfile Output file path. Must have extension `.json` or no extension.
 #'  If not provided, return model in JSON format.
@@ -69,7 +69,7 @@ export_psychomodels <- function(object,
     missing_arg("object")
   }
 
-  check_sdbuildR(object)
+  check_stockflow(object)
 
   .check_scalar_character(publication_doi, "publication_doi")
   .check_scalar_character(publication_citation, "publication_citation")

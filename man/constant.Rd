@@ -7,7 +7,7 @@
 constant(object, name, eqn = 0, label = name, doc = "", non_negative = FALSE)
 }
 \arguments{
-\item{object}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
+\item{object}{Stock-and-flow model, object of class \code{\link{stockflow}}.}
 
 \item{name}{Variable name. Accepts a bare symbol (e.g., \code{population}), a string (\code{"population"}), or a vector via \code{c()} (e.g., \code{c(a, b)} or \code{c("a", "b")}). Use \verb{!!} to inject from a variable.}
 
@@ -20,7 +20,7 @@ constant(object, name, eqn = 0, label = name, doc = "", non_negative = FALSE)
 \item{non_negative}{If TRUE, variable is enforced to be non-negative (i.e., strictly 0 or positive). Defaults to \code{FALSE}.}
 }
 \value{
-A stock-and-flow model object of class \code{\link{sdbuildR}}
+A stock-and-flow model object of class \code{\link{stockflow}}
 }
 \description{
 Constants are time-independent variables that do not change over the course
@@ -31,7 +31,7 @@ convenience wrapper around \code{\link[=update]{update()}} with \code{type = "co
 \examples{
 
 # Create constants for model parameters
-sfm <- sdbuildR() |>
+sfm <- stockflow() |>
   constant(growth_rate, eqn = 0.1, label = "Growth Rate") |>
   constant(carrying_capacity, eqn = 1000, label = "Carrying Capacity")
 

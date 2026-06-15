@@ -1,7 +1,7 @@
 # Test custom_func() function for creating and modifying func-type variables
 
 test_that("custom_func() creates custom functions", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
 
   sfm1 <- custom_func(sfm, "parameter1", eqn = "5")
   df <- as.data.frame(sfm1, type = "func", properties = c("name", "eqn"))
@@ -11,7 +11,7 @@ test_that("custom_func() creates custom functions", {
 })
 
 test_that("custom_func() adds multiple funcs", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
 
   sfm1 <- custom_func(sfm, "param1", eqn = "5")
   sfm2 <- custom_func(sfm1, "param2", eqn = "10")
@@ -25,7 +25,7 @@ test_that("custom_func() adds multiple funcs", {
 })
 
 test_that("custom_func() modifies existing func equations", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
 
   sfm1 <- custom_func(sfm, "param1", eqn = "5")
   sfm2 <- custom_func(sfm1, "param1", eqn = "10")
@@ -35,7 +35,7 @@ test_that("custom_func() modifies existing func equations", {
 })
 
 test_that("custom_func() validates function definitions (defaults at end)", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
 
   # Invalid: default arg not at end
   expect_error(
@@ -51,7 +51,7 @@ test_that("custom_func() validates function definitions (defaults at end)", {
 
 
 test_that("custom_func() sets documentation", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
 
   sfm1 <- custom_func(sfm, "birth_rate",
     eqn = "0.02",
@@ -62,7 +62,7 @@ test_that("custom_func() sets documentation", {
 })
 
 test_that("discard() removes funcs", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
 
   sfm1 <- custom_func(sfm, "param1", eqn = "5")
   sfm2 <- custom_func(sfm1, "param2", eqn = "10")
@@ -75,7 +75,7 @@ test_that("discard() removes funcs", {
 })
 
 test_that("discard() removes multiple funcs", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
 
   sfm1 <- custom_func(sfm, "p1", eqn = "1")
   sfm2 <- custom_func(sfm1, "p2", eqn = "2")
@@ -89,7 +89,7 @@ test_that("discard() removes multiple funcs", {
 })
 
 test_that("discard() validates func existence", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
 
   sfm1 <- custom_func(sfm, "param1", eqn = "5")
 
@@ -100,7 +100,7 @@ test_that("discard() validates func existence", {
 })
 
 test_that("change_name() renames funcs", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
 
   sfm1 <- custom_func(sfm, "old_name", eqn = "5")
   sfm2 <- change_name(sfm1, "old_name", new_name = "new_name")
@@ -111,7 +111,7 @@ test_that("change_name() renames funcs", {
 })
 
 test_that("custom_func() preserves variables", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
 
   sfm1 <- update(sfm, "Stock1", type = "stock")
   sfm2 <- custom_func(sfm1, "param1", eqn = "5")
@@ -127,7 +127,7 @@ test_that("custom_func() preserves variables", {
 })
 
 test_that("custom_func() can be used in variable equations", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
 
   sfm1 <- custom_func(sfm, "rate", eqn = "0.05")
   sfm2 <- update(sfm1, "Stock1", type = "stock")
@@ -141,7 +141,7 @@ test_that("custom_func() can be used in variable equations", {
 })
 
 test_that("custom_func() with empty model works", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
 
   # Should be able to add func to empty model
   sfm1 <- custom_func(sfm, "f1", eqn = "10")
@@ -150,15 +150,15 @@ test_that("custom_func() with empty model works", {
 })
 
 test_that("custom_func() returns the modified model", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
 
   result <- custom_func(sfm, "param1", eqn = "5")
-  expect_s3_class(result, "sdbuildR")
+  expect_s3_class(result, "stockflow")
   expect_true(is.list(result))
 })
 
 test_that("update() with type = 'func' works directly", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
 
   sfm1 <- update(sfm, "f", "func", eqn = "function(x) x * 2")
   df <- as.data.frame(sfm1, type = "func", properties = c("name", "eqn"))

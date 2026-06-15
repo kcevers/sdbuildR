@@ -18,7 +18,7 @@ lookup(
 )
 }
 \arguments{
-\item{object}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
+\item{object}{Stock-and-flow model, object of class \code{\link{stockflow}}.}
 
 \item{name}{Variable name. Accepts a bare symbol (e.g., \code{population}), a string (\code{"population"}), or a vector via \code{c()} (e.g., \code{c(a, b)} or \code{c("a", "b")}). Use \verb{!!} to inject from a variable.}
 
@@ -39,14 +39,14 @@ lookup(
 \item{non_negative}{If TRUE, variable is enforced to be non-negative (i.e., strictly 0 or positive). Defaults to \code{FALSE}.}
 }
 \value{
-A stock-and-flow model object of class \code{\link[=sdbuildR]{sdbuildR}}
+A stock-and-flow model object of class \code{\link[=stockflow]{stockflow}}
 }
 \description{
 Lookup variables define piecewise relationships using specified (x, y) points. \code{\link[=lookup]{lookup()}} adds or changes a lookup variable. This is a convenience wrapper around \code{\link[=update]{update()}} with \code{type = "lookup"}. See the \strong{Lookup Variables} section of \code{\link[=update]{update()}} for more details.
 }
 \examples{
 # Create a lookup variable for a non-linear relationship
-sfm <- sdbuildR() |>
+sfm <- stockflow() |>
   lookup(output,
     source = t,
     xpts = c(0, 5, 10),
@@ -61,6 +61,6 @@ plot(sim)
 
 }
 \seealso{
-\code{\link[=update.sdbuildR]{update()}}, \code{\link[=discard]{discard()}}, \code{\link[=change_name]{change_name()}}
+\code{\link[=update.stockflow]{update()}}, \code{\link[=discard]{discard()}}, \code{\link[=change_name]{change_name()}}
 }
 \concept{build}

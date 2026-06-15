@@ -25,7 +25,7 @@ Equivalent of Step() in Insight Maker
 \examples{
 # Create a simple model with a step function
 # that jumps at time 50 to a height of 5
-sfm <- sdbuildR() |>
+sfm <- stockflow() |>
   update("a", "stock") |>
   # Specify the global variable "times" as simulation times
   update("input", "constant", eqn = "step(times, 50, 5)") |>

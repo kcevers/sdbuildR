@@ -20,7 +20,7 @@
 #' # Only if dependencies are installed
 #' if (requireNamespace("DiagrammeRsvg", quietly = TRUE) &&
 #'   requireNamespace("rsvg", quietly = TRUE)) {
-#'   sfm <- sdbuildR("SIR")
+#'   sfm <- stockflow("SIR")
 #'   file <- tempfile(fileext = ".png")
 #'   export_plot(plot(sfm), file)
 #'
@@ -199,7 +199,7 @@ export_plotly <- function(pl, file, format, width, height) {
 #'
 #' Visualize a stock-and-flow diagram using the R package DiagrammeR. Stocks are represented as boxes. Flows are represented as arrows between stocks and/or double circles, where the latter represent what it outside of the model boundary. Thin grey edges indicate dependencies between variables. By default, constants (indicated by italic labels) are not shown. Hover over the variables to see their equations.
 #'
-#' @param x A stock-and-flow model object of class [`sdbuildR`][sdbuildR].
+#' @param x A stock-and-flow model object of class [`stockflow`][stockflow].
 #' @param vars Variables to plot. Defaults to NULL to plot all variables.
 #' @param format_label If TRUE, apply default formatting (removing periods and underscores) to labels if labels are the same as variable names.
 #' @param wrap_width Width of text wrapping for labels. Must be an integer. Defaults to 20.
@@ -219,11 +219,11 @@ export_plotly <- function(pl, file, format, width, height) {
 #' @returns Stock-and-flow diagram
 #' @export
 #' @concept build
-#' @method plot sdbuildR
-#' @seealso [import_insightmaker()], [sdbuildR()], [plot.simulate_sdbuildR()]
+#' @method plot stockflow
+#' @seealso [import_insightmaker()], [stockflow()], [plot.simulate_stockflow()]
 #'
 #' @examples
-#' sfm <- sdbuildR("SIR")
+#' sfm <- stockflow("SIR")
 #' plot(sfm)
 #'
 #' # Don't show constants or auxiliaries
@@ -232,25 +232,25 @@ export_plotly <- function(pl, file, format, width, height) {
 #' # Only show specific variables
 #' plot(sfm, vars = "susceptible")
 #'
-plot.sdbuildR <- function(x,
-                          vars = NULL,
-                          format_label = TRUE,
-                          wrap_width = 20,
-                          font_size = 18,
-                          font_family = "Times New Roman",
-                          stock_col = "#83d3d4",
-                          flow_col = "#f48153",
-                          dependency_col = "#999999",
-                          show_dependencies = TRUE,
-                          show_constants = FALSE,
-                          show_aux = TRUE,
-                          minlen = 2,
-                          pad = 0.1,
-                          nodesep = 0.3,
-                          ...) {
+plot.stockflow <- function(x,
+                           vars = NULL,
+                           format_label = TRUE,
+                           wrap_width = 20,
+                           font_size = 18,
+                           font_family = "Times New Roman",
+                           stock_col = "#83d3d4",
+                           flow_col = "#f48153",
+                           dependency_col = "#999999",
+                           show_dependencies = TRUE,
+                           show_constants = FALSE,
+                           show_aux = TRUE,
+                           minlen = 2,
+                           pad = 0.1,
+                           nodesep = 0.3,
+                           ...) {
   sfm <- x
   rm(x)
-  check_sdbuildR(sfm)
+  check_stockflow(sfm)
 
   # Get property dataframe
   df <- as.data.frame(sfm, properties = c("type", "name", "label", "eqn"))
@@ -655,8 +655,8 @@ plot.sdbuildR <- function(x,
 #' @param type_sim Either "sim", "ensemble", or "verify"
 #' @param df data.frame to plot
 #' @param constants Constants to plot
-#' @inheritParams plot.simulate_sdbuildR
-#' @inheritParams update.sdbuildR
+#' @inheritParams plot.simulate_stockflow
+#' @inheritParams update.stockflow
 #'
 #' @returns List
 #' @noRd
@@ -773,7 +773,7 @@ prep_plot <- function(
 #'
 #' Visualize simulation results of a stock-and-flow model. Plot the evolution of stocks over time, with the option of also showing other model variables.
 #'
-#' @param x Output of [`simulate()`][simulate.sdbuildR()].
+#' @param x Output of [`simulate()`][simulate.stockflow()].
 #' @param show_constants If TRUE, include constants in plot. Defaults to FALSE.
 #' @param vars Variables to plot. Defaults to NULL to plot all variables.
 #' @param palette Colour palette. Must be one of hcl.pals().
@@ -787,11 +787,11 @@ prep_plot <- function(
 #' @returns Plotly object
 #' @export
 #' @concept simulate
-#' @seealso [`simulate()`][simulate.sdbuildR()], [as.data.frame.simulate_sdbuildR()], [plot.simulate_sdbuildR()]
-#' @method plot simulate_sdbuildR
+#' @seealso [`simulate()`][simulate.stockflow()], [as.data.frame.simulate_stockflow()], [plot.simulate_stockflow()]
+#' @method plot simulate_stockflow
 #'
 #' @examples
-#' sfm <- sdbuildR("SIR")
+#' sfm <- stockflow("SIR")
 #' sim <- simulate(sfm)
 #' plot(sim)
 #'
@@ -801,16 +801,16 @@ prep_plot <- function(
 #' # Add constants to the plot
 #' plot(sim, show_constants = TRUE)
 #'
-plot.simulate_sdbuildR <- function(x,
-                                   show_constants = FALSE,
-                                   vars = NULL,
-                                   palette = "Dark 2",
-                                   colors = NULL,
-                                   font_family = "Times New Roman",
-                                   font_size = 16,
-                                   wrap_width = 25,
-                                   showlegend = TRUE,
-                                   ...) {
+plot.simulate_stockflow <- function(x,
+                                    show_constants = FALSE,
+                                    vars = NULL,
+                                    palette = "Dark 2",
+                                    colors = NULL,
+                                    font_family = "Times New Roman",
+                                    font_size = 16,
+                                    wrap_width = 25,
+                                    showlegend = TRUE,
+                                    ...) {
   if (missing(x)) {
     cli::cli_abort(c(
       "x" = "No simulation data available.",
@@ -818,7 +818,7 @@ plot.simulate_sdbuildR <- function(x,
     ))
   }
 
-  check_simulate_sdbuildR(x)
+  check_simulate_stockflow(x)
 
   if (!x[["success"]]) {
     cli::cli_abort(c(
@@ -940,36 +940,36 @@ plot.simulate_sdbuildR <- function(x,
 #' @param central_tendency Central tendency to use for the mean line. Either "mean", "median", or FALSE to not plot the central tendency. Defaults to "mean".
 #' @param central_tendency_width Line width of central tendency. Defaults to 3.
 #' @param ... Optional parameters
-#' @inheritParams plot.simulate_sdbuildR
+#' @inheritParams plot.simulate_stockflow
 #'
 #' @returns Plotly object
 #' @export
 #' @concept ensemble
 #' @seealso [ensemble()]
-#' @method plot ensemble_sdbuildR
+#' @method plot ensemble_stockflow
 #'
-plot.ensemble_sdbuildR <- function(x,
-                                   which = c("summary", "sims")[1],
-                                   sim = seq(1, min(c(x[["n"]], 10))),
-                                   condition = seq(1, min(c(x[["n_conditions"]], 9))),
-                                   vars = NULL,
-                                   show_constants = FALSE,
-                                   nrows = ceiling(sqrt(max(condition))),
-                                   margin = .05,
-                                   shareX = TRUE,
-                                   shareY = TRUE,
-                                   palette = "Dark 2",
-                                   alpha = 0.3,
-                                   colors = NULL,
-                                   font_family = "Times New Roman",
-                                   font_size = 16,
-                                   wrap_width = 25,
-                                   showlegend = TRUE,
-                                   label_subplots = TRUE,
-                                   central_tendency = c("mean", "median", FALSE)[1],
-                                   central_tendency_width = 3,
-                                   ...) {
-  check_ensemble_sdbuildR(x)
+plot.ensemble_stockflow <- function(x,
+                                    which = c("summary", "sims")[1],
+                                    sim = seq(1, min(c(x[["n"]], 10))),
+                                    condition = seq(1, min(c(x[["n_conditions"]], 9))),
+                                    vars = NULL,
+                                    show_constants = FALSE,
+                                    nrows = ceiling(sqrt(max(condition))),
+                                    margin = .05,
+                                    shareX = TRUE,
+                                    shareY = TRUE,
+                                    palette = "Dark 2",
+                                    alpha = 0.3,
+                                    colors = NULL,
+                                    font_family = "Times New Roman",
+                                    font_size = 16,
+                                    wrap_width = 25,
+                                    showlegend = TRUE,
+                                    label_subplots = TRUE,
+                                    central_tendency = c("mean", "median", FALSE)[1],
+                                    central_tendency_width = 3,
+                                    ...) {
+  check_ensemble_stockflow(x)
 
   # Validate common plot parameters
   validate_plot_params(
@@ -1369,7 +1369,7 @@ get_cond <- function(lst, key, template) {
 #' @param alpha Opacity of the confidence bands or individual trajectories.
 #' @param theme List of styling parameters from plotly_theme(). Invariant
 #'   across conditions, so computed once by the caller and passed in.
-#' @inheritParams plot.ensemble_sdbuildR
+#' @inheritParams plot.ensemble_stockflow
 #'
 #' @returns Plotly object
 #' @noRd
@@ -1606,45 +1606,45 @@ plot_ensemble_helper <- function(subplot_label,
 #' @param wrap_width Label wrap width. Defaults to `25`.
 #' @param showlegend Whether to show the legend. Defaults to `TRUE`.
 #' @param label_subplots Whether to plot labels indicating the test number of the subplot.
-#' @param ... Additional arguments passed to [plot.simulate_sdbuildR()].
-#' @inheritParams as.data.frame.verify_sdbuildR
-#' @inheritParams plot.simulate_sdbuildR
-#' @inheritParams plot.ensemble_sdbuildR
+#' @param ... Additional arguments passed to [plot.simulate_stockflow()].
+#' @inheritParams as.data.frame.verify_stockflow
+#' @inheritParams plot.simulate_stockflow
+#' @inheritParams plot.ensemble_stockflow
 #'
 #' @returns A plotly object.
 #' @export
 #' @concept unitTest
-#' @method plot verify_sdbuildR
-#' @seealso [verify()], [plot.simulate_sdbuildR()], [plot.ensemble_sdbuildR()]
+#' @method plot verify_stockflow
+#' @seealso [verify()], [plot.simulate_stockflow()], [plot.ensemble_stockflow()]
 #'
 #' @examples
-#' sfm <- sdbuildR("SIR") |>
+#' sfm <- stockflow("SIR") |>
 #'   unit_test(expr = all(susceptible >= 0))
 #' res <- verify(sfm)
 #' plot(res)
-plot.verify_sdbuildR <- function(x,
-                                 test = NULL,
-                                 vars = NULL,
-                                 show_constants = FALSE,
-                                 label = NULL,
-                                 ignore_case = TRUE,
-                                 status = c("pass", "fail", "error", "skip"),
-                                 condition = seq(1, min(c(x[["n_conditions"]], 9))),
-                                 nrows = ceiling(sqrt(max(condition))),
-                                 shareX = TRUE,
-                                 shareY = TRUE,
-                                 palette = "Dark 2",
-                                 colors = NULL,
-                                 font_family = "Times New Roman",
-                                 font_size = 16,
-                                 wrap_width = 25,
-                                 showlegend = TRUE,
-                                 label_subplots = TRUE,
-                                 alpha = 1,
-                                 margin = .05,
-                                 ...) {
-  # Check whether it is a verify_sdbuildR object
-  check_verify_sdbuildR(x)
+plot.verify_stockflow <- function(x,
+                                  test = NULL,
+                                  vars = NULL,
+                                  show_constants = FALSE,
+                                  label = NULL,
+                                  ignore_case = TRUE,
+                                  status = c("pass", "fail", "error", "skip"),
+                                  condition = seq(1, min(c(x[["n_conditions"]], 9))),
+                                  nrows = ceiling(sqrt(max(condition))),
+                                  shareX = TRUE,
+                                  shareY = TRUE,
+                                  palette = "Dark 2",
+                                  colors = NULL,
+                                  font_family = "Times New Roman",
+                                  font_size = 16,
+                                  wrap_width = 25,
+                                  showlegend = TRUE,
+                                  label_subplots = TRUE,
+                                  alpha = 1,
+                                  margin = .05,
+                                  ...) {
+  # Check whether it is a verify_stockflow object
+  check_verify_stockflow(x)
 
   # Validate common plot parameters
   validate_plot_params(

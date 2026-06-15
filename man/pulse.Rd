@@ -30,7 +30,7 @@ Equivalent of Pulse() in Insight Maker
 # Create a simple model with a pulse function
 # that starts at time 5, jumps to a height of 2
 # with a width of 1, and does not repeat
-sfm <- sdbuildR() |>
+sfm <- stockflow() |>
   update("a", "stock") |>
   # Specify the global variable "times" as simulation times
   update("input", "constant", eqn = "pulse(times, 5, 2, 1)") |>

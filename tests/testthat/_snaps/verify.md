@@ -11,7 +11,7 @@
       ( ) 2. inactive test
         `FALSE`
 
-# print.verify_sdbuildR() snapshot for passing tests
+# print.verify_stockflow() snapshot for passing tests
 
     Code
       print(result)
@@ -22,7 +22,7 @@
       v 1. S is non-negative
       v 2. S starts at 100
 
-# print.verify_sdbuildR() snapshot for failing FALSE tests
+# print.verify_stockflow() snapshot for failing FALSE tests
 
     Code
       print(result)

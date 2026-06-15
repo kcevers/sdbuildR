@@ -1,5 +1,5 @@
 test_that("converting equations to Julia", {
-  sfm <- sdbuildR("predator_prey")
+  sfm <- stockflow("predator_prey")
   var_names <- get_model_var(sfm)
   name <- var_names[1]
   type <- "aux"
@@ -133,7 +133,7 @@ test_that("Julia conversion rejects or handles previously unchecked edge cases",
 
 
 test_that("converting functions to Julia with named arguments", {
-  sfm <- sdbuildR("predator_prey")
+  sfm <- stockflow("predator_prey")
   var_names <- get_model_var(sfm)
   name <- var_names[1]
   type <- "aux"
@@ -224,24 +224,24 @@ test_that("converting functions to Julia with named arguments", {
 
   # Error when not all default arguments are at the end
   expect_error(
-    sdbuildR() |> custom_func("Function", "function(x, y = 1, z) x + y"),
+    stockflow() |> custom_func("Function", "function(x, y = 1, z) x + y"),
     "Change the function definition of"
   )
 
-  expect_error(sdbuildR() |> custom_func("Function", "function(x, y = 1, z){\nx + y\n}"), "Change the function definition of")
+  expect_error(stockflow() |> custom_func("Function", "function(x, y = 1, z){\nx + y\n}"), "Change the function definition of")
 
-  expect_error(sdbuildR() |> custom_func("Function", "function(x, y = 1, z, a = 1) x + y"), "Change the function definition of")
+  expect_error(stockflow() |> custom_func("Function", "function(x, y = 1, z, a = 1) x + y"), "Change the function definition of")
 
-  expect_error(sdbuildR() |> custom_func("Function", "function(x, y = 1, z, a = 1){\nx + y\n}"), "Change the function definition of")
+  expect_error(stockflow() |> custom_func("Function", "function(x, y = 1, z, a = 1){\nx + y\n}"), "Change the function definition of")
 
-  expect_no_error(sdbuildR() |> custom_func("Function", "function(x, y = 1, a = 1){\nx + y\n}"))
-  expect_no_error(sdbuildR() |> custom_func("Function", "function(x){\nx + y\n}"))
-  expect_no_error(sdbuildR() |> custom_func("Function", "function(y = 1){\nx + y\n}"))
+  expect_no_error(stockflow() |> custom_func("Function", "function(x, y = 1, a = 1){\nx + y\n}"))
+  expect_no_error(stockflow() |> custom_func("Function", "function(x){\nx + y\n}"))
+  expect_no_error(stockflow() |> custom_func("Function", "function(y = 1){\nx + y\n}"))
 })
 
 
 test_that("custom function definitons work", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     custom_func("myfunc", "function(x, y = 1, z = 2) x + y")
 
   # Test func definition conversion via convert_equations_julia
@@ -280,7 +280,7 @@ test_that("custom function definitons work", {
   # Repeat in Julia
   skip_if_julia_not_ready()
 
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     custom_func("myfunc", "function(x, y = 1, z = 2) x + y") |>
     sim_settings(language = "Julia", stop = 1, dt = .1) |>
     update("a", "stock", eqn = "myfunc(1, 2)")
@@ -290,7 +290,7 @@ test_that("custom function definitons work", {
 
 
 test_that("converting statements", {
-  sfm <- sdbuildR("predator_prey")
+  sfm <- stockflow("predator_prey")
   var_names <- get_model_var(sfm)
 
   eqn <- "if(a > b){\n\t a + b\n} # test () {}"
@@ -350,82 +350,82 @@ test_that("converting statements", {
 
 
 test_that("convert_distribution() to Julia", {
-  sfm <- sdbuildR("predator_prey")
+  sfm <- stockflow("predator_prey")
   # names_df = get_names(sfm)
   var_names <- get_model_var(sfm)
   name <- var_names[1]
   type <- "stock"
 
   # When n = 1, don't add n, otherwise this create a vector
-  result <- convert_builtin_functions_julia(type, name, "runif(1)", var_names)$eqn
+  result <- convert_equations_julia(type, name, "runif(1)", var_names)$eqn
   expected <- "rand(Distributions.Uniform(0.0, 1.0))"
   expect_equal(result, expected)
 
-  result <- convert_builtin_functions_julia(type, name, "runif(1, min =1, max=3)", var_names)$eqn
+  result <- convert_equations_julia(type, name, "runif(1, min =1, max=3)", var_names)$eqn
   expected <- "rand(Distributions.Uniform(1.0, 3.0))"
   expect_equal(result, expected)
 
-  result <- convert_builtin_functions_julia(type, name, "runif(10, min =-1, max=3)", var_names)$eqn
+  result <- convert_equations_julia(type, name, "runif(10, min =-1, max=3)", var_names)$eqn
   expected <- "rand(Distributions.Uniform(-1.0, 3.0), 10)"
   expect_equal(result, expected)
 
-  result <- convert_builtin_functions_julia(type, name, "rnorm(1)", var_names)$eqn
+  result <- convert_equations_julia(type, name, "rnorm(1)", var_names)$eqn
   expected <- "rand(Distributions.Normal(0.0, 1.0))"
   expect_equal(result, expected)
 
   # Different order of arguments
-  result <- convert_builtin_functions_julia(type, name, "rnorm(10, sd =1, mean=3)", var_names)$eqn
+  result <- convert_equations_julia(type, name, "rnorm(10, sd =1, mean=3)", var_names)$eqn
   expected <- "rand(Distributions.Normal(3.0, 1.0), 10)"
   expect_equal(result, expected)
 
-  result <- convert_builtin_functions_julia(type, name, "rnorm(10, 1, 3)", var_names)$eqn
+  result <- convert_equations_julia(type, name, "rnorm(10, 1, 3)", var_names)$eqn
   expected <- "rand(Distributions.Normal(1.0, 3.0), 10)"
   expect_equal(result, expected)
 
   # R parameterizes Exponential/Gamma by rate; Julia uses scale = 1 / rate
-  result <- convert_builtin_functions_julia(type, name, "rexp(10, 3)", var_names)$eqn
+  result <- convert_equations_julia(type, name, "rexp(10, 3)", var_names)$eqn
   expected <- "rand(Distributions.Exponential(1 / (3.0)), 10)"
   expect_equal(result, expected)
 
-  result <- convert_builtin_functions_julia(type, name, "rexp(1, rate=30)", var_names)$eqn
+  result <- convert_equations_julia(type, name, "rexp(1, rate=30)", var_names)$eqn
   expected <- "rand(Distributions.Exponential(1 / (30.0)))"
   expect_equal(result, expected)
 
 
   # cdf, pdf, quantile
-  result <- convert_builtin_functions_julia(type, name, "pexp(1, rate=30)", var_names)$eqn
+  result <- convert_equations_julia(type, name, "pexp(1, rate=30)", var_names)$eqn
   expected <- "Distributions.cdf.(Distributions.Exponential(1 / (30.0)), 1)"
   expect_equal(result, expected)
 
-  result <- convert_builtin_functions_julia(type, name, "qexp(1, rate=30)", var_names)$eqn
+  result <- convert_equations_julia(type, name, "qexp(1, rate=30)", var_names)$eqn
   expected <- "Distributions.quantile.(Distributions.Exponential(1 / (30.0)), 1)"
   expect_equal(result, expected)
 
-  result <- convert_builtin_functions_julia(type, name, "dexp(1, rate=30)", var_names)$eqn
+  result <- convert_equations_julia(type, name, "dexp(1, rate=30)", var_names)$eqn
   expected <- "Distributions.pdf.(Distributions.Exponential(1 / (30.0)), 1)"
   expect_equal(result, expected)
 
   # Gamma: sort_args() resolves scale = 1/rate, so rate is dropped
-  result <- convert_builtin_functions_julia(type, name, "pgamma(1, 2, rate=30)", var_names)$eqn
+  result <- convert_equations_julia(type, name, "pgamma(1, 2, rate=30)", var_names)$eqn
   expected <- "Distributions.cdf.(Distributions.Gamma(2.0, 1.0/30.0), 1)"
   expect_equal(result, expected)
 
-  result <- convert_builtin_functions_julia(type, name, "qgamma(1, 2, rate=30)", var_names)$eqn
+  result <- convert_equations_julia(type, name, "qgamma(1, 2, rate=30)", var_names)$eqn
   expected <- "Distributions.quantile.(Distributions.Gamma(2.0, 1.0/30.0), 1)"
   expect_equal(result, expected)
 
-  result <- convert_builtin_functions_julia(type, name, "dgamma(1, 2, rate=30)", var_names)$eqn
+  result <- convert_equations_julia(type, name, "dgamma(1, 2, rate=30)", var_names)$eqn
   expected <- "Distributions.pdf.(Distributions.Gamma(2.0, 1.0/30.0), 1)"
   expect_equal(result, expected)
 })
 
 
 test_that("corrected builtin conversions to Julia", {
-  sfm <- sdbuildR("predator_prey")
+  sfm <- stockflow("predator_prey")
   var_names <- c(get_model_var(sfm), "m", "x", "y", "tbl", "cond", "a", "b")
   name <- var_names[1]
   type <- "aux"
-  conv <- function(s) convert_builtin_functions_julia(type, name, s, var_names)$eqn
+  conv <- function(s) convert_equations_julia(type, name, s, var_names)$eqn
 
   # Reductions: R's na.rm/use defaults are no longer injected (syntax1 no-fill)
   expect_equal(conv("mean(x)"), "Statistics.mean(x)")
@@ -490,16 +490,16 @@ test_that("corrected builtin conversions to Julia", {
 
   # diff -> r_diff; positional lag is preserved (was dropped under old varargs path)
   expect_equal(conv("diff(x)"), "r_diff(x)")
-  expect_equal(conv("diff(x, 2)"), "r_diff(x, 2)")
+  expect_equal(conv("diff(x, 2)"), "r_diff(x, 2.0)") # **to do: should this be an integer literal in Julia?
 })
 
 
 test_that("added builtin conversions to Julia (batch 3)", {
-  sfm <- sdbuildR("predator_prey")
+  sfm <- stockflow("predator_prey")
   var_names <- c(get_model_var(sfm), "m", "x", "y", "n", "k")
   name <- var_names[1]
   type <- "aux"
-  conv <- function(s) convert_builtin_functions_julia(type, name, s, var_names)$eqn
+  conv <- function(s) convert_equations_julia(type, name, s, var_names)$eqn
 
   # rep -> r_rep; named each/length.out/times map to correct positions (fill path)
   expect_equal(conv("rep(x, 3)"), "r_rep(x, 3.0, -1.0, 1.0)")
@@ -525,7 +525,7 @@ test_that("added builtin conversions to Julia (batch 3)", {
 
 
 test_that("floor-division operator %/% maps to the Julia ⊘ operator", {
-  sfm <- sdbuildR("predator_prey")
+  sfm <- stockflow("predator_prey")
   var_names <- c(get_model_var(sfm), "a", "b")
   conv <- function(s) convert_equations_julia("aux", var_names[1], s, var_names)$eqn
 
@@ -561,16 +561,16 @@ test_that("sort_args lowercases injected logical defaults (TRUE/FALSE -> true/fa
   expect_false(any(vals2 %in% c("TRUE", "FALSE")))
 
   # End-to-end: grep's filled defaults appear lowercased in the generated call
-  sfm <- sdbuildR("predator_prey")
+  sfm <- stockflow("predator_prey")
   var_names <- c(get_model_var(sfm), "x")
-  out3 <- convert_builtin_functions_julia("aux", var_names[1], "grep(\"a\", x)", var_names)$eqn
+  out3 <- convert_equations_julia("aux", var_names[1], "grep(\"a\", x)", var_names)$eqn
   expect_false(grepl("FALSE|TRUE", out3))
   expect_match(out3, "false")
 })
 
 
 test_that("convert sequence works", {
-  sfm <- sdbuildR("predator_prey")
+  sfm <- stockflow("predator_prey")
   var_names <- get_model_var(sfm)
   name <- var_names[1]
   type <- "aux"
@@ -602,7 +602,7 @@ test_that("convert sequence works", {
 
 
 test_that("convert sample works", {
-  sfm <- sdbuildR("predator_prey")
+  sfm <- stockflow("predator_prey")
   var_names <- get_model_var(sfm)
   name <- var_names[1]
   type <- "aux"

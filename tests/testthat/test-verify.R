@@ -2,8 +2,8 @@
 # test-verify.R: Unit tests for the verify / unit_test system
 # ==============================================================================
 
-test_that("new_sdbuildR() initialises unit_tests as empty list", {
-  sfm <- sdbuildR()
+test_that("new_stockflow() initialises unit_tests as empty list", {
+  sfm <- stockflow()
   expect_true("unit_tests" %in% names(sfm))
   expect_true(is.list(sfm[["unit_tests"]]))
   expect_equal(length(sfm[["unit_tests"]]), 0L)
@@ -24,8 +24,8 @@ test_that("unit_test() adds a test to the list", {
   expect_equal(sfm[["unit_tests"]][[1]][["conditions"]], list())
   expect_true(sfm[["unit_tests"]][[1]][["active"]])
 
-  # Still returns the full sdbuildR object
-  expect_s3_class(sfm, "sdbuildR")
+  # Still returns the full stockflow object
+  expect_s3_class(sfm, "stockflow")
   expect_equal(length(sfm[["unit_tests"]]), 1L)
 })
 
@@ -196,13 +196,13 @@ test_that("discard_unit_test() warns when index out of range", {
 # unit_tests() display
 # ==============================================================================
 
-test_that("unit_tests() returns unit_tests_sdbuildR with correct count", {
+test_that("unit_tests() returns unit_tests_stockflow with correct count", {
   sfm <- make_verifiable_sfm() |>
     unit_test(label = "a", expr = all(S >= 0)) |>
     unit_test(label = "b", expr = all(S < 200))
 
   result <- unit_tests(sfm)
-  expect_s3_class(result, "unit_tests_sdbuildR")
+  expect_s3_class(result, "unit_tests_stockflow")
   expect_equal(result$n, 2L)
 })
 
@@ -221,18 +221,18 @@ test_that("unit_tests() snapshot for defined tests", {
 
 
 # ==============================================================================
-# verify.sdbuildR()
+# verify.stockflow()
 # ==============================================================================
 
-test_that("verify.sdbuildR() returns verify_sdbuildR class", {
+test_that("verify.stockflow() returns verify_stockflow class", {
   sfm <- make_verifiable_sfm() |>
     unit_test(label = "S is non-negative", expr = all(S >= 0))
 
   result <- silence(verify(sfm))
-  expect_s3_class(result, "verify_sdbuildR")
+  expect_s3_class(result, "verify_stockflow")
 })
 
-test_that("verify.sdbuildR() passes a correct test", {
+test_that("verify.stockflow() passes a correct test", {
   sfm <- make_verifiable_sfm() |>
     unit_test(label = "S is non-negative", expr = all(S >= 0))
 
@@ -253,7 +253,7 @@ test_that("verify result includes expr_str, conditions, and outcome for passing 
   expect_equal(res_entry[["status"]], "pass")
 })
 
-test_that("verify.sdbuildR() fails an incorrect test", {
+test_that("verify.stockflow() fails an incorrect test", {
   sfm <- make_verifiable_sfm() |>
     unit_test(label = "S is always zero", expr = all(S == 0))
 
@@ -274,7 +274,7 @@ test_that("verify result includes outcome = FALSE for failing test", {
   expect_equal(res_entry[["status"]], "fail")
 })
 
-test_that("verify.sdbuildR() fails FALSE character expression", {
+test_that("verify.stockflow() fails FALSE character expression", {
   sfm <- make_verifiable_sfm() |>
     unit_test(label = "char false", expr = "all(S == 0)")
 
@@ -282,7 +282,7 @@ test_that("verify.sdbuildR() fails FALSE character expression", {
   expect_equal(result[["results"]][[1]][["status"]], "fail")
 })
 
-test_that("verify.sdbuildR() errors if expression returns numeric scalar", {
+test_that("verify.stockflow() errors if expression returns numeric scalar", {
   sfm <- make_verifiable_sfm() |>
     unit_test(label = "numeric output", expr = mean(S > 0.2))
 
@@ -304,7 +304,7 @@ test_that("verify result includes outcome and conditions for error status", {
   expect_equal(res_entry[["status"]], "error")
 })
 
-test_that("verify.sdbuildR() errors if expression returns logical vector", {
+test_that("verify.stockflow() errors if expression returns logical vector", {
   sfm <- make_verifiable_sfm() |>
     unit_test(label = "vector output", expr = S > 0)
 
@@ -314,7 +314,7 @@ test_that("verify.sdbuildR() errors if expression returns logical vector", {
 })
 
 
-test_that("verify.sdbuildR() works with conditions", {
+test_that("verify.stockflow() works with conditions", {
   sfm <- make_verifiable_sfm() |>
     unit_test(
       label      = "at zero rate, S does not decrease",
@@ -331,7 +331,7 @@ test_that("verify.sdbuildR() works with conditions", {
   expect_equal(res_entry[["status"]], "pass")
 })
 
-test_that("verify.sdbuildR() errors when no tests defined", {
+test_that("verify.stockflow() errors when no tests defined", {
   sfm <- make_verifiable_sfm()
   expect_error(verify(sfm), regexp = "No unit tests")
 })
@@ -356,7 +356,7 @@ test_that("verify() returns sims as nested list and j as named int vector", {
   expect_equal(length(result[["sims"]]), 1L)
   # sims[[j]][[i]] structure
   expect_true(is.list(result[["sims"]][[1]]))
-  expect_s3_class(result[["sims"]][[1]], "simulate_sdbuildR")
+  expect_s3_class(result[["sims"]][[1]], "simulate_stockflow")
   expect_equal(result[["condition"]], c("S non-negative" = 1L))
 })
 
@@ -388,15 +388,15 @@ test_that("verify() deduplicates sims: two tests sharing conditions map to the s
     result[["condition"]][["S non-negative"]] ==
       result[["condition"]][["S constant at zero rate"]]
   )
-  # All sims are nested simulate_sdbuildR objects
+  # All sims are nested simulate_stockflow objects
   for (sim_list in result[["sims"]]) {
     expect_true(is.list(sim_list))
-    expect_s3_class(sim_list, "simulate_sdbuildR")
+    expect_s3_class(sim_list, "simulate_stockflow")
   }
 })
 
 
-test_that("as.data.frame.verify_sdbuildR returns a data frame with expected columns", {
+test_that("as.data.frame.verify_stockflow returns a data frame with expected columns", {
   sfm <- make_verifiable_sfm() |>
     unit_test(label = "S non-negative", expr = all(S >= 0))
   result <- silence(verify(sfm))
@@ -406,7 +406,7 @@ test_that("as.data.frame.verify_sdbuildR returns a data frame with expected colu
   expect_equal(nrow(df), 1L)
 })
 
-test_that("as.data.frame.verify_sdbuildR stores compact FALSE failure messages", {
+test_that("as.data.frame.verify_stockflow stores compact FALSE failure messages", {
   sfm <- make_verifiable_sfm() |>
     unit_test(label = "S is zero", expr = all(S == 0))
 
@@ -416,7 +416,7 @@ test_that("as.data.frame.verify_sdbuildR stores compact FALSE failure messages",
   expect_equal(df[["message"]], "Expected: TRUE\nActual: FALSE")
 })
 
-test_that("as.data.frame.verify_sdbuildR test filter works", {
+test_that("as.data.frame.verify_stockflow test filter works", {
   sfm <- make_verifiable_sfm() |>
     unit_test(label = "S non-negative", expr = all(S >= 0)) |>
     unit_test(
@@ -430,7 +430,7 @@ test_that("as.data.frame.verify_sdbuildR test filter works", {
   expect_equal(df_nr1[["label"]], "S non-negative")
 })
 
-test_that("as.data.frame.verify_sdbuildR sims test display shows only requested numbers", {
+test_that("as.data.frame.verify_stockflow sims test display shows only requested numbers", {
   sfm <- make_verifiable_sfm() |>
     unit_test(label = "A", expr = all(S >= 0)) |>
     unit_test(label = "B", expr = all(S > 0))
@@ -444,7 +444,7 @@ test_that("as.data.frame.verify_sdbuildR sims test display shows only requested 
   expect_true(all(df_nr1[["test"]] == "1"))
 })
 
-test_that("head.verify_sdbuildR and tail.verify_sdbuildR return data frames", {
+test_that("head.verify_stockflow and tail.verify_stockflow return data frames", {
   sfm <- make_verifiable_sfm() |>
     unit_test(label = "S non-negative", expr = all(S >= 0))
   result <- silence(verify(sfm))
@@ -688,7 +688,7 @@ test_that("verify().results always includes error_type field", {
 # Snapshot tests
 # ==============================================================================
 
-test_that("print.verify_sdbuildR() snapshot for passing tests", {
+test_that("print.verify_stockflow() snapshot for passing tests", {
   sfm <- make_verifiable_sfm() |>
     update(S, eqn = 100) |>
     unit_test(label = "S is non-negative", expr = all(S >= 0)) |>
@@ -698,7 +698,7 @@ test_that("print.verify_sdbuildR() snapshot for passing tests", {
   expect_snapshot(print(result))
 })
 
-test_that("print.verify_sdbuildR() snapshot for failing FALSE tests", {
+test_that("print.verify_stockflow() snapshot for failing FALSE tests", {
   sfm <- make_verifiable_sfm() |>
     unit_test(label = "S is zero", expr = all(S == 0))
 
@@ -895,7 +895,7 @@ test_that("discard_unit_test() removes multiple tests by index", {
 # verify — only_stocks auto-detection
 # ==============================================================================
 
-test_that("verify.sdbuildR() passes test referencing a flow (non-stock)", {
+test_that("verify.stockflow() passes test referencing a flow (non-stock)", {
   sfm <- make_verifiable_sfm() |>
     unit_test(label = "drain is positive", expr = all(drain > 0))
 
@@ -903,7 +903,7 @@ test_that("verify.sdbuildR() passes test referencing a flow (non-stock)", {
   expect_equal(result[["results"]][[1]][["status"]], "pass")
 })
 
-test_that("verify.sdbuildR() passes test referencing a constant (non-stock)", {
+test_that("verify.stockflow() passes test referencing a constant (non-stock)", {
   sfm <- make_verifiable_sfm() |>
     unit_test(label = "rate is 0.1", expr = expect_equal(rate[[1]], 0.1))
 
@@ -911,7 +911,7 @@ test_that("verify.sdbuildR() passes test referencing a constant (non-stock)", {
   expect_equal(result[["results"]][[1]][["status"]], "pass")
 })
 
-test_that("verify.sdbuildR() passes mixed stock and non-stock tests", {
+test_that("verify.stockflow() passes mixed stock and non-stock tests", {
   sfm <- make_verifiable_sfm() |>
     unit_test(label = "S is non-negative", expr = all(S >= 0)) |>
     unit_test(label = "drain is positive", expr = all(drain > 0))
@@ -957,12 +957,12 @@ test_that("verify(): mixed conditions are both present in sim", {
 # verify() — Julia backend (n = 1 and n > 1)
 # ==============================================================================
 
-test_that("verify() with Julia backend returns verify_sdbuildR class (n = 1)", {
+test_that("verify() with Julia backend returns verify_stockflow class (n = 1)", {
   skip_if_julia_not_ready()
   sfm <- make_verifiable_sfm(language = "Julia") |>
     unit_test(label = "S non-negative", expr = all(S >= 0))
   result <- silence(verify(sfm))
-  expect_s3_class(result, "verify_sdbuildR")
+  expect_s3_class(result, "verify_stockflow")
 })
 
 test_that("verify() with Julia backend passes correct test (n = 1)", {
@@ -1066,7 +1066,7 @@ test_that("verify() augments sfm vars with test refs (fixes vars/only_stocks con
 })
 
 
-test_that("plot.verify_sdbuildR respects vars argument and returns plotly", {
+test_that("plot.verify_stockflow respects vars argument and returns plotly", {
   res <- make_verify_model(n_tests = 1)
   pl <- plot(res, vars = "S")
   expect_plotly(pl)

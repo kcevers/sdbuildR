@@ -15,12 +15,12 @@ test_that("templates() with unknown name throws an error", {
 # Clean creation: every template loads without error, warning, or message
 # ============================================================================
 
-test_that("templates() with valid name creates sdbuildR without error/warning/message", {
+test_that("templates() with valid name creates stockflow without error/warning/message", {
   for (nm in templates()) {
     expect_no_error(sfm <- templates(nm))
     expect_no_warning(sfm <- templates(nm))
     expect_no_message(sfm <- templates(nm))
-    expect_s3_class(sfm, "sdbuildR")
+    expect_s3_class(sfm, "stockflow")
     expect_gt(nrow(as.data.frame(sfm)), 0)
   }
 })

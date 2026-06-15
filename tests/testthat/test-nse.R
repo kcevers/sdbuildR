@@ -55,21 +55,21 @@ test_that(".expr_to_char() handles negative numbers", {
 # ==============================================================================
 
 test_that("update() accepts bare symbol for name", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm <- update(sfm, population, type = "stock")
   vars <- as.data.frame(sfm)
   expect_equal(vars[["name"]], "population")
 })
 
 test_that("update() accepts string for type", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm <- update(sfm, x, type = "stock")
   vars <- as.data.frame(sfm)
   expect_equal(vars[["type"]], "stock")
 })
 
 test_that("update() accepts bare symbol for name and string for type", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm <- update(sfm, x, "stock")
   vars <- as.data.frame(sfm)
   expect_equal(vars[["name"]], "x")
@@ -77,7 +77,7 @@ test_that("update() accepts bare symbol for name and string for type", {
 })
 
 test_that("update() accepts bare expression for eqn", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm <- update(sfm, x, "stock", eqn = 100)
   sfm <- update(sfm, y, "aux", eqn = x * 0.1 + 2)
   vars <- as.data.frame(sfm)
@@ -86,7 +86,7 @@ test_that("update() accepts bare expression for eqn", {
 })
 
 test_that("update() accepts bare symbols for to/from", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm <- update(sfm, pop, "stock", eqn = 100)
   sfm <- update(sfm, births, "flow", eqn = pop * 0.1, to = pop)
   vars <- as.data.frame(sfm)
@@ -94,7 +94,7 @@ test_that("update() accepts bare symbols for to/from", {
 })
 
 test_that("update() accepts bare symbol for source", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm <- update(sfm, my_lookup, "lookup",
     xpts = c(0, 5, 10), ypts = c(0, 10, 15), source = t
   )
@@ -103,7 +103,7 @@ test_that("update() accepts bare symbol for source", {
 })
 
 test_that("update() vectorized with bare symbols in c()", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm <- update(sfm, c(a, b), "stock", eqn = c(1, 2))
   vars <- as.data.frame(sfm)
   expect_equal(sort(vars[["name"]]), c("a", "b"))
@@ -112,7 +112,7 @@ test_that("update() vectorized with bare symbols in c()", {
 })
 
 test_that("update(): strings still work", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm <- update(sfm, "population", "stock", eqn = "100")
   vars <- as.data.frame(sfm)
   expect_equal(vars[["name"]], "population")
@@ -121,7 +121,7 @@ test_that("update(): strings still work", {
 })
 
 test_that("eqn with functions as strings", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm <- custom_func(sfm, a,
     eqn = "function(x, midpoint, slope) {x^slope / (midpoint^slope + x^slope)}"
   )
@@ -134,7 +134,7 @@ test_that("eqn with functions as strings", {
 
 
 test_that("eqn with NSE functions", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm <- custom_func(sfm, a,
     eqn = function(x, midpoint, slope) {
       x^slope / (midpoint^slope + x^slope)
@@ -149,7 +149,7 @@ test_that("eqn with NSE functions", {
 
 
 test_that("eqn with NSE functions specified with variable", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   f <- function(x, midpoint, slope) {
     x^slope / (midpoint^slope + x^slope)
   }
@@ -164,15 +164,15 @@ test_that("eqn with NSE functions specified with variable", {
 })
 
 test_that("update(): do.call still works", {
-  sfm <- sdbuildR()
-  sfm <- do.call(update.sdbuildR, list(object = sfm, name = "x", type = "stock", eqn = "10"))
+  sfm <- stockflow()
+  sfm <- do.call(update.stockflow, list(object = sfm, name = "x", type = "stock", eqn = "10"))
   vars <- as.data.frame(sfm)
   expect_equal(vars[["name"]], "x")
   expect_equal(vars[["eqn"]], "10")
 })
 
 test_that("update() with !! injection for name", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   my_name <- "population"
   sfm <- update(sfm, !!my_name, "stock", eqn = 100)
   vars <- as.data.frame(sfm)
@@ -180,7 +180,7 @@ test_that("update() with !! injection for name", {
 })
 
 test_that("update() with !! injection for eqn", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   my_eqn <- "a * b + 1"
   sfm <- update(sfm, x, "aux", eqn = !!my_eqn)
   vars <- as.data.frame(sfm)
@@ -188,7 +188,7 @@ test_that("update() with !! injection for eqn", {
 })
 
 test_that("update() modifying existing variable with NSE name", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm <- update(sfm, x, "stock", eqn = 10)
   sfm <- update(sfm, x, eqn = 20)
   vars <- as.data.frame(sfm)
@@ -203,7 +203,7 @@ test_that("update() with df argument still works (no NSE interference)", {
     to = c(NA, "S"),
     stringsAsFactors = FALSE
   )
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm <- update(sfm, df = df)
   vars <- as.data.frame(sfm)
   expect_equal(nrow(vars), 2)
@@ -215,7 +215,7 @@ test_that("update() with df argument still works (no NSE interference)", {
 # ==============================================================================
 
 test_that("stock() accepts bare symbols", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm <- stock(sfm, population, eqn = 100, label = "Population")
   vars <- as.data.frame(sfm)
   expect_equal(vars[["name"]], "population")
@@ -224,7 +224,7 @@ test_that("stock() accepts bare symbols", {
 })
 
 test_that("flow() accepts bare symbols for name, to, from", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm <- stock(sfm, pop, eqn = 100)
   sfm <- flow(sfm, births, eqn = pop * 0.1, to = pop)
   vars <- as.data.frame(sfm)
@@ -234,7 +234,7 @@ test_that("flow() accepts bare symbols for name, to, from", {
 })
 
 test_that("constant() accepts bare symbols", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm <- constant(sfm, growth_rate, eqn = 0.1)
   vars <- as.data.frame(sfm)
   expect_equal(vars[["name"]], "growth_rate")
@@ -242,7 +242,7 @@ test_that("constant() accepts bare symbols", {
 })
 
 test_that("auxiliary() / aux() accepts bare symbols", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     stock("pop", eqn = "100") |>
     constant("K", eqn = "1000")
   sfm <- auxiliary(sfm, density, eqn = pop / K)
@@ -251,7 +251,7 @@ test_that("auxiliary() / aux() accepts bare symbols", {
 })
 
 test_that("lookup() accepts bare symbols", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm <- lookup(sfm, my_gf,
     xpts = c(0, 5, 10), ypts = c(0, 10, 15),
     source = t
@@ -267,7 +267,7 @@ test_that("lookup() accepts bare symbols", {
 # ==============================================================================
 
 test_that("discard() accepts bare symbol for name", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update("x", "stock", eqn = "1")
   sfm <- discard(sfm, x)
   vars <- as.data.frame(sfm)
@@ -275,7 +275,7 @@ test_that("discard() accepts bare symbol for name", {
 })
 
 test_that("discard() with c() of bare symbols", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update("a", "stock") |>
     update("b", "stock")
   sfm <- discard(sfm, c(a, b))
@@ -289,7 +289,7 @@ test_that("discard() with c() of bare symbols", {
 # ==============================================================================
 
 test_that("change_name() accepts bare symbols", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update("old_name", "stock")
   sfm <- change_name(sfm, old_name, new_name = new_name_var)
   vars <- as.data.frame(sfm)
@@ -297,7 +297,7 @@ test_that("change_name() accepts bare symbols", {
 })
 
 test_that("change_name() accepts unquoted new_name that requires cleaning", {
-  sfm <- sdbuildR() |> update("alpha", "constant", eqn = 1)
+  sfm <- stockflow() |> update("alpha", "constant", eqn = 1)
 
   # Should not error when new_name needs cleaning (e.g., 't' -> cleaned form)
   expect_warning(expect_no_error(sfm <- change_name(sfm, alpha, new_name = t)), "name was changed")
@@ -314,7 +314,7 @@ test_that("change_name() accepts unquoted new_name that requires cleaning", {
 # ==============================================================================
 
 test_that("change_type() accepts bare symbols", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update("delta", "constant", eqn = "0.025")
   sfm <- change_type(sfm, delta, new_type = aux)
   vars <- as.data.frame(sfm)
@@ -327,7 +327,7 @@ test_that("change_type() accepts bare symbols", {
 # ==============================================================================
 
 test_that("full pipe chain with NSE works end-to-end", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     stock(prey, eqn = 50) |>
     stock(predator, eqn = 10) |>
     flow(prey_births, eqn = alpha * prey, to = prey) |>
@@ -345,18 +345,18 @@ test_that("full pipe chain with NSE works end-to-end", {
 
 
 # ==============================================================================
-# as.data.frame.sdbuildR() with NSE
+# as.data.frame.stockflow() with NSE
 # ==============================================================================
 
 test_that("as.data.frame() accepts bare symbol for name", {
-  sfm <- sdbuildR("SIR")
+  sfm <- stockflow("SIR")
   df <- as.data.frame(sfm, name = susceptible)
   expect_equal(nrow(df), 1L)
   expect_equal(df[["name"]], "susceptible")
 })
 
 test_that("as.data.frame() accepts c() of bare symbols for name", {
-  sfm <- sdbuildR("SIR")
+  sfm <- stockflow("SIR")
   df <- as.data.frame(sfm, name = c(susceptible, infected))
   expect_equal(nrow(df), 2L)
   expect_true(all(c("susceptible", "infected") %in% df[["name"]]))
@@ -364,7 +364,7 @@ test_that("as.data.frame() accepts c() of bare symbols for name", {
 
 
 test_that("as.data.frame() backward compat: strings still work for name", {
-  sfm <- sdbuildR("SIR")
+  sfm <- stockflow("SIR")
   df_name <- as.data.frame(sfm, name = "susceptible")
   expect_equal(nrow(df_name), 1L)
 })

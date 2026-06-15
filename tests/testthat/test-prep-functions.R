@@ -7,7 +7,7 @@
 
 # Test prep_stock_change() creates list columns (R backend)
 test_that("prep_stock_change() creates list columns (R)", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update(name = "S", type = "stock", eqn = "100") |>
     update(name = "inflow1", type = "flow", eqn = "5", to = "S") |>
     update(name = "outflow1", type = "flow", eqn = "3", from = "S")
@@ -30,7 +30,7 @@ test_that("prep_stock_change() creates list columns (R)", {
 
 # Test prep_stock_change() creates list columns (Julia backend)
 test_that("prep_stock_change() creates list columns (Julia)", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update(name = "S", type = "stock", eqn = "100") |>
     update(name = "inflow1", type = "flow", eqn = "5", to = "S") |>
     update(name = "outflow1", type = "flow", eqn = "3", from = "S") |>
@@ -54,7 +54,7 @@ test_that("prep_stock_change() creates list columns (Julia)", {
 
 # Test multiple flows populate correctly
 test_that("multiple flows populate correctly in list columns", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update(name = "S", type = "stock", eqn = "100") |>
     update(name = "in1", type = "flow", eqn = "2", to = "S") |>
     update(name = "in2", type = "flow", eqn = "3", to = "S") |>
@@ -78,7 +78,7 @@ test_that("multiple flows populate correctly in list columns", {
 
 # Test list columns work across language switching
 test_that("list columns work across language switching", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update(name = "S", type = "stock", eqn = "100") |>
     update(name = "births", type = "flow", eqn = "0.1 * S", to = "S")
 
@@ -106,7 +106,7 @@ test_that("list columns work across language switching", {
 
 # Test stocks with no flows have empty list columns
 test_that("stocks with no flows have empty list columns", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update(name = "IsolatedStock", type = "stock", eqn = "50")
 
   sfm <- prep_stock_change(sfm)
@@ -127,7 +127,7 @@ test_that("stocks with no flows have empty list columns", {
 
 # Test list extraction in sum_eqn generation
 test_that("sum_eqn correctly generated from list columns", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update(name = "A", type = "stock", eqn = "100") |>
     update(name = "B", type = "stock", eqn = "50") |>
     update(name = "f1", type = "flow", eqn = "10", to = "A") |>
@@ -154,7 +154,7 @@ test_that("sum_eqn correctly generated from list columns", {
 # Test consistency between R and Julia prep
 test_that("R and Julia prep produce equivalent list structures", {
   # Create model
-  sfm_base <- sdbuildR() |>
+  sfm_base <- stockflow() |>
     update(name = "S", type = "stock", eqn = "100") |>
     update(name = "in1", type = "flow", eqn = "5", to = "S") |>
     update(name = "out1", type = "flow", eqn = "3", from = "S")
@@ -183,7 +183,7 @@ test_that("R and Julia prep produce equivalent list structures", {
 # Test prep functions handle existing list columns
 test_that("prep functions handle pre-existing list columns", {
   # Manually create a model with list columns already set
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update(name = "S", type = "stock", eqn = "100") |>
     update(name = "births", type = "flow", eqn = "0.1 * S", to = "S")
 
@@ -201,7 +201,7 @@ test_that("prep functions handle pre-existing list columns", {
 
 # Test sum_name positional index matches stock order (Julia state vector)
 test_that("prep_stock_change() assigns dSdt[] indices matching stock order", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update(name = "alpha", type = "stock", eqn = "1") |>
     update(name = "beta", type = "stock", eqn = "2") |>
     update(name = "gamma", type = "stock", eqn = "3") |>
@@ -219,7 +219,7 @@ test_that("incremental prep_stock_change() keeps all dSdt[] indices consistent",
   # Build with two stocks, then insert a third that sorts in the middle and
   # prep only that one (the incremental path used by mutators). The earlier
   # full layout + final sanitize must still yield a consistent mapping.
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update(name = "a", type = "stock", eqn = "1") |>
     update(name = "z", type = "stock", eqn = "2") |>
     sim_settings(language = "Julia") |>
@@ -232,7 +232,7 @@ test_that("incremental prep_stock_change() keeps all dSdt[] indices consistent",
 
 # Test bidirectional flow (from and to same stock)
 test_that("bidirectional flows handled correctly", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update(name = "Reservoir", type = "stock", eqn = "1000") |>
     update(name = "pump_in", type = "flow", eqn = "10", to = "Reservoir") |>
     update(name = "drain_out", type = "flow", eqn = "5", from = "Reservoir")

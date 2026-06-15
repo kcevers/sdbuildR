@@ -5,7 +5,7 @@
 #' @param template Name of model.
 #'
 #' @noRd
-#' @returns Stock-and-flow model of class [`sdbuildR`][sdbuildR]
+#' @returns Stock-and-flow model of class [`stockflow`][stockflow]
 #'
 templates <- function(template) {
   model_names <- c(
@@ -49,7 +49,7 @@ templates <- function(template) {
 
 
   if (template == "logistic_model") {
-    object <- sdbuildR() |>
+    object <- stockflow() |>
       meta(name = "Logistic model") |>
       sim_settings(stop = 200) |>
       update("X", "stock", eqn = ".01", label = "Population size") |>
@@ -59,7 +59,7 @@ templates <- function(template) {
       update("r", "constant", eqn = "0.1", label = "Growth rate") |>
       update("K", "constant", eqn = "1", label = "Carrying capacity")
   } else if (template == "sir") {
-    object <- sdbuildR() |>
+    object <- stockflow() |>
       meta(name = "Susceptible-Infected-Recovered (SIR)") |>
       sim_settings(start = 0, stop = 20, time_units = "weeks") |>
       update("susceptible", "stock", eqn = "99999", label = "Susceptible") |>
@@ -72,7 +72,7 @@ templates <- function(template) {
       update("new_recoveries", "flow", eqn = "recovery_rate * infected", from = "infected", to = "recovered", label = "New recoveries") |>
       update("total_population", "constant", eqn = "susceptible + infected + recovered", label = "Total population")
   } else if (template == "predator_prey") {
-    object <- sdbuildR() |>
+    object <- stockflow() |>
       meta(name = "Predator-Prey Dynamics (Lotka-Volterra)") |>
       sim_settings(method = "euler", stop = 500) |>
       update("predator", "stock", eqn = 10, label = "Predator") |>
@@ -102,7 +102,7 @@ templates <- function(template) {
         )
       )
   } else if (template == "cusp") {
-    object <- sdbuildR() |>
+    object <- stockflow() |>
       meta(name = "Cusp Catastrophe") |>
       sim_settings(method = "euler", stop = 500) |>
       update("x", "stock", eqn = .1) |>
@@ -113,7 +113,7 @@ templates <- function(template) {
       update("a", "constant", eqn = 2, label = "Normal variable") |>
       update("b", "constant", eqn = 2, label = "Splitting variable")
   } else if (template == "crielaard2022") {
-    object <- sdbuildR() |>
+    object <- stockflow() |>
       meta(
         name = "Eating Behaviour (Crielaard et al., 2022)",
         doi = "10.1037/met0000484"
@@ -165,7 +165,7 @@ templates <- function(template) {
       update(c("a0", "a1", "a2"), "constant", eqn = c(1.31, 1.5, 0.38)) |>
       custom_func(name = "Sig", eqn = "function(x) 1 / (1 + exp(1)^(-x))")
   } else if (template == "coffee_cup") {
-    object <- sdbuildR() |>
+    object <- stockflow() |>
       meta(name = "Coffee cup", caption = "Coffee cup cooling or heating from Meadows' Thinking in Systems (Chapter 1)") |>
       sim_settings(stop = 100, dt = 1, time_units = "minute", language = "Julia") |>
       update("coffee_temperature", "stock", eqn = "100", label = "Coffee temperature") |>
@@ -173,7 +173,7 @@ templates <- function(template) {
       update("discrepancy", "aux", eqn = "room_temperature - coffee_temperature", label = "Discrepancy") |>
       update("room_temperature", "constant", eqn = "18", label = "Room temperature")
   } else if (template == "bank_account") {
-    object <- sdbuildR() |>
+    object <- stockflow() |>
       meta(
         name = "Bank account with interest",
         caption = "Bank account with compounding interest from Meadows' Thinking in Systems (Chapter 1)"
@@ -192,7 +192,7 @@ templates <- function(template) {
         eqn = ".02", label = "Interest rate"
       )
   } else if (template == "lorenz") {
-    object <- sdbuildR() |>
+    object <- stockflow() |>
       meta(
         name = "Lorenz Attractor",
         caption = "Lorenz Attractor system for chaotic dynamics"
@@ -211,7 +211,7 @@ templates <- function(template) {
       update("rho", "constant", eqn = "28") |>
       update("beta", "constant", eqn = "8/3")
   } else if (template == "rossler") {
-    object <- sdbuildR() |>
+    object <- stockflow() |>
       meta(
         name = "Rossler Attractor",
         caption = "Chaotic Rossler system in 3D"
@@ -230,7 +230,7 @@ templates <- function(template) {
       update("b", "constant", eqn = "0.2") |>
       update("c", "constant", eqn = "5.7")
   } else if (template == "vanderpol") {
-    object <- sdbuildR() |>
+    object <- stockflow() |>
       meta(
         name = "Van der Pol Oscillator",
         caption = "Nonlinear oscillator with limit cycle behavior"
@@ -245,7 +245,7 @@ templates <- function(template) {
       # Parameters
       update("mu", "constant", eqn = "1", label = "Damping parameter")
   } else if (template == "duffing") {
-    object <- sdbuildR() |>
+    object <- stockflow() |>
       meta(
         name = "Duffing Oscillator",
         caption = "Nonlinear oscillator with forcing"
@@ -270,7 +270,7 @@ templates <- function(template) {
       update("gamma", "constant", eqn = "0.5", label = "Forcing amplitude") |>
       update("omega", "constant", eqn = "1.2", label = "Forcing frequency")
   } else if (template == "chua") {
-    object <- sdbuildR() |>
+    object <- stockflow() |>
       meta(name = "Chua's Circuit", caption = "Chaotic electronic circuit model") |>
       sim_settings(stop = 50, time_units = "hours") |>
       # Stocks
@@ -291,7 +291,7 @@ templates <- function(template) {
       update("m0", "constant", eqn = "-1.143", label = "Nonlinear slope m0") |>
       update("m1", "constant", eqn = "-0.714", label = "Nonlinear slope m1")
   } else if (template == "jdr") {
-    object <- sdbuildR() |>
+    object <- stockflow() |>
       sim_settings(start = "0.0", stop = round(182.5), dt = "0.01", seed = "123", time_units = "day", only_stocks = FALSE, save_at = 1) |>
       meta(name = "Job Demands and Resources (JD-R) Theory", created = "2026-05-25 10:42:07.289319") |>
       stock("demands", eqn = "runif(1, 0.01, 2)", label = "Job Demands") |>

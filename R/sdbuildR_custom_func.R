@@ -190,7 +190,7 @@ contains_IM <- function(haystack, needle) {
 #' @seealso [step()], [pulse()], [seasonal()]
 #' @examples
 #' # Create a simple model with a ramp function
-#' sfm <- sdbuildR() |>
+#' sfm <- stockflow() |>
 #'   update("a", "stock") |>
 #'   # Specify the global variable "times" as simulation times
 #'   update("input", "constant", eqn = "ramp(times, 20, 30, 3)") |>
@@ -293,7 +293,7 @@ ramp <- function(times, start, finish, height = 1) {
 #' # Create a simple model with a pulse function
 #' # that starts at time 5, jumps to a height of 2
 #' # with a width of 1, and does not repeat
-#' sfm <- sdbuildR() |>
+#' sfm <- stockflow() |>
 #'   update("a", "stock") |>
 #'   # Specify the global variable "times" as simulation times
 #'   update("input", "constant", eqn = "pulse(times, 5, 2, 1)") |>
@@ -409,7 +409,7 @@ pulse <- function(times, start, height = 1, width = 1, repeat_interval = NULL) {
 #' @examples
 #' # Create a simple model with a step function
 #' # that jumps at time 50 to a height of 5
-#' sfm <- sdbuildR() |>
+#' sfm <- stockflow() |>
 #'   update("a", "stock") |>
 #'   # Specify the global variable "times" as simulation times
 #'   update("input", "constant", eqn = "step(times, 50, 5)") |>
@@ -484,7 +484,7 @@ step <- function(times, start, height = 1) {
 #'
 #' @examples
 #' # Create a simple model with a seasonal wave
-#' sfm <- sdbuildR() |>
+#' sfm <- stockflow() |>
 #'   update("a", "stock") |>
 #'   # Specify the global variable "times" as simulation times
 #'   update("input", "constant", eqn = "seasonal(times, 10, 0)") |>
@@ -737,7 +737,7 @@ hill <- function(x, slope = 1, midpoint = 0.5, upper = 1) {
 #' @export
 #' @examples
 #' # Recommended: Use save_at in sim_settings() to downsample simulations
-#' sfm <- sdbuildR("SIR") |> sim_settings(dt = 0.01, save_at = 1)
+#' sfm <- stockflow("SIR") |> sim_settings(dt = 0.01, save_at = 1)
 #' sim <- simulate(sfm)
 #' df <- as.data.frame(sim)
 #' nrow(df) # Returns only times at intervals of 1

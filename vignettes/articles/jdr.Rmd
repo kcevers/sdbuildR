@@ -220,7 +220,7 @@ Please see the paper for Step 3a and 3b; here, we only note that exhaustion was 
 As a first step, we initialize a new stock-and-flow model, and set the simulation to take place over the time course of six months, with the time unit of a day: 
 
 ```{r}
-sfm <- sdbuildR() |>
+sfm <- stockflow() |>
   sim_settings(
     stop = round(182.5), time_units = "day",
     # Simulation timestep
@@ -404,7 +404,7 @@ if (recreate_figs) {
   df_hill$type <- factor(df_hill$type, levels = as.character(sort(slopes)))
 
   # Simulate three models with different functional forms
-  sfm0_rev <- sdbuildR() |>
+  sfm0_rev <- stockflow() |>
     stock(Stock, eqn = 0.1) |>
     sim_settings(only_stocks = FALSE, stop = 10, save_at = save_at_fine, dt = .01)
   sfm1_rev <- sfm0_rev |> flow(Inflow, eqn = 1 * Stock * (1 - Stock / 0.5), to = Stock)
@@ -1320,14 +1320,14 @@ sfm0 <- sfm
 
 
 ```{r, include=FALSE, eval=FALSE}
-compare_models(sdbuildR("jdr"), sfm)
+compare_models(stockflow("jdr"), sfm)
 ```
 
 
-Note that this is identical to the version stored in the model library, which can be loaded using `sdbuildR()`:
+Note that this is identical to the version stored in the model library, which can be loaded using `stockflow()`:
 
 ```{r}
-sfm0 <- sfm <- sdbuildR("jdr")
+sfm0 <- sfm <- stockflow("jdr")
 ```
 
 ```{r include=FALSE}
@@ -2214,7 +2214,7 @@ m1_est <- chosen_lag_est <- lavaan::standardizedSolution(
 ```
 
 
-As shown above, our model implies that engagement has a strong positive effect on itself, whereas demands have little effect on future demands. Higher demands lead to lower future work engagement, but higher engagement increases future demands. Furthermore, our JD-R model allows us to assess how these effects depend on the time between waves. For instance, as shown below, though the autoregressive effect of job demands is initially negative, it flips in sign as the time between waves increases. If provided with only a verbal theory, there would be no principled basis for anticipating this lag dependence.
+As shown below, our model implies that engagement has a strong positive effect on itself, whereas demands have little effect on future demands. Higher demands lead to lower future work engagement, but higher engagement increases future demands. Furthermore, our JD-R model allows us to assess how these effects depend on the time between waves. For instance, as shown below, though the autoregressive effect of job demands is initially negative, it flips in sign as the time between waves increases. If provided with only a verbal theory, there would be no principled basis for anticipating this lag dependence.
 
 
 
@@ -2332,7 +2332,9 @@ pl <- plotly::plot_ly(results_df,
 
 
 ```{r, echo=FALSE}
-print(pl)
+plotly::layout(pl,
+  legend = utils::modifyList(annot_legend, list(x = 0.5, y = -0.2))
+)
 ```
 
 ```{r include=FALSE, eval = has_internet(), error = TRUE}

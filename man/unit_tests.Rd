@@ -7,7 +7,7 @@
 unit_tests(object, test = NULL, label = NULL, ignore_case = TRUE)
 }
 \arguments{
-\item{object}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
+\item{object}{Stock-and-flow model, object of class \code{\link{stockflow}}.}
 
 \item{test}{Integer vector of test number(s) to display (1-based). Defaults to
 \code{NULL} (show all tests). Can be combined with \code{label} (intersection).}
@@ -21,14 +21,14 @@ Can be combined with \code{test} (intersection).}
 Default \code{TRUE}.}
 }
 \value{
-An object of class \code{unit_tests_sdbuildR}, printed automatically.
+An object of class \code{unit_tests_stockflow}, printed automatically.
 }
 \description{
 Returns an overview of all unit tests attached to the model. The result
 has a \code{print()} method.
 }
 \examples{
-sfm <- sdbuildR("SIR") |>
+sfm <- stockflow("SIR") |>
   unit_test(expr = all(susceptible >= 0)) |>
   unit_test(
     label = "recovered increases over time",

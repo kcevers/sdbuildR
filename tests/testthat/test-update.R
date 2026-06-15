@@ -1,7 +1,7 @@
 # Comprehensive tests for update() and helpers in update.R
 
 test_that("update() creates variables with defaults", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm <- update(sfm, "Population", type = "stock")
 
   vars <- as.data.frame(sfm)
@@ -15,7 +15,7 @@ test_that("update() creates variables with defaults", {
 
 
 test_that("update() validates inputs and basic errors", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
 
   expect_error(update(sfm, "Var1", type = "invalid"), "must be one of")
   expect_error(update(sfm, "", type = "stock"), "cannot be empty")
@@ -29,7 +29,7 @@ test_that("update() validates inputs and basic errors", {
 
 
 test_that("update() rejects malformed equations at build time", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
 
   expect_error(
     update(sfm, "S", type = "stock", eqn = "1 // 2"),
@@ -46,7 +46,7 @@ test_that("update() rejects malformed equations at build time", {
 
 
 test_that("update() handles long names with spaces without cli parse errors", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
 
   expect_warning(
     sfm2 <- update(sfm, "Very Long Stock Name That Should Wrap", type = "stock"),
@@ -59,7 +59,7 @@ test_that("update() handles long names with spaces without cli parse errors", {
 
 
 test_that("update() rejects disallowed names", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
 
   # NA name
   expect_error(update(sfm, NA_character_, type = "stock"), "Variable names cannot be NA")
@@ -70,7 +70,7 @@ test_that("update() rejects disallowed names", {
 
 
 test_that("update() enforces flow rules", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm <- update(sfm, "StockA", type = "stock")
   sfm <- update(sfm, "StockB", type = "stock")
 
@@ -80,13 +80,13 @@ test_that("update() enforces flow rules", {
   # Flow with same to/from is not allowed
   expect_error(update(sfm, "Flow2", type = "flow", to = "StockA", from = "StockA"), "same stock as both source and target")
 
-  # Flow 'to' must be a stock (sanitize_sdbuildR will later clean; update should not accept non-stock in this context)
+  # Flow 'to' must be a stock (sanitize_stockflow will later clean; update should not accept non-stock in this context)
   expect_error(update(sfm, "Flow3", type = "flow", to = "Flow3"), "flow cannot flow to itself")
 })
 
 
 test_that("change_name() renames variables and updates references", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm <- update(sfm, "Prey", type = "stock", eqn = "10")
   sfm <- update(sfm, "Predator", type = "stock", eqn = "5")
   sfm <- update(sfm, "Hunt",
@@ -107,7 +107,7 @@ test_that("change_name() renames variables and updates references", {
 
 
 test_that("update() blocks type mismatches", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm <- update(sfm, "A", type = "stock")
 
   # specifying a conflicting type for existing var errors
@@ -115,7 +115,7 @@ test_that("update() blocks type mismatches", {
 })
 
 test_that("discard() removes variables", {
-  sfm <- sdbuildR() |> update("A", type = "stock")
+  sfm <- stockflow() |> update("A", type = "stock")
 
   # discard fails on missing vars
   expect_error(discard(sfm, "Missing"), "not exist")
@@ -126,7 +126,7 @@ test_that("discard() removes variables", {
 })
 
 test_that("discard() removes discarded names from sim_settings vars", {
-  sfm <- sdbuildR("SIR") |>
+  sfm <- stockflow("SIR") |>
     sim_settings(vars = c("susceptible", "new_infections"))
 
   sfm2 <- discard(sfm, "new_infections")
@@ -134,7 +134,7 @@ test_that("discard() removes discarded names from sim_settings vars", {
 })
 
 test_that("discard() clears sim_settings vars when all selected vars are removed", {
-  sfm <- sdbuildR("SIR") |>
+  sfm <- stockflow("SIR") |>
     sim_settings(vars = c("new_recoveries"))
 
   sfm2 <- discard(sfm, "new_recoveries")
@@ -143,7 +143,7 @@ test_that("discard() clears sim_settings vars when all selected vars are removed
 
 
 test_that("change_type() changes types while preserving equations", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm <- update(sfm, "alpha", type = "aux", eqn = "2")
 
   sfm_changed <- change_type(sfm, "alpha", "constant")
@@ -155,7 +155,7 @@ test_that("change_type() changes types while preserving equations", {
 
 
 test_that("update() validates graphical functions", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
 
   expect_error(update(sfm, "curve1", type = "lookup", xpts = c(0, 1)), "required")
   expect_error(update(sfm, "curve2", type = "lookup", xpts = c(0, 1), ypts = c(2)), "Length mismatch")
@@ -172,7 +172,7 @@ test_that("update() validates graphical functions", {
 
 
 test_that("update() supports bulk add via data frame and validates df", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   df <- data.frame(
     type = c("stock", "flow"),
     name = c("S", "In"),
@@ -203,7 +203,7 @@ test_that("update() supports bulk add via data frame and validates df", {
 
 
 test_that("update() warns when inappropriate properties are supplied", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   expect_warning(
     update(sfm, "A", type = "stock", interpolation = "linear"),
     "Inappropriate propert"
@@ -212,7 +212,7 @@ test_that("update() warns when inappropriate properties are supplied", {
 
 
 test_that("update() handles doc, non_negative lengths", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm <- update(sfm, c("A", "B"), type = c("stock", "stock"), doc = c("d1", "d2"), non_negative = c(TRUE, FALSE))
   vars <- as.data.frame(sfm)
   expect_true(vars[vars[["name"]] == "A", "non_negative"])
@@ -223,7 +223,7 @@ test_that("update() handles doc, non_negative lengths", {
 # --- Vectorized lookup tests ------------------------------------------------
 
 test_that("lookup() supports vectorized creation with lists", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm <- lookup(sfm,
     c("L1", "L2"),
     xpts = list(c(0, 1), c(0, 5, 10)),
@@ -241,7 +241,7 @@ test_that("lookup() supports vectorized creation with lists", {
 })
 
 test_that("lookup() single with list input unlists correctly", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm <- lookup(sfm, "L1",
     xpts = list(0, 1, 2),
     ypts = list(10, 20, 30)
@@ -252,7 +252,7 @@ test_that("lookup() single with list input unlists correctly", {
 })
 
 test_that("lookup() single with vector input still works", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm <- lookup(sfm, "L1", xpts = c(0, 1), ypts = c(10, 20))
   l1 <- sfm[["variables"]][sfm[["variables"]][["name"]] == "L1", ]
   expect_equal(unlist(l1$xpts), c(0, 1))
@@ -260,7 +260,7 @@ test_that("lookup() single with vector input still works", {
 })
 
 test_that("lookup() vectorized errors on non-list xpts/ypts", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   expect_error(
     lookup(sfm, c("L1", "L2"), xpts = c(0, 1), ypts = c(10, 20)),
     "must be a list"
@@ -268,7 +268,7 @@ test_that("lookup() vectorized errors on non-list xpts/ypts", {
 })
 
 test_that("lookup() vectorized errors on wrong-length list", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   expect_error(
     lookup(sfm, c("L1", "L2"),
       xpts = list(c(0, 1)),
@@ -279,7 +279,7 @@ test_that("lookup() vectorized errors on wrong-length list", {
 })
 
 test_that("lookup() vectorized recycles scalar params", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm <- lookup(sfm,
     c("L1", "L2"),
     xpts = list(c(0, 1), c(0, 5)),
@@ -298,7 +298,7 @@ test_that("lookup() vectorized recycles scalar params", {
 })
 
 test_that("lookup() vectorized accepts per-element params", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     stock("A", eqn = 1) |>
     stock("B", eqn = 2)
   sfm <- lookup(sfm,
@@ -313,7 +313,7 @@ test_that("lookup() vectorized accepts per-element params", {
 })
 
 test_that("update() with type = 'gf' still works (backward compat)", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm <- update(sfm, "L1",
     type = "gf",
     xpts = c(0, 1), ypts = c(10, 20)
@@ -330,7 +330,7 @@ test_that("update() with type = 'gf' still works (backward compat)", {
 # by the update() tests above and are NOT duplicated here.
 
 test_that("stock() creates a stock and forwards all parameters", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm <- stock(sfm, "Pop",
     eqn = "100",
     label = "Population", doc = "total pop", non_negative = TRUE
@@ -347,7 +347,7 @@ test_that("stock() creates a stock and forwards all parameters", {
 })
 
 test_that("flow() creates a flow and forwards to/from", {
-  sfm <- sdbuildR() |> stock(c("S1", "S2"))
+  sfm <- stockflow() |> stock(c("S1", "S2"))
   sfm <- flow(sfm, "F1",
     eqn = "S1 * 0.5", from = "S1", to = "S2",
     non_negative = TRUE
@@ -363,7 +363,7 @@ test_that("flow() creates a flow and forwards to/from", {
 })
 
 test_that("auxiliary() creates an aux and forwards parameters", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm <- auxiliary(sfm, "rate",
     eqn = "0.05",
     label = "growth rate", doc = "per-capita"
@@ -379,10 +379,10 @@ test_that("auxiliary() creates an aux and forwards parameters", {
 })
 
 test_that("aux() behaves identically to auxiliary()", {
-  sfm1 <- sdbuildR()
+  sfm1 <- stockflow()
   sfm1 <- auxiliary(sfm1, "r", eqn = "0.1")
 
-  sfm2 <- sdbuildR()
+  sfm2 <- stockflow()
   sfm2 <- aux(sfm2, "r", eqn = "0.1")
 
   v1 <- as.data.frame(sfm1)
@@ -392,7 +392,7 @@ test_that("aux() behaves identically to auxiliary()", {
 })
 
 test_that("custom_func() creates a func and forwards parameters", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm <- custom_func(sfm, "square", eqn = "x^2", doc = "square fn")
 
   v <- as.data.frame(sfm)
@@ -405,7 +405,7 @@ test_that("custom_func() creates a func and forwards parameters", {
 
 test_that("lookup() injects type = 'lookup'", {
   # Detailed lookup tests already exist above; this only checks type injection.
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm <- lookup(sfm, "LU",
     xpts = c(0, 10), ypts = c(1, 2),
     doc = "a lookup"
@@ -417,7 +417,7 @@ test_that("lookup() injects type = 'lookup'", {
 })
 
 test_that("wrappers work in a pipe chain", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     stock("Prey", eqn = "100") |>
     stock("Predator", eqn = "10") |>
     flow("births", eqn = "Prey * r", to = "Prey") |>
@@ -446,12 +446,12 @@ test_that("wrappers work in a pipe chain", {
 # ------------------------------------------------------------------------------
 
 test_that("update() errors when model object passed as name", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   expect_error(update(sfm, sfm, type = "constant"), "passed where a variable name")
 })
 
 test_that("wrapper functions error when model object passed as name", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   expect_error(constant(sfm, sfm), "passed where a variable name")
   expect_error(stock(sfm, sfm), "passed where a variable name")
   expect_error(flow(sfm, sfm), "passed where a variable name")
@@ -459,12 +459,12 @@ test_that("wrapper functions error when model object passed as name", {
 })
 
 test_that("discard() errors when model object passed as name", {
-  sfm <- sdbuildR() |> update("A", type = "constant")
+  sfm <- stockflow() |> update("A", type = "constant")
   expect_error(discard(sfm, sfm), "passed where a variable name")
 })
 
 test_that("change_type() errors when model object passed as name", {
-  sfm <- sdbuildR() |> update("A", type = "constant")
+  sfm <- stockflow() |> update("A", type = "constant")
   expect_error(change_type(sfm, sfm, new_type = "aux"), "passed where a variable name")
 })
 
@@ -580,10 +580,10 @@ test_that("change_type() invalidates test deps cache", {
 
 test_that("change_type() to stock keeps dSdt[] indices aligned with stock order", {
   # Converting a non-stock to a stock adds a new state variable. The new stock
-  # is appended during the change, then sanitize_sdbuildR() re-sorts variables
+  # is appended during the change, then sanitize_stockflow() re-sorts variables
   # by type/name. The positional dSdt[] index must follow that final order, or
   # stock dynamics get silently swapped.
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update("a_stock", type = "stock", eqn = "1") |>
     update("z_stock", type = "stock", eqn = "2") |>
     # 'motiv' sorts alphabetically BETWEEN a_stock and z_stock, so making it a
@@ -610,7 +610,7 @@ test_that("change_type() to stock keeps dSdt[] indices aligned with stock order"
 test_that("change_type() to stock keeps dSdt[] aligned in a realistic model", {
   # Regression for the JDR template: change_type(motivation_rate -> stock) used
   # to leave resources pointing at dSdt[4] while the state vector put it at 5.
-  sfm <- sdbuildR("JDR") |>
+  sfm <- stockflow("JDR") |>
     sim_settings(language = "Julia") |>
     change_type("motivation_rate", new_type = "stock")
 
@@ -622,7 +622,7 @@ test_that("change_type() to stock keeps dSdt[] aligned in a realistic model", {
 
 
 test_that("discard() reindexes remaining stock dSdt[] contiguously", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update("a", type = "stock", eqn = "1") |>
     update("b", type = "stock", eqn = "2") |>
     update("c", type = "stock", eqn = "3") |>
@@ -639,7 +639,7 @@ test_that("discard() reindexes remaining stock dSdt[] contiguously", {
 
 
 test_that("change_type() away from stock reindexes remaining stocks", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update("a", type = "stock", eqn = "1") |>
     update("b", type = "stock", eqn = "2") |>
     update("c", type = "stock", eqn = "3") |>
@@ -656,7 +656,7 @@ test_that("change_type() away from stock reindexes remaining stocks", {
 test_that("change_name() that reorders stocks keeps dSdt[] aligned", {
   # Renaming a stock can change its alphabetical sort position, which shifts
   # other stocks' state-vector indices.
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update("b", type = "stock", eqn = "1") |>
     update("c", type = "stock", eqn = "2") |>
     sim_settings(language = "Julia")
@@ -675,7 +675,7 @@ test_that("change_type() to stock simulates correctly in Julia (no-flow stock is
   # and must not absorb another stock's dynamics via a misaligned dSdt[] index.
   skip_if_julia_not_ready()
 
-  sfm <- sdbuildR("JDR") |>
+  sfm <- stockflow("JDR") |>
     sim_settings(language = "Julia") |>
     change_type("motivation_rate", new_type = "stock")
 

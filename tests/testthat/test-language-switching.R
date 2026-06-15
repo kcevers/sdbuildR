@@ -37,7 +37,7 @@ test_that("switching Julia -> R works", {
   # Start with Julia
   sfm <- sim_settings(sfm, language = "Julia", stop = 10)
   sim1 <- simulate(sfm)
-  expect_s3_class(sim1, "simulate_sdbuildR")
+  expect_s3_class(sim1, "simulate_stockflow")
 
   # Switch to R - should NOT crash
   expect_no_error({
@@ -45,7 +45,7 @@ test_that("switching Julia -> R works", {
     sim2 <- simulate(sfm)
   })
 
-  expect_s3_class(sim2, "simulate_sdbuildR")
+  expect_s3_class(sim2, "simulate_stockflow")
 
   # Both should produce results
   expect_gt(nrow(sim1$df), 0)
@@ -55,7 +55,7 @@ test_that("switching Julia -> R works", {
 test_that("multiple language switches maintain integrity", {
   skip_if_julia_not_ready()
 
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update(name = "S", type = "stock", eqn = "100") |>
     update(name = "births", type = "flow", eqn = "0.1 * S", to = "S") |>
     update(name = "deaths", type = "flow", eqn = "0.05 * S", from = "S") |>
@@ -70,8 +70,8 @@ test_that("multiple language switches maintain integrity", {
     sim_r <- simulate(sfm)
 
     # Both should complete successfully
-    expect_s3_class(sim_j, "simulate_sdbuildR")
-    expect_s3_class(sim_r, "simulate_sdbuildR")
+    expect_s3_class(sim_j, "simulate_stockflow")
+    expect_s3_class(sim_r, "simulate_stockflow")
 
     # Results should be reasonable (stocks not all zero)
     s_vals_j <- sim_j$df[sim_j$df$variable == "S", "value"]
@@ -85,7 +85,7 @@ test_that("multiple language switches maintain integrity", {
 test_that("R and Julia produce consistent results", {
   skip_if_julia_not_ready()
 
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update(name = "Population", type = "stock", eqn = "100") |>
     update(name = "births", type = "flow", eqn = "0.05 * Population", to = "Population") |>
     update(name = "deaths", type = "flow", eqn = "0.03 * Population", from = "Population") |>
@@ -110,7 +110,7 @@ test_that("R and Julia produce consistent results", {
 test_that("switching languages preserves variable structure", {
   skip_if_julia_not_ready()
 
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update(name = "S", type = "stock", eqn = "100") |>
     update(name = "rate", type = "aux", eqn = "0.5") |>
     update(name = "inflow", type = "flow", eqn = "rate * S", to = "S")
@@ -135,7 +135,7 @@ test_that("switching languages preserves variable structure", {
 test_that("language switching works with multiple stocks and flows", {
   skip_if_julia_not_ready()
 
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update(name = "S", type = "stock", eqn = "900") |>
     update(name = "I", type = "stock", eqn = "100") |>
     update(name = "R", type = "stock", eqn = "0") |>
@@ -154,8 +154,8 @@ test_that("language switching works with multiple stocks and flows", {
   sim_j <- simulate(sfm_j)
 
   # Both should complete
-  expect_s3_class(sim_r, "simulate_sdbuildR")
-  expect_s3_class(sim_j, "simulate_sdbuildR")
+  expect_s3_class(sim_r, "simulate_stockflow")
+  expect_s3_class(sim_j, "simulate_stockflow")
 
   # Check variables exist in both
   expect_true(all(c("S", "I", "R") %in% unique(sim_r$df$variable)))
@@ -171,7 +171,7 @@ test_that("language switching works with multiple stocks and flows", {
 test_that("language switching works with isolated stocks", {
   skip_if_julia_not_ready()
 
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update(name = "IsolatedStock", type = "stock", eqn = "42")
 
   # R simulation

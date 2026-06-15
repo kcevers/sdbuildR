@@ -1209,7 +1209,7 @@ debug_import_context_IM <- function(ctx) {
 #' @returns Import context with parsed model data
 #' @noRd
 #'
-file_to_sdbuildR <- function(read_file, ext) {
+file_to_stockflow <- function(read_file, ext) {
   # Create import context
   ctx <- create_import_context(vendor = "insightmaker")
 
@@ -1700,7 +1700,7 @@ replace_names_IM <- function(string, original, replacement,
 
 #' Strip units from model equations and globals
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #'
 #' @returns Updated object
 #' @noRd
@@ -1801,7 +1801,7 @@ strip_units_curly <- function(x, var_names) {
 
 #' Check non-negative stocks and flows
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #' @inheritParams import_insightmaker
 #'
 #' @returns Updated object
@@ -1840,7 +1840,7 @@ check_nonnegativity <- function(object, keep_nonnegative_flow,
 
 #' Convert global Insight Maker script to macros
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #'
 #' @returns Updated stock-and-flow model with macros
 #' @noRd
@@ -1886,7 +1886,7 @@ convert_macros_IM_wrapper <- function(object) {
 
 #' Replace Insight Maker names in macros with syntactically valid names
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #'
 #' @returns Updated stock-and-flow model with replaced macro names all throughout the model
 #' @noRd
@@ -2111,7 +2111,7 @@ replace_safely <- function(eqn, dict, var_names, ignore_case = TRUE) {
 
 #' Split macro equation and names
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #'
 #' @returns Updated stock-and-flow model with split macros
 #' @noRd
@@ -2184,7 +2184,7 @@ split_macros_IM <- function(object) {
 
 #' Convert Insight Maker equations to R code
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #'
 #' @returns Updated stock-and-flow model with converted equations to R.
 #' @noRd
@@ -2245,7 +2245,7 @@ convert_equations_IM_wrapper <- function(object) {
 #'
 #' Add sources for graphical functions
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #'
 #' @returns Updated object
 #' @noRd
@@ -2269,7 +2269,7 @@ remove_brackets_from_names <- function(object) {
 
 #' Split auxiliaries into static parameters or dynamic variables
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #'
 #' @returns Vector of variable names that are constants
 #' @noRd

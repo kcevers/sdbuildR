@@ -1,7 +1,7 @@
 # Structural layout invariants
 #
 # The correctness of generated code depends on cross-cutting invariants that are
-# maintained by convention across prep_stock_change(), sanitize_sdbuildR() and
+# maintained by convention across prep_stock_change(), sanitize_stockflow() and
 # the compile step. These tests pin those invariants down directly, and fuzz
 # arbitrary mutation sequences to catch ordering/index bugs that only surface in
 # specific histories (e.g. the change_type() dSdt[] swap). All run in pure R.
@@ -9,7 +9,7 @@
 # --- validate_layout() catches corruption ------------------------------------
 
 test_that("validate_layout() catches misaligned stock derivative slots", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update("a", type = "stock", eqn = "1") |>
     update("b", type = "stock", eqn = "2") |>
     sim_settings(language = "Julia")
@@ -21,11 +21,11 @@ test_that("validate_layout() catches misaligned stock derivative slots", {
   stock_idx <- which(sfm[["variables"]][["type"]] == "stock")
   sfm[["variables"]][stock_idx, "sum_name"] <- c("dSdt[2]", "dSdt[1]")
 
-  expect_error(validate_layout(sfm), class = "sdbuildR_layout_error")
+  expect_error(validate_layout(sfm), class = "stockflow_layout_error")
 })
 
 test_that("validate_layout() catches non-contiguous stock derivative slots", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update("a", type = "stock", eqn = "1") |>
     update("b", type = "stock", eqn = "2") |>
     sim_settings(language = "Julia")
@@ -33,18 +33,18 @@ test_that("validate_layout() catches non-contiguous stock derivative slots", {
   stock_idx <- which(sfm[["variables"]][["type"]] == "stock")
   sfm[["variables"]][stock_idx, "sum_name"] <- c("dSdt[1]", "dSdt[3]")
 
-  expect_error(validate_layout(sfm), class = "sdbuildR_layout_error")
+  expect_error(validate_layout(sfm), class = "stockflow_layout_error")
 })
 
 test_that("validate_layout() catches duplicate variable names", {
-  sfm <- sdbuildR() |> update("a", type = "stock", eqn = "1")
+  sfm <- stockflow() |> update("a", type = "stock", eqn = "1")
   sfm[["variables"]] <- rbind(sfm[["variables"]], sfm[["variables"]])
 
-  expect_error(validate_layout(sfm), class = "sdbuildR_layout_error")
+  expect_error(validate_layout(sfm), class = "stockflow_layout_error")
 })
 
 test_that("validate_layout() is a no-op for empty models", {
-  expect_invisible(validate_layout(sdbuildR()))
+  expect_invisible(validate_layout(stockflow()))
 })
 
 test_that("pre_assemble_components() validates layout while (re)building", {
@@ -52,7 +52,7 @@ test_that("pre_assemble_components() validates layout while (re)building", {
   # model must succeed and produce aligned indices. (Direct corruption detection
   # is covered by the validate_layout() tests above; a hash-matched cache is
   # trusted and not re-validated, which is why this checks the build path.)
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update("a", type = "stock", eqn = "1") |>
     update("b", type = "stock", eqn = "2") |>
     sim_settings(language = "Julia")
@@ -66,7 +66,7 @@ test_that("pre_assemble_components() validates layout while (re)building", {
 test_that("incrementally built model compiles identically to a fresh rebuild", {
   # The original dSdt[] bug was a cache/order interaction: an incrementally
   # updated model diverged from one rebuilt from scratch. Assert they match.
-  sfm <- sdbuildR("JDR") |>
+  sfm <- stockflow("JDR") |>
     sim_settings(language = "Julia") |>
     change_type("motivation_rate", new_type = "stock") |>
     update("extra", type = "stock", eqn = "1")
@@ -119,7 +119,7 @@ test_that("random mutation sequences keep stock dSdt[] indices aligned", {
     out
   }
 
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update("seed_stock", type = "stock", eqn = "1") |>
     sim_settings(language = "Julia")
 

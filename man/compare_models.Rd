@@ -7,12 +7,12 @@
 compare_models(sfm1, sfm2)
 }
 \arguments{
-\item{sfm1}{A stock-and-flow model of class \code{\link[=sdbuildR]{sdbuildR}}.}
+\item{sfm1}{A stock-and-flow model of class \code{\link[=stockflow]{stockflow}}.}
 
-\item{sfm2}{A stock-and-flow model of class \code{\link[=sdbuildR]{sdbuildR}}.}
+\item{sfm2}{A stock-and-flow model of class \code{\link[=stockflow]{stockflow}}.}
 }
 \value{
-An object of class \code{compare_sdbuildR} (a list) containing:
+An object of class \code{compare_stockflow} (a list) containing:
 \describe{
 \item{\code{labels}}{Names of the two model objects (captured expressions).}
 \item{\code{added}}{Variables present in \code{sfm2} but not \code{sfm1}.}
@@ -25,15 +25,15 @@ An object of class \code{compare_sdbuildR} (a list) containing:
 }
 \description{
 Compares the structure, equations, and simulation settings of two
-\code{sdbuildR} models, and computes a nonlinearity score for each.
+\code{stockflow} models, and computes a nonlinearity score for each.
 }
 \examples{
-sfm1 <- sdbuildR("SIR")
+sfm1 <- stockflow("SIR")
 sfm2 <- stock(sfm1, "susceptible", eqn = 0.5)
 compare_models(sfm1, sfm2)
 
 }
 \seealso{
-\code{\link[=simulate.sdbuildR]{simulate()}}, \code{\link[=summary.sdbuildR]{summary()}}
+\code{\link[=simulate.stockflow]{simulate()}}, \code{\link[=summary.stockflow]{summary()}}
 }
 \concept{build}

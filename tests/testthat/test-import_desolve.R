@@ -93,7 +93,7 @@ test_that("import_desolve() errors on missing derivative for a state variable", 
 
 # ---- correct imports ----
 
-test_that("import_desolve() logistic growth: returns sdbuildR object", {
+test_that("import_desolve() logistic growth: returns stockflow object", {
   sfm <- import_desolve(
     model  = logistic_model_deSolve,
     params = c(r = 0.3, K = 100),
@@ -101,7 +101,7 @@ test_that("import_desolve() logistic growth: returns sdbuildR object", {
     times  = seq(0, 50, by = 0.1),
     name   = "Logistic growth"
   )
-  expect_s3_class(sfm, "sdbuildR")
+  expect_s3_class(sfm, "stockflow")
 })
 
 
@@ -198,7 +198,7 @@ test_that("import_desolve() produces a simulatable model (logistic)", {
   )
   sfm <- sim_settings(sfm, save_at = 1)
   sim <- expect_no_error(simulate(sfm))
-  expect_s3_class(sim, "simulate_sdbuildR")
+  expect_s3_class(sim, "simulate_stockflow")
 })
 
 
@@ -211,5 +211,5 @@ test_that("import_desolve() produces a simulatable model (SIR)", {
   )
   sfm <- sim_settings(sfm, save_at = 5)
   sim <- expect_no_error(simulate(sfm))
-  expect_s3_class(sim, "simulate_sdbuildR")
+  expect_s3_class(sim, "simulate_stockflow")
 })

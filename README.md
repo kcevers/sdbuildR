@@ -29,7 +29,7 @@ classic SIR (Susceptible-Infected-Recovered) epidemic model:
 library(sdbuildR)
 
 # Load stock-and-flow model
-sfm <- sdbuildR("SIR")
+sfm <- stockflow("SIR")
 
 # View the stock-and-flow diagram
 plot(sfm)

@@ -25,7 +25,7 @@
       
       * `Stock1` and `Flow1` have an equation of 0.
 
-# print.summary_sdbuildR() shows header and 'No problems detected!' for valid model
+# print.summary_stockflow() shows header and 'No problems detected!' for valid model
 
     Code
       print(result)

@@ -23,8 +23,8 @@
 #' model. Try specifying a random initial condition or adding randomness to
 #' other model elements (see examples).
 #'
-#' @inheritParams update.sdbuildR
-#' @inheritParams simulate.sdbuildR
+#' @inheritParams update.stockflow
+#' @inheritParams simulate.stockflow
 #' @param n Number of simulations to run in the ensemble. When conditions is
 #'   specified, n defines the number of simulations to run per condition. If
 #'   each condition only needs to be run once, set `n = 1`. Defaults to `n = 10`.
@@ -49,7 +49,7 @@
 #' @param verbose If `TRUE` (default), print details and duration of simulation.
 #' @param ... Optional arguments passed to [sim_settings()]; these can be used to override the simulation specifications set in the model object.
 #'
-#' @returns Object of class [`ensemble_sdbuildR`][ensemble()], which is a list
+#' @returns Object of class [`ensemble_stockflow`][ensemble()], which is a list
 #'   containing:
 #' \describe{
 #'  \item{success}{If `TRUE`, simulation was successful. If `FALSE`, simulation
@@ -79,13 +79,13 @@
 #'  }
 #' @export
 #' @concept ensemble
-#' @seealso [update()], [sdbuildR()], [sim_settings()], [use_julia()],
+#' @seealso [update()], [stockflow()], [sim_settings()], [use_julia()],
 #'   [future::plan()]
 #'
 #' @examples
 #' # Ensemble simulation in R (no parallelization)
 #' # Load example
-#' sfm <- sdbuildR("predator_prey")
+#' sfm <- stockflow("predator_prey")
 #'
 #' # Set random initial conditions
 #' sfm <- update(sfm, c(predator, prey),
@@ -157,7 +157,7 @@ ensemble <- function(object,
                      cross = TRUE,
                      quantiles = c(0.025, 0.975),
                      verbose = TRUE, ...) {
-  check_sdbuildR(object)
+  check_stockflow(object)
 
   # Override sim_settings with any arguments passed via ...
   varargs <- list(...)
@@ -227,7 +227,7 @@ ensemble <- function(object,
     ))
   }
 
-  validate_ensemble_sdbuildR(out)
+  validate_ensemble_stockflow(out)
   out
 }
 
@@ -393,18 +393,18 @@ abort_ensemble <- function(message) {
 }
 
 
-#' Check class [`ensemble_sdbuildR`][ensemble()]
+#' Check class [`ensemble_stockflow`][ensemble()]
 #'
-#' @param x An ensemble simulation of class [`ensemble_sdbuildR`][ensemble()]
+#' @param x An ensemble simulation of class [`ensemble_stockflow`][ensemble()]
 #'
 #' @returns Invisible x if valid, otherwise an error is thrown
 #' @noRd
 #'
-check_ensemble_sdbuildR <- function(x) {
-  if (!inherits(x, "ensemble_sdbuildR")) {
+check_ensemble_stockflow <- function(x) {
+  if (!inherits(x, "ensemble_stockflow")) {
     cli::cli_abort(c(
       "x" = "Invalid object type.",
-      "!" = "Expected object of class {.cls ensemble_sdbuildR}.",
+      "!" = "Expected object of class {.cls ensemble_stockflow}.",
       ">" = "Use {.fn ensemble} to create a valid ensemble object."
     ))
   }
@@ -422,8 +422,8 @@ check_ensemble_sdbuildR <- function(x) {
 
 #' @export
 #' @concept ensemble
-#' @method print ensemble_sdbuildR
-print.ensemble_sdbuildR <- function(x, ...) {
+#' @method print ensemble_stockflow
+print.ensemble_stockflow <- function(x, ...) {
   model_name <- x[["object"]][["meta"]][["name"]]
   default_name <- formals(meta)[["name"]]
   has_name <- !is.null(model_name) && nzchar(model_name) && model_name != default_name
@@ -481,8 +481,8 @@ print.ensemble_sdbuildR <- function(x, ...) {
 
 #' @export
 #' @concept ensemble
-#' @method as.data.frame ensemble_sdbuildR
-as.data.frame.ensemble_sdbuildR <- function(
+#' @method as.data.frame ensemble_stockflow
+as.data.frame.ensemble_stockflow <- function(
   x, row.names = NULL,
   optional = FALSE,
   which = c("summary", "sims")[1],
@@ -491,7 +491,7 @@ as.data.frame.ensemble_sdbuildR <- function(
   condition = NULL,
   ...
 ) {
-  check_ensemble_sdbuildR(x)
+  check_ensemble_stockflow(x)
 
   which <- .clean_which(which)
 
@@ -574,8 +574,8 @@ as.data.frame.ensemble_sdbuildR <- function(
 
 #' @export
 #' @concept ensemble
-#' @method head ensemble_sdbuildR
-head.ensemble_sdbuildR <- function(x, n = 6L, ...) {
+#' @method head ensemble_stockflow
+head.ensemble_stockflow <- function(x, n = 6L, ...) {
   df <- as.data.frame(x, ...)
   head(df, n)
 }
@@ -583,8 +583,8 @@ head.ensemble_sdbuildR <- function(x, n = 6L, ...) {
 
 #' @export
 #' @concept ensemble
-#' @method tail ensemble_sdbuildR
-tail.ensemble_sdbuildR <- function(x, n = 6L, ...) {
+#' @method tail ensemble_stockflow
+tail.ensemble_stockflow <- function(x, n = 6L, ...) {
   df <- as.data.frame(x, ...)
   tail(df, n)
 }
@@ -592,31 +592,31 @@ tail.ensemble_sdbuildR <- function(x, n = 6L, ...) {
 
 #' @export
 #' @concept ensemble
-#' @method summary ensemble_sdbuildR
-summary.ensemble_sdbuildR <- function(object, ...) {
-  check_ensemble_sdbuildR(object)
+#' @method summary ensemble_stockflow
+summary.ensemble_stockflow <- function(object, ...) {
+  check_ensemble_stockflow(object)
   object[["summary"]]
 }
 
 
-#' Constructor for [`ensemble_sdbuildR`][ensemble()]
+#' Constructor for [`ensemble_stockflow`][ensemble()]
 #'
 #' @noRd
-new_ensemble_sdbuildR <- function(success = FALSE,
-                                  error_message = NULL,
-                                  df = NULL,
-                                  summary = NULL,
-                                  n = NULL,
-                                  n_total = NULL,
-                                  n_conditions = NULL,
-                                  conditions = NULL,
-                                  init = NULL,
-                                  constants = NULL,
-                                  script = NULL,
-                                  duration = NULL,
-                                  cross = TRUE,
-                                  quantiles = NULL,
-                                  object = NULL) {
+new_ensemble_stockflow <- function(success = FALSE,
+                                   error_message = NULL,
+                                   df = NULL,
+                                   summary = NULL,
+                                   n = NULL,
+                                   n_total = NULL,
+                                   n_conditions = NULL,
+                                   conditions = NULL,
+                                   init = NULL,
+                                   constants = NULL,
+                                   script = NULL,
+                                   duration = NULL,
+                                   cross = TRUE,
+                                   quantiles = NULL,
+                                   object = NULL) {
   obj <- list(
     success = success,
     error_message = error_message,
@@ -634,18 +634,18 @@ new_ensemble_sdbuildR <- function(success = FALSE,
     quantiles = quantiles,
     object = object
   )
-  structure(obj, class = "ensemble_sdbuildR")
+  structure(obj, class = "ensemble_stockflow")
 }
 
 
-#' Deep validator for [`ensemble_sdbuildR`][ensemble()]
+#' Deep validator for [`ensemble_stockflow`][ensemble()]
 #'
 #' @noRd
-validate_ensemble_sdbuildR <- function(x) {
-  if (!inherits(x, "ensemble_sdbuildR")) {
+validate_ensemble_stockflow <- function(x) {
+  if (!inherits(x, "ensemble_stockflow")) {
     cli::cli_abort(c(
       "x" = "Invalid object type.",
-      "!" = "Expected object of class {.cls ensemble_sdbuildR}.",
+      "!" = "Expected object of class {.cls ensemble_stockflow}.",
       ">" = "Use {.fn ensemble} to create a valid ensemble object."
     ))
   }

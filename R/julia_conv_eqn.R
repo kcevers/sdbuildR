@@ -1,6 +1,6 @@
 #' Convert all R equations to Julia code
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #' @inheritParams simulate_julia
 #'
 #' @returns Updated object
@@ -79,7 +79,7 @@ convert_equations_julia_wrapper <- function(object) {
 
 #' Transform R code to Julia code
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #' @inheritParams convert_equations_IM
 #'
 #' @returns List with flat structure:
@@ -155,15 +155,14 @@ convert_equations_julia <- function(type, name, eqn, var_names) {
   if (!nzchar(eqn) || eqn == "0" || eqn == "0.0") {
     return(default_out)
   } else {
-    if (!identical(getOption("sdbuildR.use_ast", TRUE), FALSE)) {
-      ast <- convert_eqn_ast_julia(eqn, var_names)
-      if (!is.null(ast)) {
-        return(list(
-          eqn = ast,
-          add_vars = data.frame(),
-          doc = ""
-        ))
-      }
+    # Use ast conversion for equations that can be parsed; if parsing fails, fall back to string replacement (for unsupported syntax)
+    ast <- convert_eqn_ast_julia(eqn, var_names)
+    if (!is.null(ast)) {
+      return(list(
+        eqn = ast,
+        add_vars = data.frame(),
+        doc = ""
+      ))
     }
 
     # Ensure there is no scientific notation
@@ -194,7 +193,7 @@ convert_equations_julia <- function(type, name, eqn, var_names) {
     # replace_range_julia(var_names)
 
     # Step 5. Replace R functions to Julia functions
-    conv_list <- convert_builtin_functions_julia(type, name, eqn, var_names)
+    conv_list <- convert_builtin_functions_julia_old(type, name, eqn, var_names)
     eqn <- conv_list[["eqn"]]
     add_vars <- conv_list[["add_vars"]]
 

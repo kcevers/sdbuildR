@@ -7,7 +7,7 @@
 install_julia_env(remove = FALSE)
 }
 \arguments{
-\item{remove}{If \code{TRUE}, remove Julia environment for sdbuildR. This will delete the Manifest.toml file, as well as the StockFlowRSupport.jl package. All other Julia packages remain untouched.}
+\item{remove}{If \code{TRUE}, remove Julia environment for sdbuildR. This will delete the Manifest.toml file, as well as the SystemDynamicsBuildR.jl package. All other Julia packages remain untouched.}
 }
 \value{
 Invisibly returns \code{NULL} after instantiating the Julia environment.
@@ -20,7 +20,7 @@ Instantiate the Julia environment for sdbuildR to run stock-and-flow models usin
 \itemize{
 \item Start a Julia session
 \item Activate a Julia environment using sdbuildR's Project.toml
-\item Install StockFlowRSupport.jl from GitHub (https://github.com/kcevers/StockFlowRSupport.jl)
+\item Install SystemDynamicsBuildR.jl from GitHub (https://github.com/kcevers/SystemDynamicsBuildR.jl)
 \item Install all other required Julia packages
 \item Create Manifest.toml
 \item Precompile packages for faster subsequent loading

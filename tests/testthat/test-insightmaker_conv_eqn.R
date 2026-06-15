@@ -1,5 +1,5 @@
 test_that("convert_builtin_functions_IM basic functions", {
-  sfm <- sdbuildR("predator_prey")
+  sfm <- stockflow("predator_prey")
   var_names <- get_model_var(sfm)
   name <- "test"
   type <- "stock"
@@ -63,7 +63,7 @@ test_that("convert_builtin_functions_IM comments", {
 
 
 test_that("convert_equations_IM basic math functions", {
-  sfm <- sdbuildR("predator_prey")
+  sfm <- stockflow("predator_prey")
   var_names <- get_model_var(sfm)
   name <- var_names[1]
   type <- "aux"
@@ -87,7 +87,7 @@ test_that("convert_equations_IM basic math functions", {
 
 
 test_that("convert_equations_IM conditional statements", {
-  sfm <- sdbuildR("predator_prey")
+  sfm <- stockflow("predator_prey")
   var_names <- get_model_var(sfm)
   name <- var_names[1]
   type <- "aux"
@@ -105,7 +105,7 @@ test_that("convert_equations_IM conditional statements", {
 
 
 test_that("convert_equations_IM empty and NULL cases", {
-  sfm <- sdbuildR("predator_prey")
+  sfm <- stockflow("predator_prey")
   var_names <- get_model_var(sfm)
   name <- var_names[1]
   type <- "aux"
@@ -135,7 +135,7 @@ test_that("convert_all_statements() preserves strings and adds missing else bran
 
 
 test_that("convert_builtin_functions_IM string functions", {
-  sfm <- sdbuildR("predator_prey")
+  sfm <- stockflow("predator_prey")
   var_names <- get_model_var(sfm)
   name <- "test"
   type <- "aux"
@@ -158,7 +158,7 @@ test_that("convert_builtin_functions_IM string functions", {
 
 
 test_that("convert_builtin_functions_IM statistical functions", {
-  sfm <- sdbuildR("predator_prey")
+  sfm <- stockflow("predator_prey")
   var_names <- get_model_var(sfm)
   name <- "test"
   type <- "aux"

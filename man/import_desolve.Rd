@@ -21,11 +21,11 @@ import_desolve(model, params, init, times, method = "lsoda", name = NULL)
 \item{name}{Optional model name. Character scalar.}
 }
 \value{
-A stock-and-flow model of class \code{\link{sdbuildR}}.
+A stock-and-flow model of class \code{\link{stockflow}}.
 }
 \description{
 Convert a model written for \href{https://cran.r-project.org/package=deSolve}{deSolve}
-into a stock-and-flow model of class \code{\link{sdbuildR}}.
+into a stock-and-flow model of class \code{\link{stockflow}}.
 }
 \details{
 The model function must follow the canonical deSolve convention:

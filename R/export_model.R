@@ -1,6 +1,6 @@
 #' Export a stock-and-flow model
 #'
-#' Export a model of class [`sdbuildR`][sdbuildR] to another format.
+#' Export a model of class [`stockflow`][stockflow] to another format.
 #'
 #' ## sdbuildR format (`format = "sdbuildR"`)
 #' Returns R code that reconstructs the model using sdbuildR functions.
@@ -23,7 +23,7 @@
 #' When `file` is provided, writes a `.json` file and returns the path invisibly.
 #' If `file` has no `.json` extension, one is appended.
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #' @param format Export format. One of `"sdbuildR"`, `"deSolve"`, or
 #'   `"psychomodels"`.
 #' @param file Output file path, or `NULL` to return the result directly.
@@ -62,7 +62,7 @@
 #' @seealso [import_insightmaker()], [import_desolve()]
 #'
 #' @examples
-#' sfm <- sdbuildR("SIR")
+#' sfm <- stockflow("SIR")
 #'
 #' # Get sdbuildR reconstruction code
 #' cat(export_model(sfm, format = "sdbuildR"))
@@ -109,13 +109,13 @@ export_model <- function(object,
   if (missing(object)) {
     missing_arg("object")
   }
-  check_sdbuildR(object)
+  check_stockflow(object)
 
   format <- match.arg(format, c("sdbuildR", "deSolve", "psychomodels"))
 
   switch(format,
     sdbuildR = {
-      code <- build_sdbuildR_code_(object)
+      code <- build_stockflow_code_(object)
       if (is.null(file)) {
         return(code)
       }
@@ -215,8 +215,8 @@ export_desolve_ <- function(object) {
 }
 
 
-build_sdbuildR_code_ <- function(object) {
-  check_sdbuildR(object)
+build_stockflow_code_ <- function(object) {
+  check_stockflow(object)
 
   # Simulation specifications — filter out defaults
   sim_settings_list <- object[["sim_settings"]]
@@ -394,7 +394,7 @@ build_sdbuildR_code_ <- function(object) {
   }
 
   script <- sprintf(
-    "sfm <-\tsdbuildR()%s%s%s%s", sim_settings_str,
+    "sfm <-\tstockflow()%s%s%s%s", sim_settings_str,
     meta_str, var_str, func_str
   )
 

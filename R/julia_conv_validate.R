@@ -27,7 +27,7 @@ validate_julia_conversion_ast <- function(parsed) {
         cli::cli_abort(c(
           "x" = "Unsupported namespaced function in Julia equation: {.fn {full_name}}.",
           "i" = "Use a supported base/stats function or define a custom function without namespace qualification."
-        ), class = "sdbuildR_julia_conversion_error", call. = FALSE)
+        ), class = "stockflow_julia_conversion_error", call. = FALSE)
       }
     }
 
@@ -42,19 +42,19 @@ validate_julia_conversion_ast <- function(parsed) {
           cli::cli_abort(c(
             "x" = "Negative R-style indices are not supported in Julia equations.",
             "i" = "Julia uses different indexing semantics; select explicit variables or rewrite the expression."
-          ), class = "sdbuildR_julia_conversion_error", call. = FALSE)
+          ), class = "stockflow_julia_conversion_error", call. = FALSE)
         }
         if (rlang::is_syntactic_literal(idx) && is.logical(idx)) {
           cli::cli_abort(c(
             "x" = "Logical R-style indices are not supported in Julia equations.",
             "i" = "Julia uses different indexing semantics; select explicit variables or rewrite the expression."
-          ), class = "sdbuildR_julia_conversion_error", call. = FALSE)
+          ), class = "stockflow_julia_conversion_error", call. = FALSE)
         }
         if (rlang::is_syntactic_literal(idx) && is.numeric(idx) && idx != round(idx)) {
           cli::cli_abort(c(
             "x" = "Non-integer indices are not supported in Julia equations.",
             "i" = "Use integer indices or rewrite the expression before simulation."
-          ), class = "sdbuildR_julia_conversion_error", call. = FALSE)
+          ), class = "stockflow_julia_conversion_error", call. = FALSE)
         }
         walk(idx, in_index = TRUE)
       }
@@ -66,7 +66,7 @@ validate_julia_conversion_ast <- function(parsed) {
       cli::cli_abort(c(
         "x" = "Field and slot access are not supported in Julia equations.",
         "i" = "Use a model variable, custom function, or explicit scalar expression instead."
-      ), class = "sdbuildR_julia_conversion_error", call. = FALSE)
+      ), class = "stockflow_julia_conversion_error", call. = FALSE)
     }
 
     if (!is.null(fname) && fname == "::") {

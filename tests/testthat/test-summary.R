@@ -1,13 +1,13 @@
 test_that("summary() detects model with no stocks", {
-  sfm <- sdbuildR() |> update("aux1", type = "aux", eqn = "5")
+  sfm <- stockflow() |> update("aux1", type = "aux", eqn = "5")
 
   result <- summary(sfm)
-  expect_s3_class(result, "summary_sdbuildR")
+  expect_s3_class(result, "summary_stockflow")
   expect_equal(result$no_stocks$problem, "error")
 })
 
 test_that("summary() detects stocks not connected to flows", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update("Stock1", type = "stock") |>
     update("Stock2", type = "stock")
 
@@ -20,7 +20,7 @@ test_that("summary() detects stocks not connected to flows", {
 })
 
 test_that("summary() detects flows not connected to any stock", {
-  sfm <- sdbuildR() |> update("Orphan_Flow", type = "flow")
+  sfm <- stockflow() |> update("Orphan_Flow", type = "flow")
 
   result <- summary(sfm)
   expect_equal(result$disconnected_flows$problem, "error")
@@ -28,7 +28,7 @@ test_that("summary() detects flows not connected to any stock", {
 })
 
 test_that("summary() detects flows connected to non-existent stocks", {
-  sfm <- sdbuildR() |> update("Bad_Flow", type = "flow", to = "NonExistentStock")
+  sfm <- stockflow() |> update("Bad_Flow", type = "flow", to = "NonExistentStock")
 
   result <- summary(sfm)
   expect_equal(result$bad_flow_connections$problem, "error")
@@ -36,7 +36,7 @@ test_that("summary() detects flows connected to non-existent stocks", {
 })
 
 test_that("summary() warns about zero equations", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update("Stock1", type = "stock") |>
     update("Flow1", type = "flow", from = "Stock1", eqn = "0")
 
@@ -47,7 +47,7 @@ test_that("summary() warns about zero equations", {
 })
 
 test_that("summary() detects undefined variable references", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update("Stock1", type = "stock") |>
     update("Flow1", type = "flow", from = "Stock1", eqn = "undefined_var * 2")
 
@@ -58,7 +58,7 @@ test_that("summary() detects undefined variable references", {
 })
 
 test_that("summary() detects circular dependencies in static variables", {
-  suppressWarnings(sfm <- sdbuildR() |>
+  suppressWarnings(sfm <- stockflow() |>
     update("const1", type = "constant", eqn = "const2") |>
     update("const2", type = "constant", eqn = "const1") |>
     update("Stock1", type = "stock") |>
@@ -69,7 +69,7 @@ test_that("summary() detects circular dependencies in static variables", {
 })
 
 test_that("summary() detects circular dependencies in dynamic variables", {
-  suppressWarnings(sfm <- sdbuildR() |>
+  suppressWarnings(sfm <- stockflow() |>
     update("Stock1", type = "stock") |>
     update("aux1", type = "aux", eqn = "aux2") |>
     update("aux2", type = "aux", eqn = "aux1") |>
@@ -79,11 +79,11 @@ test_that("summary() detects circular dependencies in dynamic variables", {
   expect_equal(result$circular_dynamic$problem, "error")
 })
 
-test_that("summary() returns summary_sdbuildR with all 10 checks", {
-  sfm <- sdbuildR() |> update("Stock1", type = "stock")
+test_that("summary() returns summary_stockflow with all 10 checks", {
+  sfm <- stockflow() |> update("Stock1", type = "stock")
 
   result <- summary(sfm)
-  expect_s3_class(result, "summary_sdbuildR")
+  expect_s3_class(result, "summary_stockflow")
   expected_names <- c(
     "no_stocks", "no_flows", "disconnected_stocks",
     "disconnected_flows", "bad_flow_connections",
@@ -96,23 +96,23 @@ test_that("summary() returns summary_sdbuildR with all 10 checks", {
 })
 
 test_that("summary() passes with valid model", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update("Stock1", type = "stock", eqn = "100") |>
     update("Flow1", type = "flow", from = "Stock1", eqn = "Stock1 * 0.1")
 
   result <- summary(sfm)
-  expect_s3_class(result, "summary_sdbuildR")
+  expect_s3_class(result, "summary_stockflow")
   expect_true(all(vapply(result, `[[`, character(1), "problem") == "none"))
 })
 
-test_that("print.summary_sdbuildR() shows header and 'No problems detected!' for valid model", {
-  sfm <- sdbuildR("predator_prey")
+test_that("print.summary_stockflow() shows header and 'No problems detected!' for valid model", {
+  sfm <- stockflow("predator_prey")
   result <- summary(sfm)
   expect_snapshot(print(result))
 })
 
 test_that("summary() does not flag func argument names as undefined", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     custom_func("double", eqn = "function(x) x * 2") |>
     update("Stock1", type = "stock", eqn = "100") |>
     update("Flow1", type = "flow", from = "Stock1", eqn = "double(Stock1)")
@@ -122,7 +122,7 @@ test_that("summary() does not flag func argument names as undefined", {
 })
 
 test_that("summary() does not flag func argument names with defaults as undefined", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     custom_func("scale", eqn = "function(x, factor = 10) x * factor") |>
     update("Stock1", type = "stock", eqn = "100") |>
     update("Flow1", type = "flow", from = "Stock1", eqn = "scale(Stock1)")
@@ -137,7 +137,7 @@ test_that("summary() does not flag func argument names with defaults as undefine
 # ==============================================================================
 
 test_that("summary() is clean for model with valid unit tests", {
-  sfm <- sdbuildR("SIR") |>
+  sfm <- stockflow("SIR") |>
     unit_test(label = "S non-neg", expr = all(susceptible >= 0))
 
   result <- summary(sfm)

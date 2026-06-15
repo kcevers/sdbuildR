@@ -7,7 +7,7 @@
 unit_test(object, test, expr, label, conditions = list(), active = TRUE)
 }
 \arguments{
-\item{object}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
+\item{object}{Stock-and-flow model, object of class \code{\link{stockflow}}.}
 
 \item{test}{Integer number of the test to modify. Must be a positive integer
 (a warning is issued and the value rounded when a non-integer is
@@ -25,7 +25,7 @@ auto-generated from \code{expr}. If omitted when modifying, the current label
 is kept. Labels must be unique.}
 
 \item{conditions}{A named list of constant or initial stock overrides used
-when evaluating this test. If non-empty, \code{\link[=verify.sdbuildR]{verify.sdbuildR()}} will
+when evaluating this test. If non-empty, \code{\link[=verify.stockflow]{verify.stockflow()}} will
 re-simulate the model with these parameter values before evaluating \code{expr}.}
 
 \item{active}{If \code{FALSE}, the test is defined but skipped during
@@ -74,7 +74,7 @@ an error is thrown if an identical \code{expr} already exists on another test.
 }
 
 \examples{
-sfm <- sdbuildR("SIR") |>
+sfm <- stockflow("SIR") |>
   unit_test(expr = all(susceptible >= 0))
 
 # Run unit tests

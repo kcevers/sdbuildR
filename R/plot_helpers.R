@@ -27,8 +27,8 @@
 
 #' Validate plot parameters
 #'
-#' Validate common parameters used across all plotting functions (plot.simulate_sdbuildR,
-#' plot.sdbuildR, plot.ensemble_sdbuildR).
+#' Validate common parameters used across all plotting functions (plot.simulate_stockflow,
+#' plot.stockflow, plot.ensemble_stockflow).
 #'
 #' @param showlegend Logical, whether to show legend.
 #' @param vars Character vector of variable names to plot, or NULL.
@@ -194,7 +194,7 @@ plotly_theme <- function(font_family = "Times New Roman",
 
 #' Create DiagrammeR/Graphviz theme with consistent styling
 #'
-#' Generate styling parameters for diagram plots (plot.sdbuildR).
+#' Generate styling parameters for diagram plots (plot.stockflow).
 #'
 #' @param font_family Character, font family name.
 #' @param font_size Numeric, base font size in points.

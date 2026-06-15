@@ -3,7 +3,7 @@
 
 # Test stocks with no flows
 test_that("stocks with no flows work correctly", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update(name = "IsolatedStock", type = "stock", eqn = 50)
 
   sfm_r <- sim_settings(sfm, language = "R", stop = 5)
@@ -25,7 +25,7 @@ test_that("stocks with no flows work correctly", {
 
 # Test empty list columns
 test_that("empty list columns handled correctly", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update(name = "S", type = "stock", eqn = 100)
 
   sfm <- prep_stock_change(sfm)
@@ -44,7 +44,7 @@ test_that("empty list columns handled correctly", {
 
 # Test models with circular dependencies
 test_that("models with circular dependencies work in both languages", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update(name = "A", type = "stock", eqn = "10") |>
     update(name = "B", type = "stock", eqn = "20") |>
     update(name = "rate_a", type = "aux", eqn = "B / 10") |>
@@ -62,8 +62,8 @@ test_that("models with circular dependencies work in both languages", {
   sim_j <- simulate(sim_settings(sfm, language = "Julia"))
 
   # Both should complete
-  expect_s3_class(sim_r, "simulate_sdbuildR")
-  expect_s3_class(sim_j, "simulate_sdbuildR")
+  expect_s3_class(sim_r, "simulate_stockflow")
+  expect_s3_class(sim_j, "simulate_stockflow")
   expect_true(sim_r$success)
   expect_true(sim_j$success)
 
@@ -76,7 +76,7 @@ test_that("models with circular dependencies work in both languages", {
 
 # Test stock with only inflows (no outflows)
 test_that("stock with only inflows works correctly", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update(name = "Accumulator", type = "stock", eqn = "0") |>
     update(name = "constant_in", type = "flow", eqn = "5", to = "Accumulator") |>
     sim_settings(stop = 10, dt = 0.1)
@@ -106,7 +106,7 @@ test_that("stock with only inflows works correctly", {
 
 # Test stock with only outflows (no inflows)
 test_that("stock with only outflows works correctly", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update(name = "Draining", type = "stock", eqn = "100") |>
     update(name = "constant_out", type = "flow", eqn = "2", from = "Draining") |>
     sim_settings(stop = 10, dt = 0.1)
@@ -136,7 +136,7 @@ test_that("stock with only outflows works correctly", {
 
 # Test model with many flows to single stock
 test_that("stock with many flows handles list columns correctly", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update(name = "Hub", type = "stock", eqn = "100") |>
     update(name = "in1", type = "flow", eqn = "1", to = "Hub") |>
     update(name = "in2", type = "flow", eqn = "2", to = "Hub") |>
@@ -163,7 +163,7 @@ test_that("stock with many flows handles list columns correctly", {
 
 # Test flow between two stocks (both from and to defined)
 test_that("flow between two stocks works correctly", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update(name = "Source", type = "stock", eqn = "100") |>
     update(name = "Sink", type = "stock", eqn = "0") |>
     update(name = "transfer", type = "flow", eqn = "5", from = "Source", to = "Sink") |>
@@ -195,7 +195,7 @@ test_that("flow between two stocks works correctly", {
 
 # Test model with zero initial stock value
 test_that("stock with zero initial value works correctly", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update(name = "ZeroStart", type = "stock", eqn = "0") |>
     update(name = "inflow", type = "flow", eqn = "1", to = "ZeroStart") |>
     sim_settings(stop = 5)
@@ -211,7 +211,7 @@ test_that("stock with zero initial value works correctly", {
 
 # Test model with very large initial stock value
 test_that("stock with large initial value works correctly", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update(name = "LargeStock", type = "stock", eqn = "1e10") |>
     update(name = "tiny_drain", type = "flow", eqn = "1", from = "LargeStock") |>
     sim_settings(stop = 5)
@@ -227,7 +227,7 @@ test_that("stock with large initial value works correctly", {
 
 # Test stock with negative initial value
 test_that("stock with negative initial value works correctly", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update(name = "Debt", type = "stock", eqn = "-50") |>
     update(name = "payment", type = "flow", eqn = "5", to = "Debt") |>
     sim_settings(stop = 5)
@@ -243,7 +243,7 @@ test_that("stock with negative initial value works correctly", {
 
 # Test model with auxiliary depending on stock
 test_that("auxiliary depending on stock works with prep functions", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update(name = "S", type = "stock", eqn = "100") |>
     update(name = "double_s", type = "aux", eqn = "2 * S") |>
     update(name = "drain", type = "flow", eqn = "double_s * 0.01", from = "S") |>
@@ -263,7 +263,7 @@ test_that("auxiliary depending on stock works with prep functions", {
 
 # Test complex SIR-like model
 test_that("complex model with multiple stocks and flows works", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update(name = "S", type = "stock", eqn = "900") |>
     update(name = "I", type = "stock", eqn = "100") |>
     update(name = "R", type = "stock", eqn = "0") |>

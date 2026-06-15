@@ -488,7 +488,7 @@ clean_language <- function(language) {
 
 #' Clean variable type
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #'
 #' @returns Cleaned string or vector
 #' @noRd
@@ -595,7 +595,7 @@ clean_vars <- function(vars) {
 #' @export
 #' @concept internal
 #' @examples
-#' sfm <- sdbuildR("predator_prey")
+#' sfm <- stockflow("predator_prey")
 #' # As the variable name "predator" is already taken, clean_name() will create
 #' # a unique name
 #' clean_name("predator", as.data.frame(sfm)[["name"]])
@@ -615,18 +615,18 @@ clean_name <- function(new, protected = NULL) {
 }
 
 
-#' Get allowed variable types for sdbuildR model
+#' Get allowed variable types for stockflow model
 #'
 #' @returns Character vector of allowed type names.
 #' @noRd
-.sdbuildR_types <- function() {
+.stockflow_types <- function() {
   c("stock", "flow", "constant", "aux", "lookup", "func")
 }
 
 
 #' Quickly get names of model variables
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #'
 #' @noRd
 #' @returns Vector with names of model variables
@@ -637,7 +637,7 @@ get_model_var <- function(object) {
 
 #' Get func-type variables from model
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #' @returns data.frame of func-type variables
 #' @noRd
 get_funcs <- function(object) {
@@ -647,7 +647,7 @@ get_funcs <- function(object) {
 
 #' Create data frame with stock-and-flow model variables, types, and labels
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #'
 #' @returns data.frame
 #' @noRd
@@ -672,7 +672,7 @@ get_names <- function(object) {
 
 #' Validate vars argument for simulation output selection
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #' @param vars Character vector of variable names to save.
 #'
 #' @returns Cleaned character vector of unique variable names.
@@ -704,7 +704,7 @@ validate_sim_vars <- function(object, vars) {
 #' If `vars` is supplied, it overrides `only_stocks`: stock-only output remains
 #' TRUE only when all requested variables are stocks.
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #' @param only_stocks Logical stock-only output setting.
 #' @param vars Character vector of variable names, or NULL.
 #'
@@ -809,7 +809,7 @@ parse_args <- function(bracket_arg) {
 #' @param arg Vector with arguments in strings
 #' @param func_name String with name of R function
 #' @param default_arg Either NULL or named list of default arguments
-#' @inheritParams convert_builtin_functions_julia
+#' @inheritParams convert_builtin_functions_julia_old
 #'
 #' @noRd
 #' @returns List with named and sorted arguments
@@ -1297,7 +1297,7 @@ get_range_quot <- function(eqn) {
 #' Select the innermost built-in function to convert next
 #'
 #' Shared step of convert_builtin_functions_IM() and
-#' convert_builtin_functions_julia(). Given the detected function matches
+#' convert_builtin_functions_julia_old(). Given the detected function matches
 #' (`idx_df`), it pairs each function with its opening round bracket, adds back the
 #' functions that take no brackets, and returns the single most deeply nested match
 #' (the one to convert first so that nested calls are resolved inside-out).
@@ -1514,13 +1514,13 @@ get_range_all_pairs <- function(eqn, var_names,
 #'
 #' @param vendor Character. The source vendor (e.g., "insightmaker", "stella", "vensim").
 #'
-#' @returns A list with class "sdbuildR_import_context"
+#' @returns A list with class "stockflow_import_context"
 #' @noRd
 #'
 create_import_context <- function(vendor) {
   ctx <- list(
     # The object being built - components added progressively as they become ready
-    object = new_sdbuildR(),
+    object = new_stockflow(),
 
     # Vendor identification
     vendor = vendor,
@@ -1556,7 +1556,7 @@ create_import_context <- function(vendor) {
     meta = list()
   )
 
-  class(ctx) <- c("sdbuildR_import_context", "list")
+  class(ctx) <- c("stockflow_import_context", "list")
   ctx
 }
 
@@ -1751,7 +1751,7 @@ ctx_finalize_variables <- function(ctx) {
     elem_for_build <- elem[names(elem) %in% allowed_col]
 
     # Add variable to object using update()
-    ctx$object <- do.call(update.sdbuildR, c(list(object = ctx$object), elem_for_build))
+    ctx$object <- do.call(update.stockflow, c(list(object = ctx$object), elem_for_build))
   }
 
   ctx
@@ -1791,7 +1791,7 @@ ctx_build_import_metadata <- function(ctx) {
 #'
 ctx_finalize <- function(ctx) {
   ctx$object[["import_metadata"]] <- ctx_build_import_metadata(ctx)
-  ctx$object <- sanitize_sdbuildR(ctx$object)
+  ctx$object <- sanitize_stockflow(ctx$object)
   ctx$object
 }
 

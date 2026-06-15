@@ -18,7 +18,7 @@ Vector of cleaned names
 Clean variable name(s) to create syntactically valid, unique names for use in R and Julia.
 }
 \examples{
-sfm <- sdbuildR("predator_prey")
+sfm <- stockflow("predator_prey")
 # As the variable name "predator" is already taken, clean_name() will create
 # a unique name
 clean_name("predator", as.data.frame(sfm)[["name"]])

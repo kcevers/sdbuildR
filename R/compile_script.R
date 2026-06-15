@@ -60,7 +60,7 @@ decode_unicode <- function(text) {
 #' Calls pre_assemble_components() to ensure the model structure cache is
 #' populated, then generates the runtime-specific run_ode and post sections.
 #'
-#' @inheritParams simulate.sdbuildR
+#' @inheritParams simulate.stockflow
 #' @param filepath_sim Path to output CSV file (Julia only).
 #' @param only_stocks Logical; if TRUE, only stock values are saved.
 #' @param vars Character vector of variable names to save, or NULL.
@@ -142,7 +142,7 @@ compile_times <- function(object, language) {
 
 #' Compile script for global variables
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #'
 #' @returns Func script as character string
 #' @noRd
@@ -329,7 +329,7 @@ compile_static <- function(object, language,
 
 #' Compile script for non-negative stocks
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #' @inheritParams compile
 #'
 #' @noRd
@@ -445,7 +445,7 @@ compile_post <- function(object, filepath_sim = NULL, language, vars = NULL) {
 #' builds the ensemble-specific portions (ensemble_def, ensemble_iter,
 #' run_ode, post) on top.
 #'
-#' @inheritParams simulate.sdbuildR
+#' @inheritParams simulate.stockflow
 #' @inheritParams ensemble
 #' @param ensemble_pars List of ensemble parameters constructed by ensemble().
 #'
@@ -495,7 +495,7 @@ compile_ensemble <- function(object, ensemble_pars, only_stocks = TRUE) {
 
 #' Compile script for ODE function passed to deSolve::ode
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #' @inheritParams compile
 #' @inheritParams order_equations
 #' @inheritParams compile_static

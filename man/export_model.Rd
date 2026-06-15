@@ -36,7 +36,7 @@ export_model(
 )
 }
 \arguments{
-\item{object}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
+\item{object}{Stock-and-flow model, object of class \code{\link{stockflow}}.}
 
 \item{format}{Export format. One of \code{"sdbuildR"}, \code{"deSolve"}, or
 \code{"psychomodels"}.}
@@ -100,7 +100,7 @@ For \code{file = NULL}: a character string containing the exported content.
 For \code{file} specified: invisibly returns the file path.
 }
 \description{
-Export a model of class \code{\link{sdbuildR}} to another format.
+Export a model of class \code{\link{stockflow}} to another format.
 }
 \details{
 \subsection{sdbuildR format (\code{format = "sdbuildR"})}{
@@ -131,7 +131,7 @@ If \code{file} has no \code{.json} extension, one is appended.
 }
 }
 \examples{
-sfm <- sdbuildR("SIR")
+sfm <- stockflow("SIR")
 
 # Get sdbuildR reconstruction code
 cat(export_model(sfm, format = "sdbuildR"))

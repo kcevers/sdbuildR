@@ -139,7 +139,7 @@ sim <- simulate(sfm_plot)
 plot(sim)
 ```
 
-The imported model is a full `sdbuildR` object. You can modify it with
+The imported model is a full `stockflow` object. You can modify it with
 `update()`, add unit tests with `unit_test()`, run ensembles, and export it to
 any supported format.
 
@@ -147,7 +147,7 @@ any supported format.
 
 ## Exporting models
 
-`export_model()` converts an `sdbuildR` object to another format. The currently
+`export_model()` converts an `stockflow` object to another format. The currently
 supported export formats are 'sdbuildR` to generate the build code of the model, `deSolve` to return a complete script for simulating a model with `deSolve`, and `psychomodels`.
 
 Use `file = "path"` to write directly to disk; omit `file` to return the

@@ -143,7 +143,7 @@ find_newly_defined_var <- function(eqn) {
 #'
 #' Find which other variables each variable is dependent on.
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #' @param name Variable names to find dependencies for. Defaults to `NULL` to include all variables.
 #' @param type Variable types to find dependencies for. Must be one or more of 'stock', 'flow', 'constant', 'aux', 'gf', or 'func'. Defaults to `NULL` to include all types.
 #' @param reverse If FALSE, list for each variable X which variables Y it depends on for its equation definition. If TRUE, don't show dependencies but dependents. This reverses the dependencies, such that for each variable X, it lists what other variables Y depend on X.
@@ -153,12 +153,12 @@ find_newly_defined_var <- function(eqn) {
 #' @export
 #'
 #' @examples
-#' sfm <- sdbuildR("SIR")
+#' sfm <- stockflow("SIR")
 #' dependencies(sfm)
 #'
 dependencies <- function(object, name = NULL, type = NULL, reverse = FALSE) {
   name <- .expr_to_char(rlang::enexpr(name))
-  check_sdbuildR(object)
+  check_stockflow(object)
 
   # Check for mutually exclusive parameters
   if (!is.null(name) && !is.null(type)) {
@@ -260,7 +260,7 @@ reverse_dep <- function(dep) {
 #' Find dependencies in equation (only for internal use)
 #'
 #' @param eqns String with equation to find dependencies in; defaults to NULL to find dependencies of all variables.
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #' @param only_var If TRUE, only look for variable names, not functions.
 #' @param only_model_var If TRUE, only look for dependencies on other model variables.
 #'
@@ -340,7 +340,7 @@ reverse_dep <- function(dep) {
 
 #' Order equations of static and dynamic part of stock-and-flow model
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #' @param print_msg If TRUE, print message if the ordering fails; defaults to TRUE.
 #'
 #' @returns List with order of static and dynamic variables

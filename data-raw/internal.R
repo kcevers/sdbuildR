@@ -1,14 +1,14 @@
-# Use specific GitHub release version of StockFlowRSupport (rather than main/ or dev/)
+# Use specific GitHub release version of SystemDynamicsBuildR (rather than main/ or dev/)
 use_github_release <- TRUE
 
 # Names of variables and functions
 P <- list(
   debug = FALSE,
   insightmaker_version = 38, # version sdbuildR was made with
-  # jl_pkg_name = "SystemDynamicsBuildR",
+  jl_pkg_name = "SystemDynamicsBuildR",
   # jl_pkg_version = "0.2.5", # required version SystemDynamicsBuildR
-  jl_pkg_name = "StockFlowRSupport",
-  jl_pkg_version_github_release = "0.0.6", # required version StockFlowRSupport
+  # jl_pkg_name = "StockFlowRSupport",
+  jl_pkg_version_github_release = "0.3.0", # required version SystemDynamicsBuildR
   model_setup_name = "model_setup",
   func_name = "func",
   initial_value_name = "init",
@@ -62,9 +62,6 @@ P <- list(
   rootfun_name = "rootfun",
   eventfun_name = "eventfun",
   nonneg_stock_name = "nonneg_stock",
-  # convert_u_func = "convert_u",
-  # sdbuildR_units = "sdbuildR_units",
-  # MyCustomUnits = "MyCustomUnits",
   saveat_func = "saveat_func",
   init_sdbuildR = "init_sdbuildR"
 )
@@ -658,7 +655,6 @@ println("\\nSetup complete!")
   )
 
   # Write scripts
-  # filepath <- file.path(system.file(package = "sdbuildR"), "inst", "setup.jl")
   filepath <- system.file("setup.jl", package = "sdbuildR")
   write_script(script_setup, filepath)
 
@@ -699,7 +695,7 @@ create_julia_project_toml_init <- function(use_github_release = TRUE) {
     deps_names <- character(0)
   }
 
-  # Insert dependency on StockFlowRSupport.jl
+  # Insert dependency on SystemDynamicsBuildR.jl
   lines <- append(lines, paste0(P[["jl_pkg_name"]], " = \"", uuid, "\""), after = deps_start)
   deps_names <- c(deps_names, P[["jl_pkg_name"]])
 
@@ -714,7 +710,6 @@ create_julia_project_toml_init <- function(use_github_release = TRUE) {
   script_project_toml <- paste(lines, collapse = "\n")
 
   # Write script
-  # filepath <- file.path(system.file(package = "sdbuildR"), "inst", "Project.toml")
   filepath <- system.file("Project.toml", package = "sdbuildR")
   write_script(script_project_toml, filepath)
 
@@ -764,16 +759,6 @@ fetch_jl_functions <- function(use_github_release = TRUE) {
   exported_functions
 }
 
-
-# .julia_func_names <- function() {
-#   c(
-#     "is_function_or_interp", "itp", "make_ramp", "make_step", "make_pulse", "make_seasonal", "round_IM", "logit", "expit", "logistic", "nonnegative", "rbool", "rdist", "indexof", "contains_IM", "round_", "\u2295",
-#     # "convert_u",
-#     "saveat_func", "clean_df", "clean_constants", "clean_init", "transform_intermediaries", "generate_param_combinations", "ensemble_to_df", "ensemble_to_df_threaded", "ensemble_summ", "ensemble_summ_threaded"
-#   )
-# }
-
-
 ##### Create Julia inst/init.jl, inst/setup_jl, inst/Project.toml #####
 create_julia_setup()
 create_julia_project_toml_init()
@@ -821,8 +806,6 @@ protected_names <- c(
     "timestep_name", "saveat_name", "ensemble_iter",
     "ode_func_name", "callback_func_name", "callback_name", "intermediaries",
     "rootfun_name", "eventfun_name",
-    #  "sdbuildR_units",
-    # "MyCustomUnits",
     "init_sdbuildR"
   )]))
 ) |> unique()

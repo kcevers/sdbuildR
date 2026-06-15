@@ -15,7 +15,7 @@ ensemble(
 )
 }
 \arguments{
-\item{object}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
+\item{object}{Stock-and-flow model, object of class \code{\link{stockflow}}.}
 
 \item{n}{Number of simulations to run in the ensemble. When conditions is
 specified, n defines the number of simulations to run per condition. If
@@ -44,7 +44,7 @@ generate all possible combinations of parameters. Defaults to \code{TRUE}.}
 \item{...}{Optional arguments passed to \code{\link[=sim_settings]{sim_settings()}}; these can be used to override the simulation specifications set in the model object.}
 }
 \value{
-Object of class \code{\link[=ensemble]{ensemble_sdbuildR}}, which is a list
+Object of class \code{\link[=ensemble]{ensemble_stockflow}}, which is a list
 containing:
 \describe{
 \item{success}{If \code{TRUE}, simulation was successful. If \code{FALSE}, simulation
@@ -101,7 +101,7 @@ other model elements (see examples).
 \examples{
 # Ensemble simulation in R (no parallelization)
 # Load example
-sfm <- sdbuildR("predator_prey")
+sfm <- stockflow("predator_prey")
 
 # Set random initial conditions
 sfm <- update(sfm, c(predator, prey),
@@ -169,7 +169,7 @@ if (requireNamespace("future", quietly = TRUE) &&
 \dontshow{\}) # examplesIf}
 }
 \seealso{
-\code{\link[=update]{update()}}, \code{\link[=sdbuildR]{sdbuildR()}}, \code{\link[=sim_settings]{sim_settings()}}, \code{\link[=use_julia]{use_julia()}},
+\code{\link[=update]{update()}}, \code{\link[=stockflow]{stockflow()}}, \code{\link[=sim_settings]{sim_settings()}}, \code{\link[=use_julia]{use_julia()}},
 \code{\link[future:plan]{future::plan()}}
 }
 \concept{ensemble}

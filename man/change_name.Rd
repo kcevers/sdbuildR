@@ -7,20 +7,20 @@
 change_name(object, name, new_name)
 }
 \arguments{
-\item{object}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
+\item{object}{Stock-and-flow model, object of class \code{\link{stockflow}}.}
 
 \item{name}{Variable name. Accepts a bare symbol (e.g., \code{population}), a string (\code{"population"}), or a vector via \code{c()} (e.g., \code{c(a, b)} or \code{c("a", "b")}). Use \verb{!!} to inject from a variable.}
 
 \item{new_name}{New name. Character vector of the same length as \code{name}. Must be unique across all existing variables.}
 }
 \value{
-A stock-and-flow model object of class \code{\link{sdbuildR}} with the name changed throughout the model.
+A stock-and-flow model object of class \code{\link{stockflow}} with the name changed throughout the model.
 }
 \description{
 Change the name of a variable throughout the model. This updates the data frame and all references in equations, flow connections, and labels.
 }
 \examples{
-sfm <- sdbuildR("SIR")
+sfm <- stockflow("SIR")
 sfm <- change_name(sfm, c(susceptible, infected, recovered),
   new_name = c(S, I, R)
 )

@@ -4,7 +4,7 @@
 #' simulated, such as the integration method (i.e., solver), start and stop time,
 #' and timestep. Modify these specifications for an existing stock-and-flow model.
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #' @param method Integration method. Defaults to `"euler"`.
 #' @param start Start time of simulation. Defaults to `0`.
 #' @param stop End time of simulation. Defaults to `100`.
@@ -41,13 +41,13 @@
 #' @param save_sims If `TRUE`, individual simulations are retained in
 #'   [ensemble()] output. Defaults to `FALSE`.
 #'
-#' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR]
+#' @returns A stock-and-flow model object of class [`stockflow`][stockflow]
 #' @concept simulate
 #' @seealso [sim_methods()]
 #' @export
 #'
 #' @examples
-#' sfm <- sdbuildR("predator_prey") |>
+#' sfm <- stockflow("predator_prey") |>
 #'   sim_settings(start = 0, stop = 50, dt = 0.1)
 #' sim <- simulate(sfm)
 #' plot(sim)
@@ -92,7 +92,7 @@ sim_settings <- function(object,
   if (missing(object)) {
     missing_arg("object")
   }
-  check_sdbuildR(object)
+  check_stockflow(object)
 
 
   # --- Time argument validation ---
@@ -266,7 +266,7 @@ sim_settings <- function(object,
     object <- invalidate_assemble(object, "all")
   }
 
-  object <- sanitize_sdbuildR(object)
+  object <- sanitize_stockflow(object)
 
   # --- save_sims handling (meta-setting, does NOT invalidate cache) ---
   if (!missing(save_sims)) {
@@ -365,7 +365,7 @@ sim_settings <- function(object,
 #' Returns a character scalar (interval) or character vector (explicit times).
 #'
 #' @param save_at Numeric scalar or vector supplied by the user.
-#' @param object An `sdbuildR` model object (for fallback effective values).
+#' @param object A `stockflow` model object (for fallback effective values).
 #' @param time_vals Named list of validated time args (start/stop/dt), may be empty.
 #' @noRd
 .validate_save_at <- function(save_at, object, time_vals) {

@@ -5,7 +5,7 @@
 #' `install_julia_env()` will:
 #' * Start a Julia session
 #' * Activate a Julia environment using sdbuildR's Project.toml
-#' * Install StockFlowRSupport.jl from GitHub (https://github.com/kcevers/StockFlowRSupport.jl)
+#' * Install SystemDynamicsBuildR.jl from GitHub (https://github.com/kcevers/SystemDynamicsBuildR.jl)
 #' * Install all other required Julia packages
 #' * Create Manifest.toml
 #' * Precompile packages for faster subsequent loading
@@ -13,7 +13,7 @@
 #'
 #' Note that this may take 10-25 minutes the first time as Julia downloads and compiles packages.
 #'
-#' @param remove If `TRUE`, remove Julia environment for sdbuildR. This will delete the Manifest.toml file, as well as the StockFlowRSupport.jl package. All other Julia packages remain untouched.
+#' @param remove If `TRUE`, remove Julia environment for sdbuildR. This will delete the Manifest.toml file, as well as the SystemDynamicsBuildR.jl package. All other Julia packages remain untouched.
 #'
 #' @returns Invisibly returns `NULL` after instantiating the Julia environment.
 #' @export
@@ -56,7 +56,7 @@ install_julia_env <- function(remove = FALSE) {
     julia_cmd <- sprintf("using Pkg; Pkg.activate(\"%s\"; io=devnull)", jl_path(env_path))
     julia_eval(julia_cmd)
 
-    # Delete StockFlowRSupport.jl, but only if it is installed, to avoid unnecessary warnings
+    # Delete SystemDynamicsBuildR.jl, but only if it is installed, to avoid unnecessary warnings
     status <- is_julia_env_setup(force = TRUE, error = FALSE)
     if (!isTRUE(status)) {
       cli::cli_inform(c("i" = paste0(P[["jl_pkg_name"]], ".jl not found in Julia environment; no need to remove.")))
@@ -86,18 +86,6 @@ install_julia_env <- function(remove = FALSE) {
     manifest_file <- system.file("Manifest.toml", package = "sdbuildR")
     remove_files(manifest_file)
 
-    # Remove SystemDynamicsBuildR.jl (earlier sdbuildR package) if it is installed, to ensure clean installation of the required version.
-    x <- sprintf(
-      'using Pkg; if haskey(Pkg.project().dependencies, "%s") Pkg.rm("%s"); Pkg.gc() end',
-      "SystemDynamicsBuildR", "SystemDynamicsBuildR"
-    )
-    tryCatch(
-      julia_eval(x),
-      error = function(e) {
-        cli::cli_inform(c("!" = paste0("Could not remove SystemDynamicsBuildR.jl (older version of StockFlowRSupport.jl): ", e$message)))
-      }
-    )
-
     # Run the setup script
     setup_script <- system.file("setup.jl", package = "sdbuildR")
     julia_eval(paste0('include("', jl_path(setup_script), '")'))
@@ -118,7 +106,7 @@ install_julia_env <- function(remove = FALSE) {
 #'
 #' Start Julia session and activate Julia environment to simulate stock-and-flow models. To do so, Julia needs to be installed (see [https://julialang.org/install/](https://julialang.org/install/)) and findable from within R. See [this vignette](https://kcevers.github.io/sdbuildR/articles/julia-setup.html) for guidance. In addition, the Julia environment specifically for sdbuildR needs to have been instantiated. This can be set up with [install_julia_env()].
 #'
-#' In every R session, [use_julia()] needs to be run once (which is done automatically in [`simulate()`][simulate.sdbuildR]), which can take around 30-60 seconds.
+#' In every R session, [use_julia()] needs to be run once (which is done automatically in [`simulate()`][simulate.stockflow]), which can take around 30-60 seconds.
 #'
 #' @param stop If `TRUE`, stop active Julia session. Defaults to `FALSE`.
 #' @param restart If `TRUE`, force Julia session to restart.
@@ -324,7 +312,6 @@ is_julia_env_setup <- function(force = FALSE, error = TRUE) {
   # Check sdbuildR environment files
   project_file <- system.file("Project.toml", package = "sdbuildR")
   manifest_file <- system.file("Manifest.toml", package = "sdbuildR")
-  # manifest_file <- file.path(dirname(project_file), "Manifest.toml")
 
   env_exists <- nzchar(project_file)
   env_instantiated <- file.exists(manifest_file)

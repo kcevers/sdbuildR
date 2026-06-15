@@ -10,7 +10,7 @@
 #' @param n_conditions Integer; number of conditions.
 #' @param total_sims Integer; total simulations across all conditions.
 #'
-#' @returns Object of class [`ensemble_sdbuildR`][ensemble()]
+#' @returns Object of class [`ensemble_stockflow`][ensemble()]
 #' @noRd
 ensemble_julia <- function(object, n, save_sims, conditions, cross,
                            quantiles, only_stocks, vars = NULL, verbose,
@@ -150,7 +150,7 @@ ensemble_julia <- function(object, n, save_sims, conditions, cross,
       }
       summary_df <- filter_sim_df_vars(summary_df, vars)
 
-      new_ensemble_sdbuildR(
+      new_ensemble_stockflow(
         success = TRUE,
         df = df,
         summary = summary_df,
@@ -173,7 +173,7 @@ ensemble_julia <- function(object, n, save_sims, conditions, cross,
         "i" = "An error occurred while running the Julia script.",
         ">" = "Error: {e[['message']]}"
       ))
-      new_ensemble_sdbuildR(
+      new_ensemble_stockflow(
         success = FALSE,
         error_message = e[["message"]],
         script = script,

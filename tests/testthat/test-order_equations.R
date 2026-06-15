@@ -1,7 +1,7 @@
 ## Tests for dependencies and .dependencies
 
 test_that("dependencies maps basic cross-type dependencies", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm <- update(sfm, "c1", type = "constant", eqn = "5")
   sfm <- update(sfm, "S", type = "stock", eqn = "c1")
   sfm <- update(sfm, "A", type = "aux", eqn = "S + c1")
@@ -14,7 +14,7 @@ test_that("dependencies maps basic cross-type dependencies", {
 })
 
 test_that("dependencies includes gf source dependencies", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm <- update(sfm, "S", type = "stock", eqn = "10")
   # Graphical function with source=S
   sfm <- update(sfm, "G", type = "lookup", source = "S", xpts = c(0, 10), ypts = c(0, 100))
@@ -24,7 +24,7 @@ test_that("dependencies includes gf source dependencies", {
 })
 
 test_that(".dependencies includes func names with only_model_var=TRUE", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     custom_func("mfun", "function(x){ x }") |>
     update("x", "constant", eqn = "1") |>
     update("A", "aux", eqn = "mfun(x)")
@@ -35,7 +35,7 @@ test_that(".dependencies includes func names with only_model_var=TRUE", {
 })
 
 test_that(".dependencies extracts model variable dependencies", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm1 <- update(sfm, "a", type = "constant", eqn = "5")
   sfm2 <- update(sfm1, "b", type = "constant", eqn = "a * 2")
   sfm3 <- update(sfm2, "c", type = "constant", eqn = "b + 1")
@@ -46,7 +46,7 @@ test_that(".dependencies extracts model variable dependencies", {
 })
 
 test_that(".dependencies ignores non-model functions when only_model_var", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm1 <- update(sfm, "x", type = "constant", eqn = "10")
   sfm2 <- update(sfm1, "y", type = "constant", eqn = "x")
 
@@ -55,7 +55,7 @@ test_that(".dependencies ignores non-model functions when only_model_var", {
 })
 
 test_that(".dependencies returns all names when only_model_var=FALSE and only_var=FALSE", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm1 <- update(sfm, "x", type = "constant", eqn = "10")
   sfm2 <- update(sfm1, "y", type = "constant", eqn = "x")
 
@@ -65,7 +65,7 @@ test_that(".dependencies returns all names when only_model_var=FALSE and only_va
 })
 
 test_that(".dependencies ignores names inside quotes", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update("Stock1", "stock", eqn = "10") |>
     update("A", "aux", eqn = "paste('Stock1')")
 
@@ -75,7 +75,7 @@ test_that(".dependencies ignores names inside quotes", {
 
 
 test_that(".dependencies flag behavior: only_model_var=TRUE vs FALSE", {
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update("x", "constant", eqn = "1")
 
   # Model-only vars should exclude non-model functions
@@ -91,7 +91,7 @@ test_that(".dependencies flag behavior: only_model_var=TRUE vs FALSE", {
 })
 
 test_that("dependencies exported API returns full mapping and reverse mapping", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm <- update(sfm, "c1", type = "constant", eqn = "5")
   sfm <- update(sfm, "S", type = "stock", eqn = "c1")
   sfm <- update(sfm, "A", type = "aux", eqn = "S + c1")
@@ -108,7 +108,7 @@ test_that("dependencies exported API returns full mapping and reverse mapping", 
 
 test_that(".dependencies self-reference behavior matches implementation", {
   # Current implementation does not remove self-references from eqn
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update("A", "aux", eqn = "A + 1")
 
   deps <- .dependencies(sfm, only_model_var = TRUE)
@@ -116,7 +116,7 @@ test_that(".dependencies self-reference behavior matches implementation", {
 })
 
 test_that(".dependencies respects naming in input eqns", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   deps <- .dependencies(sfm, eqns = c(foo = "bar + baz"), only_model_var = FALSE)
   expect_true("foo" %in% names(deps))
 })
@@ -125,7 +125,7 @@ test_that(".dependencies respects naming in input eqns", {
 # order_equations() tests -------------------------------------------------
 
 test_that("order_equations() handles simple linear dependencies", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm1 <- update(sfm, "a", type = "constant", eqn = "5")
   sfm2 <- update(sfm1, "b", type = "constant", eqn = "a * 2")
   sfm3 <- update(sfm2, "c", type = "constant", eqn = "b + 1")
@@ -139,7 +139,7 @@ test_that("order_equations() handles simple linear dependencies", {
 })
 
 test_that("order_equations() handles independent variables", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm1 <- update(sfm, "x", type = "constant", eqn = "10")
   sfm2 <- update(sfm1, "y", type = "constant", eqn = "20")
   sfm3 <- update(sfm2, "z", type = "constant", eqn = "30")
@@ -153,7 +153,7 @@ test_that("order_equations() handles independent variables", {
 })
 
 test_that("order_equations() detects circular dependencies", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm <- update(sfm, "a", type = "constant", eqn = "b")
   suppressWarnings(sfm <- update(sfm, "b", type = "constant", eqn = "a") |>
     update("Stock1", type = "stock") |> update("Flow1", type = "flow", from = "Stock1", eqn = "0"))
@@ -164,7 +164,7 @@ test_that("order_equations() detects circular dependencies", {
 })
 
 test_that("order_equations() handles auxiliaries depending on stocks", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm1 <- update(sfm, "Stock1", type = "stock", eqn = "100")
   sfm2 <- update(sfm1, "aux1", type = "aux", eqn = "Stock1 * 0.5")
   sfm3 <- update(sfm2, "Flow1", type = "flow", from = "Stock1", eqn = "aux1")
@@ -175,7 +175,7 @@ test_that("order_equations() handles auxiliaries depending on stocks", {
 })
 
 test_that("order_equations() returns correct structure", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm1 <- update(sfm, "Stock1", type = "stock", eqn = "100")
   sfm2 <- update(sfm1, "Flow1", type = "flow", from = "Stock1", eqn = "1")
 
@@ -189,7 +189,7 @@ test_that("order_equations() returns correct structure", {
 })
 
 test_that("order_equations() handles complex dependency chains", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm1 <- update(sfm, "const1", type = "constant", eqn = "10")
   sfm2 <- update(sfm1, "const2", type = "constant", eqn = "const1 * 2")
   sfm3 <- update(sfm2, "Stock1", type = "stock", eqn = "const2")
@@ -203,7 +203,7 @@ test_that("order_equations() handles complex dependency chains", {
 })
 
 test_that("order_equations() handles empty model gracefully", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   result <- order_equations(sfm, print_msg = TRUE)
 
   expect_type(result, "list")
@@ -219,7 +219,7 @@ test_that("order_equations() handles empty model gracefully", {
 })
 
 test_that("order_equations() warns for circular dependencies in static part", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   # Create circular aux dependencies
   sfm <- update(sfm, "constant1", type = "constant", eqn = "constant2")
   suppressWarnings(sfm <- update(sfm, "constant2", type = "constant", eqn = "constant1"))
@@ -238,7 +238,7 @@ test_that("order_equations() warns for circular dependencies in static part", {
 })
 
 test_that("order_equations() warns for circular dependencies in aux", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm1 <- update(sfm, "aux1", type = "aux", eqn = "aux2")
   suppressWarnings(sfm2 <- update(sfm1, "aux2", type = "aux", eqn = "aux1"))
 
@@ -261,28 +261,28 @@ test_that("order_equations() warns for circular dependencies in aux", {
 # ==============================================================================
 
 test_that("dependencies() accepts bare symbol for name", {
-  sfm <- sdbuildR("SIR")
+  sfm <- stockflow("SIR")
   deps <- dependencies(sfm, name = susceptible)
   expect_true("susceptible" %in% names(deps))
   expect_equal(length(deps), 1L)
 })
 
 test_that("dependencies() accepts c() of bare symbols for name", {
-  sfm <- sdbuildR("SIR")
+  sfm <- stockflow("SIR")
   deps <- dependencies(sfm, name = c(susceptible, infected))
   expect_equal(length(deps), 2L)
   expect_true(all(c("susceptible", "infected") %in% names(deps)))
 })
 
 test_that("dependencies() accepts string for type", {
-  sfm <- sdbuildR("SIR")
+  sfm <- stockflow("SIR")
   deps <- dependencies(sfm, type = "stock")
   stock_names <- as.data.frame(sfm, type = "stock")[["name"]]
   expect_true(all(names(deps) %in% stock_names))
 })
 
 test_that("dependencies() backward compat: strings still work for name", {
-  sfm <- sdbuildR("SIR")
+  sfm <- stockflow("SIR")
   deps <- dependencies(sfm, name = "susceptible")
   expect_equal(length(deps), 1L)
   expect_true("susceptible" %in% names(deps))

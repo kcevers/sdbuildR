@@ -71,12 +71,12 @@ get_dynamic_equations <- function(object) {
 #' Unified function for both R and Julia. Uses lang_adapter() to dispatch
 #' language-specific formatting.
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #' @param modified_names Character vector of variable names that were modified.
 #'   If NULL (default), all variables are processed. If provided, only the
 #'   specified variables are updated for incremental performance.
 #'
-#' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR]
+#' @returns A stock-and-flow model object of class [`stockflow`][stockflow]
 #' @noRd
 #'
 prep_equations_variables <- function(object, modified_names = NULL) {
@@ -229,12 +229,12 @@ prep_equations_variables <- function(object, modified_names = NULL) {
 #' Unified function for both R and Julia. Uses lang_adapter() to dispatch
 #' language-specific formatting of stock change names and equations.
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #' @param modified_names Character vector of variable names that were modified.
 #'   If `NULL` (default), all stocks are processed. If provided, only the
 #'   specified stocks are updated for incremental performance.
 #'
-#' @returns A stock-and-flow model object of class [`sdbuildR`][sdbuildR]
+#' @returns A stock-and-flow model object of class [`stockflow`][stockflow]
 #' @noRd
 #'
 prep_stock_change <- function(object, modified_names = NULL) {
@@ -405,7 +405,7 @@ join_script_sections <- function(sections) {
 #' The base assembly cache owns language-neutral section order. Runtime-specific
 #' callers provide the ODE, solve, and post-processing sections.
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #' @param ode Compiled ODE section.
 #' @param run_ode Compiled solve section.
 #' @param post Compiled post-processing section.
@@ -513,7 +513,7 @@ r_saveat_script <- function(ss) {
 
 #' Build Julia output-selection arguments for clean_df()
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #' @param vars Character vector of requested output variables, or NULL.
 #'
 #' @returns List of Julia code snippets for selected stocks, intermediaries, and
@@ -658,7 +658,7 @@ gather_stock_changes <- function(object, assign_op, language) {
 #' Called by compile() and compile_ensemble() to ensure the base cache is
 #' populated before runtime-specific script generation begins.
 #'
-#' @param object A stock-and-flow model object of class [`sdbuildR`][sdbuildR]
+#' @param object A stock-and-flow model object of class [`stockflow`][stockflow]
 #'
 #' @returns A stock-and-flow model object with populated object$assemble cache
 #' @noRd
@@ -751,14 +751,14 @@ pre_assemble_components <- function(object) {
 #' Mutators (`update()`, `sim_settings()`) call this so the assembly cache is
 #' ready immediately. Because the cache is now hash-gated, the codegen can be
 #' safely deferred to the next codegen consumer (`compile()`/`simulate()`):
-#' set `options(sdbuildR.defer_codegen = TRUE)` to skip the eager pass and only
-#' assemble on demand. The default preserves the original eager behaviour.
+#' set `SDBUILDR_DEFER_CODEGEN=true` to skip the eager pass and only assemble
+#' on demand. The default preserves the original eager behaviour.
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #' @returns The model, with components pre-assembled unless deferral is enabled.
 #' @noRd
 maybe_pre_assemble <- function(object) {
-  if (isTRUE(getOption("sdbuildR.defer_codegen", FALSE))) {
+  if (identical(tolower(Sys.getenv("SDBUILDR_DEFER_CODEGEN", unset = "")), "true")) {
     return(object)
   }
   pre_assemble_components(object)

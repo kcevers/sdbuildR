@@ -1,6 +1,6 @@
 #' Simulate stock-and-flow model in Julia
 #'
-#' @inheritParams simulate.sdbuildR
+#' @inheritParams simulate.stockflow
 #'
 #' @returns List with variables created in the simulation script
 #' @noRd
@@ -63,7 +63,7 @@ simulate_julia <- function(object,
       df <- read_sim_csv(filepath_sim)
       df <- filter_sim_df_vars(df, vars)
 
-      new_simulate_sdbuildR(
+      new_simulate_stockflow(
         success = TRUE,
         object = object, # Return object with cache
         df = df,
@@ -75,7 +75,7 @@ simulate_julia <- function(object,
     },
     error = function(e) {
       warning("\nAn error occurred while running the Julia script.")
-      new_simulate_sdbuildR(
+      new_simulate_stockflow(
         success = FALSE,
         error_message = e[["message"]],
         script = script,
@@ -92,7 +92,7 @@ simulate_julia <- function(object,
 #'
 #' Check whether any variable names are used as functions with keyword arguments in the Julia translated equation
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #' @param var_names Character vector; variable names in the model.
 #'
 #' @returns Returns `NULL`, called for side effects.
@@ -174,7 +174,7 @@ check_no_keyword_arg <- function(object, var_names) {
 
 #' Prepare stock-and-flow model for ensemble conditions
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #' @inheritParams compile
 #'
 #' @returns List with updated stock-and-flow model and updated ensemble parameters
@@ -203,7 +203,7 @@ prep_ensemble_conditions <- function(object, ensemble_pars) {
 
 #' Prepare intermediary variables
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #' @inheritParams compile_static
 #'
 #' @returns List of intermediary variables and values

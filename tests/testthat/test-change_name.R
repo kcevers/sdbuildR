@@ -1,7 +1,5 @@
 test_that("change_name updates dependencies correctly", {
-  withr::local_options(list(sdbuildR.defer_codegen = FALSE))
-
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update("a", "constant", eqn = 1) |>
     update("b", "aux", eqn = "a * 2") |>
     sim_settings()
@@ -29,9 +27,7 @@ test_that("change_name updates dependencies correctly", {
 })
 
 test_that("change_name clears and rebuilds cache", {
-  withr::local_options(list(sdbuildR.defer_codegen = FALSE))
-
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update("x", "stock", eqn = 10) |>
     update("flow_in", "flow", eqn = "rate", to = "x") |>
     update("rate", "constant", eqn = 0.5) |>
@@ -54,9 +50,7 @@ test_that("change_name clears and rebuilds cache", {
 })
 
 test_that("change_name updates flow to/from references in dependencies", {
-  withr::local_options(list(sdbuildR.defer_codegen = FALSE))
-
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update("population", "stock", eqn = 100) |>
     update("births", "flow", eqn = "birth_rate * population", to = "population") |>
     update("birth_rate", "constant", eqn = 0.1) |>
@@ -80,9 +74,7 @@ test_that("change_name updates flow to/from references in dependencies", {
 })
 
 test_that("change_name updates graphical function source", {
-  withr::local_options(list(sdbuildR.defer_codegen = FALSE))
-
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update("input_var", "aux", eqn = "Time") |>
     update("lookup1", "lookup",
       xpts = c(0, 1, 2),
@@ -106,12 +98,12 @@ test_that("change_name updates graphical function source", {
 })
 
 test_that("change_name() errors when model object passed as name", {
-  sfm <- sdbuildR() |> update("A", type = "constant")
+  sfm <- stockflow() |> update("A", type = "constant")
   expect_error(change_name(sfm, sfm, new_name = "B"), "passed where a variable name")
 })
 
 test_that("change_name() errors on missing source variable (symbol and string)", {
-  sfm <- sdbuildR()
+  sfm <- stockflow()
 
   # Bare symbol missing
   expect_error(
@@ -127,7 +119,7 @@ test_that("change_name() errors on missing source variable (symbol and string)",
 })
 
 test_that("change_name() errors when one of multiple names is missing and leaves model unchanged", {
-  sfm <- sdbuildR() |> update("S", type = "stock")
+  sfm <- stockflow() |> update("S", type = "stock")
 
   expect_error(
     sfm <- change_name(sfm, c("S", "missing_var"), new_name = c("Stock", "M")),

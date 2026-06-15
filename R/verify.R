@@ -18,31 +18,31 @@ verify <- function(object, ...) {
 #' Run all active unit tests defined on a stock-and-flow model. Use
 #' [unit_test()] to define tests; use [unit_tests()] to display them.
 #'
-#' Calling `verify()` on a `sdbuildR` model will first simulate the model, then
+#' Calling `verify()` on a `stockflow` model will first simulate the model, then
 #' run all tests — including those that require re-simulation under alternative
 #' [conditions][unit_test()]. Simulations are always retained in the returned
-#' object so that [plot.verify_sdbuildR()] works without any extra arguments.
+#' object so that [plot.verify_stockflow()] works without any extra arguments.
 #'
 #' For repeated-run robustness testing use [ensemble()] instead.
 #'
-#' @param object An [`sdbuildR`][sdbuildR] object.
+#' @param object An [`stockflow`][stockflow] object.
 #' @param test Integer vector of test number(s) to run (numbers-based, as shown by [unit_tests()]).
 #'   Defaults to `NULL` (run all tests).
 #' @param ... Additional arguments passed to [sim_settings()] (e.g., `seed`,
 #'   `dt`).
 #'
-#' @returns An object of class `verify_sdbuildR`, returned invisibly. Use
+#' @returns An object of class `verify_stockflow`, returned invisibly. Use
 #'   [as.data.frame()] to extract results as a data frame and [plot()] to
 #'   visualize the simulations used. The object contains:
 #'   \describe{
 #'     \item{results}{List of test result entries, one per test (including inactive
 #'       tests, which appear with `status = "skip"`). Each entry has `label`,
 #'       `expr_str`, `conditions`, `status`, `error_type`, `message`, and `outcome`.}
-#'     \item{object}{The `sdbuildR` model the tests were run against.}
-#'     \item{sims}{Nested list of `simulate_sdbuildR` objects used internally by
-#'       [plot.verify_sdbuildR()]. Always present (never `NULL`).}
+#'     \item{object}{The `stockflow` model the tests were run against.}
+#'     \item{sims}{Nested list of `simulate_stockflow` objects used internally by
+#'       [plot.verify_stockflow()]. Always present (never `NULL`).}
 #'     \item{j}{Named integer vector mapping each test label to its condition index.
-#'       Used internally by [plot.verify_sdbuildR()].}
+#'       Used internally by [plot.verify_stockflow()].}
 #'     \item{n}{Number of simulations run per condition.}
 #'     \item{n_conditions}{Number of unique simulation conditions.}
 #'     \item{test_indices}{Integer vector of the original 1-based test numbers that
@@ -52,12 +52,12 @@ verify <- function(object, ...) {
 #'
 #' @export
 #' @concept unitTest
-#' @method verify sdbuildR
-#' @seealso [unit_test()], [unit_tests()], [simulate.sdbuildR()],
-#'   [as.data.frame.verify_sdbuildR()], [plot.verify_sdbuildR()]
+#' @method verify stockflow
+#' @seealso [unit_test()], [unit_tests()], [simulate.stockflow()],
+#'   [as.data.frame.verify_stockflow()], [plot.verify_stockflow()]
 #'
 #' @examples
-#' sfm <- sdbuildR("SIR") |>
+#' sfm <- stockflow("SIR") |>
 #'   unit_test(expr = all(susceptible >= 0)) |>
 #'   unit_test(
 #'     label = "recovered increases over time",
@@ -65,8 +65,8 @@ verify <- function(object, ...) {
 #'   )
 #'
 #' verify(sfm)
-verify.sdbuildR <- function(object, test = NULL, ...) {
-  check_sdbuildR(object)
+verify.stockflow <- function(object, test = NULL, ...) {
+  check_stockflow(object)
 
   # Override sim_settings with any arguments passed via ...
   varargs <- list(...)
@@ -82,7 +82,7 @@ verify.sdbuildR <- function(object, test = NULL, ...) {
       "x" = "No unit tests defined.",
       ">" = "Add tests with {.fn unit_test}."
     ))
-    return(invisible(new_verify_sdbuildR(
+    return(invisible(new_verify_stockflow(
       success = FALSE,
       error_message = "No unit tests defined.",
       results = list(), object = object
@@ -184,7 +184,7 @@ verify.sdbuildR <- function(object, test = NULL, ...) {
 
   sims <- sim_cache
 
-  result_obj <- new_verify_sdbuildR(
+  result_obj <- new_verify_stockflow(
     success = TRUE,
     results = results, object = object,
     sims = sims, condition = condition,
@@ -196,11 +196,11 @@ verify.sdbuildR <- function(object, test = NULL, ...) {
 }
 
 
-check_verify_sdbuildR <- function(x) {
-  if (!inherits(x, "verify_sdbuildR")) {
+check_verify_stockflow <- function(x) {
+  if (!inherits(x, "verify_stockflow")) {
     cli::cli_abort(c(
       "x" = "Invalid object class.",
-      "i" = "This is not an object of class {.cls verify_sdbuildR}.",
+      "i" = "This is not an object of class {.cls verify_stockflow}.",
       ">" = "Generate a unit test run with {.fn verify}."
     ))
   }
@@ -251,7 +251,7 @@ check_verify_sdbuildR <- function(x) {
 #' or modified label would create a duplicate. Expressions must also be unique;
 #' an error is thrown if an identical `expr` already exists on another test.
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #' @param test Integer number of the test to modify. Must be a positive integer
 #'   (a warning is issued and the value rounded when a non-integer is
 #'   supplied). When `test` exceeds the current number of tests a warning is
@@ -265,7 +265,7 @@ check_verify_sdbuildR <- function(x) {
 #'   auto-generated from `expr`. If omitted when modifying, the current label
 #'   is kept. Labels must be unique.
 #' @param conditions A named list of constant or initial stock overrides used
-#'   when evaluating this test. If non-empty, [verify.sdbuildR()] will
+#'   when evaluating this test. If non-empty, [verify.stockflow()] will
 #'   re-simulate the model with these parameter values before evaluating `expr`.
 #' @param active If `FALSE`, the test is defined but skipped during
 #'   [verify()]. Defaults to `TRUE`.
@@ -277,7 +277,7 @@ check_verify_sdbuildR <- function(x) {
 #' @seealso [verify()], [unit_tests()], [discard_unit_test()]
 #'
 #' @examples
-#' sfm <- sdbuildR("SIR") |>
+#' sfm <- stockflow("SIR") |>
 #'   unit_test(expr = all(susceptible >= 0))
 #'
 #' # Run unit tests
@@ -313,7 +313,7 @@ check_verify_sdbuildR <- function(x) {
 #' verify(sfm)
 #'
 unit_test <- function(object, test, expr, label, conditions = list(), active = TRUE) {
-  check_sdbuildR(object)
+  check_stockflow(object)
 
   tests <- object[["unit_tests"]]
   n_tests <- length(tests)
@@ -625,7 +625,7 @@ unit_test <- function(object, test, expr, label, conditions = list(), active = T
 #' [unit_tests()]) or by `label` (character). Warns if a label or index is
 #' not found. Remaining tests are renumbered sequentially after removal.
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #' @param test Integer index/indices of the test(s) to remove. Corresponds to
 #'   the order shown by [unit_tests()].
 #' @param label Character label(s) of the test(s) to remove. Supports NSE
@@ -639,7 +639,7 @@ unit_test <- function(object, test, expr, label, conditions = list(), active = T
 #' @seealso [unit_test()], [unit_tests()]
 #'
 #' @examples
-#' sfm <- sdbuildR("SIR") |>
+#' sfm <- stockflow("SIR") |>
 #'   unit_test(label = "susceptible is non-negative", expr = all(susceptible >= 0)) |>
 #'   unit_test(label = "recovered increases", expr = all(diff(recovered) >= 0))
 #'
@@ -649,7 +649,7 @@ unit_test <- function(object, test, expr, label, conditions = list(), active = T
 #' # Remove by label
 #' sfm <- discard_unit_test(sfm, label = "recovered increases")
 discard_unit_test <- function(object, label, test) {
-  check_sdbuildR(object)
+  check_stockflow(object)
 
   n_tests <- length(object[["unit_tests"]])
 
@@ -723,7 +723,7 @@ discard_unit_test <- function(object, label, test) {
 #' Returns an overview of all unit tests attached to the model. The result
 #' has a `print()` method.
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #' @param test Integer vector of test number(s) to display (1-based). Defaults to
 #'   `NULL` (show all tests). Can be combined with `label` (intersection).
 #' @param label Character vector of regex patterns for partial, case-insensitive
@@ -733,14 +733,14 @@ discard_unit_test <- function(object, label, test) {
 #' @param ignore_case Logical; whether `label` matching is case-insensitive.
 #'   Default `TRUE`.
 #'
-#' @returns An object of class `unit_tests_sdbuildR`, printed automatically.
+#' @returns An object of class `unit_tests_stockflow`, printed automatically.
 #'
 #' @export
 #' @concept unitTest
 #' @seealso [unit_test()], [verify()]
 #'
 #' @examples
-#' sfm <- sdbuildR("SIR") |>
+#' sfm <- stockflow("SIR") |>
 #'   unit_test(expr = all(susceptible >= 0)) |>
 #'   unit_test(
 #'     label = "recovered increases over time",
@@ -751,7 +751,7 @@ discard_unit_test <- function(object, label, test) {
 #' unit_tests(sfm, test = 1L)
 #' unit_tests(sfm, label = "increases")
 unit_tests <- function(object, test = NULL, label = NULL, ignore_case = TRUE) {
-  check_sdbuildR(object)
+  check_stockflow(object)
   tests <- object[["unit_tests"]]
   indices <- seq_along(tests)
   if (!is.null(test)) {
@@ -783,7 +783,7 @@ unit_tests <- function(object, test = NULL, label = NULL, ignore_case = TRUE) {
   }
   result <- structure(
     list(tests = tests, n = length(tests), indices = indices),
-    class = "unit_tests_sdbuildR"
+    class = "unit_tests_stockflow"
   )
   result
 }
@@ -791,7 +791,7 @@ unit_tests <- function(object, test = NULL, label = NULL, ignore_case = TRUE) {
 
 #' @export
 #' @concept unitTest
-print.unit_tests_sdbuildR <- function(x, ...) {
+print.unit_tests_stockflow <- function(x, ...) {
   if (x$n == 0) {
     cli::cli_inform(c("i" = "No unit tests defined. Add tests with {.fn unit_test}."))
     return(invisible(x))
@@ -828,10 +828,10 @@ print.unit_tests_sdbuildR <- function(x, ...) {
 # ==============================================================================
 
 #' @noRd
-new_verify_sdbuildR <- function(success = FALSE,
-                                error_message = NULL,
-                                results, object, sims = NULL, condition = NULL,
-                                n_conditions = 1L, test_indices = NULL) {
+new_verify_stockflow <- function(success = FALSE,
+                                 error_message = NULL,
+                                 results, object, sims = NULL, condition = NULL,
+                                 n_conditions = 1L, test_indices = NULL) {
   if (is.null(test_indices)) test_indices <- seq_along(results)
   structure(
     list(
@@ -841,7 +841,7 @@ new_verify_sdbuildR <- function(success = FALSE,
       n_conditions = n_conditions,
       test_indices = as.integer(test_indices)
     ),
-    class = "verify_sdbuildR"
+    class = "verify_stockflow"
   )
 }
 
@@ -854,7 +854,7 @@ new_verify_sdbuildR <- function(success = FALSE,
 
 #' Print a unit-test result message as indented cli bullets
 #'
-#' Used by print.verify_sdbuildR() for failed, errored, and skipped tests. The
+#' Used by print.verify_stockflow() for failed, errored, and skipped tests. The
 #' (possibly multi-line) message is split into one bullet per line.
 #'
 #' @param message Message string, or `NULL`/empty to print nothing.
@@ -876,8 +876,8 @@ new_verify_sdbuildR <- function(success = FALSE,
 
 #' @export
 #' @concept unitTest
-print.verify_sdbuildR <- function(x, ...) {
-  check_verify_sdbuildR(x)
+print.verify_stockflow <- function(x, ...) {
+  check_verify_stockflow(x)
 
   results <- x[["results"]]
 
@@ -935,7 +935,7 @@ print.verify_sdbuildR <- function(x, ...) {
 
 #' Convert verify() results to a data frame
 #'
-#' Converts a `verify_sdbuildR` object to a data frame.
+#' Converts a `verify_stockflow` object to a data frame.
 #'
 #' **`which = "tests"` (default)** returns one row per unit test with columns
 #' `test`, `label`, `status`, `outcome`, `expr_str`, `conditions`, and `message`.
@@ -950,7 +950,7 @@ print.verify_sdbuildR <- function(x, ...) {
 #' shows only the requested matching test number(s) for the retained simulation
 #' row(s). Use `direction = "wide"` to pivot variables into columns.
 #'
-#' @param x A `verify_sdbuildR` object (output of [verify()]).
+#' @param x A `verify_stockflow` object (output of [verify()]).
 #' @param row.names `NULL` or a character vector giving row names (optional).
 #' @param optional Ignored; present for compatibility.
 #' @param which Character. `"tests"` (default) or `"sims"`. Partial matching
@@ -975,11 +975,11 @@ print.verify_sdbuildR <- function(x, ...) {
 #'   - `"sims"` (wide): `test`, `condition`, `conditions`, `time`, then one column per variable.
 #' @export
 #' @concept unitTest
-#' @method as.data.frame verify_sdbuildR
+#' @method as.data.frame verify_stockflow
 #'
 #' @examples
 #' # Create model with 2 unit tests
-#' sfm <- sdbuildR("SIR") |>
+#' sfm <- stockflow("SIR") |>
 #'   unit_test(expr = all(susceptible >= 0)) |>
 #'   # Add test with conditions
 #'   unit_test(
@@ -1003,14 +1003,14 @@ print.verify_sdbuildR <- function(x, ...) {
 #'
 #' # Only simulations for passing tests
 #' as.data.frame(res, which = "sims", status = "pass") |> head()
-as.data.frame.verify_sdbuildR <- function(x, row.names = NULL, optional = FALSE,
-                                          which = c("tests", "sims")[1],
-                                          direction = "long",
-                                          test = NULL, label = NULL, ignore_case = TRUE,
-                                          status = c("pass", "fail", "error", "skip"),
-                                          condition = NULL,
-                                          ...) {
-  check_verify_sdbuildR(x)
+as.data.frame.verify_stockflow <- function(x, row.names = NULL, optional = FALSE,
+                                           which = c("tests", "sims")[1],
+                                           direction = "long",
+                                           test = NULL, label = NULL, ignore_case = TRUE,
+                                           status = c("pass", "fail", "error", "skip"),
+                                           condition = NULL,
+                                           ...) {
+  check_verify_stockflow(x)
 
   which <- .clean_which_verify(which)
 
@@ -1300,24 +1300,24 @@ as.data.frame.verify_sdbuildR <- function(x, row.names = NULL, optional = FALSE,
 #' Print first rows of verify results
 #'
 #' Wrapper around [head()] that first converts the results to a data frame using
-#' [as.data.frame.verify_sdbuildR()].
+#' [as.data.frame.verify_stockflow()].
 #'
-#' @param x A `verify_sdbuildR` object.
+#' @param x A `verify_stockflow` object.
 #' @param n Number of rows. Defaults to 6.
-#' @param ... Other arguments passed to [as.data.frame.verify_sdbuildR()].
+#' @param ... Other arguments passed to [as.data.frame.verify_stockflow()].
 #'
 #' @returns A `data.frame`.
 #' @export
 #' @concept unitTest
 #' @importFrom utils head
-#' @method head verify_sdbuildR
+#' @method head verify_stockflow
 #'
 #' @examples
-#' sfm <- sdbuildR("SIR") |>
+#' sfm <- stockflow("SIR") |>
 #'   unit_test(expr = all(susceptible >= 0))
 #' res <- verify(sfm)
 #' head(res)
-head.verify_sdbuildR <- function(x, n = 6L, ...) {
+head.verify_stockflow <- function(x, n = 6L, ...) {
   df <- as.data.frame(x, ...)
   head(df, n)
 }
@@ -1326,24 +1326,24 @@ head.verify_sdbuildR <- function(x, n = 6L, ...) {
 #' Print last rows of verify results
 #'
 #' Wrapper around [tail()] that first converts the results to a data frame using
-#' [as.data.frame.verify_sdbuildR()].
+#' [as.data.frame.verify_stockflow()].
 #'
-#' @param x A `verify_sdbuildR` object.
+#' @param x A `verify_stockflow` object.
 #' @param n Number of rows. Defaults to 6.
-#' @param ... Other arguments passed to [as.data.frame.verify_sdbuildR()].
+#' @param ... Other arguments passed to [as.data.frame.verify_stockflow()].
 #'
 #' @returns A `data.frame`.
 #' @export
 #' @concept unitTest
 #' @importFrom utils tail
-#' @method tail verify_sdbuildR
+#' @method tail verify_stockflow
 #'
 #' @examples
-#' sfm <- sdbuildR("SIR") |>
+#' sfm <- stockflow("SIR") |>
 #'   unit_test(expr = all(susceptible >= 0))
 #' res <- verify(sfm)
 #' tail(res)
-tail.verify_sdbuildR <- function(x, n = 6L, ...) {
+tail.verify_stockflow <- function(x, n = 6L, ...) {
   df <- as.data.frame(x, ...)
   tail(df, n)
 }
@@ -1378,7 +1378,7 @@ tail.verify_sdbuildR <- function(x, n = 6L, ...) {
 #' Evaluate a single unit test against a simulation result
 #'
 #' @param test A single unit test entry
-#' @param sim A `simulate_sdbuildR` object
+#' @param sim A `simulate_stockflow` object
 #' @return A named list with fields: `label`, `expr_str`, `conditions`, `status`, `error_type`,
 #'   `message`, `outcome`. The `error_type` field is `NA` for pass/fail/skipped results,
 #'   and one of `"expr_syntax"` (parse error), `"expr_result"` (type validation error),
@@ -1549,7 +1549,7 @@ tail.verify_sdbuildR <- function(x, n = 6L, ...) {
 #' expression) and `cond_refs` (variable names used as condition keys). Returns
 #' a positionally-indexed list matching `object[["unit_tests"]]`.
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #' @return List of `list(expr_refs = character(), cond_refs = character())`
 #' @noRd
 .compute_test_deps <- function(object) {
@@ -1576,7 +1576,7 @@ tail.verify_sdbuildR <- function(x, n = 6L, ...) {
 #' and returns it. The caller is responsible for assigning the returned object
 #' back if caching is desired.
 #'
-#' @inheritParams update.sdbuildR
+#' @inheritParams update.stockflow
 #' @return A list with two elements:
 #'   - `object`: the (possibly updated) model object
 #'   - `deps`: positionally-indexed list of `list(expr_refs, cond_refs)`

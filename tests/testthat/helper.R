@@ -168,7 +168,7 @@ expect_named_elements <- function(x, expected) {
 
 
 expect_successful_ensemble <- function(x, expected_fields = NULL) {
-  expect_s3_class(x, "ensemble_sdbuildR")
+  expect_s3_class(x, "ensemble_stockflow")
   expect_true(x[["success"]])
   expect_false(is.null(x[["summary"]]))
 
@@ -204,7 +204,7 @@ silence <- function(expr) {
 #'
 #' Creates and simulates the SIR model, allowing overrides such as only_stocks.
 sir_sim <- function(..., only_stocks = TRUE, seed = 123) {
-  simulate(sdbuildR("SIR"), only_stocks = only_stocks, seed = seed, ...)
+  simulate(stockflow("SIR"), only_stocks = only_stocks, seed = seed, ...)
 }
 
 
@@ -214,7 +214,7 @@ sir_sim <- function(..., only_stocks = TRUE, seed = 123) {
 #' to reduce duplication across tests. Note: uses "Flow1" instead of "F" to avoid
 #' name conflict with R's FALSE constant.
 make_basic_sfm <- function() {
-  sdbuildR() |>
+  stockflow() |>
     update("S", type = "stock", eqn = "1") |>
     update("Flow1", type = "flow", eqn = "S", to = "S")
 }
@@ -232,7 +232,7 @@ skip_if_no_internet <- function() {
 # Local helper: model with stock, flow, constant, language = Julia
 # Validation in ensemble() fails before Julia execution, so no Julia needed
 make_ensemble_error_sfm <- function() {
-  sdbuildR() |>
+  stockflow() |>
     update("S", type = "stock", eqn = "1") |>
     update("Flow1", type = "flow", eqn = "S", to = "S") |>
     update("k", type = "constant", eqn = "0.5") |>
@@ -242,13 +242,13 @@ make_ensemble_error_sfm <- function() {
 
 # Helper: standard sfm for method tests
 make_jl_ensemble_sfm <- function() {
-  sdbuildR("Crielaard2022") |>
+  stockflow("Crielaard2022") |>
     sim_settings(start = 0, stop = 10, dt = 0.1, save_at = 1, language = "Julia")
 }
 
 
 make_r_ensemble_random_sfm <- function() {
-  sdbuildR("SIR") |>
+  stockflow("SIR") |>
     update(c(susceptible, infected, recovered), eqn = "runif(1, 1, 1000)") |>
     sim_settings(language = "R", start = 0, stop = 10, dt = 0.1, save_at = 1, seed = 42)
 }
@@ -277,7 +277,7 @@ expect_stock_indices_aligned <- function(sfm) {
 # Helper: a small model with a stock, flow, and constant
 # Pass language = "Julia" to use the Julia backend instead of R.
 make_verifiable_sfm <- function(language = "R") {
-  sdbuildR() |>
+  stockflow() |>
     update("S", type = "stock", eqn = runif(1, 1, 100)) |>
     update("drain", type = "flow", eqn = "rate * S", from = "S") |>
     update("rate", type = "constant", eqn = "0.1") |>
@@ -285,7 +285,7 @@ make_verifiable_sfm <- function(language = "R") {
 }
 
 
-# Helper: build a verify_sdbuildR result with configurable tests.
+# Helper: build a verify_stockflow result with configurable tests.
 #   n_tests = 1 : one test ("S non-negative")
 #   n_tests = 2 : adds a conditioned test ("S constant at zero rate")
 #   with_fail   : adds an intentionally failing test instead of the conditioned one
@@ -514,10 +514,10 @@ plotly_dedupe_legend <- function(traces) {
   out
 }
 
-##### Helpers for plot.sdbuildR() #####
-#' Extract node info from a plot.sdbuildR() diagram
+##### Helpers for plot.stockflow() #####
+#' Extract node info from a plot.stockflow() diagram
 #'
-#' @param pl Output of plot.sdbuildR() (a DiagrammeR htmlwidget)
+#' @param pl Output of plot.stockflow() (a DiagrammeR htmlwidget)
 #' @return A data.frame, one row per node, with a `name` column plus one
 #'   column per attribute found (id, label, xlabel, tooltip, ...). Missing
 #'   attributes are NA.
@@ -571,9 +571,9 @@ extract_diagram_nodes <- function(pl) {
 }
 
 
-#' Extract edge info from a plot.sdbuildR() diagram
+#' Extract edge info from a plot.stockflow() diagram
 #'
-#' @param pl Output of plot.sdbuildR()
+#' @param pl Output of plot.stockflow()
 #' @return A data.frame with `from`, `to`, an edge `type` (from the section
 #'   comment), plus one column per shared edge attribute (color, arrowhead, ...).
 extract_diagram_edges <- function(pl) {

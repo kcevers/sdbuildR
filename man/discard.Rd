@@ -11,21 +11,21 @@ discard(
 )
 }
 \arguments{
-\item{object}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
+\item{object}{Stock-and-flow model, object of class \code{\link{stockflow}}.}
 
 \item{name}{Name(s) to remove. Accepts bare symbols (e.g., \code{x}), strings, or vectors via \code{c()}. Must be variable names.}
 
 \item{remove_references}{Where to remove references to the discarded variables. By default, references to discarded variables in \code{"to"}, \code{"from"}, \code{"source"}, and \code{"unit_test"} are removed. Set to \code{NULL} to keep all references (not recommended). Note that any lingering references in equations will cause errors in simulation and should be removed or updated with \code{update()} after discarding the variable.}
 }
 \value{
-A stock-and-flow model object of class \code{\link[=sdbuildR]{sdbuildR}}
+A stock-and-flow model object of class \code{\link[=stockflow]{stockflow}}
 }
 \description{
 Remove variable(s) from a stock-and-flow model. All references in flow connections and graphical function sources are also removed. A warning will be thrown if any lingering references to the removed name remain in the model.
 }
 \examples{
 # Add stock
-sfm <- sdbuildR() |> stock(x)
+sfm <- stockflow() |> stock(x)
 print(sfm)
 
 # Remove stock

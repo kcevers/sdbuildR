@@ -7,7 +7,7 @@
 dependencies(object, name = NULL, type = NULL, reverse = FALSE)
 }
 \arguments{
-\item{object}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
+\item{object}{Stock-and-flow model, object of class \code{\link{stockflow}}.}
 
 \item{name}{Variable names to find dependencies for. Defaults to \code{NULL} to include all variables.}
 
@@ -22,7 +22,7 @@ List, with for each model variable what other variables it depends on, or if \co
 Find which other variables each variable is dependent on.
 }
 \examples{
-sfm <- sdbuildR("SIR")
+sfm <- stockflow("SIR")
 dependencies(sfm)
 
 }

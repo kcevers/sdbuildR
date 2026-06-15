@@ -56,7 +56,7 @@ convert_eqn_ast_julia <- function(eqn, var_names) {
 #' Signal that the AST path cannot handle a node (triggers fallback)
 #' @noRd
 .ast_bail <- function() {
-  rlang::abort("unsupported AST node", class = "sdbuildR_ast_unsupported")
+  rlang::abort("unsupported AST node", class = "stockflow_ast_unsupported")
 }
 
 

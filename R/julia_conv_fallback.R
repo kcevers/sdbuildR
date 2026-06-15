@@ -9,7 +9,7 @@
 #' @noRd
 #' @importFrom rlang .data
 #'
-convert_builtin_functions_julia <- function(type, name, eqn, var_names) {
+convert_builtin_functions_julia_old <- function(type, name, eqn, var_names) {
   # Check if equation contains letters and opening and closing brackets
   # (all translated R functions have brackets)
   contains_letters <- grepl("[[:alpha:]]", eqn) && grepl("\\(", eqn) && grepl("\\)", eqn)

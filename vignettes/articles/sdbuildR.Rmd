@@ -22,10 +22,10 @@ sdbuildR is an R package for building, simulating, and testing stock-and-flow mo
 
 ### Load models from the model library
 
-Dozens of example models can be loaded using `sdbuildR()`. Here we load the SIR (Susceptible-Infected-Recovered) model, a classic model in epidemiology:
+Dozens of example models can be loaded using `stockflow()`. Here we load the SIR (Susceptible-Infected-Recovered) model, a classic model in epidemiology:
 
 ```{r SIR_print}
-sfm <- sdbuildR("SIR")
+sfm <- stockflow("SIR")
 print(sfm)
 ```
 
@@ -44,10 +44,10 @@ plot(sim)
 
 ### Build a model from scratch
 
-The equivalent stock-and-flow model can also be built from scratch. We initialise an empty model with `sdbuildR()` and add three stocks. 
+The equivalent stock-and-flow model can also be built from scratch. We initialise an empty model with `stockflow()` and add three stocks. 
 
 ```{r scratch_build}
-sfm <- sdbuildR() |>
+sfm <- stockflow() |>
   stock(susceptible, eqn = 99999, label = "Susceptible") |>
   stock(infected, eqn = 1, label = "Infected") |>
   stock(recovered, eqn = 0, label = "Recovered")
@@ -106,7 +106,7 @@ See the [Build](https://kcevers.github.io/sdbuildR/articles/build.html) vignette
 Running multiple simulations (i.e., an ensemble) provides insight into a model's behavioural variability. Here, we initialize all stocks to a random value:
 
 ```{r ensemble_setup}
-sfm_ens <- sdbuildR("SIR") |>
+sfm_ens <- stockflow("SIR") |>
   update(c(susceptible, infected, recovered), eqn = runif(1, 1, 1000)) |>
   # Save fewer values for computational efficiency
   sim_settings(stop = 50, save_at = 1)
@@ -126,7 +126,7 @@ See the [Ensemble](https://kcevers.github.io/sdbuildR/articles/ensemble.html) vi
 Stock-and-flow models can easily become complex, producing unexpected behaviours as the model is developed. Unit tests assert that a model behaves as expected. An expression that evaluates to `TRUE` means the test passes. Here we check that the susceptible population never becomes negative, and that the total population is conserved:
 
 ```{r unit_tests}
-sfm <- sdbuildR("SIR") |>
+sfm <- stockflow("SIR") |>
   unit_test(expr = all(susceptible >= 0)) |>
   unit_test(
     expr = all(abs(susceptible + infected + recovered - total_population) < 1e-8),

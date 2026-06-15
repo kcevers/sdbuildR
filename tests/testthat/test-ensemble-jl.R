@@ -1,4 +1,4 @@
-# Tests for ensemble() and plot.ensemble_sdbuildR()
+# Tests for ensemble() and plot.ensemble_stockflow()
 
 # Input validation ----------------------------
 
@@ -129,7 +129,7 @@ test_that("ensemble() handles models with no constants", {
 
 test_that("ensemble() of model with only stocks", {
   skip_if_julia_not_ready()
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     stock("Stock1", eqn = 100) |>
     stock("Stock2", eqn = 50) |>
     sim_settings(language = "Julia", start = 0, stop = 10, dt = 0.1, save_at = 1)
@@ -189,8 +189,8 @@ test_that("ensemble() with Julia vars overrides only_stocks", {
 test_that("ensemble() with Julia handles integer start and fractional dt with intermediaries", {
   skip_if_julia_not_ready()
 
-  sfm <- withr::with_options(new = c(sdbuildR.defer_codegen = TRUE), {
-    sdbuildR() |>
+  sfm <- withr::with_envvar(new = c(SDBUILDR_DEFER_CODEGEN = "true"), {
+    stockflow() |>
       sim_settings(language = "Julia", start = 0, stop = 0.02, dt = 0.01, save_sims = TRUE) |>
       update("k", type = "constant", eqn = "0.1") |>
       update("s", type = "stock", eqn = "runif(1, 0.9, 1.1)") |>
@@ -389,7 +389,7 @@ test_that("ensemble() non-crossed design pairs values", {
 test_that("ensemble() with mixed stock and constant in conditions", {
   skip_if_julia_not_ready()
 
-  sfm <- sdbuildR("predator_prey") |>
+  sfm <- stockflow("predator_prey") |>
     update(c("predator", "prey"), eqn = "runif(1, 30, 50)") |>
     sim_settings(
       language = "Julia",
@@ -425,7 +425,7 @@ test_that("ensemble() with mixed stock and constant in conditions", {
 test_that("ensemble in Julia is reproducible with seed", {
   skip_if_julia_not_ready()
 
-  sfm <- sdbuildR("predator_prey") |>
+  sfm <- stockflow("predator_prey") |>
     sim_settings(
       language = "Julia",
       start = 0, stop = 10, dt = 0.1,
@@ -476,7 +476,7 @@ test_that("ensemble in Julia with threads is reproducible with seed", {
   use_julia(nthreads = 2)
   on.exit(use_julia(stop = TRUE))
 
-  sfm <- sdbuildR("predator_prey") |>
+  sfm <- stockflow("predator_prey") |>
     sim_settings(
       language = "Julia",
       start = 0, stop = 10, dt = 0.1,
@@ -519,7 +519,7 @@ test_that("ensemble in Julia with threads is reproducible with seed", {
 test_that("ensemble in Julia without seed", {
   skip_if_julia_not_ready()
 
-  sfm <- sdbuildR("predator_prey") |>
+  sfm <- stockflow("predator_prey") |>
     sim_settings(
       language = "Julia",
       start = 0, stop = 10, dt = 0.1,
@@ -547,7 +547,7 @@ test_that("ensemble in Julia without seed", {
 test_that("ensemble() works with single time point", {
   skip_if_julia_not_ready()
 
-  sfm <- sdbuildR("predator_prey") |>
+  sfm <- stockflow("predator_prey") |>
     sim_settings(
       language = "Julia",
       start = 0, stop = 5, dt = 0.1,
@@ -570,7 +570,7 @@ test_that("ensemble() works with single time point", {
 test_that("ensemble() works with interpolation function", {
   skip_if_julia_not_ready()
 
-  sfm <- sdbuildR("logistic_model") |>
+  sfm <- stockflow("logistic_model") |>
     sim_settings(
       language = "Julia",
       start = 0, stop = 50, dt = 0.1,
@@ -632,43 +632,43 @@ cli::test_that_cli(configs = c("plain", "ansi"), "ensemble() error: non-numeric 
 })
 
 
-# check_ensemble_sdbuildR() ---------------------------------------------------
+# check_ensemble_stockflow() ---------------------------------------------------
 
 # Error conditions require corrupted/wrong-class objects
 
-test_that("check_ensemble_sdbuildR() rejects non-ensemble objects", {
-  expect_error(check_ensemble_sdbuildR(list(success = TRUE)), "ensemble_sdbuildR")
-  expect_error(check_ensemble_sdbuildR("string"), "ensemble_sdbuildR")
-  expect_error(check_ensemble_sdbuildR(42), "ensemble_sdbuildR")
+test_that("check_ensemble_stockflow() rejects non-ensemble objects", {
+  expect_error(check_ensemble_stockflow(list(success = TRUE)), "ensemble_stockflow")
+  expect_error(check_ensemble_stockflow("string"), "ensemble_stockflow")
+  expect_error(check_ensemble_stockflow(42), "ensemble_stockflow")
 })
 
-test_that("validate_ensemble_sdbuildR() assesses success, summary, duration", {
+test_that("validate_ensemble_stockflow() assesses success, summary, duration", {
   skip_if_julia_not_ready()
   sims0 <- sims <- silence(ensemble(make_jl_ensemble_sfm(), n = 3))
   sims$success <- "yes"
-  expect_error(validate_ensemble_sdbuildR(sims), "success")
+  expect_error(validate_ensemble_stockflow(sims), "success")
 
   sims$success <- c(TRUE, FALSE)
-  expect_error(validate_ensemble_sdbuildR(sims), "success")
+  expect_error(validate_ensemble_stockflow(sims), "success")
 
   sims <- sims0
   sims$summary <- NULL
-  expect_error(validate_ensemble_sdbuildR(sims), "summary")
+  expect_error(validate_ensemble_stockflow(sims), "summary")
 
   sims$summary <- "not a df"
-  expect_error(validate_ensemble_sdbuildR(sims), "summary")
+  expect_error(validate_ensemble_stockflow(sims), "summary")
 
   sims <- sims0
   sims$duration <- NULL
-  expect_error(validate_ensemble_sdbuildR(sims), "duration")
+  expect_error(validate_ensemble_stockflow(sims), "duration")
 
-  # check_ensemble_sdbuildR() passes for valid successful ensemble
-  expect_no_error(check_ensemble_sdbuildR(sims0))
-  expect_invisible(check_ensemble_sdbuildR(sims0))
+  # check_ensemble_stockflow() passes for valid successful ensemble
+  expect_no_error(check_ensemble_stockflow(sims0))
+  expect_invisible(check_ensemble_stockflow(sims0))
 })
 
 
-# print.ensemble_sdbuildR() ---------------------------------------------------
+# print.ensemble_stockflow() ---------------------------------------------------
 
 test_that("print() returns x invisibly", {
   skip_if_julia_not_ready()
@@ -705,7 +705,7 @@ cli::test_that_cli(configs = "plain", "print() success with conditions lists cha
 
 cli::test_that_cli(configs = "plain", "ensemble setup rejects malformed equations early", {
   expect_error(
-    sdbuildR() |>
+    stockflow() |>
       meta(name = "Demo model") |>
       update("S", type = "stock", eqn = "1 // 2") |>
       update("F1", type = "flow", eqn = "S", to = "S") |>
@@ -716,7 +716,7 @@ cli::test_that_cli(configs = "plain", "ensemble setup rejects malformed equation
 })
 
 
-# as.data.frame.ensemble_sdbuildR() -------------------------------------------
+# as.data.frame.ensemble_stockflow() -------------------------------------------
 
 
 test_that("as.data.frame() and summary() return the summary df", {
@@ -800,7 +800,7 @@ test_that("as.data.frame() row.names length mismatch errors", {
 })
 
 
-# head.ensemble_sdbuildR() / tail.ensemble_sdbuildR() ------------------------
+# head.ensemble_stockflow() / tail.ensemble_stockflow() ------------------------
 
 test_that("head() and tail() return a data.frame with correct number of rows from summary", {
   skip_if_julia_not_ready()
@@ -840,7 +840,7 @@ test_that("head() and tail() pass which = 'sims' through to individual sims", {
 })
 
 
-# summary.ensemble_sdbuildR() -------------------------------------------------
+# summary.ensemble_stockflow() -------------------------------------------------
 
 test_that("summary() result has expected columns", {
   skip_if_julia_not_ready()

@@ -16,7 +16,7 @@ flow(
 )
 }
 \arguments{
-\item{object}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
+\item{object}{Stock-and-flow model, object of class \code{\link{stockflow}}.}
 
 \item{name}{Variable name. Accepts a bare symbol (e.g., \code{population}), a string (\code{"population"}), or a vector via \code{c()} (e.g., \code{c(a, b)} or \code{c("a", "b")}). Use \verb{!!} to inject from a variable.}
 
@@ -33,7 +33,7 @@ flow(
 \item{non_negative}{If TRUE, variable is enforced to be non-negative (i.e., strictly 0 or positive). Defaults to \code{FALSE}.}
 }
 \value{
-A stock-and-flow model object of class \code{\link{sdbuildR}}
+A stock-and-flow model object of class \code{\link{stockflow}}
 }
 \description{
 Flows move material and information through the system, increasing or
@@ -44,7 +44,7 @@ convenience wrapper around \code{\link[=update]{update()}} with \code{type = "fl
 \examples{
 
 # Create a flow into a stock
-sfm <- sdbuildR() |>
+sfm <- stockflow() |>
   stock(population, eqn = 100) |>
   flow(births, eqn = population * 0.1, to = population) |>
   flow(deaths, eqn = population * 0.05, from = population)

@@ -24,7 +24,7 @@ Equivalent of Seasonal() in Insight Maker
 }
 \examples{
 # Create a simple model with a seasonal wave
-sfm <- sdbuildR() |>
+sfm <- stockflow() |>
   update("a", "stock") |>
   # Specify the global variable "times" as simulation times
   update("input", "constant", eqn = "seasonal(times, 10, 0)") |>

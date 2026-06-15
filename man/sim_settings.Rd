@@ -23,7 +23,7 @@ sim_settings(
 )
 }
 \arguments{
-\item{object}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
+\item{object}{Stock-and-flow model, object of class \code{\link{stockflow}}.}
 
 \item{method}{Integration method. Defaults to \code{"euler"}.}
 
@@ -75,7 +75,7 @@ of flows. Defaults to \code{TRUE}.}
 \code{\link[=ensemble]{ensemble()}} output. Defaults to \code{FALSE}.}
 }
 \value{
-A stock-and-flow model object of class \code{\link{sdbuildR}}
+A stock-and-flow model object of class \code{\link{stockflow}}
 }
 \description{
 Simulation specifications are the settings that determine how the model is
@@ -83,7 +83,7 @@ simulated, such as the integration method (i.e., solver), start and stop time,
 and timestep. Modify these specifications for an existing stock-and-flow model.
 }
 \examples{
-sfm <- sdbuildR("predator_prey") |>
+sfm <- stockflow("predator_prey") |>
   sim_settings(start = 0, stop = 50, dt = 0.1)
 sim <- simulate(sfm)
 plot(sim)

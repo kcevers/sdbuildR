@@ -7,7 +7,7 @@
 custom_func(object, name, eqn = 0, label = name, doc = "")
 }
 \arguments{
-\item{object}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
+\item{object}{Stock-and-flow model, object of class \code{\link{stockflow}}.}
 
 \item{name}{Name of the function variable. The equation will be assigned to this name.}
 
@@ -18,7 +18,7 @@ custom_func(object, name, eqn = 0, label = name, doc = "")
 \item{doc}{Documentation. Defaults to "".}
 }
 \value{
-A stock-and-flow model object of class \code{\link{sdbuildR}}
+A stock-and-flow model object of class \code{\link{stockflow}}
 }
 \description{
 Custom functions are user-defined functions that can be used
@@ -28,17 +28,17 @@ throughout a stock-and-flow model. \code{\link[=custom_func]{custom_func()}} add
 \examples{
 
 # Simple function
-sfm <- sdbuildR() |>
+sfm <- stockflow() |>
   custom_func(double, eqn = "function(x) x * 2") |>
   constant(a, eqn = double(2))
 
 # Function with defaults
-sfm <- sdbuildR() |>
+sfm <- stockflow() |>
   custom_func(scale, eqn = "function(x, factor = 10) x * factor") |>
   constant(b, eqn = scale(2))
 
 # If the logistic() function did not exist, you could create it yourself:
-sfm <- sdbuildR() |>
+sfm <- stockflow() |>
   custom_func(my_logistic, eqn = "function(x, slope = 1, midpoint = .5){
    1 / (1 + exp(-slope*(x-midpoint)))
  }") |>
@@ -46,6 +46,6 @@ sfm <- sdbuildR() |>
 
 }
 \seealso{
-\code{\link[=update.sdbuildR]{update()}}, \code{\link[=discard]{discard()}}, \code{\link[=change_name]{change_name()}}
+\code{\link[=update.stockflow]{update()}}, \code{\link[=discard]{discard()}}, \code{\link[=change_name]{change_name()}}
 }
 \concept{build}

@@ -7,7 +7,7 @@
 discard_unit_test(object, label, test)
 }
 \arguments{
-\item{object}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
+\item{object}{Stock-and-flow model, object of class \code{\link{stockflow}}.}
 
 \item{label}{Character label(s) of the test(s) to remove. Supports NSE
 (bare symbol or string). For backward compatibility, integer values
@@ -25,7 +25,7 @@ Remove one or more unit tests by \code{test} (integer position as shown by
 not found. Remaining tests are renumbered sequentially after removal.
 }
 \examples{
-sfm <- sdbuildR("SIR") |>
+sfm <- stockflow("SIR") |>
   unit_test(label = "susceptible is non-negative", expr = all(susceptible >= 0)) |>
   unit_test(label = "recovered increases", expr = all(diff(recovered) >= 0))
 

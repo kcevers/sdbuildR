@@ -133,7 +133,7 @@ Stock-and-flow models conceptualize systems in terms of quantities that accumula
 colors <- c(stock_col, inflow_col, outflow_col)
 sfm_list <- list()
 
-sfm <- sdbuildR() |>
+sfm <- stockflow() |>
   sim_settings(only_stocks = FALSE, stop = 1, save_at = .01, dt = .01) |>
   stock(Stock)
 
@@ -150,7 +150,7 @@ sfm3 <- sfm |>
   flow(Outflow, eqn = 5 * Stock, from = Stock)
 sfm_list[["C"]] <- sfm3
 
-sfm_big <- sdbuildR() |>
+sfm_big <- stockflow() |>
   stock(stockA, label = "Stock") |>
   flow(inflowA, label = "Inflow", to = stockA) |>
   stock(stockB, label = "Stock") |>
@@ -286,7 +286,7 @@ The model represents a stylized pattern of how burnout develops over time on a w
 It contains a single stock representing the current level of energy, an inflow for recovery, and an outflow for depletion from work. We first initialize an empty stock-and-flow model:
 
 ```{r , fig.width=4, fig.height=2}
-sfm <- sdbuildR()
+sfm <- stockflow()
 print(sfm)
 ```
 
@@ -559,7 +559,7 @@ if (recreate_figs) {
 
 ```{r include = FALSE}
 if (recreate_figs) {
-  # copy cat(viz_str) from plot.sdbuildR() with minlen=1.5
+  # copy cat(viz_str) from plot.stockflow() with minlen=1.5
   {
     viz_str <- "
 
@@ -857,7 +857,7 @@ pl
 
 ```{r echo=FALSE}
 functions_table <- data.frame(
-  Function = c("`sdbuildR()`", "`stock()`", "`flow()`", "`constant()`", "`aux()`", "`lookup()`", "`update()`", "`simulate()`", "`plot()`", "`summary()`", "`as.data.frame()`", "`sim_settings()`", "`meta()`", "`export_model()`"),
+  Function = c("`stockflow()`", "`stock()`", "`flow()`", "`constant()`", "`aux()`", "`lookup()`", "`update()`", "`simulate()`", "`plot()`", "`summary()`", "`as.data.frame()`", "`sim_settings()`", "`meta()`", "`export_model()`"),
   Purpose = c("Create empty model or load template", "Add or modify a stock", "Add or modify a flow", "Add or modify a constant", "Add or modify an auxiliary", "Add or modify a lookup function", "Add or modify any variable (generic)", "Simulate model", "Plot model diagram or simulation", "Run model diagnostics", "Get model properties in a dataframe", "Modify simulation specifications", "Modify model metadata", "Export models to other formats")
 )
 
@@ -1015,7 +1015,7 @@ Note that this cannot be undone!
 Lookup functions (`lookup`), also known as table or graphical functions, are interpolation functions used to create custom input-output functions, where we define the desired output (y) for a specified input (x). They are defined by a set of x- and y-domain points. The interpolation method defines the behaviour of the lookup function between x-points, and the extrapolation method defines the behaviour outside of the x-points. For example, a simple lookup function called `"graph"` may look like this:
 
 ```{r}
-sfm <- sdbuildR() |>
+sfm <- stockflow() |>
   lookup(graph,
     xpts = c(0, 1, 2), ypts = c(0.5, 1, 1),
     interpolation = "linear", extrapolation = "nearest"
@@ -1034,7 +1034,7 @@ sfm <- constant(sfm, x, eqn = graph(1))
 New functions can be defined such that they can be used anywhere in the model. For example, if the `logistic()` function did not exist, you could create it yourself:
 
 ```{r}
-sfm <- sdbuildR() |>
+sfm <- stockflow() |>
   custom_func(f, eqn = function(x, slope = 1, midpoint = .5) 1 / (1 + exp(-slope * (x - midpoint))))
 ```
 

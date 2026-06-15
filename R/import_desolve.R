@@ -1,7 +1,7 @@
 #' Import a deSolve model
 #'
 #' Convert a model written for [deSolve](https://cran.r-project.org/package=deSolve)
-#' into a stock-and-flow model of class [`sdbuildR`][sdbuildR].
+#' into a stock-and-flow model of class [`stockflow`][stockflow].
 #'
 #' The model function must follow the canonical deSolve convention:
 #'
@@ -28,7 +28,7 @@
 #' @param method Integration method. Defaults to `"lsoda"`. See [sim_methods()].
 #' @param name Optional model name. Character scalar.
 #'
-#' @returns A stock-and-flow model of class [`sdbuildR`][sdbuildR].
+#' @returns A stock-and-flow model of class [`stockflow`][stockflow].
 #' @export
 #' @concept importExport
 #' @seealso [import_insightmaker()], [export_model()], [update()]
@@ -93,7 +93,7 @@ import_desolve <- function(model, params, init, times,
 
   parsed <- .parse_desolve_body(model, names(init), names(params))
 
-  sfm <- sdbuildR()
+  sfm <- stockflow()
 
   if (!is.null(name)) {
     sfm <- meta(sfm, name = name)

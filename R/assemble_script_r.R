@@ -1,6 +1,6 @@
 #' Simulate stock-and-flow model in R
 #'
-#' @inheritParams simulate.sdbuildR
+#' @inheritParams simulate.stockflow
 #'
 #' @returns List with variables created in the simulation script
 #' @noRd
@@ -47,7 +47,7 @@ simulate_r <- function(object,
       init <- unlist(envir[[P[["initial_value_name"]]]])
       constants <- unlist(Filter(Negate(is.function), envir[[P[["parameter_name"]]]]))
 
-      new_simulate_sdbuildR(
+      new_simulate_stockflow(
         success = TRUE,
         object = object, # Return object with cache
         df = df,
@@ -60,7 +60,7 @@ simulate_r <- function(object,
     error = function(e) {
       warning("\nAn error occurred while running the R script.")
 
-      new_simulate_sdbuildR(
+      new_simulate_stockflow(
         success = FALSE,
         error_message = e[["message"]],
         script = script,

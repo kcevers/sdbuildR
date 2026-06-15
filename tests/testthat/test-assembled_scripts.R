@@ -1,7 +1,5 @@
 test_that("assemble cache keeps canonical structure after invalidation", {
-  withr::local_options(list(sdbuildR.defer_codegen = FALSE))
-
-  sfm <- sdbuildR()
+  sfm <- stockflow()
   sfm$assemble <- sfm$assemble[setdiff(
     names(sfm$assemble),
     c("eqn_cache", "summary", "run")
@@ -15,9 +13,7 @@ test_that("assemble cache keeps canonical structure after invalidation", {
 
 
 test_that("R script components are pre-cached in sfm after sim_settings", {
-  withr::local_options(list(sdbuildR.defer_codegen = FALSE))
-
-  sfm <- sdbuildR("SIR") |>
+  sfm <- stockflow("SIR") |>
     sim_settings(language = "R", start = 0, stop = 10, dt = 0.1)
 
   # Check that all standard fields exist
@@ -39,9 +35,7 @@ test_that("R script components are pre-cached in sfm after sim_settings", {
 })
 
 test_that("R script components persist through simulation", {
-  withr::local_options(list(sdbuildR.defer_codegen = FALSE))
-
-  sfm <- sdbuildR("SIR") |>
+  sfm <- stockflow("SIR") |>
     sim_settings(language = "R", start = 0, stop = 10, dt = 0.1)
 
   # Capture field names before simulate
@@ -68,9 +62,7 @@ test_that("R script components persist through simulation", {
 
 
 test_that("R funcs are pre-cached in assemble", {
-  withr::local_options(list(sdbuildR.defer_codegen = FALSE))
-
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update("S", "stock", eqn = 100) |>
     update("I", "stock", eqn = 1) |>
     update("contact_rate", "constant", eqn = 0.5) |>
@@ -89,11 +81,9 @@ test_that("R funcs are pre-cached in assemble", {
 # Julia Script Assembly Tests ---------------------------------------------------
 
 test_that("Julia script components are pre-cached after sim_settings", {
-  withr::local_options(list(sdbuildR.defer_codegen = FALSE))
-
   skip_if_julia_not_ready()
 
-  sfm <- sdbuildR("SIR") |>
+  sfm <- stockflow("SIR") |>
     sim_settings(language = "Julia", start = 0, stop = 10, dt = 0.1)
 
   expect_true(!is.null(sfm$assemble$language))
@@ -108,11 +98,9 @@ test_that("Julia script components are pre-cached after sim_settings", {
 })
 
 test_that("Julia script components persist through simulation", {
-  withr::local_options(list(sdbuildR.defer_codegen = FALSE))
-
   skip_if_julia_not_ready()
 
-  sfm <- sdbuildR("SIR") |>
+  sfm <- stockflow("SIR") |>
     sim_settings(language = "Julia", start = 0, stop = 10, dt = 0.1)
 
   # Capture field names before simulate
@@ -138,14 +126,12 @@ test_that("Julia script components persist through simulation", {
 })
 
 test_that("Julia and R have identical assemble structure fields", {
-  withr::local_options(list(sdbuildR.defer_codegen = FALSE))
-
   skip_if_julia_not_ready()
 
-  sfm_r <- sdbuildR("SIR") |>
+  sfm_r <- stockflow("SIR") |>
     sim_settings(language = "R", start = 0, stop = 10, dt = 0.1)
 
-  sfm_julia <- sdbuildR("SIR") |>
+  sfm_julia <- stockflow("SIR") |>
     sim_settings(language = "Julia", start = 0, stop = 10, dt = 0.1)
 
   # Both should have identical field names
@@ -156,14 +142,12 @@ test_that("Julia and R have identical assemble structure fields", {
 
 
 test_that("Julia equations differ from R equations in cached components", {
-  withr::local_options(list(sdbuildR.defer_codegen = FALSE))
-
   skip_if_julia_not_ready()
 
-  sfm_r <- sdbuildR("SIR") |>
+  sfm_r <- stockflow("SIR") |>
     sim_settings(language = "R", start = 0, stop = 10, dt = 0.1)
 
-  sfm_julia <- sdbuildR("SIR") |>
+  sfm_julia <- stockflow("SIR") |>
     sim_settings(language = "Julia", start = 0, stop = 10, dt = 0.1)
 
   # Check that variables have different eqn_str for R vs Julia
@@ -176,9 +160,7 @@ test_that("Julia equations differ from R equations in cached components", {
 
 
 test_that("cache invalidates when sim_settings parameters change", {
-  withr::local_options(list(sdbuildR.defer_codegen = FALSE))
-
-  sfm <- sdbuildR() |>
+  sfm <- stockflow() |>
     update(name = "S", type = "stock", eqn = "100") |>
     update(name = "births", type = "flow", eqn = "0.1 * S", to = "S")
 

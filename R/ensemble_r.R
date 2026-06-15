@@ -75,7 +75,7 @@ summarise_by <- function(df, by, quantiles, q_names) {
 #' @param n_conditions Integer; number of conditions.
 #' @param total_sims Integer; total simulations across all conditions.
 #'
-#' @returns Object of class [`ensemble_sdbuildR`][ensemble()]
+#' @returns Object of class [`ensemble_stockflow`][ensemble()]
 #' @noRd
 ensemble_r <- function(object, n, save_sims, conditions, cross,
                        quantiles, only_stocks, vars = NULL, verbose,
@@ -198,7 +198,7 @@ ensemble_r <- function(object, n, save_sims, conditions, cross,
   if (length(sim_results) == 0L) {
     err_msg <- attr(sim_results, "error_message") %||%
       "Ensemble simulation failed."
-    return(new_ensemble_sdbuildR(
+    return(new_ensemble_stockflow(
       success = FALSE,
       error_message = err_msg,
       object = object
@@ -208,7 +208,7 @@ ensemble_r <- function(object, n, save_sims, conditions, cross,
   # Check for any failed simulations
   failed <- vapply(sim_results, function(x) !x[["success"]], logical(1))
   if (all(failed)) {
-    return(new_ensemble_sdbuildR(
+    return(new_ensemble_stockflow(
       success = FALSE,
       error_message = sim_results[[1]][["error_message"]],
       object = object
@@ -281,7 +281,7 @@ eval_sim_script_r <- function(parsed_expr, condition, sim) {
 }
 
 
-#' Assemble R ensemble results into ensemble_sdbuildR object
+#' Assemble R ensemble results into ensemble_stockflow object
 #'
 #' @param good_results List of successful simulation results
 #' @param n Simulations per condition
@@ -295,7 +295,7 @@ eval_sim_script_r <- function(parsed_expr, condition, sim) {
 #' @param object Stock-and-flow model
 #' @param duration Time elapsed
 #'
-#' @returns Object of class [`ensemble_sdbuildR`][ensemble()]
+#' @returns Object of class [`ensemble_stockflow`][ensemble()]
 #' @noRd
 assemble_ensemble_results_r <- function(good_results, n, n_conditions,
                                         total_sims, save_sims,
@@ -383,7 +383,7 @@ assemble_ensemble_results_r <- function(good_results, n, n_conditions,
     df_out <- NULL
   }
 
-  new_ensemble_sdbuildR(
+  new_ensemble_stockflow(
     success = TRUE,
     df = df_out,
     summary = summary_df,

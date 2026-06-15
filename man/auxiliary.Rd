@@ -10,7 +10,7 @@ auxiliary(object, name, eqn = 0, label = name, doc = "", non_negative = FALSE)
 aux(object, name, eqn = 0, label = name, doc = "", non_negative = FALSE)
 }
 \arguments{
-\item{object}{Stock-and-flow model, object of class \code{\link{sdbuildR}}.}
+\item{object}{Stock-and-flow model, object of class \code{\link{stockflow}}.}
 
 \item{name}{Variable name. Accepts a bare symbol (e.g., \code{population}), a string (\code{"population"}), or a vector via \code{c()} (e.g., \code{c(a, b)} or \code{c("a", "b")}). Use \verb{!!} to inject from a variable.}
 
@@ -23,24 +23,24 @@ aux(object, name, eqn = 0, label = name, doc = "", non_negative = FALSE)
 \item{non_negative}{If TRUE, variable is enforced to be non-negative (i.e., strictly 0 or positive). Defaults to \code{FALSE}.}
 }
 \value{
-A stock-and-flow model object of class \code{\link{sdbuildR}}
+A stock-and-flow model object of class \code{\link{stockflow}}
 }
 \description{
 Auxiliaries are dynamic variables used for intermediate calculations in the
 system. \code{\link[=auxiliary]{auxiliary()}} adds or changes an auxiliary variable. This is a convenience
 wrapper around \code{\link[=update]{update()}} with \code{type = "aux"}. See the \strong{Auxiliaries} section
-of \code{\link[=update.sdbuildR]{update()}} for more details.
+of \code{\link[=update.stockflow]{update()}} for more details.
 }
 \examples{
 
 # Create an auxiliary for an intermediate calculation
-sfm <- sdbuildR() |>
+sfm <- stockflow() |>
   stock(population, eqn = 100) |>
   constant(carrying_capacity, eqn = 1000) |>
   auxiliary(density, eqn = population / carrying_capacity, label = "Density")
 
 }
 \seealso{
-\code{\link[=update.sdbuildR]{update()}}, \code{\link[=discard]{discard()}}, \code{\link[=change_name]{change_name()}}
+\code{\link[=update.stockflow]{update()}}, \code{\link[=discard]{discard()}}, \code{\link[=change_name]{change_name()}}
 }
 \concept{build}

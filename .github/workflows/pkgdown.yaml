@@ -24,7 +24,6 @@ jobs:
       NOT_CRAN: "true"
       SDBUILDR_INSTALL_JULIA_ENV: "true"
       SDBUILDR_CREATE_TEST_FIGS: "true"
-      SDBUILDR_VIGNETTE_TRACE_FILE: "jdr-render-trace.log"
 
     permissions:
       contents: write
@@ -58,48 +57,8 @@ jobs:
         shell: bash
 
       - name: Build site
-        run: |
-          : > "$SDBUILDR_VIGNETTE_TRACE_FILE"
-          tail -n +1 -f "$SDBUILDR_VIGNETTE_TRACE_FILE" &
-          trace_tail_pid=$!
-
-          cleanup() {
-            status=$?
-            trap - EXIT TERM INT
-            echo "::group::Final jdr render trace"
-            if [ -f "$SDBUILDR_VIGNETTE_TRACE_FILE" ]; then
-              cat "$SDBUILDR_VIGNETTE_TRACE_FILE"
-            else
-              echo "No vignette trace file found at $SDBUILDR_VIGNETTE_TRACE_FILE"
-            fi
-            echo "::endgroup::"
-            kill "$trace_tail_pid" 2>/dev/null || true
-            exit "$status"
-          }
-
-          trap cleanup EXIT
-          trap 'echo "Received termination signal while building pkgdown"; cleanup' TERM INT
-
-          Rscript -e 'pkgdown::build_site_github_pages(new_process = FALSE, install = FALSE)'
-        shell: bash
-
-      - name: Print vignette trace
-        if: always()
-        run: |
-          if [ -f "$SDBUILDR_VIGNETTE_TRACE_FILE" ]; then
-            cat "$SDBUILDR_VIGNETTE_TRACE_FILE"
-          else
-            echo "No vignette trace file found at $SDBUILDR_VIGNETTE_TRACE_FILE"
-          fi
-        shell: bash
-
-      - name: Upload vignette trace
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: jdr-render-trace
-          path: ${{ env.SDBUILDR_VIGNETTE_TRACE_FILE }}
-          if-no-files-found: ignore
+        run: pkgdown::build_site_github_pages(new_process = FALSE, install = FALSE)
+        shell: Rscript {0}
 
       - name: Deploy to GitHub pages 🚀
         if: github.event_name != 'pull_request'

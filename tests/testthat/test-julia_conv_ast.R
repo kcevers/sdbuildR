@@ -116,14 +116,14 @@ test_that("AST and legacy translators agree on deterministic template equations"
   # Equivalence check over real model equations (excludes stochastic calls).
   eqns <- c()
   for (tp in templates()) {
-    sfm <- tryCatch(sdbuildR(tp), error = function(e) NULL)
+    sfm <- tryCatch(stockflow(tp), error = function(e) NULL)
     if (is.null(sfm)) next
     v <- sfm[["variables"]]
     eqns <- c(eqns, v[v[["type"]] %in% c("stock", "flow", "constant", "aux"), "eqn"])
   }
   eqns <- unique(eqns[nzchar(eqns)])
   vnames <- c(julia_ast_vnames(), unlist(lapply(templates(), function(tp) {
-    s <- tryCatch(sdbuildR(tp), error = function(e) NULL)
+    s <- tryCatch(stockflow(tp), error = function(e) NULL)
     if (is.null(s)) character(0) else get_model_var(s)
   })))
 

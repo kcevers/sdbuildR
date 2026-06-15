@@ -106,7 +106,7 @@ lang_adapter_r <- function() {
     # Zero literal
     zero = "0",
 
-    # Whether to call sanitize_sdbuildR after stock change prep
+    # Whether to call sanitize_stockflow after stock change prep
     validate_after_stock_change = FALSE,
 
     # Func equation formatting: R just pastes name = eqn
@@ -205,7 +205,7 @@ lang_adapter_julia <- function() {
     # Zero literal
     zero = "0.0",
 
-    # Whether to call sanitize_sdbuildR after stock change prep
+    # Whether to call sanitize_stockflow after stock change prep
     validate_after_stock_change = FALSE,
 
     # Func equation formatting: Julia converts R syntax to Julia
