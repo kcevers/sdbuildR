@@ -202,7 +202,7 @@ sfm <- sdbuildR("SIR")
 cat(export_model(sfm, format = "sdbuildR"))
 #> sfm <-    sdbuildR() |>
 #>  sim_settings(start = "0.0", stop = "20.0", dt = "0.01", time_units = "weeks") |>
-#>  meta(name = "Susceptible-Infected-Recovered (SIR)", created = "2026-06-14 23:04:42.815253") |>
+#>  meta(name = "Susceptible-Infected-Recovered (SIR)", created = "2026-06-15 07:30:06.272515") |>
 #>  stock(infected, eqn = 1, label = "Infected") |>
 #>  stock(recovered, eqn = 0, label = "Recovered") |>
 #>  stock(susceptible, eqn = 99999, label = "Susceptible") |>

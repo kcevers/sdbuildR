@@ -110,7 +110,7 @@ function:
 
 sims <- ensemble(sfm, n = 100)
 #> Starting ensemble simulation in "R" with 100 simulations.
-#> ✔ Ensemble simulation completed in 21.9946 seconds.
+#> ✔ Ensemble simulation completed in 22.2741 seconds.
 ```
 
 ``` r
@@ -126,7 +126,7 @@ which we first have to rerun the simulation with `save_sims = TRUE`:
 
 sims <- ensemble(sfm, n = 30, save_sims = TRUE)
 #> Starting ensemble simulation in "R" with 30 simulations.
-#> ✔ Ensemble simulation completed in 6.5798 seconds.
+#> ✔ Ensemble simulation completed in 6.6991 seconds.
 ```
 
 ``` r
@@ -150,7 +150,7 @@ By default, only the stocks are saved. To save all variables, set
 
 sims <- ensemble(sfm, n = 100, only_stocks = FALSE)
 #> Starting ensemble simulation in "R" with 100 simulations.
-#> ✔ Ensemble simulation completed in 72.7342 seconds.
+#> ✔ Ensemble simulation completed in 73.0425 seconds.
 ```
 
 ``` r
@@ -239,7 +239,7 @@ sims <- ensemble(sfm,
 )
 #> Starting ensemble simulation in "Julia" with 400 simulations in total.
 #> ℹ 4 conditions x 100 simulations per condition.
-#> ✔ Ensemble simulation completed in 10.2176 seconds.
+#> ✔ Ensemble simulation completed in 10.2969 seconds.
 ```
 
 ``` r
@@ -264,7 +264,7 @@ sims <- ensemble(sfm,
 )
 #> Starting ensemble simulation in "Julia" with 400 simulations in total.
 #> ℹ 4 conditions x 100 simulations per condition.
-#> ✔ Ensemble simulation completed in 2.601 seconds.
+#> ✔ Ensemble simulation completed in 2.5749 seconds.
 ```
 
 ``` r
@@ -301,7 +301,7 @@ sims <- ensemble(sfm,
 )
 #> Starting ensemble simulation in "Julia" with 300 simulations in total.
 #> ℹ 3 conditions x 100 simulations per condition.
-#> ✔ Ensemble simulation completed in 2.8885 seconds.
+#> ✔ Ensemble simulation completed in 2.8407 seconds.
 ```
 
 ``` r

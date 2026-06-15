@@ -1148,7 +1148,7 @@ model for a thousand iterations:
 
 sims <- ensemble(sfm, n = 1000)
 #> Starting ensemble simulation in "Julia" with 1000 simulations.
-#> ✔ Ensemble simulation completed in 14.7345 seconds.
+#> ✔ Ensemble simulation completed in 14.8794 seconds.
 plot(sims, vars = c("engagement", "demands"))
 ```
 
@@ -1178,7 +1178,7 @@ n <- 100
 sims <- ensemble(sfm, n = n, conditions = conditions)
 #> Starting ensemble simulation in "Julia" with 300 simulations in total.
 #> ℹ 3 conditions x 100 simulations per condition.
-#> ✔ Ensemble simulation completed in 3.4059 seconds.
+#> ✔ Ensemble simulation completed in 3.4275 seconds.
 
 # Plot all trajectories
 plot(sims,
@@ -1250,7 +1250,7 @@ Run an ensemble simulation:
 sfm <- sim_settings(sfm, save_sims = TRUE)
 sims <- ensemble(sfm, n = n)
 #> Starting ensemble simulation in "Julia" with 100 simulations.
-#> ✔ Ensemble simulation completed in 2.4835 seconds.
+#> ✔ Ensemble simulation completed in 2.8734 seconds.
 plot(sims,
   which = "sims", sim = 1:n, alpha = .75, central_tendency = FALSE,
   vars = c("engagement", "demands", "motivation_rate")
@@ -1269,7 +1269,7 @@ sfm <- sim_settings(sfm,
 )
 sims <- ensemble(sfm, n = n)
 #> Starting ensemble simulation in "Julia" with 1000 simulations.
-#> ✔ Ensemble simulation completed in 27.4234 seconds.
+#> ✔ Ensemble simulation completed in 27.2333 seconds.
 df <- as.data.frame(sims, direction = "wide", which = "sims")
 tab <- table(round(df$engagement)) |>
   prop.table() |>
@@ -1289,7 +1289,7 @@ A shorter intervention is not as effective.
 sfm2 <- update(sfm, duration, eqn = 7)
 sims2 <- ensemble(sfm2, n = n)
 #> Starting ensemble simulation in "Julia" with 1000 simulations.
-#> ✔ Ensemble simulation completed in 27.7954 seconds.
+#> ✔ Ensemble simulation completed in 27.6154 seconds.
 df2 <- as.data.frame(sims2, direction = "wide", which = "sims")
 tab2 <- table(round(df2$engagement)) |>
   prop.table() |>
