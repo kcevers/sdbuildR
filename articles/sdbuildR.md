@@ -12,13 +12,13 @@ features.
 ### Load models from the model library
 
 Dozens of example models can be loaded using
-[`sdbuildR()`](https://kcevers.github.io/sdbuildR/reference/sdbuildR.md).
+[`stockflow()`](https://kcevers.github.io/sdbuildR/reference/stockflow.md).
 Here we load the SIR (Susceptible-Infected-Recovered) model, a classic
 model in epidemiology:
 
 ``` r
 
-sfm <- sdbuildR("SIR")
+sfm <- stockflow("SIR")
 print(sfm)
 #> 
 #> ── Stock-and-Flow Model: Susceptible-Infected-Recovered (SIR) ──────────────────
@@ -59,12 +59,12 @@ plot(sim)
 
 The equivalent stock-and-flow model can also be built from scratch. We
 initialise an empty model with
-[`sdbuildR()`](https://kcevers.github.io/sdbuildR/reference/sdbuildR.md)
+[`stockflow()`](https://kcevers.github.io/sdbuildR/reference/stockflow.md)
 and add three stocks.
 
 ``` r
 
-sfm <- sdbuildR() |>
+sfm <- stockflow() |>
   stock(susceptible, eqn = 99999, label = "Susceptible") |>
   stock(infected, eqn = 1, label = "Infected") |>
   stock(recovered, eqn = 0, label = "Recovered")
@@ -154,7 +154,7 @@ random value:
 
 ``` r
 
-sfm_ens <- sdbuildR("SIR") |>
+sfm_ens <- stockflow("SIR") |>
   update(c(susceptible, infected, recovered), eqn = runif(1, 1, 1000)) |>
   # Save fewer values for computational efficiency
   sim_settings(stop = 50, save_at = 1)
@@ -164,7 +164,7 @@ sfm_ens <- sdbuildR("SIR") |>
 
 sims <- ensemble(sfm_ens, n = 100)
 #> Starting ensemble simulation in "R" with 100 simulations.
-#> ✔ Ensemble simulation completed in 6.6902 seconds.
+#> ✔ Ensemble simulation completed in 6.5382 seconds.
 plot(sims)
 ```
 
@@ -186,7 +186,7 @@ negative, and that the total population is conserved:
 
 ``` r
 
-sfm <- sdbuildR("SIR") |>
+sfm <- stockflow("SIR") |>
   unit_test(expr = all(susceptible >= 0)) |>
   unit_test(
     expr = all(abs(susceptible + infected + recovered - total_population) < 1e-8),

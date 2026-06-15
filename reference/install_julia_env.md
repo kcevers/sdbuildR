@@ -15,8 +15,8 @@ install_julia_env(remove = FALSE)
 - remove:
 
   If `TRUE`, remove Julia environment for sdbuildR. This will delete the
-  Manifest.toml file, as well as the StockFlowRSupport.jl package. All
-  other Julia packages remain untouched.
+  Manifest.toml file, as well as the SystemDynamicsBuildR.jl package.
+  All other Julia packages remain untouched.
 
 ## Value
 
@@ -30,8 +30,8 @@ Invisibly returns `NULL` after instantiating the Julia environment.
 
 - Activate a Julia environment using sdbuildR's Project.toml
 
-- Install StockFlowRSupport.jl from GitHub
-  (https://github.com/kcevers/StockFlowRSupport.jl)
+- Install SystemDynamicsBuildR.jl from GitHub
+  (https://github.com/kcevers/SystemDynamicsBuildR.jl)
 
 - Install all other required Julia packages
 

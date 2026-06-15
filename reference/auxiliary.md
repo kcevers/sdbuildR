@@ -5,7 +5,7 @@ the system. `auxiliary()` adds or changes an auxiliary variable. This is
 a convenience wrapper around
 [`update()`](https://rdrr.io/r/stats/update.html) with `type = "aux"`.
 See the **Auxiliaries** section of
-[`update()`](https://kcevers.github.io/sdbuildR/reference/update.sdbuildR.md)
+[`update()`](https://kcevers.github.io/sdbuildR/reference/update.stockflow.md)
 for more details.
 
 ## Usage
@@ -21,7 +21,7 @@ aux(object, name, eqn = 0, label = name, doc = "", non_negative = FALSE)
 - object:
 
   Stock-and-flow model, object of class
-  [`sdbuildR`](https://kcevers.github.io/sdbuildR/reference/sdbuildR.md).
+  [`stockflow`](https://kcevers.github.io/sdbuildR/reference/stockflow.md).
 
 - name:
 
@@ -52,11 +52,11 @@ aux(object, name, eqn = 0, label = name, doc = "", non_negative = FALSE)
 ## Value
 
 A stock-and-flow model object of class
-[`sdbuildR`](https://kcevers.github.io/sdbuildR/reference/sdbuildR.md)
+[`stockflow`](https://kcevers.github.io/sdbuildR/reference/stockflow.md)
 
 ## See also
 
-[`update()`](https://kcevers.github.io/sdbuildR/reference/update.sdbuildR.md),
+[`update()`](https://kcevers.github.io/sdbuildR/reference/update.stockflow.md),
 [`discard()`](https://kcevers.github.io/sdbuildR/reference/discard.md),
 [`change_name()`](https://kcevers.github.io/sdbuildR/reference/change_name.md)
 
@@ -65,7 +65,7 @@ A stock-and-flow model object of class
 ``` r
 
 # Create an auxiliary for an intermediate calculation
-sfm <- sdbuildR() |>
+sfm <- stockflow() |>
   stock(population, eqn = 100) |>
   constant(carrying_capacity, eqn = 1000) |>
   auxiliary(density, eqn = population / carrying_capacity, label = "Density")

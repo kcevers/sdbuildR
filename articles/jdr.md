@@ -99,7 +99,7 @@ time unit of a day:
 
 ``` r
 
-sfm <- sdbuildR() |>
+sfm <- stockflow() |>
   sim_settings(
     stop = round(182.5), time_units = "day",
     # Simulation timestep
@@ -524,11 +524,11 @@ sfm0 <- sfm
 
 Note that this is identical to the version stored in the model library,
 which can be loaded using
-[`sdbuildR()`](https://kcevers.github.io/sdbuildR/reference/sdbuildR.md):
+[`stockflow()`](https://kcevers.github.io/sdbuildR/reference/stockflow.md):
 
 ``` r
 
-sfm0 <- sfm <- sdbuildR("jdr")
+sfm0 <- sfm <- stockflow("jdr")
 ```
 
 ## Step 4. Testing
@@ -1148,7 +1148,7 @@ model for a thousand iterations:
 
 sims <- ensemble(sfm, n = 1000)
 #> Starting ensemble simulation in "Julia" with 1000 simulations.
-#> ✔ Ensemble simulation completed in 14.8794 seconds.
+#> ✔ Ensemble simulation completed in 14.6265 seconds.
 plot(sims, vars = c("engagement", "demands"))
 ```
 
@@ -1178,7 +1178,7 @@ n <- 100
 sims <- ensemble(sfm, n = n, conditions = conditions)
 #> Starting ensemble simulation in "Julia" with 300 simulations in total.
 #> ℹ 3 conditions x 100 simulations per condition.
-#> ✔ Ensemble simulation completed in 3.4275 seconds.
+#> ✔ Ensemble simulation completed in 3.3958 seconds.
 
 # Plot all trajectories
 plot(sims,
@@ -1250,7 +1250,7 @@ Run an ensemble simulation:
 sfm <- sim_settings(sfm, save_sims = TRUE)
 sims <- ensemble(sfm, n = n)
 #> Starting ensemble simulation in "Julia" with 100 simulations.
-#> ✔ Ensemble simulation completed in 2.8734 seconds.
+#> ✔ Ensemble simulation completed in 2.4735 seconds.
 plot(sims,
   which = "sims", sim = 1:n, alpha = .75, central_tendency = FALSE,
   vars = c("engagement", "demands", "motivation_rate")
@@ -1269,7 +1269,7 @@ sfm <- sim_settings(sfm,
 )
 sims <- ensemble(sfm, n = n)
 #> Starting ensemble simulation in "Julia" with 1000 simulations.
-#> ✔ Ensemble simulation completed in 27.2333 seconds.
+#> ✔ Ensemble simulation completed in 27.3724 seconds.
 df <- as.data.frame(sims, direction = "wide", which = "sims")
 tab <- table(round(df$engagement)) |>
   prop.table() |>
@@ -1289,7 +1289,7 @@ A shorter intervention is not as effective.
 sfm2 <- update(sfm, duration, eqn = 7)
 sims2 <- ensemble(sfm2, n = n)
 #> Starting ensemble simulation in "Julia" with 1000 simulations.
-#> ✔ Ensemble simulation completed in 27.6154 seconds.
+#> ✔ Ensemble simulation completed in 27.4415 seconds.
 df2 <- as.data.frame(sims2, direction = "wide", which = "sims")
 tab2 <- table(round(df2$engagement)) |>
   prop.table() |>
@@ -1319,7 +1319,7 @@ between job demands and work engagement with **lavaan** (Rosseel 2012)
 on an ensemble dataset (*n = 10,000*), sampled at day 20 (wave 1) and
 three months later at day 110 (wave 2).
 
-As shown above, our model implies that engagement has a strong positive
+As shown below, our model implies that engagement has a strong positive
 effect on itself, whereas demands have little effect on future demands.
 Higher demands lead to lower future work engagement, but higher
 engagement increases future demands. Furthermore, our JD-R model allows

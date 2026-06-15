@@ -15,7 +15,7 @@ change_name(object, name, new_name)
 - object:
 
   Stock-and-flow model, object of class
-  [`sdbuildR`](https://kcevers.github.io/sdbuildR/reference/sdbuildR.md).
+  [`stockflow`](https://kcevers.github.io/sdbuildR/reference/stockflow.md).
 
 - name:
 
@@ -32,7 +32,7 @@ change_name(object, name, new_name)
 ## Value
 
 A stock-and-flow model object of class
-[`sdbuildR`](https://kcevers.github.io/sdbuildR/reference/sdbuildR.md)
+[`stockflow`](https://kcevers.github.io/sdbuildR/reference/stockflow.md)
 with the name changed throughout the model.
 
 ## See also
@@ -43,7 +43,7 @@ with the name changed throughout the model.
 ## Examples
 
 ``` r
-sfm <- sdbuildR("SIR")
+sfm <- stockflow("SIR")
 sfm <- change_name(sfm, c(susceptible, infected, recovered),
   new_name = c(S, I, R)
 )

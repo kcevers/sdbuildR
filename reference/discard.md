@@ -20,7 +20,7 @@ discard(
 - object:
 
   Stock-and-flow model, object of class
-  [`sdbuildR`](https://kcevers.github.io/sdbuildR/reference/sdbuildR.md).
+  [`stockflow`](https://kcevers.github.io/sdbuildR/reference/stockflow.md).
 
 - name:
 
@@ -41,7 +41,7 @@ discard(
 ## Value
 
 A stock-and-flow model object of class
-[`sdbuildR`](https://kcevers.github.io/sdbuildR/reference/sdbuildR.md)
+[`stockflow`](https://kcevers.github.io/sdbuildR/reference/stockflow.md)
 
 ## See also
 
@@ -52,7 +52,7 @@ A stock-and-flow model object of class
 
 ``` r
 # Add stock
-sfm <- sdbuildR() |> stock(x)
+sfm <- stockflow() |> stock(x)
 print(sfm)
 #> 
 #> ── Stock-and-Flow Model ────────────────────────────────────────────────────────

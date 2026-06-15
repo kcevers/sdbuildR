@@ -13,7 +13,7 @@ dependencies(object, name = NULL, type = NULL, reverse = FALSE)
 - object:
 
   Stock-and-flow model, object of class
-  [`sdbuildR`](https://kcevers.github.io/sdbuildR/reference/sdbuildR.md).
+  [`stockflow`](https://kcevers.github.io/sdbuildR/reference/stockflow.md).
 
 - name:
 
@@ -41,7 +41,7 @@ or if `reverse = TRUE`, which variables depend on it
 ## Examples
 
 ``` r
-sfm <- sdbuildR("SIR")
+sfm <- stockflow("SIR")
 dependencies(sfm)
 #> $infected
 #> character(0)

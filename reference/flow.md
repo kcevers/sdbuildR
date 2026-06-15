@@ -27,7 +27,7 @@ flow(
 - object:
 
   Stock-and-flow model, object of class
-  [`sdbuildR`](https://kcevers.github.io/sdbuildR/reference/sdbuildR.md).
+  [`stockflow`](https://kcevers.github.io/sdbuildR/reference/stockflow.md).
 
 - name:
 
@@ -68,7 +68,7 @@ flow(
 ## Value
 
 A stock-and-flow model object of class
-[`sdbuildR`](https://kcevers.github.io/sdbuildR/reference/sdbuildR.md)
+[`stockflow`](https://kcevers.github.io/sdbuildR/reference/stockflow.md)
 
 ## See also
 
@@ -81,7 +81,7 @@ A stock-and-flow model object of class
 ``` r
 
 # Create a flow into a stock
-sfm <- sdbuildR() |>
+sfm <- stockflow() |>
   stock(population, eqn = 100) |>
   flow(births, eqn = population * 0.1, to = population) |>
   flow(deaths, eqn = population * 0.05, from = population)

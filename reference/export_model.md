@@ -1,7 +1,7 @@
 # Export a stock-and-flow model
 
 Export a model of class
-[`sdbuildR`](https://kcevers.github.io/sdbuildR/reference/sdbuildR.md)
+[`stockflow`](https://kcevers.github.io/sdbuildR/reference/stockflow.md)
 to another format.
 
 ## Usage
@@ -44,7 +44,7 @@ export_model(
 - object:
 
   Stock-and-flow model, object of class
-  [`sdbuildR`](https://kcevers.github.io/sdbuildR/reference/sdbuildR.md).
+  [`stockflow`](https://kcevers.github.io/sdbuildR/reference/stockflow.md).
 
 - format:
 
@@ -196,13 +196,13 @@ writes a `.json` file and returns the path invisibly. If `file` has no
 ## Examples
 
 ``` r
-sfm <- sdbuildR("SIR")
+sfm <- stockflow("SIR")
 
 # Get sdbuildR reconstruction code
 cat(export_model(sfm, format = "sdbuildR"))
-#> sfm <-    sdbuildR() |>
+#> sfm <-    stockflow() |>
 #>  sim_settings(start = "0.0", stop = "20.0", dt = "0.01", time_units = "weeks") |>
-#>  meta(name = "Susceptible-Infected-Recovered (SIR)", created = "2026-06-15 07:30:06.272515") |>
+#>  meta(name = "Susceptible-Infected-Recovered (SIR)", created = "2026-06-15 12:02:56.208897") |>
 #>  stock(infected, eqn = 1, label = "Infected") |>
 #>  stock(recovered, eqn = 0, label = "Recovered") |>
 #>  stock(susceptible, eqn = 99999, label = "Susceptible") |>

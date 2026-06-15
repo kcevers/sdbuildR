@@ -20,7 +20,7 @@ unit_test(object, test, expr, label, conditions = list(), active = TRUE)
 - object:
 
   Stock-and-flow model, object of class
-  [`sdbuildR`](https://kcevers.github.io/sdbuildR/reference/sdbuildR.md).
+  [`stockflow`](https://kcevers.github.io/sdbuildR/reference/stockflow.md).
 
 - test:
 
@@ -47,7 +47,7 @@ unit_test(object, test, expr, label, conditions = list(), active = TRUE)
 
   A named list of constant or initial stock overrides used when
   evaluating this test. If non-empty,
-  [`verify.sdbuildR()`](https://kcevers.github.io/sdbuildR/reference/verify.sdbuildR.md)
+  [`verify.stockflow()`](https://kcevers.github.io/sdbuildR/reference/verify.stockflow.md)
   will re-simulate the model with these parameter values before
   evaluating `expr`.
 
@@ -100,7 +100,7 @@ another test.
 ## Examples
 
 ``` r
-sfm <- sdbuildR("SIR") |>
+sfm <- stockflow("SIR") |>
   unit_test(expr = all(susceptible >= 0))
 
 # Run unit tests

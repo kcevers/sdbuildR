@@ -14,7 +14,7 @@ unit_tests(object, test = NULL, label = NULL, ignore_case = TRUE)
 - object:
 
   Stock-and-flow model, object of class
-  [`sdbuildR`](https://kcevers.github.io/sdbuildR/reference/sdbuildR.md).
+  [`stockflow`](https://kcevers.github.io/sdbuildR/reference/stockflow.md).
 
 - test:
 
@@ -34,7 +34,7 @@ unit_tests(object, test = NULL, label = NULL, ignore_case = TRUE)
 
 ## Value
 
-An object of class `unit_tests_sdbuildR`, printed automatically.
+An object of class `unit_tests_stockflow`, printed automatically.
 
 ## See also
 
@@ -44,7 +44,7 @@ An object of class `unit_tests_sdbuildR`, printed automatically.
 ## Examples
 
 ``` r
-sfm <- sdbuildR("SIR") |>
+sfm <- stockflow("SIR") |>
   unit_test(expr = all(susceptible >= 0)) |>
   unit_test(
     label = "recovered increases over time",

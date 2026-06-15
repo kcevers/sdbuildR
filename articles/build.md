@@ -54,7 +54,7 @@ We first initialize an empty stock-and-flow model:
 
 ``` r
 
-sfm <- sdbuildR()
+sfm <- stockflow()
 print(sfm)
 #> 
 #> ── Stock-and-Flow Model ────────────────────────────────────────────────────────
@@ -326,7 +326,7 @@ The following flowchart can be used to determine a variable’s type:
 
 | Function | Purpose |
 |:---|:---|
-| [`sdbuildR()`](https://kcevers.github.io/sdbuildR/reference/sdbuildR.md) | Create empty model or load template |
+| [`stockflow()`](https://kcevers.github.io/sdbuildR/reference/stockflow.md) | Create empty model or load template |
 | [`stock()`](https://kcevers.github.io/sdbuildR/reference/stock.md) | Add or modify a stock |
 | [`flow()`](https://kcevers.github.io/sdbuildR/reference/flow.md) | Add or modify a flow |
 | [`constant()`](https://kcevers.github.io/sdbuildR/reference/constant.md) | Add or modify a constant |
@@ -533,7 +533,7 @@ outside of the x-points. For example, a simple lookup function called
 
 ``` r
 
-sfm <- sdbuildR() |>
+sfm <- stockflow() |>
   lookup(graph,
     xpts = c(0, 1, 2), ypts = c(0.5, 1, 1),
     interpolation = "linear", extrapolation = "nearest"
@@ -556,7 +556,7 @@ function did not exist, you could create it yourself:
 
 ``` r
 
-sfm <- sdbuildR() |>
+sfm <- stockflow() |>
   custom_func(f, eqn = function(x, slope = 1, midpoint = .5) 1 / (1 + exp(-slope * (x - midpoint))))
 ```
 

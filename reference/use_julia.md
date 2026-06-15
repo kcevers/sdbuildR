@@ -41,7 +41,7 @@ Returns `NULL` invisibly, used for side effects
 
 In every R session, `use_julia()` needs to be run once (which is done
 automatically in
-[`simulate()`](https://kcevers.github.io/sdbuildR/reference/simulate.sdbuildR.md)),
+[`simulate()`](https://kcevers.github.io/sdbuildR/reference/simulate.stockflow.md)),
 which can take around 30-60 seconds.
 
 ## See also

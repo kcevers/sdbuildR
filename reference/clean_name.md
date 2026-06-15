@@ -26,7 +26,7 @@ Vector of cleaned names
 ## Examples
 
 ``` r
-sfm <- sdbuildR("predator_prey")
+sfm <- stockflow("predator_prey")
 # As the variable name "predator" is already taken, clean_name() will create
 # a unique name
 clean_name("predator", as.data.frame(sfm)[["name"]])

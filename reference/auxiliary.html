@@ -53,7 +53,7 @@ of update() for more details.'></head><body>
     <p>Auxiliaries are dynamic variables used for intermediate calculations in the
 system. <code>auxiliary()</code> adds or changes an auxiliary variable. This is a convenience
 wrapper around <code><a href="https://rdrr.io/r/stats/update.html" class="external-link">update()</a></code> with <code>type = "aux"</code>. See the <strong>Auxiliaries</strong> section
-of <code><a href="update.sdbuildR.html">update()</a></code> for more details.</p>
+of <code><a href="update.stockflow.html">update()</a></code> for more details.</p>
     </div>
 
     <div class="section level2">
@@ -68,7 +68,7 @@ of <code><a href="update.sdbuildR.html">update()</a></code> for more details.</p
 
 
 <dl><dt id="arg-object">object<a class="anchor" aria-label="anchor" href="#arg-object"></a></dt>
-<dd><p>Stock-and-flow model, object of class <code><a href="sdbuildR.html">sdbuildR</a></code>.</p></dd>
+<dd><p>Stock-and-flow model, object of class <code><a href="stockflow.html">stockflow</a></code>.</p></dd>
 
 
 <dt id="arg-name">name<a class="anchor" aria-label="anchor" href="#arg-name"></a></dt>
@@ -93,18 +93,18 @@ of <code><a href="update.sdbuildR.html">update()</a></code> for more details.</p
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A stock-and-flow model object of class <code><a href="sdbuildR.html">sdbuildR</a></code></p>
+    <p>A stock-and-flow model object of class <code><a href="stockflow.html">stockflow</a></code></p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p><code><a href="update.sdbuildR.html">update()</a></code>, <code><a href="discard.html">discard()</a></code>, <code><a href="change_name.html">change_name()</a></code></p></div>
+    <div class="dont-index"><p><code><a href="update.stockflow.html">update()</a></code>, <code><a href="discard.html">discard()</a></code>, <code><a href="change_name.html">change_name()</a></code></p></div>
     </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Create an auxiliary for an intermediate calculation</span></span></span>
-<span class="r-in"><span><span class="va">sfm</span> <span class="op">&lt;-</span> <span class="fu"><a href="sdbuildR.html">sdbuildR</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span><span class="va">sfm</span> <span class="op">&lt;-</span> <span class="fu"><a href="stockflow.html">stockflow</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="stock.html">stock</a></span><span class="op">(</span><span class="va">population</span>, eqn <span class="op">=</span> <span class="fl">100</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="constant.html">constant</a></span><span class="op">(</span><span class="va">carrying_capacity</span>, eqn <span class="op">=</span> <span class="fl">1000</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu">auxiliary</span><span class="op">(</span><span class="va">density</span>, eqn <span class="op">=</span> <span class="va">population</span> <span class="op">/</span> <span class="va">carrying_capacity</span>, label <span class="op">=</span> <span class="st">"Density"</span><span class="op">)</span></span></span>

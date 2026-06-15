@@ -18,7 +18,7 @@ stock(object, name, eqn = 0, label = name, doc = "", non_negative = FALSE)
 - object:
 
   Stock-and-flow model, object of class
-  [`sdbuildR`](https://kcevers.github.io/sdbuildR/reference/sdbuildR.md).
+  [`stockflow`](https://kcevers.github.io/sdbuildR/reference/stockflow.md).
 
 - name:
 
@@ -49,7 +49,7 @@ stock(object, name, eqn = 0, label = name, doc = "", non_negative = FALSE)
 ## Value
 
 A stock-and-flow model object of class
-[`sdbuildR`](https://kcevers.github.io/sdbuildR/reference/sdbuildR.md)
+[`stockflow`](https://kcevers.github.io/sdbuildR/reference/stockflow.md)
 
 ## See also
 
@@ -62,11 +62,11 @@ A stock-and-flow model object of class
 ``` r
 
 # Create a stock with an initial value
-sfm <- sdbuildR() |>
+sfm <- stockflow() |>
   stock(population, eqn = 100, label = "Population")
 
 # Multiple stocks
-sfm <- sdbuildR() |>
+sfm <- stockflow() |>
   stock(susceptible, eqn = 999, label = "susceptible") |>
   stock(infected, eqn = 1, label = "infected") |>
   stock(recovered, eqn = 0, label = "recovered")

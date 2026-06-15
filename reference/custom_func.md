@@ -16,7 +16,7 @@ custom_func(object, name, eqn = 0, label = name, doc = "")
 - object:
 
   Stock-and-flow model, object of class
-  [`sdbuildR`](https://kcevers.github.io/sdbuildR/reference/sdbuildR.md).
+  [`stockflow`](https://kcevers.github.io/sdbuildR/reference/stockflow.md).
 
 - name:
 
@@ -39,11 +39,11 @@ custom_func(object, name, eqn = 0, label = name, doc = "")
 ## Value
 
 A stock-and-flow model object of class
-[`sdbuildR`](https://kcevers.github.io/sdbuildR/reference/sdbuildR.md)
+[`stockflow`](https://kcevers.github.io/sdbuildR/reference/stockflow.md)
 
 ## See also
 
-[`update()`](https://kcevers.github.io/sdbuildR/reference/update.sdbuildR.md),
+[`update()`](https://kcevers.github.io/sdbuildR/reference/update.stockflow.md),
 [`discard()`](https://kcevers.github.io/sdbuildR/reference/discard.md),
 [`change_name()`](https://kcevers.github.io/sdbuildR/reference/change_name.md)
 
@@ -52,17 +52,17 @@ A stock-and-flow model object of class
 ``` r
 
 # Simple function
-sfm <- sdbuildR() |>
+sfm <- stockflow() |>
   custom_func(double, eqn = "function(x) x * 2") |>
   constant(a, eqn = double(2))
 
 # Function with defaults
-sfm <- sdbuildR() |>
+sfm <- stockflow() |>
   custom_func(scale, eqn = "function(x, factor = 10) x * factor") |>
   constant(b, eqn = scale(2))
 
 # If the logistic() function did not exist, you could create it yourself:
-sfm <- sdbuildR() |>
+sfm <- stockflow() |>
   custom_func(my_logistic, eqn = "function(x, slope = 1, midpoint = .5){
    1 / (1 + exp(-slope*(x-midpoint)))
  }") |>

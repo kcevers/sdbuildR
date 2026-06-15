@@ -1,7 +1,7 @@
 # Compare two stock-and-flow models
 
 Compares the structure, equations, and simulation settings of two
-`sdbuildR` models, and computes a nonlinearity score for each.
+`stockflow` models, and computes a nonlinearity score for each.
 
 ## Usage
 
@@ -14,16 +14,16 @@ compare_models(sfm1, sfm2)
 - sfm1:
 
   A stock-and-flow model of class
-  [`sdbuildR`](https://kcevers.github.io/sdbuildR/reference/sdbuildR.md).
+  [`stockflow`](https://kcevers.github.io/sdbuildR/reference/stockflow.md).
 
 - sfm2:
 
   A stock-and-flow model of class
-  [`sdbuildR`](https://kcevers.github.io/sdbuildR/reference/sdbuildR.md).
+  [`stockflow`](https://kcevers.github.io/sdbuildR/reference/stockflow.md).
 
 ## Value
 
-An object of class `compare_sdbuildR` (a list) containing:
+An object of class `compare_stockflow` (a list) containing:
 
 - `labels`:
 
@@ -55,13 +55,13 @@ An object of class `compare_sdbuildR` (a list) containing:
 
 ## See also
 
-[`simulate()`](https://kcevers.github.io/sdbuildR/reference/simulate.sdbuildR.md),
-[`summary()`](https://kcevers.github.io/sdbuildR/reference/summary.sdbuildR.md)
+[`simulate()`](https://kcevers.github.io/sdbuildR/reference/simulate.stockflow.md),
+[`summary()`](https://kcevers.github.io/sdbuildR/reference/summary.stockflow.md)
 
 ## Examples
 
 ``` r
-sfm1 <- sdbuildR("SIR")
+sfm1 <- stockflow("SIR")
 sfm2 <- stock(sfm1, "susceptible", eqn = 0.5)
 compare_models(sfm1, sfm2)
 #> 

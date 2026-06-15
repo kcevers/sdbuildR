@@ -18,7 +18,7 @@ constant(object, name, eqn = 0, label = name, doc = "", non_negative = FALSE)
 - object:
 
   Stock-and-flow model, object of class
-  [`sdbuildR`](https://kcevers.github.io/sdbuildR/reference/sdbuildR.md).
+  [`stockflow`](https://kcevers.github.io/sdbuildR/reference/stockflow.md).
 
 - name:
 
@@ -49,7 +49,7 @@ constant(object, name, eqn = 0, label = name, doc = "", non_negative = FALSE)
 ## Value
 
 A stock-and-flow model object of class
-[`sdbuildR`](https://kcevers.github.io/sdbuildR/reference/sdbuildR.md)
+[`stockflow`](https://kcevers.github.io/sdbuildR/reference/stockflow.md)
 
 ## See also
 
@@ -62,7 +62,7 @@ A stock-and-flow model object of class
 ``` r
 
 # Create constants for model parameters
-sfm <- sdbuildR() |>
+sfm <- stockflow() |>
   constant(growth_rate, eqn = 0.1, label = "Growth Rate") |>
   constant(carrying_capacity, eqn = 1000, label = "Carrying Capacity")
 ```

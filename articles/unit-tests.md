@@ -22,7 +22,7 @@ of infectious diseases.
 
 ``` r
 
-sfm <- sdbuildR("SIR")
+sfm <- stockflow("SIR")
 plot(sfm)
 ```
 

@@ -25,7 +25,7 @@ meta(
 - object:
 
   Stock-and-flow model, object of class
-  [`sdbuildR`](https://kcevers.github.io/sdbuildR/reference/sdbuildR.md).
+  [`stockflow`](https://kcevers.github.io/sdbuildR/reference/stockflow.md).
 
 - name:
 
@@ -62,12 +62,12 @@ meta(
 ## Value
 
 A stock-and-flow model object of class
-[`sdbuildR`](https://kcevers.github.io/sdbuildR/reference/sdbuildR.md)
+[`stockflow`](https://kcevers.github.io/sdbuildR/reference/stockflow.md)
 
 ## Examples
 
 ``` r
-sfm <- sdbuildR() |>
+sfm <- stockflow() |>
   meta(
     name = "My first model",
     caption = "This is my first model",

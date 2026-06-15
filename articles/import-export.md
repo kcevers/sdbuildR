@@ -166,7 +166,7 @@ sim <- simulate(sfm_plot)
 plot(sim)
 ```
 
-The imported model is a full `sdbuildR` object. You can modify it with
+The imported model is a full `stockflow` object. You can modify it with
 [`update()`](https://rdrr.io/r/stats/update.html), add unit tests with
 [`unit_test()`](https://kcevers.github.io/sdbuildR/reference/unit_test.md),
 run ensembles, and export it to any supported format.
@@ -176,8 +176,8 @@ run ensembles, and export it to any supported format.
 ## Exporting models
 
 [`export_model()`](https://kcevers.github.io/sdbuildR/reference/export_model.md)
-converts an `sdbuildR` object to another format. The currently supported
-export formats are
+converts an `stockflow` object to another format. The currently
+supported export formats are
 ’sdbuildR`to generate the build code of the model,`deSolve`to return a complete script for simulating a model with`deSolve`, and`psychomodels\`.
 
 Use `file = "path"` to write directly to disk; omit `file` to return the
@@ -195,7 +195,7 @@ specifications.
 ``` r
 
 export_model(sfm, format = "sdbuildR")
-#> [1] "sfm <-\tsdbuildR() |>\n\tsim_settings(method = \"lsoda\", start = \"0.0\", stop = \"100.0\", dt = \"0.1\") |>\n\tmeta(name = \"SIR epidemic\", created = \"2026-06-15 07:33:41.838724\") |>\n\tstock(I, eqn = 10) |>\n\tstock(R, eqn = 0) |>\n\tstock(S, eqn = 990) |>\n\tflow(net_I, eqn = SI - IR, to = I) |>\n\tflow(net_R, eqn = IR, to = R) |>\n\tflow(net_S, eqn = -SI, to = S) |>\n\tconstant(beta, eqn = 0.3) |>\n\tconstant(gamma, eqn = 0.1) |>\n\tconstant(N, eqn = 1000) |>\n\taux(IR, eqn = gamma * I) |>\n\taux(SI, eqn = beta * S * I/N)\n"
+#> [1] "sfm <-\tstockflow() |>\n\tsim_settings(method = \"lsoda\", start = \"0.0\", stop = \"100.0\", dt = \"0.1\") |>\n\tmeta(name = \"SIR epidemic\", created = \"2026-06-15 12:06:27.667451\") |>\n\tstock(I, eqn = 10) |>\n\tstock(R, eqn = 0) |>\n\tstock(S, eqn = 990) |>\n\tflow(net_I, eqn = SI - IR, to = I) |>\n\tflow(net_R, eqn = IR, to = R) |>\n\tflow(net_S, eqn = -SI, to = S) |>\n\tconstant(beta, eqn = 0.3) |>\n\tconstant(gamma, eqn = 0.1) |>\n\tconstant(N, eqn = 1000) |>\n\taux(IR, eqn = gamma * I) |>\n\taux(SI, eqn = beta * S * I/N)\n"
 ```
 
 ### deSolve script

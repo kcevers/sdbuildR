@@ -16,7 +16,7 @@ discard_unit_test(object, label, test)
 - object:
 
   Stock-and-flow model, object of class
-  [`sdbuildR`](https://kcevers.github.io/sdbuildR/reference/sdbuildR.md).
+  [`stockflow`](https://kcevers.github.io/sdbuildR/reference/stockflow.md).
 
 - label:
 
@@ -42,7 +42,7 @@ The model object with the specified test(s) removed.
 ## Examples
 
 ``` r
-sfm <- sdbuildR("SIR") |>
+sfm <- stockflow("SIR") |>
   unit_test(label = "susceptible is non-negative", expr = all(susceptible >= 0)) |>
   unit_test(label = "recovered increases", expr = all(diff(recovered) >= 0))
 

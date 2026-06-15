@@ -2,10 +2,10 @@
 
 ## Building stock-and-flow models
 
-- [`as.data.frame(`*`<sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/as.data.frame.sdbuildR.md)
-  : Convert stock-and-flow model to data frame
-- [`as.data.frame(`*`<simulate_sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/as.data.frame.simulate_sdbuildR.md)
+- [`as.data.frame(`*`<simulate_stockflow>`*`)`](https://kcevers.github.io/sdbuildR/reference/as.data.frame.simulate_stockflow.md)
   : Create data frame of simulation results
+- [`as.data.frame(`*`<stockflow>`*`)`](https://kcevers.github.io/sdbuildR/reference/as.data.frame.stockflow.md)
+  : Convert stock-and-flow model to data frame
 - [`auxiliary()`](https://kcevers.github.io/sdbuildR/reference/auxiliary.md)
   [`aux()`](https://kcevers.github.io/sdbuildR/reference/auxiliary.md) :
   Add or modify auxiliaries
@@ -29,60 +29,60 @@
   Add or modify lookup variables (graphical functions)
 - [`meta()`](https://kcevers.github.io/sdbuildR/reference/meta.md) :
   Modify meta of stock-and-flow model
-- [`plot(`*`<sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/plot.sdbuildR.md)
+- [`plot(`*`<stockflow>`*`)`](https://kcevers.github.io/sdbuildR/reference/plot.stockflow.md)
   : Plot stock-and-flow diagram
-- [`print(`*`<compare_sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/print.compare_sdbuildR.md)
+- [`print(`*`<compare_stockflow>`*`)`](https://kcevers.github.io/sdbuildR/reference/print.compare_stockflow.md)
   : Print comparison of two stock-and-flow models
-- [`print(`*`<sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/print.sdbuildR.md)
-  : Print overview of stock-and-flow model
-- [`print(`*`<simulate_sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/print.simulate_sdbuildR.md)
+- [`print(`*`<simulate_stockflow>`*`)`](https://kcevers.github.io/sdbuildR/reference/print.simulate_stockflow.md)
   : Print simulation of a stock-and-flow model
-- [`print(`*`<summary_sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/print.summary_sdbuildR.md)
-  : Print method for summary_sdbuildR
-- [`sdbuildR()`](https://kcevers.github.io/sdbuildR/reference/sdbuildR.md)
-  : Create a new stock-and-flow model
+- [`print(`*`<stockflow>`*`)`](https://kcevers.github.io/sdbuildR/reference/print.stockflow.md)
+  : Print overview of stock-and-flow model
+- [`print(`*`<summary_stockflow>`*`)`](https://kcevers.github.io/sdbuildR/reference/print.summary_stockflow.md)
+  : Print method for summary_stockflow
 - [`stock()`](https://kcevers.github.io/sdbuildR/reference/stock.md) :
   Add or modify stocks
-- [`summary(`*`<sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/summary.sdbuildR.md)
+- [`stockflow()`](https://kcevers.github.io/sdbuildR/reference/stockflow.md)
+  : Create a new stock-and-flow model
+- [`summary(`*`<stockflow>`*`)`](https://kcevers.github.io/sdbuildR/reference/summary.stockflow.md)
   : Run model diagnostics
-- [`update(`*`<sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/update.sdbuildR.md)
+- [`update(`*`<stockflow>`*`)`](https://kcevers.github.io/sdbuildR/reference/update.stockflow.md)
   : Create or modify variables
 
 ## Simulate stock-and-flow models
 
-- [`head(`*`<simulate_sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/head.simulate_sdbuildR.md)
+- [`head(`*`<simulate_stockflow>`*`)`](https://kcevers.github.io/sdbuildR/reference/head.simulate_stockflow.md)
   : Print first rows of a simulation
-- [`plot(`*`<simulate_sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/plot.simulate_sdbuildR.md)
+- [`plot(`*`<simulate_stockflow>`*`)`](https://kcevers.github.io/sdbuildR/reference/plot.simulate_stockflow.md)
   : Plot timeseries of simulation
 - [`sim_methods()`](https://kcevers.github.io/sdbuildR/reference/sim_methods.md)
   : Translate between deSolve and DifferentialEquations.jl solver names
 - [`sim_settings()`](https://kcevers.github.io/sdbuildR/reference/sim_settings.md)
   : Modify simulation specifications
-- [`simulate(`*`<sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/simulate.sdbuildR.md)
+- [`simulate(`*`<stockflow>`*`)`](https://kcevers.github.io/sdbuildR/reference/simulate.stockflow.md)
   : Simulate stock-and-flow model
-- [`summary(`*`<simulate_sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/summary.simulate_sdbuildR.md)
+- [`summary(`*`<simulate_stockflow>`*`)`](https://kcevers.github.io/sdbuildR/reference/summary.simulate_stockflow.md)
   : Summarise simulation results
-- [`tail(`*`<simulate_sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/tail.simulate_sdbuildR.md)
+- [`tail(`*`<simulate_stockflow>`*`)`](https://kcevers.github.io/sdbuildR/reference/tail.simulate_stockflow.md)
   : Print last rows of a simulation
 
 ## Ensemble simulations
 
 - [`ensemble()`](https://kcevers.github.io/sdbuildR/reference/ensemble.md)
   : Run ensemble simulations
-- [`plot(`*`<ensemble_sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/plot.ensemble_sdbuildR.md)
+- [`plot(`*`<ensemble_stockflow>`*`)`](https://kcevers.github.io/sdbuildR/reference/plot.ensemble_stockflow.md)
   : Plot timeseries of ensemble simulation
 
 ## Unit testing
 
-- [`as.data.frame(`*`<verify_sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/as.data.frame.verify_sdbuildR.md)
+- [`as.data.frame(`*`<verify_stockflow>`*`)`](https://kcevers.github.io/sdbuildR/reference/as.data.frame.verify_stockflow.md)
   : Convert verify() results to a data frame
 - [`discard_unit_test()`](https://kcevers.github.io/sdbuildR/reference/discard_unit_test.md)
   : Remove a unit test from a stock-and-flow model
-- [`head(`*`<verify_sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/head.verify_sdbuildR.md)
+- [`head(`*`<verify_stockflow>`*`)`](https://kcevers.github.io/sdbuildR/reference/head.verify_stockflow.md)
   : Print first rows of verify results
-- [`plot(`*`<verify_sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/plot.verify_sdbuildR.md)
+- [`plot(`*`<verify_stockflow>`*`)`](https://kcevers.github.io/sdbuildR/reference/plot.verify_stockflow.md)
   : Plot verify results
-- [`tail(`*`<verify_sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/tail.verify_sdbuildR.md)
+- [`tail(`*`<verify_stockflow>`*`)`](https://kcevers.github.io/sdbuildR/reference/tail.verify_stockflow.md)
   : Print last rows of verify results
 - [`unit_test()`](https://kcevers.github.io/sdbuildR/reference/unit_test.md)
   : Add or modify unit tests
@@ -90,7 +90,7 @@
   : Display unit tests defined on a stock-and-flow model
 - [`verify()`](https://kcevers.github.io/sdbuildR/reference/verify.md) :
   Verify model behavior with unit tests
-- [`verify(`*`<sdbuildR>`*`)`](https://kcevers.github.io/sdbuildR/reference/verify.sdbuildR.md)
+- [`verify(`*`<stockflow>`*`)`](https://kcevers.github.io/sdbuildR/reference/verify.stockflow.md)
   : Verify unit tests against simulation results
 
 ## Set-up and use Julia
