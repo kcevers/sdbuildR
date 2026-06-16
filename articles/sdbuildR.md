@@ -164,7 +164,7 @@ sfm_ens <- stockflow("SIR") |>
 
 sims <- ensemble(sfm_ens, n = 100)
 #> Starting ensemble simulation in "R" with 100 simulations.
-#> ✔ Ensemble simulation completed in 6.5382 seconds.
+#> ✔ Ensemble simulation completed in 6.7647 seconds.
 plot(sims)
 ```
 

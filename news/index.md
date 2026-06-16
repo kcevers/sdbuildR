@@ -1,6 +1,8 @@
 # Changelog
 
-## sdbuildR (development version)
+## sdbuildR 2.0.0
+
+CRAN release: 2026-06-16
 
 ### Breaking changes
 
@@ -75,10 +77,10 @@
   [`use_julia()`](https://kcevers.github.io/sdbuildR/reference/use_julia.md)
   instead.
 
-- Unit-specific helpers from 1.x, including `u()`, `convert_u()`,
-  `drop_u()`, `model_units()`, `unit_prefixes()`, `get_units()`,
-  `get_regex_units()`, and `get_regex_time_units()`, are no longer part
-  of the public API.
+- Units are no longer supported. This means that unit-specific helpers
+  from 1.x, including `u()`, `convert_u()`, `drop_u()`, `model_units()`,
+  `unit_prefixes()`, `get_units()`, `get_regex_units()`, and
+  `get_regex_time_units()`, are no longer available.
 
 ### New features
 

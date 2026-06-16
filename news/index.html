@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">sdbuildR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.8.9001</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -39,13 +39,13 @@
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Changelog</h1>
-      <small>Source: <a href="https://github.com/KCEvers/sdbuildR/blob/stockflow/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
+      <small>Source: <a href="https://github.com/KCEvers/sdbuildR/blob/v2.0.0/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="development version" id="sdbuildr-development-version">sdbuildR (development version)<a class="anchor" aria-label="anchor" href="#sdbuildr-development-version"></a></h2>
+<h2 class="pkg-version" data-toc-text="2.0.0" id="sdbuildr-200">sdbuildR 2.0.0<a class="anchor" aria-label="anchor" href="#sdbuildr-200"></a></h2><p class="text-muted">CRAN release: 2026-06-16</p>
 <div class="section level3">
-<h3 id="breaking-changes-development-version">Breaking changes<a class="anchor" aria-label="anchor" href="#breaking-changes-development-version"></a></h3>
+<h3 id="breaking-changes-2-0-0">Breaking changes<a class="anchor" aria-label="anchor" href="#breaking-changes-2-0-0"></a></h3>
 <ul><li><p><code><a href="../reference/stockflow.html">stockflow()</a></code> is now the constructor for stock-and-flow models. Code that used <code>xmile()</code> or the development-only <code>sdbuildR()</code> constructor should call <code><a href="../reference/stockflow.html">stockflow()</a></code> instead.</p></li>
 <li><p><code><a href="https://rdrr.io/r/stats/update.html" class="external-link">update()</a></code> now replaces the old <code>build()</code> workflow for general model edits. For clearer model-building code, use <code><a href="../reference/stock.html">stock()</a></code>, <code><a href="../reference/flow.html">flow()</a></code>, <code><a href="../reference/constant.html">constant()</a></code>, <code><a href="../reference/auxiliary.html">aux()</a></code>/<code><a href="../reference/auxiliary.html">auxiliary()</a></code>, <code><a href="../reference/lookup.html">lookup()</a></code>, and <code><a href="../reference/custom_func.html">custom_func()</a></code>.</p></li>
 <li><p><code>stockflow</code> is now the primary model class. Code that checked for <code>sdbuildR_xmile</code> or <code>sdbuildR</code> should check for <code>stockflow</code> instead.</p></li>
@@ -60,10 +60,10 @@
 <li><p><code><a href="../reference/ensemble.html">ensemble()</a></code> now uses <code>conditions</code> instead of <code>range</code>. To retain individual simulations, use <code>save_sims = TRUE</code> instead of <code>return_sims = TRUE</code>.</p></li>
 <li><p><code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> methods now use <code>show_constants</code> instead of <code>add_constants</code>. For ensemble plots, use <code>which</code>, <code>sim</code>, <code>condition</code>, and <code>label_subplots</code> instead of <code>type</code>, <code>i</code>, <code>j</code>, and <code>j_labels</code>.</p></li>
 <li><p><code>use_julia(nthreads = )</code> now controls Julia threading. Code that used <code>use_threads()</code> should set the thread count with <code><a href="../reference/use_julia.html">use_julia()</a></code> instead.</p></li>
-<li><p>Unit-specific helpers from 1.x, including <code>u()</code>, <code>convert_u()</code>, <code>drop_u()</code>, <code>model_units()</code>, <code>unit_prefixes()</code>, <code>get_units()</code>, <code>get_regex_units()</code>, and <code>get_regex_time_units()</code>, are no longer part of the public API.</p></li>
+<li><p>Units are no longer supported. This means that unit-specific helpers from 1.x, including <code>u()</code>, <code>convert_u()</code>, <code>drop_u()</code>, <code>model_units()</code>, <code>unit_prefixes()</code>, <code>get_units()</code>, <code>get_regex_units()</code>, and <code>get_regex_time_units()</code>, are no longer available.</p></li>
 </ul></div>
 <div class="section level3">
-<h3 id="new-features-development-version">New features<a class="anchor" aria-label="anchor" href="#new-features-development-version"></a></h3>
+<h3 id="new-features-2-0-0">New features<a class="anchor" aria-label="anchor" href="#new-features-2-0-0"></a></h3>
 <ul><li><p><code><a href="../reference/stockflow.html">stockflow()</a></code> creates an empty model or loads a built-in template using a case-insensitive <code>template</code> name.</p></li>
 <li><p><code><a href="../reference/stock.html">stock()</a></code>, <code><a href="../reference/flow.html">flow()</a></code>, <code><a href="../reference/constant.html">constant()</a></code>, <code><a href="../reference/auxiliary.html">aux()</a></code>/<code><a href="../reference/auxiliary.html">auxiliary()</a></code>, <code><a href="../reference/lookup.html">lookup()</a></code>, and <code><a href="../reference/custom_func.html">custom_func()</a></code> provide typed model-building helpers around <code><a href="https://rdrr.io/r/stats/update.html" class="external-link">update()</a></code>.</p></li>
 <li><p><code><a href="https://rdrr.io/r/stats/update.html" class="external-link">update()</a></code> now supports bare variable names and R expressions in <code>name</code>, <code>type</code>, <code>eqn</code>, <code>to</code>, <code>from</code>, and <code>source</code>. Strings and programmatic injection with <code>!!</code> remain supported.</p></li>
@@ -78,7 +78,7 @@
 <li><p><code><a href="../reference/export_model.html">export_model()</a></code> exports models as sdbuildR reconstruction code, standalone deSolve scripts, or Psychomodels JSON records.</p></li>
 </ul></div>
 <div class="section level3">
-<h3 id="improvements-and-fixes-development-version">Improvements and fixes<a class="anchor" aria-label="anchor" href="#improvements-and-fixes-development-version"></a></h3>
+<h3 id="improvements-and-fixes-2-0-0">Improvements and fixes<a class="anchor" aria-label="anchor" href="#improvements-and-fixes-2-0-0"></a></h3>
 <ul><li><p><code><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame()</a></code> methods now support the <code>stockflow</code>, <code>simulate_stockflow</code>, <code>ensemble_stockflow</code>, and <code>verify_stockflow</code> classes.</p></li>
 <li><p><code><a href="../reference/dependencies.html">dependencies()</a></code> can now filter dependencies by variable name and type.</p></li>
 <li><p><code><a href="../reference/export_plot.html">export_plot()</a></code> now supports the current plot classes and additional graph export options.</p></li>

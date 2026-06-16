@@ -195,7 +195,7 @@ specifications.
 ``` r
 
 export_model(sfm, format = "sdbuildR")
-#> [1] "sfm <-\tstockflow() |>\n\tsim_settings(method = \"lsoda\", start = \"0.0\", stop = \"100.0\", dt = \"0.1\") |>\n\tmeta(name = \"SIR epidemic\", created = \"2026-06-15 12:06:27.667451\") |>\n\tstock(I, eqn = 10) |>\n\tstock(R, eqn = 0) |>\n\tstock(S, eqn = 990) |>\n\tflow(net_I, eqn = SI - IR, to = I) |>\n\tflow(net_R, eqn = IR, to = R) |>\n\tflow(net_S, eqn = -SI, to = S) |>\n\tconstant(beta, eqn = 0.3) |>\n\tconstant(gamma, eqn = 0.1) |>\n\tconstant(N, eqn = 1000) |>\n\taux(IR, eqn = gamma * I) |>\n\taux(SI, eqn = beta * S * I/N)\n"
+#> [1] "sfm <-\tstockflow() |>\n\tsim_settings(method = \"lsoda\", start = \"0.0\", stop = \"100.0\", dt = \"0.1\") |>\n\tmeta(name = \"SIR epidemic\", created = \"2026-06-16 21:37:27.132036\") |>\n\tstock(I, eqn = 10) |>\n\tstock(R, eqn = 0) |>\n\tstock(S, eqn = 990) |>\n\tflow(net_I, eqn = SI - IR, to = I) |>\n\tflow(net_R, eqn = IR, to = R) |>\n\tflow(net_S, eqn = -SI, to = S) |>\n\tconstant(beta, eqn = 0.3) |>\n\tconstant(gamma, eqn = 0.1) |>\n\tconstant(N, eqn = 1000) |>\n\taux(IR, eqn = gamma * I) |>\n\taux(SI, eqn = beta * S * I/N)\n"
 ```
 
 ### deSolve script

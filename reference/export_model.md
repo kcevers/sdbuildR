@@ -202,7 +202,7 @@ sfm <- stockflow("SIR")
 cat(export_model(sfm, format = "sdbuildR"))
 #> sfm <-    stockflow() |>
 #>  sim_settings(start = "0.0", stop = "20.0", dt = "0.01", time_units = "weeks") |>
-#>  meta(name = "Susceptible-Infected-Recovered (SIR)", created = "2026-06-15 12:02:56.208897") |>
+#>  meta(name = "Susceptible-Infected-Recovered (SIR)", created = "2026-06-16 21:33:43.234367") |>
 #>  stock(infected, eqn = 1, label = "Infected") |>
 #>  stock(recovered, eqn = 0, label = "Recovered") |>
 #>  stock(susceptible, eqn = 99999, label = "Susceptible") |>

@@ -8,7 +8,7 @@
 ## Citation
 
 Source:
-[`inst/CITATION`](https://github.com/KCEvers/sdbuildR/blob/stockflow/inst/CITATION)
+[`inst/CITATION`](https://github.com/KCEvers/sdbuildR/blob/v2.0.0/inst/CITATION)
 
 Evers K (2025). *sdbuildR: Easily Build, Simulate, and Visualise
 Stock-and-Flow Models*.
