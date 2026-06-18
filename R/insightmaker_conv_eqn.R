@@ -215,11 +215,10 @@ report_unsupported_IM_functions <- function(eqn, name, var_names, syntax_df_unsu
   idx5 <- stringr::str_detect(eqn_no_names, syntax5[["insightmaker_regex"]])
 
   if (any(idx5)) {
-    cli::cli_inform(
-      "Unsupported Insight Maker functions were detected in equation of ",
-      name, ", and won't be translated: "
-    )
-    cli::cli_inform(paste0(syntax5[idx5, "insightmaker"], ")"))
+    cli::cli_inform(c(
+      "!" = "Unsupported Insight Maker functions were detected in equation of {name}, and won't be translated:",
+      ">" = paste0(paste0(syntax5[idx5, "insightmaker"], ")"), collapse = ", ")
+    ))
   }
 
   invisible(NULL)
@@ -610,8 +609,11 @@ replace_op_IM <- function(eqn, var_names) {
       type = "round",
       names_with_brackets = TRUE
     )
-    end_function_words <- get_words(eqn)
-    end_function_words <- end_function_words[end_function_words[["word"]] == "function", "end"]
+    words <- get_words(eqn)
+    function_word_idxs <- which(tolower(words[["word"]]) == "function")
+    end_function_words <- words[function_word_idxs, "end"]
+    named_function_idxs <- function_word_idxs[function_word_idxs < nrow(words)]
+    end_function_words <- c(end_function_words, words[named_function_idxs + 1, "end"])
 
     if (nrow(paired_idxs) > 0 && length(end_function_words) > 0) {
       function_brackets <- paired_idxs[paired_idxs[["start"]] %in% (end_function_words + 1), ]

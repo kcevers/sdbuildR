@@ -127,18 +127,18 @@ To cite sdbuildR, please use:
 citation("sdbuildR")
 #> To cite package 'sdbuildR' in publications use:
 #> 
-#>   Evers K (2025). _sdbuildR: Easily Build, Simulate, and Visualise
+#>   Evers K (2026). _sdbuildR: Easily Build, Simulate, and Explore
 #>   Stock-and-Flow Models_. doi:10.32614/CRAN.package.sdbuildR
 #>   <https://doi.org/10.32614/CRAN.package.sdbuildR>, R package version
-#>   1.0.8.
+#>   2.0.0.9000.
 #> 
 #> A BibTeX entry for LaTeX users is
 #> 
 #>   @Manual{,
-#>     title = {sdbuildR: Easily Build, Simulate, and Visualise Stock-and-Flow Models},
+#>     title = {sdbuildR: Easily Build, Simulate, and Explore Stock-and-Flow Models},
 #>     author = {Kyra Caitlin Evers},
-#>     year = {2025},
-#>     note = {R package version 1.0.8},
+#>     year = {2026},
+#>     note = {R package version 2.0.0.9000},
 #>     doi = {10.32614/CRAN.package.sdbuildR},
 #>   }
 ```

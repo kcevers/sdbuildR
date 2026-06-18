@@ -279,3 +279,78 @@ test_that("interpret: expect_false(cond) → 'expect that ... is false'", {
   expect_match(result, "^expect that")
   expect_match(result, "is false$")
 })
+
+
+# ============================================================================
+# interpret() - additional user-facing expression descriptions
+# ============================================================================
+
+test_that("interpret: string literals and vectors are readable", {
+  expect_equal(interpret(expr_("'stable'")), '"stable"')
+  expect_equal(interpret(expr_('c("low", "high")')), '["low", "high"]')
+})
+
+test_that("interpret: logical negation keeps the inner comparison", {
+  result <- interpret(expr_("!(x > 0)"))
+  expect_equal(result, "it is not the case that x is greater than 0")
+})
+
+test_that("interpret: summary statistics wrap logical inputs", {
+  expect_equal(interpret(expr_("mean(x > 0)")), "the mean of (x is greater than 0)")
+  expect_equal(interpret(expr_("sum(x <= target)")), "the sum of (x is at most target)")
+})
+
+test_that("interpret: transformations, logs and rounding describe parameters", {
+  expect_equal(interpret(expr_("sqrt(abs(x))")), "the square root of the absolute value of x")
+  expect_equal(interpret(expr_("log(x)")), "the natural log of x")
+  expect_equal(interpret(expr_("log(x, 10)")), "the log (base 10) of x")
+  expect_equal(interpret(expr_("round(score)")), "score rounded")
+  expect_equal(interpret(expr_("round(score, 2)")), "score rounded to 2 decimal places")
+})
+
+test_that("interpret: sequence, difference, head and tail helpers describe slices", {
+  expect_equal(interpret(expr_("1:5")), "1 to 5")
+  expect_equal(interpret(expr_("diff(x)")), "the successive differences of x")
+  expect_equal(interpret(expr_("diff(x, lag = 2)")), "the successive differences (lag 2) of x")
+  expect_equal(interpret(expr_("head(x, 1)")), "the first 1 value of x")
+  expect_equal(interpret(expr_("tail(x)")), "the last 6 values of x")
+})
+
+test_that("interpret: indexing describes initial, final, range and filtered values", {
+  expect_equal(interpret(expr_("x[1]")), "the initial value of x")
+  expect_equal(interpret(expr_("x[3]")), "x at index 3")
+  expect_equal(interpret(expr_("x[2:5]")), "x from index 2 to 5")
+  expect_equal(interpret(expr_("x[length(x)]")), "the final value of x")
+  expect_equal(interpret(expr_("x[x > 0]")), "x where x is greater than 0")
+})
+
+test_that("interpret: extraction, approximate equality and conditionals are explicit", {
+  expect_equal(interpret(expr_("model$value")), "model's value")
+  expect_equal(interpret(expr_("near(x, y)")), "x is approximately equal to y")
+  expect_equal(interpret(expr_("near(x, y, 0.01)")), "x is approximately equal to y (within tolerance 0.01)")
+  expect_equal(interpret(expr_("ifelse(x > 0, 'gain', 'loss')")), 'if x is greater than 0 then "gain" otherwise "loss"')
+})
+
+test_that("interpret: extrema and identical describe common checks", {
+  expect_equal(interpret(expr_("which.max(x)")), "the index of the peak of x")
+  expect_equal(interpret(expr_("which.min(x)")), "the index of the trough of x")
+  expect_equal(interpret(expr_("identical(sort(x), x)")), "x is sorted in ascending order")
+  expect_equal(interpret(expr_("identical(x, y)")), "x is identical to y")
+})
+
+test_that("interpret: additional testthat expectations keep their intent", {
+  expect_equal(interpret(expr_("expect_named(x)")), "expect that x is named")
+  expect_equal(interpret(expr_('expect_named(x, c("a", "b"))')), 'expect that x has names ["a", "b"]')
+  expect_equal(interpret(expr_('expect_type(x, "double")')), 'expect that x is of type "double"')
+  expect_equal(interpret(expr_('expect_s3_class(x, "stockflow")')), 'expect that x is an S3 object of class "stockflow"')
+  expect_equal(interpret(expr_("expect_null(x)")), "expect that x is NULL")
+  expect_equal(interpret(expr_('expect_match(x, "abc")')), 'expect that x matches the pattern "abc"')
+  expect_equal(interpret(expr_("expect_silent(run_model())")), "expect that run_model() runs without messages, warnings, or errors")
+})
+
+test_that("interpret: vector expectations report optional type and size", {
+  expect_equal(
+    interpret(expr_("expect_vector(x, ptype = double(), size = 3)")),
+    "expect that x is a vector of type double() with size 3"
+  )
+})

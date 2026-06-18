@@ -434,3 +434,73 @@ test_that("conv_lookup: replacement uses square-bracket primitive syntax", {
   # The source (arg[1] with brackets stripped) appears in the replacement
   expect_match(result$replacement, "mydata")
 })
+
+
+# ============================================================================
+# conversion guardrails and replacement helper branches
+# ============================================================================
+
+test_that("replace_comments leaves comment markers inside quotes untouched", {
+  original <- "label <- 'http://example.test/*not-comment*/' // real comment"
+  result <- replace_comments(original)
+
+  expect_match(result, "http://example.test/*not-comment*/", fixed = TRUE)
+  expect_match(result, "# real comment", fixed = TRUE)
+  expect_false(grepl("// real comment", result, fixed = TRUE))
+})
+
+test_that("replace_op_IM preserves function defaults but converts comparisons and assignments", {
+  result <- replace_op_IM("Function f(x = 1)\ny <- x\nx = y", character(0))
+
+  expect_match(result, "x = 1", fixed = TRUE)
+  expect_match(result, "y = x", fixed = TRUE)
+  expect_match(result, "x == y", fixed = TRUE)
+})
+
+test_that("postprocess_equation_IM wraps multiline non-function equations", {
+  result <- postprocess_equation_IM("x <- 1\ny <- 2", name = "aux_var")
+
+  expect_equal(result, "{\nx <- 1\ny <- 2\n}")
+  expect_equal(postprocess_equation_IM("x <- 1\ny <- 2", name = P[["func_name"]]), "x <- 1\ny <- 2")
+})
+
+test_that("build_IM_builtin_replacement handles syntax0, syntax1b and unsupported syntax", {
+  syntax0 <- syntax_IM$syntax_df[
+    syntax_IM$syntax_df[["syntax"]] == "syntax0" &
+      syntax_IM$syntax_df[["insightmaker_first_iter"]] == "Time",
+  ]
+  syntax0$start <- 1L
+  syntax0$end <- 4L
+  result <- build_IM_builtin_replacement("Rand", syntax0[1, ], character(0), "x", character(0), character(0))
+  expect_equal(result$replacement, P[["time_name"]])
+  expect_equal(result$start_idx, 1L)
+  expect_equal(result$end_idx, 4L)
+  expect_equal(nrow(result$add_var), 0L)
+
+  syntax1b <- syntax_IM$syntax_df[
+    syntax_IM$syntax_df[["syntax"]] == "syntax1b" &
+      syntax_IM$syntax_df[["insightmaker_first_iter"]] == "Rand",
+  ]
+  syntax1b$start <- 1L
+  syntax1b$end <- 4L
+  result <- build_IM_builtin_replacement("Constant", syntax1b[1, ], character(0), "x", character(0), character(0))
+  expect_equal(result$replacement, "runif(1)")
+
+  bad_syntax <- syntax0
+  bad_syntax$syntax <- "unknown"
+  expect_error(
+    build_IM_builtin_replacement("Bad", bad_syntax[1, ], character(0), "x", character(0), character(0)),
+    "Unsupported Insight Maker syntax class"
+  )
+})
+
+test_that("report_unsupported_IM_functions reports unsupported function families", {
+  expect_message(
+    report_unsupported_IM_functions("Distance(x)", "stock", character(0), syntax_IM$syntax_df_unsupp),
+    "Agent-Based Modelling functions"
+  )
+  expect_message(
+    report_unsupported_IM_functions("Prompt(x)", "stock", character(0), syntax_IM$syntax_df_unsupp),
+    "Unsupported Insight Maker functions"
+  )
+})
