@@ -25,6 +25,10 @@ knitr::opts_chunk$set(
 
 ```{r, echo=TRUE, message=FALSE}
 library(sdbuildR)
+
+# Disable WebGL: many plotly widgets per HTML page can exceed the browser WebGL
+# context limit and render blank. SVG always renders.
+options(sdbuildR.webgl = FALSE)
 ```
 
 Stock-and-flow models can easily become complex, producing unexpected behaviours as the model is developed. To ensure a model behaves as intended, we may make use of unit tests, a concept from software engineering. A unit test compares the behaviour of a small aspect of the model (i.e., a unit) to an explicitly formulated expectation. By implementing an exhaustive test suite, we can systematically and routinely check the model. In this vignette, we will demonstrate how to use `sdbuildR` to create and run unit tests for a simple model.

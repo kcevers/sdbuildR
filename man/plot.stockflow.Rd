@@ -14,12 +14,18 @@
   stock_col = "#83d3d4",
   flow_col = "#f48153",
   dependency_col = "#999999",
+  label_col = "black",
+  show_eqn = TRUE,
+  show_tooltip = TRUE,
   show_dependencies = TRUE,
   show_constants = FALSE,
   show_aux = TRUE,
-  minlen = 2,
+  minlen = 1,
   pad = 0.1,
   nodesep = 0.3,
+  direction = "LR",
+  align = NULL,
+  order = NULL,
   ...
 )
 }
@@ -42,6 +48,12 @@
 
 \item{dependency_col}{Colour of dependency arrows. Defaults to "#999999".}
 
+\item{label_col}{Colour of variable labels (and of the equation text when \code{show_eqn = TRUE}). Defaults to "black".}
+
+\item{show_eqn}{If \code{TRUE}, show each variable's equation on a new line beneath its label, in a smaller font and the same colour as the label (\code{label_col}). Defaults to \code{TRUE}.}
+
+\item{show_tooltip}{If \code{TRUE}, show each variable's equation as a tooltip when hovering over it. Defaults to \code{TRUE}.}
+
 \item{show_dependencies}{If TRUE, show dependencies between variables. Defaults to TRUE.}
 
 \item{show_constants}{If TRUE, show constants. Defaults to FALSE.}
@@ -53,6 +65,29 @@
 \item{pad}{Padding around the graph. Defaults to 0.1.}
 
 \item{nodesep}{Minimum distance between nodes. Defaults to 0.3.}
+
+\item{direction}{Overall flow direction of the layout, passed to Graphviz's
+\code{rankdir}. One of \code{"LR"} (left-to-right, the default), \code{"TB"} (top-to-bottom),
+\code{"RL"} (right-to-left), or \code{"BT"} (bottom-to-top).}
+
+\item{align}{Optional alignment of variables \emph{across} the flow direction. A
+character vector of variable names, or a list of such vectors. Each group is
+placed on the same Graphviz rank (\code{{rank=same; ...}}), so its members line up
+(vertically when \code{direction = "LR"}, horizontally when \code{direction = "TB"}).
+Works for any variable (stocks, flows, auxiliaries, constants), not only
+stocks. Names that are not currently drawn (hidden by \code{vars},
+\code{show_constants}, or \code{show_aux}) are ignored with a warning; unknown names
+raise an error. Defaults to \code{NULL}.}
+
+\item{order}{Optional ordering of variables \emph{along} the flow direction. A
+character vector of variable names, or a list of such vectors, giving the
+desired sequence. Implemented as invisible edges between consecutive names,
+so it acts as a soft hint that Graphviz balances against the real flows
+rather than a hard constraint. On its own it sequences variables into
+successive ranks (e.g. separate columns when \code{direction = "LR"}); to instead
+line variables up in a single rank and control their order \emph{within} it,
+combine \code{order} with \code{align} (the \code{align} group sets the rank, \code{order} sets
+the position within it). Same validation as \code{align}. Defaults to \code{NULL}.}
 
 \item{...}{Optional arguments}
 }
@@ -71,6 +106,24 @@ plot(sfm, show_constants = FALSE, show_aux = FALSE)
 
 # Only show specific variables
 plot(sfm, vars = "susceptible")
+
+# Hide the equations shown beneath each label
+plot(sfm, show_eqn = FALSE)
+
+# Hide the equation tooltips shown on hover
+plot(sfm, show_tooltip = FALSE)
+
+# Custom label colour
+plot(sfm, label_col = "#333333")
+
+# Lay the model out top-to-bottom instead of left-to-right
+plot(sfm, direction = "TB")
+
+# Align variables across the flow direction (same Graphviz rank)
+plot(sfm, align = c("susceptible", "recovered"))
+
+# Order variables along the flow direction (soft hint via invisible edges)
+plot(sfm, order = c("susceptible", "infected", "recovered"))
 
 }
 \seealso{

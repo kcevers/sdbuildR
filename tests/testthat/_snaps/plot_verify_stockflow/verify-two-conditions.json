@@ -3,31 +3,27 @@
     {
       "x": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
       "y": [10, 9.04, 8.18, 7.4, 6.69, 6.05, 5.47, 4.95, 4.48, 4.05, 3.66],
-      "legendgroup": "S",
-      "type": "scatter",
-      "mode": "lines",
-      "opacity": 1,
-      "showlegend": false,
-      "connectgaps": false,
-      "visible": true,
       "name": "S",
+      "legendgroup": "S",
+      "type": "scattergl",
+      "mode": "lines",
+      "line": {
+        "color": "#C87A8AFF"
+      },
+      "showlegend": false,
+      "visible": true,
+      "connectgaps": false,
       "marker": {
-        "color": "rgba(200,122,138,1)",
+        "color": "rgba(31,119,180,1)",
         "line": {
-          "color": "rgba(200,122,138,1)"
+          "color": "rgba(31,119,180,1)"
         }
       },
-      "textfont": {
-        "color": "rgba(200,122,138,1)"
-      },
       "error_y": {
-        "color": "rgba(200,122,138,1)"
+        "color": "rgba(31,119,180,1)"
       },
       "error_x": {
-        "color": "rgba(200,122,138,1)"
-      },
-      "line": {
-        "color": "rgba(200,122,138,1)"
+        "color": "rgba(31,119,180,1)"
       },
       "xaxis": "x",
       "yaxis": "y",
@@ -36,31 +32,27 @@
     {
       "x": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
       "y": [10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10],
-      "legendgroup": "S",
-      "type": "scatter",
-      "mode": "lines",
-      "opacity": 1,
-      "showlegend": true,
-      "connectgaps": false,
-      "visible": true,
       "name": "S",
+      "legendgroup": "S",
+      "type": "scattergl",
+      "mode": "lines",
+      "line": {
+        "color": "#C87A8AFF"
+      },
+      "showlegend": true,
+      "visible": true,
+      "connectgaps": false,
       "marker": {
-        "color": "rgba(200,122,138,1)",
+        "color": "rgba(255,127,14,1)",
         "line": {
-          "color": "rgba(200,122,138,1)"
+          "color": "rgba(255,127,14,1)"
         }
       },
-      "textfont": {
-        "color": "rgba(200,122,138,1)"
-      },
       "error_y": {
-        "color": "rgba(200,122,138,1)"
+        "color": "rgba(255,127,14,1)"
       },
       "error_x": {
-        "color": "rgba(200,122,138,1)"
-      },
-      "line": {
-        "color": "rgba(200,122,138,1)"
+        "color": "rgba(255,127,14,1)"
       },
       "xaxis": "x",
       "yaxis": "y2",
@@ -153,7 +145,7 @@
     "hovermode": "closest",
     "showlegend": true,
     "title": {
-      "text": "Unit Tests of My Model<span style='font-size:16px;'><br />2unit tests across 2 conditions<\/span>"
+      "text": "Unit Tests of My Model<span style='font-size:16px;'><br />2 unit tests across 2 conditions<\/span>"
     },
     "font": {
       "family": "Times New Roman",

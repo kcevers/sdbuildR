@@ -27,6 +27,10 @@ knitr::opts_chunk$set(
 
 ```{r, echo=TRUE, message=FALSE}
 library(sdbuildR)
+
+# Disable WebGL: many plotly widgets per HTML page can exceed the browser WebGL
+# context limit and render blank. SVG always renders.
+options(sdbuildR.webgl = FALSE)
 ```
 
 ```{r, echo = FALSE, eval = interactive()}
@@ -279,7 +283,7 @@ To view their summary statistics, run:
 head(sims, which = "summary", type = "constant")
 ```
 
-### Close Julia session
+## Close Julia session
 
 ```{r}
 use_julia(stop = TRUE)

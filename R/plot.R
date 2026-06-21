@@ -208,12 +208,35 @@ export_plotly <- function(pl, file, format, width, height) {
 #' @param stock_col Colour of stocks. Defaults to "#83d3d4".
 #' @param flow_col Colour of flows. Defaults to "#f48153".
 #' @param dependency_col Colour of dependency arrows. Defaults to "#999999".
+#' @param label_col Colour of variable labels (and of the equation text when `show_eqn = TRUE`). Defaults to "black".
+#' @param show_eqn If `TRUE`, show each variable's equation on a new line beneath its label, in a smaller font and the same colour as the label (`label_col`). Defaults to `TRUE`.
+#' @param show_tooltip If `TRUE`, show each variable's equation as a tooltip when hovering over it. Defaults to `TRUE`.
 #' @param show_dependencies If TRUE, show dependencies between variables. Defaults to TRUE.
 #' @param show_constants If TRUE, show constants. Defaults to FALSE.
 #' @param show_aux If TRUE, show auxiliary variables. Defaults to TRUE.
 #' @param minlen Minimum length of edges; must be an integer. Defaults to 2.
 #' @param pad Padding around the graph. Defaults to 0.1.
 #' @param nodesep Minimum distance between nodes. Defaults to 0.3.
+#' @param direction Overall flow direction of the layout, passed to Graphviz's
+#'   `rankdir`. One of `"LR"` (left-to-right, the default), `"TB"` (top-to-bottom),
+#'   `"RL"` (right-to-left), or `"BT"` (bottom-to-top).
+#' @param align Optional alignment of variables *across* the flow direction. A
+#'   character vector of variable names, or a list of such vectors. Each group is
+#'   placed on the same Graphviz rank (`{rank=same; ...}`), so its members line up
+#'   (vertically when `direction = "LR"`, horizontally when `direction = "TB"`).
+#'   Works for any variable (stocks, flows, auxiliaries, constants), not only
+#'   stocks. Names that are not currently drawn (hidden by `vars`,
+#'   `show_constants`, or `show_aux`) are ignored with a warning; unknown names
+#'   raise an error. Defaults to `NULL`.
+#' @param order Optional ordering of variables *along* the flow direction. A
+#'   character vector of variable names, or a list of such vectors, giving the
+#'   desired sequence. Implemented as invisible edges between consecutive names,
+#'   so it acts as a soft hint that Graphviz balances against the real flows
+#'   rather than a hard constraint. On its own it sequences variables into
+#'   successive ranks (e.g. separate columns when `direction = "LR"`); to instead
+#'   line variables up in a single rank and control their order *within* it,
+#'   combine `order` with `align` (the `align` group sets the rank, `order` sets
+#'   the position within it). Same validation as `align`. Defaults to `NULL`.
 #' @param ... Optional arguments
 #'
 #' @returns Stock-and-flow diagram
@@ -232,6 +255,24 @@ export_plotly <- function(pl, file, format, width, height) {
 #' # Only show specific variables
 #' plot(sfm, vars = "susceptible")
 #'
+#' # Hide the equations shown beneath each label
+#' plot(sfm, show_eqn = FALSE)
+#'
+#' # Hide the equation tooltips shown on hover
+#' plot(sfm, show_tooltip = FALSE)
+#'
+#' # Custom label colour
+#' plot(sfm, label_col = "#333333")
+#'
+#' # Lay the model out top-to-bottom instead of left-to-right
+#' plot(sfm, direction = "TB")
+#'
+#' # Align variables across the flow direction (same Graphviz rank)
+#' plot(sfm, align = c("susceptible", "recovered"))
+#'
+#' # Order variables along the flow direction (soft hint via invisible edges)
+#' plot(sfm, order = c("susceptible", "infected", "recovered"))
+#'
 plot.stockflow <- function(x,
                            vars = NULL,
                            format_label = TRUE,
@@ -241,19 +282,63 @@ plot.stockflow <- function(x,
                            stock_col = "#83d3d4",
                            flow_col = "#f48153",
                            dependency_col = "#999999",
+                           label_col = "black",
+                           show_eqn = TRUE,
+                           show_tooltip = TRUE,
                            show_dependencies = TRUE,
                            show_constants = FALSE,
                            show_aux = TRUE,
-                           minlen = 2,
+                           minlen = 1,
                            pad = 0.1,
                            nodesep = 0.3,
+                           direction = "LR",
+                           align = NULL,
+                           order = NULL,
                            ...) {
   sfm <- x
   rm(x)
   check_stockflow(sfm)
 
+  if (!is.logical(show_eqn) || length(show_eqn) != 1 || is.na(show_eqn)) {
+    cli::cli_abort(c(
+      "x" = "Invalid {.arg show_eqn} argument.",
+      ">" = "The {.arg show_eqn} argument must be either TRUE or FALSE."
+    ))
+  }
+
+  if (!is.logical(show_tooltip) || length(show_tooltip) != 1 || is.na(show_tooltip)) {
+    cli::cli_abort(c(
+      "x" = "Invalid {.arg show_tooltip} argument.",
+      ">" = "The {.arg show_tooltip} argument must be either TRUE or FALSE."
+    ))
+  }
+
+  valid_direction <- c("LR", "TB", "RL", "BT")
+  if (!is.character(direction) || length(direction) != 1L || !direction %in% valid_direction) {
+    cli::cli_abort(c(
+      "x" = "Invalid {.arg direction} argument.",
+      ">" = "The {.arg direction} argument must be one of {.val {valid_direction}}."
+    ))
+  }
+
+  # Anchor flow edges to the node sides that face the flow direction, so the
+  # straight flow segments stay aligned with the layout: an edge leaves the
+  # tail node on the downstream side and enters the head node on the upstream
+  # side. (Dependency edges use the centre port '_', which needs no adjustment.)
+  flow_ports <- switch(direction,
+    LR = c(tail = "e", head = "w"),
+    RL = c(tail = "w", head = "e"),
+    TB = c(tail = "s", head = "n"),
+    BT = c(tail = "n", head = "s")
+  )
+
   # Get property dataframe
   df <- as.data.frame(sfm, properties = c("type", "name", "label", "eqn"))
+
+  # All variable names in the model, before any vars filtering (for align/order
+  # typo detection: a name absent from this is a typo, a name present but not
+  # drawn is ignored with a warning).
+  model_var_names <- df[["name"]]
 
   # Check whether there are any variables
   if (nrow(df) == 0) {
@@ -303,6 +388,10 @@ plot.stockflow <- function(x,
     )
   }
 
+  # Unwrapped, human-readable labels for tooltips (before wrapping/escaping).
+  # Single quotes are stripped so the labels are safe inside quoted DOT strings.
+  dict_label <- stats::setNames(gsub("'", "", df[["label"]], fixed = TRUE), df[["name"]])
+
   # Prepare and format labels using centralized helper
   df <- prepare_labels(df, wrap_width = wrap_width, format_label = FALSE, deduplicate = FALSE)
   dict <- stats::setNames(df[["label"]], df[["name"]])
@@ -331,7 +420,61 @@ plot.stockflow <- function(x,
   }
 
   # Shared node style
-  style_node <- sprintf("node [fontsize=%s,fontname='%s']", font_size, font_family)
+  style_node <- sprintf(
+    "node [fontsize=%s,fontname='%s',fontcolor='%s']",
+    font_size, font_family, label_col
+  )
+
+  # Font size for the equation line (shown beneath the label when show_eqn = TRUE)
+  eqn_font_size <- max(round(font_size * 0.7), 6)
+
+  # Build informative tooltips per variable: type, label, name (when different),
+  # equation/value, and structure (inflows/outflows for stocks, from/to for flows).
+  dict_type <- stats::setNames(df[["type"]], df[["name"]])
+  outside_label <- "outside model boundary"
+
+  tooltip_dict <- vapply(plot_var, function(nm) {
+    type <- dict_type[[nm]]
+    inflows <- outflows <- character(0)
+    from_label <- to_label <- NA_character_
+
+    if (type == "stock") {
+      inflow_names <- flow_df[["name"]][flow_df[["to"]] == nm]
+      outflow_names <- flow_df[["name"]][flow_df[["from"]] == nm]
+      inflows <- unname(dict_label[intersect(inflow_names, names(dict_label))])
+      outflows <- unname(dict_label[intersect(outflow_names, names(dict_label))])
+    } else if (type == "flow") {
+      i <- which(flow_df[["name"]] == nm)
+      if (length(i) == 1L) {
+        from_var <- flow_df[["from"]][i]
+        to_var <- flow_df[["to"]][i]
+        from_label <- if (nzchar(from_var) && from_var %in% names(dict_label)) {
+          unname(dict_label[[from_var]])
+        } else {
+          outside_label
+        }
+        to_label <- if (nzchar(to_var) && to_var %in% names(dict_label)) {
+          unname(dict_label[[to_var]])
+        } else {
+          outside_label
+        }
+      }
+    }
+
+    node_tooltip(
+      type, dict_label[[nm]], nm, dict_eqn[[nm]],
+      inflows = inflows, outflows = outflows,
+      from_label = from_label, to_label = to_label
+    )
+  }, character(1))
+
+  # Build the tooltip fragment for a set of nodes (empty when show_tooltip = FALSE)
+  node_tooltip_attr <- function(names) {
+    if (!show_tooltip) {
+      return(rep("", length(names)))
+    }
+    sprintf(", tooltip = '%s'", tooltip_dict[names])
+  }
 
   # Prepare stock nodes
   if (length(stock_names) > 0) {
@@ -340,12 +483,21 @@ plot.stockflow <- function(x,
       stock_col
     )
 
+    if (show_eqn) {
+      stock_label <- sprintf(
+        "label=<%s>",
+        make_eqn_label(dict[stock_names], dict_eqn[stock_names], eqn_font_size, label_col, wrap_width)
+      )
+    } else {
+      stock_label <- sprintf("label='%s'", dict[stock_names])
+    }
+
     stock_nodes <- sprintf(
-      "%s [id=%s,label='%s',tooltip = 'eqn = %s']",
+      "%s [id=%s,%s%s]",
       paste0("'", stock_names, "'"),
       paste0("'", stock_names, "'"),
-      dict[stock_names],
-      dict_eqn[stock_names]
+      stock_label,
+      node_tooltip_attr(stock_names)
     )
   } else {
     style_stock <- stock_nodes <- ""
@@ -358,12 +510,21 @@ plot.stockflow <- function(x,
       font_size - 2
     )
 
+    if (show_eqn) {
+      aux_xlabel <- sprintf(
+        "xlabel=<%s>",
+        make_eqn_label(dict[aux_names], dict_eqn[aux_names], eqn_font_size, label_col, wrap_width)
+      )
+    } else {
+      aux_xlabel <- sprintf("xlabel='%s'", dict[aux_names])
+    }
+
     aux_nodes <- sprintf(
-      "%s [id=%s,xlabel='%s',label='',tooltip = 'eqn = %s']",
+      "%s [id=%s,%s,label=''%s]",
       paste0("'", aux_names, "'"),
       paste0("'", aux_names, "'"),
-      dict[aux_names],
-      dict_eqn[aux_names]
+      aux_xlabel,
+      node_tooltip_attr(aux_names)
     )
   } else {
     style_aux <- aux_nodes <- ""
@@ -371,11 +532,18 @@ plot.stockflow <- function(x,
 
   # Prepare constant nodes (italic font)
   if (length(const_names) > 0) {
-    # Format labels: convert \n to <BR/> and add italics
-    formatted_labels <- vapply(dict[const_names], function(label) {
-      label_with_html_breaks <- gsub("\n", "<BR/>", label, fixed = TRUE)
-      paste0("<I>", label_with_html_breaks, "</I>")
-    }, character(1), USE.NAMES = FALSE)
+    if (show_eqn) {
+      formatted_labels <- make_eqn_label(
+        dict[const_names], dict_eqn[const_names], eqn_font_size, label_col, wrap_width,
+        italic = TRUE
+      )
+    } else {
+      # Format labels: convert \n to <BR/> and add italics
+      formatted_labels <- vapply(dict[const_names], function(label) {
+        label_with_html_breaks <- gsub("\n", "<BR/>", label, fixed = TRUE)
+        paste0("<I>", label_with_html_breaks, "</I>")
+      }, character(1), USE.NAMES = FALSE)
+    }
 
     style_const <- sprintf(
       "node [shape=diamond,fontsize=%s,width=0.15, height=0.15, fixedsize=true, style=filled, fillcolor='grey90']",
@@ -383,11 +551,11 @@ plot.stockflow <- function(x,
     )
 
     const_nodes <- sprintf(
-      "%s [id=%s,xlabel=<%s>,label='', tooltip = 'eqn = %s']",
+      "%s [id=%s,xlabel=<%s>,label=''%s]",
       paste0("'", const_names, "'"),
       paste0("'", const_names, "'"),
       formatted_labels,
-      dict_eqn[const_names]
+      node_tooltip_attr(const_names)
     )
   } else {
     style_const <- const_nodes <- ""
@@ -446,6 +614,35 @@ plot.stockflow <- function(x,
     rank_statements <- paste(rank_statements, collapse = "\n")
   }
 
+  # User-specified alignment: each group becomes a {rank=same; ...}, appended to
+  # the automatic (aux/constant) rank groupings. Graphviz merges shared nodes
+  # across rank statements, so this composes with the groups built above.
+  align_groups <- prepare_layout_groups(align, plot_var, model_var_names, "align")
+  if (length(align_groups) > 0) {
+    align_statements <- vapply(align_groups, function(g) {
+      sprintf("      {rank=same; %s }", paste0("'", g, "'", collapse = "; "))
+    }, character(1), USE.NAMES = FALSE)
+    rank_statements <- paste(c(rank_statements, align_statements), collapse = "\n")
+  }
+
+  # User-specified ordering along the flow direction: invisible edges between
+  # consecutive names. A soft hint (constraint = true, no minlen bump) so Graphviz
+  # balances it against the real flows rather than forcing the order.
+  order_groups <- prepare_layout_groups(order, plot_var, model_var_names, "order")
+  order_statements <- ""
+  if (length(order_groups) > 0) {
+    # One invisible edge per consecutive pair (a -> b, b -> c), each on its own
+    # line. Equivalent to a -> b -> c in Graphviz, but keeps the DOT readable.
+    edges <- unlist(lapply(order_groups, function(g) {
+      n <- length(g)
+      sprintf("'%s' -> '%s'", g[-n], g[-1])
+    }), use.names = FALSE)
+    order_statements <- paste0(
+      "# Ordering hints (invisible edges)\n      edge [style=invis, constraint=true]\n      ",
+      paste(edges, collapse = "\n      ")
+    )
+  }
+
   cloud_nodes <- flow_edges_from_source <- flow_edges_to_destination <- flow_nodes <- dependency_edges <- ""
   style_cloud <- style_flow_node <- style_flow_edges_from_source <- style_flow_edges_to_destination <- ""
 
@@ -464,22 +661,38 @@ plot.stockflow <- function(x,
     cloud_names <- character(0)
     if (length(idxs) > 0) {
       cloud_names <- paste0("Cloud", seq_along(idxs))
+
+      # Identify the flow and role for each cloud before overwriting the matrix.
+      # Columns are name (1), to (2), from (3): an empty 'to' is a sink (the flow
+      # leaves the model), an empty 'from' is a source (the flow enters it).
+      n_flow <- nrow(flow_df)
+      cloud_rows <- ((idxs - 1L) %% n_flow) + 1L
+      cloud_cols <- ((idxs - 1L) %/% n_flow) + 1L
+      cloud_flow_names <- flow_df[cbind(cloud_rows, rep(1L, length(idxs)))]
+      cloud_flow_labels <- unname(dict_label[cloud_flow_names])
+      cloud_flow_labels[is.na(cloud_flow_labels)] <- cloud_flow_names[is.na(cloud_flow_labels)]
+
       flow_df[idxs] <- cloud_names
 
-      # Find whether cloud is a source or a sink
-      # flow_df has three columns; idxs are row-based
-      labels <- cloud_names
-      labels[idxs <= (nrow(flow_df) * 2)] <- "Unspecified source"
-      labels[idxs > (nrow(flow_df) * 2)] <- "Unspecified sink"
+      cloud_tooltip_text <- ifelse(
+        cloud_cols == 2L,
+        paste0("Outside model boundary\\nSink of: ", cloud_flow_labels),
+        paste0("Outside model boundary\\nSource of: ", cloud_flow_labels)
+      )
 
       # Style for cloud nodes
       style_cloud <- sprintf("node [shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]")
 
       # External environment is represented as a cloud
+      cloud_tooltip <- if (show_tooltip) {
+        sprintf(", tooltip = '%s'", cloud_tooltip_text)
+      } else {
+        rep("", length(cloud_names))
+      }
       cloud_nodes <- sprintf(
-        "%s [label='', tooltip = %s]",
+        "%s [label=''%s]",
         paste0("'", cloud_names, "'"),
-        paste0("'", labels, "'")
+        cloud_tooltip
       )
     }
 
@@ -490,12 +703,21 @@ plot.stockflow <- function(x,
     )
 
     # Create intermediate flow nodes (small nodes that flows pass through)
+    if (show_eqn) {
+      flow_label <- sprintf(
+        "label=<%s>",
+        make_eqn_label(dict[flow_names], dict_eqn[flow_names], eqn_font_size, label_col, wrap_width)
+      )
+    } else {
+      flow_label <- sprintf("label='%s'", dict[flow_names])
+    }
+
     flow_nodes <- sprintf(
-      "%s [id=%s,label='%s', tooltip = 'eqn = %s']",
+      "%s [id=%s,%s%s]",
       paste0("'", flow_names, "'"),
       paste0("'", flow_names, "'"),
-      dict[flow_names],
-      dict_eqn[flow_names]
+      flow_label,
+      node_tooltip_attr(flow_names)
     )
 
     # Create edges: from -> flow_node -> to
@@ -503,18 +725,22 @@ plot.stockflow <- function(x,
     flow_edges_to_destination <- c()
 
     style_flow_edges_from_source <- sprintf(
-      "edge [style = '', arrowhead='none', color='%s', penwidth=1.1, minlen=%s, splines=false, tailport='e', headport='w']",
+      "edge [style = '', arrowhead='none', color='%s', penwidth=1.1, minlen=%s, splines=false, tailport='%s', headport='%s']",
       paste0(
         "black:", flow_col, ":black"
       ),
-      minlen
+      minlen,
+      flow_ports[["tail"]],
+      flow_ports[["head"]]
     )
     style_flow_edges_to_destination <- sprintf(
-      "edge [style = '', arrowhead='normal', color='%s', arrowsize=1.5, penwidth=1.1, minlen=%s, splines=ortho, tailport='e', headport='w']",
+      "edge [style = '', arrowhead='normal', color='%s', arrowsize=1.5, penwidth=1.1, minlen=%s, splines=ortho, tailport='%s', headport='%s']",
       paste0(
         "black:", flow_col, ":black"
       ),
-      minlen
+      minlen,
+      flow_ports[["tail"]],
+      flow_ports[["head"]]
     )
 
     # # Recycle flow_col if needed
@@ -578,7 +804,7 @@ plot.stockflow <- function(x,
     "
     digraph sfm {
 
-      graph [layout = dot, rankdir = LR, center=true, outputorder='edgesfirst', pad=%s, nodesep= %s]
+      graph [layout = dot, rankdir = %s, center=true, outputorder='edgesfirst', pad=%s, nodesep=%s]
 
       # Shared across all nodes (persists until overridden)
       %s
@@ -615,12 +841,15 @@ plot.stockflow <- function(x,
       %s
       %s
 
+      %s
+
 
       # Rank groupings
       %s
 
     }
           ",
+    direction,
     pad = as.character(pad),
     nodesep = as.character(nodesep),
     style_node,
@@ -641,6 +870,7 @@ plot.stockflow <- function(x,
     flow_edges_to_destination |> paste0(collapse = "\n\t"),
     style_dependency,
     dependency_edges |> paste0(collapse = "\n\t"),
+    order_statements,
     rank_statements
   )
 
@@ -781,7 +1011,14 @@ prep_plot <- function(
 #' @param font_family Font family. Defaults to "Times New Roman".
 #' @param font_size Font size. Defaults to 16.
 #' @param wrap_width Width of text wrapping for labels. Must be an integer. Defaults to 25.
-#' @param showlegend Whether to show legend. Must be TRUE or FALSE. Defaults to TRUE.
+#' @param showlegend Whether to show legend. Must be `TRUE` or `FALSE`. Defaults to `TRUE`.
+#' @param animation Animation mode. Use `"none"` for a static plot or `"time"`
+#'   to cumulatively reveal trajectories over time. Defaults to `"none"`.
+#' @param webgl If `TRUE`, render trajectories with WebGL (plotly `scattergl`) for
+#'   performance with many lines; if `FALSE`, use SVG (`scatter`). Defaults to
+#'   `getOption("sdbuildR.webgl", default = TRUE)`. Set
+#'   `options(sdbuildR.webgl = FALSE)` (e.g. in vignettes or dashboards, or when
+#'   a plot renders blank) to disable WebGL globally.
 #' @param ... Optional parameters
 #'
 #' @returns Plotly object
@@ -801,6 +1038,9 @@ prep_plot <- function(
 #' # Add constants to the plot
 #' plot(sim, show_constants = TRUE)
 #'
+#' # Cumulatively reveal the trajectories over time
+#' plot(sim, animation = "time")
+#'
 plot.simulate_stockflow <- function(x,
                                     show_constants = FALSE,
                                     vars = NULL,
@@ -810,7 +1050,10 @@ plot.simulate_stockflow <- function(x,
                                     font_size = 16,
                                     wrap_width = 25,
                                     showlegend = TRUE,
+                                    animation = c("none", "time"),
+                                    webgl = getOption("sdbuildR.webgl", default = TRUE),
                                     ...) {
+  animation <- .clean_animation(animation)
   if (missing(x)) {
     cli::cli_abort(c(
       "x" = "No simulation data available.",
@@ -839,7 +1082,8 @@ plot.simulate_stockflow <- function(x,
     colors = colors,
     font_family = font_family,
     font_size = font_size,
-    wrap_width = wrap_width
+    wrap_width = wrap_width,
+    webgl = webgl
   )
 
   dots <- list(...)
@@ -865,10 +1109,22 @@ plot.simulate_stockflow <- function(x,
   df_nonhighlight <- out[["df_nonhighlight"]]
   colors <- out[["colors"]]
 
+  # For time animation, cumulatively reveal each trajectory frame by frame.
+  if (animation == "time") {
+    df_highlight <- accumulate_by_time(df_highlight)
+    df_nonhighlight <- accumulate_by_time(df_nonhighlight)
+    frame <- ~.frame
+  } else {
+    frame <- NULL
+  }
+
   # Initialize plotly object
   pl <- plotly::plot_ly()
 
-  # Add traces for highlight and nonhighlight variables
+  # Add traces for highlight and nonhighlight variables. WebGL (scattergl) is
+  # used for performance, but plotly animation frames are unreliable under gl, so
+  # fall back to SVG scatter when animating.
+  trace_type <- if (webgl && animation != "time") "scattergl" else "scatter"
   pl <- add_trace_pair(pl,
     df_highlight = df_highlight,
     df_nonhighlight = df_nonhighlight,
@@ -877,7 +1133,8 @@ plot.simulate_stockflow <- function(x,
     y_col = "value",
     showlegend = showlegend,
     mode = "lines",
-    type = "scatter"
+    type = trace_type,
+    frame = frame
   )
 
   # Customize layout using theme
@@ -913,7 +1170,16 @@ plot.simulate_stockflow <- function(x,
     )
   }
 
-  pl
+  # Add play button and time slider for the cumulative reveal animation.
+  if (animation == "time") {
+    pl <- add_time_animation_controls(pl,
+      time_unit = if (is.null(time_unit)) "" else time_unit,
+      font_family = font_family,
+      font_size = font_size
+    )
+  }
+
+  set_plotly_export_format(pl)
 }
 
 
@@ -937,8 +1203,17 @@ plot.simulate_stockflow <- function(x,
 #' @param wrap_width Width of text wrapping for labels. Must be an integer. Defaults to 25.
 #' @param showlegend Whether to show legend. Must be TRUE or FALSE. Defaults to TRUE.
 #' @param label_subplots Whether to plot labels indicating the condition of the subplot.
-#' @param central_tendency Central tendency to use for the mean line. Either "mean", "median", or FALSE to not plot the central tendency. Defaults to "mean".
+#' @param central_tendency Central tendency to use for the mean line. Either "mean", "median", or "none" to not plot the central tendency. Defaults to "mean".
 #' @param central_tendency_width Line width of central tendency. Defaults to 3.
+#' @param condition_display How to display multiple conditions. Use `"subplots"`
+#'   to show conditions as panels, `"slider"` to select one condition with a
+#'   slider, or `"dropdown"` to select one condition with a dropdown. Defaults
+#'   to `"subplots"`.
+#' @param animation Animation mode. Use `"none"` for a static plot or `"time"`
+#'   to cumulatively reveal trajectories over time. Defaults to `"none"`.
+#'   Time animation requires `which = "sims"` (confidence ribbons cannot be
+#'   animated) and a single condition (one panel); combining it with
+#'   `condition_display` controls or multiple conditions is not supported.
 #' @param ... Optional parameters
 #' @inheritParams plot.simulate_stockflow
 #'
@@ -966,10 +1241,23 @@ plot.ensemble_stockflow <- function(x,
                                     wrap_width = 25,
                                     showlegend = TRUE,
                                     label_subplots = TRUE,
-                                    central_tendency = c("mean", "median", FALSE)[1],
+                                    central_tendency = c("mean", "median", "none")[1],
                                     central_tendency_width = 3,
+                                    condition_display = c("subplots", "slider", "dropdown"),
+                                    animation = c("none", "time"),
+                                    webgl = getOption("sdbuildR.webgl", default = TRUE),
                                     ...) {
   check_ensemble_stockflow(x)
+
+  condition_display <- .clean_condition_display(condition_display)
+  animation <- .clean_animation(animation)
+
+  if (animation == "time" && condition_display != "subplots") {
+    cli::cli_abort(c(
+      "x" = "Combining {.arg animation = \"time\"} with {.arg condition_display} controls is not supported yet.",
+      ">" = "Use {.code condition_display = \"subplots\"} or {.code animation = \"none\"}."
+    ))
+  }
 
   # Validate common plot parameters
   validate_plot_params(
@@ -981,20 +1269,32 @@ plot.ensemble_stockflow <- function(x,
     font_family = font_family,
     font_size = font_size,
     wrap_width = wrap_width,
-    label_subplots = label_subplots
+    label_subplots = label_subplots,
+    webgl = webgl
   )
 
   which <- .clean_which(which)
 
+  # Confidence ribbons (which = "summary") cannot be animated cleanly in plotly,
+  # so time animation is only supported for individual trajectories.
+  if (animation == "time" && which == "summary") {
+    cli::cli_abort(c(
+      "x" = "Animating summary confidence ribbons is not supported.",
+      ">" = "Use {.code which = \"sims\"} to animate individual trajectories, or {.code animation = \"none\"}."
+    ))
+  }
+
   # Check central tendency
-  if (!isFALSE(central_tendency)) {
-    central_tendency <- trimws(tolower(central_tendency))
-    if (!central_tendency %in% c("mean", "median")) {
-      cli::cli_abort(c(
-        "x" = "Invalid {.arg central_tendency} value.",
-        "i" = "The {.arg central_tendency} argument must be {.code 'mean'}, {.code 'median'}, or {.code FALSE}."
-      ))
-    }
+  # Normalize legacy FALSE to "none" for internal handling
+  if (isFALSE(central_tendency)) {
+    central_tendency <- "none"
+  }
+  central_tendency <- trimws(tolower(central_tendency))
+  if (!central_tendency %in% c("mean", "median", "none")) {
+    cli::cli_abort(c(
+      "x" = "Invalid {.arg central_tendency} value.",
+      "i" = "The {.arg central_tendency} argument must be {.code 'mean'}, {.code 'median'}, or {.code 'none'}."
+    ))
   }
 
   # Get passed arguments
@@ -1005,7 +1305,7 @@ plot.ensemble_stockflow <- function(x,
   # Build default subtitle based on plot type and central tendency
   default_sub <- if (which == "summary") {
     paste0(
-      ifelse(isFALSE(central_tendency), "",
+      ifelse(central_tendency == "none", "",
         paste0(title_case_ascii(central_tendency), " with ")
       ), "[",
       min(x[["quantiles"]]), ", ", max(x[["quantiles"]]),
@@ -1014,7 +1314,7 @@ plot.ensemble_stockflow <- function(x,
     )
   } else if (which == "sims") {
     paste0(
-      ifelse(isFALSE(central_tendency), "",
+      ifelse(central_tendency == "none", "",
         paste0(title_case_ascii(central_tendency), " with ")
       ),
       length(sim), "/", x[["n"]], " simulation",
@@ -1063,6 +1363,15 @@ plot.ensemble_stockflow <- function(x,
 
   # Whether to create subplots or not
   create_subplots <- length(condition) > 1
+
+  # Plotly animations do not compose with subplot grids, so time animation is
+  # only supported for a single condition (one panel).
+  if (animation == "time" && create_subplots) {
+    cli::cli_abort(c(
+      "x" = "Animating multiple conditions at once is not supported.",
+      ">" = "Select a single condition (e.g. {.code condition = 1}) to use {.code animation = \"time\"}."
+    ))
+  }
 
   # To plot individual simulation trajectories, extract df
   if (which == "sims") {
@@ -1114,6 +1423,22 @@ plot.ensemble_stockflow <- function(x,
     df_highlight <- df_nonhighlight <- NULL
   }
 
+  # For time animation, cumulatively reveal trajectories. Accumulate before
+  # splitting by condition so each row keeps its condition; per-frame line
+  # breaking happens later in plot_ensemble_helper().
+  if (animation == "time") {
+    summary_df_highlight <- accumulate_by_time(summary_df_highlight)
+    summary_df_nonhighlight <- accumulate_by_time(summary_df_nonhighlight)
+    df_highlight <- accumulate_by_time(df_highlight)
+    df_nonhighlight <- accumulate_by_time(df_nonhighlight)
+    frame <- ~.frame
+  } else {
+    frame <- NULL
+  }
+
+  # Whether to replace the subplot grid with a single condition selector.
+  condition_control <- condition_display %in% c("slider", "dropdown")
+
   # Find qlow and qhigh
   q_cols <- colnames(summary_df)[grepl("^q", colnames(summary_df))]
   q_num <- as.numeric(gsub("^q", "", q_cols))
@@ -1127,7 +1452,57 @@ plot.ensemble_stockflow <- function(x,
   subplot_theme <- plotly_theme(font_family = font_family, font_size = font_size)
 
   # Plot
-  if (!create_subplots) {
+  if (condition_control) {
+    # Build one (non-subplot) plot per condition, then merge into a single
+    # figure controlled by a slider or dropdown.
+    hl_by <- split_by_cond(df_highlight)
+    nhl_by <- split_by_cond(df_nonhighlight)
+    shl_by <- split_by_cond(summary_df_highlight)
+    snhl_by <- split_by_cond(summary_df_nonhighlight)
+
+    pl_list <- lapply(seq_along(condition), function(j_idx) {
+      j_name <- condition[j_idx]
+      plot_ensemble_helper(
+        subplot_label = "",
+        which = which,
+        create_subplots = FALSE,
+        summary_df_highlight = get_cond(shl_by, j_name, summary_df_highlight),
+        summary_df_nonhighlight = get_cond(snhl_by, j_name, summary_df_nonhighlight),
+        df_highlight = get_cond(hl_by, j_name, df_highlight),
+        df_nonhighlight = get_cond(nhl_by, j_name, df_nonhighlight),
+        central_tendency = central_tendency,
+        central_tendency_width = central_tendency_width,
+        q_low = q_low,
+        q_high = q_high,
+        mode = mode,
+        colors = colors,
+        showlegend = showlegend,
+        dots = dots,
+        main = main,
+        xlab = xlab, ylab = ylab,
+        font_family = font_family,
+        font_size = font_size,
+        alpha = alpha,
+        theme = subplot_theme,
+        frame = frame,
+        webgl = webgl
+      )
+    })
+
+    control_theme <- plotly_theme(
+      font_family = font_family, font_size = font_size, margin_t = 100
+    )
+
+    pl <- assemble_condition_control_plot(
+      pl_list,
+      condition_ids = condition,
+      type = condition_display,
+      labels = paste0("Condition ", condition),
+      theme = control_theme,
+      main = main, xlab = xlab, ylab = ylab,
+      font_family = font_family, font_size = font_size
+    )
+  } else if (!create_subplots) {
     j_idx <- 1
     j_name <- condition[j_idx]
     pl <- plot_ensemble_helper(
@@ -1151,7 +1526,9 @@ plot.ensemble_stockflow <- function(x,
       font_family = font_family,
       font_size = font_size,
       alpha = alpha,
-      theme = subplot_theme
+      theme = subplot_theme,
+      frame = frame,
+      webgl = webgl
     )
   } else {
     # Pre-split every condition-filtered frame once instead of re-scanning the
@@ -1188,7 +1565,9 @@ plot.ensemble_stockflow <- function(x,
         font_family = font_family,
         font_size = font_size,
         alpha = alpha,
-        theme = subplot_theme
+        theme = subplot_theme,
+        frame = frame,
+        webgl = webgl
       )
     }
 
@@ -1241,7 +1620,16 @@ plot.ensemble_stockflow <- function(x,
     }
   }
 
-  pl
+  # Add play button and time slider for the cumulative reveal animation.
+  if (animation == "time") {
+    pl <- add_time_animation_controls(pl,
+      time_unit = if (is.null(time_unit)) "" else time_unit,
+      font_family = font_family,
+      font_size = font_size
+    )
+  }
+
+  set_plotly_export_format(pl)
 }
 
 
@@ -1385,7 +1773,16 @@ plot_ensemble_helper <- function(subplot_label,
                                  mode,
                                  colors, showlegend, dots,
                                  main, xlab, ylab,
-                                 font_family, font_size, alpha, theme) {
+                                 font_family, font_size, alpha, theme,
+                                 frame = NULL, webgl = TRUE) {
+  # Local wrapper that injects the animation frame mapping into every trace pair
+  # only when animating, leaving non-animated behaviour untouched.
+  avp <- function(pl, add_fn, ...) {
+    args <- list(pl, add_fn, ...)
+    if (!is.null(frame)) args[["frame"]] <- frame
+    do.call(add_visibility_pair, args)
+  }
+
   if (which == "sims") {
     plot_highlight <- nrow(df_highlight) > 0
     plot_nonhighlight <- nrow(df_nonhighlight) > 0
@@ -1403,7 +1800,7 @@ plot_ensemble_helper <- function(subplot_label,
   if (which == "summary") {
     if (mode == "lines") {
       # Confidence bands: nonhighlight (visible = "legendonly") then highlight (visible = TRUE)
-      pl <- add_visibility_pair(pl, plotly::add_ribbons,
+      pl <- avp(pl, plotly::add_ribbons,
         data_nonhighlight = summary_df_nonhighlight,
         data_highlight = summary_df_highlight,
         plot_nonhighlight = plot_nonhighlight,
@@ -1422,45 +1819,84 @@ plot_ensemble_helper <- function(subplot_label,
       )
     }
   } else if (which == "sims") {
-    # Draw one scatter trace per variable instead of one per (variable, sim).
-    # break_sims_by_variable() inserts an NA spacer row between simulations so a
-    # single trace renders each simulation as a separate line (connectgaps =
-    # FALSE keeps the NA gaps from being bridged). Keeping color = ~variable /
-    # colors = colors means the colour mapping is identical to the summary
-    # traces, while plotly still splits the data into one trace per variable.
+    # Alpha is baked directly into each variable's line colour (rgba). Plotly's
+    # color = ~variable / colors = mapping strips alpha during plotly_build, so we
+    # set line = list(color = ...) explicitly instead. This makes overlapping
+    # trajectories accumulate density both in SVG (webgl = FALSE: one separately
+    # composited scatter trace per sim) and in WebGL (webgl = TRUE: a single
+    # scattergl trace per variable, blended per-pixel on the GPU).
+    trace_type <- if (webgl) "scattergl" else "scatter"
+
+    # One legend entry per variable, but only when there is no summary trace to
+    # carry the legend (otherwise it would be duplicated).
+    sim_showlegend <- if (plot_summary) FALSE else showlegend
+
+    # break_for_traces() inserts NA spacer rows between sims (and, when animating,
+    # within each frame) so a single scattergl trace renders each sim as its own
+    # line; connectgaps = FALSE keeps the NA gaps from being bridged.
+    break_for_traces <- function(d) {
+      if (is.null(frame) || !".frame" %in% colnames(d) || nrow(d) == 0L) {
+        return(break_sims_by_variable(d))
+      }
+      parts <- lapply(split(d, d[[".frame"]]), break_sims_by_variable)
+      do.call(rbind, parts)
+    }
+
+    # Add the per-variable trajectory traces for one data frame (highlight or
+    # nonhighlight) at a given visibility.
+    add_sim_variable_traces <- function(pl, d, visible) {
+      if (is.null(d) || nrow(d) == 0) {
+        return(pl)
+      }
+      for (v in levels(droplevels(d[["variable"]]))) {
+        dv <- d[d[["variable"]] == v, , drop = FALSE]
+        if (nrow(dv) == 0) next
+        args <- list(
+          pl,
+          data = if (webgl) break_for_traces(dv) else dv,
+          x = ~time,
+          y = ~value,
+          name = v,
+          legendgroup = v,
+          type = trace_type,
+          mode = mode,
+          line = list(color = grDevices::adjustcolor(colors[[v]], alpha.f = alpha)),
+          showlegend = sim_showlegend,
+          visible = visible
+        )
+        if (webgl) {
+          args[["connectgaps"]] <- FALSE # required: NA must break the line, not bridge it
+        } else {
+          args[["split"]] <- ~sim # one separately-composited line per sim
+        }
+        if (!is.null(frame)) args[["frame"]] <- frame
+        pl <- do.call(plotly::add_trace, args)
+      }
+      pl
+    }
 
     # nonhighlight (visible = "legendonly") then highlight (visible = TRUE)
-    pl <- add_visibility_pair(pl, plotly::add_trace,
-      data_nonhighlight = break_sims_by_variable(df_nonhighlight),
-      data_highlight = break_sims_by_variable(df_highlight),
-      plot_nonhighlight = plot_nonhighlight,
-      plot_highlight = plot_highlight,
-      x = ~time,
-      y = ~value,
-      color = ~variable,
-      legendgroup = ~variable,
-      type = "scatter",
-      mode = mode,
-      opacity = alpha,
-      colors = colors,
-      showlegend = if (plot_summary) FALSE else showlegend, # only show legend if summary is not plotted, otherwise it will be duplicated with the summary traces
-      connectgaps = FALSE # required: NA must break the line, not bridge it
-    )
+    if (plot_nonhighlight) {
+      pl <- add_sim_variable_traces(pl, df_nonhighlight, "legendonly")
+    }
+    if (plot_highlight) {
+      pl <- add_sim_variable_traces(pl, df_highlight, TRUE)
+    }
   }
 
-  # When central_tendency = FALSE, we still want a legend
-  if (isFALSE(central_tendency) && plot_summary) {
+  # When central_tendency = "none", we still want a legend
+  if (central_tendency == "none" && plot_summary) {
     # Overwrite with default
     central_tendency <- "mean"
 
     # Same trick does not work for mode == "markers" to not plot central_tendency
     if (mode == "markers") {
-      # When mode == "markers" and the only value available is Infinity, no trace is plotted but the legend still shows up, which is exactly what we want when central_tendency is FALSE
+      # When mode == "markers" and the only value available is Infinity, no trace is plotted but the legend still shows up, which is exactly what we want when central_tendency is "none"
 
       summary_df_highlight[[central_tendency]] <- Inf
       summary_df_nonhighlight[[central_tendency]] <- Inf
     } else if (mode == "lines") {
-      # When only one time point is available and mode == "lines", no trace is plotted but the legend still shows up, which is exactly what we want when central_tendency is FALSE
+      # When only one time point is available and mode == "lines", no trace is plotted but the legend still shows up, which is exactly what we want when central_tendency is "none"
       summary_df_highlight <- summary_df_highlight[summary_df_highlight[["time"]] == summary_df_highlight[["time"]][1], ]
       summary_df_nonhighlight <- summary_df_nonhighlight[summary_df_nonhighlight[["time"]] == summary_df_nonhighlight[["time"]][1], ]
     }
@@ -1469,7 +1905,7 @@ plot_ensemble_helper <- function(subplot_label,
   # Plot mean/median points/lines
   if (plot_summary) {
     if (mode == "lines") {
-      pl <- add_visibility_pair(pl, plotly::add_trace,
+      pl <- avp(pl, plotly::add_trace,
         data_nonhighlight = summary_df_nonhighlight,
         data_highlight = summary_df_highlight,
         plot_nonhighlight = plot_nonhighlight,
@@ -1485,7 +1921,7 @@ plot_ensemble_helper <- function(subplot_label,
         line = list(width = central_tendency_width) # thicker line for mean
       )
     } else if (mode == "markers" && which == "summary") {
-      pl <- add_visibility_pair(pl, plotly::add_trace,
+      pl <- avp(pl, plotly::add_trace,
         data_nonhighlight = summary_df_nonhighlight,
         data_highlight = summary_df_highlight,
         plot_nonhighlight = plot_nonhighlight,
@@ -1507,7 +1943,7 @@ plot_ensemble_helper <- function(subplot_label,
         marker = list(size = central_tendency_width * 3) # thicker line for mean
       )
     } else if (mode == "markers" && which == "sims") {
-      pl <- add_visibility_pair(pl, plotly::add_trace,
+      pl <- avp(pl, plotly::add_trace,
         data_nonhighlight = summary_df_nonhighlight,
         data_highlight = summary_df_highlight,
         plot_nonhighlight = plot_nonhighlight,
@@ -1622,6 +2058,13 @@ plot_ensemble_helper <- function(subplot_label,
 #'   unit_test(expr = all(susceptible >= 0))
 #' res <- verify(sfm)
 #' plot(res)
+#'
+#' # Select one condition at a time with a slider or dropdown
+#' plot(res, condition_display = "slider")
+#' plot(res, condition_display = "dropdown")
+#'
+#' # Cumulatively reveal the trajectories over time
+#' plot(res, animation = "time")
 plot.verify_stockflow <- function(x,
                                   test = NULL,
                                   vars = NULL,
@@ -1642,9 +2085,22 @@ plot.verify_stockflow <- function(x,
                                   label_subplots = TRUE,
                                   alpha = 1,
                                   margin = .05,
+                                  condition_display = c("subplots", "slider", "dropdown"),
+                                  animation = c("none", "time"),
+                                  webgl = getOption("sdbuildR.webgl", default = TRUE),
                                   ...) {
   # Check whether it is a verify_stockflow object
   check_verify_stockflow(x)
+
+  condition_display <- .clean_condition_display(condition_display)
+  animation <- .clean_animation(animation)
+
+  if (animation == "time" && condition_display != "subplots") {
+    cli::cli_abort(c(
+      "x" = "Combining {.arg animation = \"time\"} with {.arg condition_display} controls is not supported yet.",
+      ">" = "Use {.code condition_display = \"subplots\"} or {.code animation = \"none\"}."
+    ))
+  }
 
   # Validate common plot parameters
   validate_plot_params(
@@ -1656,7 +2112,8 @@ plot.verify_stockflow <- function(x,
     font_family = font_family,
     font_size = font_size,
     wrap_width = wrap_width,
-    label_subplots = label_subplots
+    label_subplots = label_subplots,
+    webgl = webgl
   )
 
   # Get passed arguments
@@ -1694,6 +2151,15 @@ plot.verify_stockflow <- function(x,
   # Whether to create subplots or not
   create_subplots <- n_conditions > 1
 
+  # Plotly animations do not compose with subplot grids, so time animation is
+  # only supported for a single condition (one panel).
+  if (animation == "time" && create_subplots) {
+    cli::cli_abort(c(
+      "x" = "Animating multiple conditions at once is not supported.",
+      ">" = "Select a single condition (e.g. {.code condition = 1}) to use {.code animation = \"time\"}."
+    ))
+  }
+
   # Extract constants from verify object to pass to prep_plot()
   constants <- lapply(condition_nrs, function(y) {
     const <- x[["sims"]][[y]][["constants"]]
@@ -1707,7 +2173,7 @@ plot.verify_stockflow <- function(x,
 
   # Build default subtitle
   default_sub <- paste0(
-    n_tests, "unit test", ifelse(n_tests > 1, "s", ""), " across ",
+    n_tests, " unit test", ifelse(n_tests > 1, "s", ""), " across ",
     n_conditions, " condition", ifelse(n_conditions > 1, "s", "")
   )
 
@@ -1739,6 +2205,18 @@ plot.verify_stockflow <- function(x,
   df_nonhighlight <- out[["df_nonhighlight"]]
   colors <- out[["colors"]]
 
+  # For time animation, cumulatively reveal trajectories (see ensemble plot).
+  if (animation == "time") {
+    df_highlight <- accumulate_by_time(df_highlight)
+    df_nonhighlight <- accumulate_by_time(df_nonhighlight)
+    frame <- ~.frame
+  } else {
+    frame <- NULL
+  }
+
+  # Whether to replace the subplot grid with a single condition selector.
+  condition_control <- condition_display %in% c("slider", "dropdown")
+
   # Check whether there are multiple time points
   mode <- ifelse(length(unique(df[["time"]])) == 1, "markers", "lines")
 
@@ -1746,12 +2224,60 @@ plot.verify_stockflow <- function(x,
   which <- "sims"
   summary_df_highlight <- summary_df_nonhighlight <- data.frame()
   central_tendency_width <- q_low <- q_high <- NULL
-  central_tendency <- FALSE
+  central_tendency <- "none"
 
   # Per-subplot theme is invariant across conditions; compute once.
   subplot_theme <- plotly_theme(font_family = font_family, font_size = font_size)
 
-  if (!create_subplots) {
+  if (condition_control) {
+    # Build one (non-subplot) plot per present condition, then merge into a
+    # single figure controlled by a slider or dropdown.
+    hl_by <- split_by_cond(df_highlight)
+    nhl_by <- split_by_cond(df_nonhighlight)
+
+    pl_list <- lapply(seq_along(condition_nrs), function(j_idx) {
+      j_name <- condition_nrs[j_idx]
+      plot_ensemble_helper(
+        subplot_label = "",
+        which = which,
+        create_subplots = FALSE,
+        summary_df_highlight = summary_df_highlight,
+        summary_df_nonhighlight = summary_df_nonhighlight,
+        df_highlight = get_cond(hl_by, j_name, df_highlight),
+        df_nonhighlight = get_cond(nhl_by, j_name, df_nonhighlight),
+        central_tendency = central_tendency,
+        central_tendency_width = central_tendency_width,
+        q_low = q_low,
+        q_high = q_high,
+        mode = mode,
+        colors = colors,
+        showlegend = showlegend,
+        dots = dots,
+        main = main,
+        xlab = xlab, ylab = ylab,
+        font_family = font_family,
+        font_size = font_size,
+        alpha = alpha,
+        theme = subplot_theme,
+        frame = frame,
+        webgl = webgl
+      )
+    })
+
+    control_theme <- plotly_theme(
+      font_family = font_family, font_size = font_size, margin_t = 100
+    )
+
+    pl <- assemble_condition_control_plot(
+      pl_list,
+      condition_ids = condition_nrs,
+      type = condition_display,
+      labels = make_verify_condition_labels(df, condition_nrs),
+      theme = control_theme,
+      main = main, xlab = xlab, ylab = ylab,
+      font_family = font_family, font_size = font_size
+    )
+  } else if (!create_subplots) {
     j_idx <- 1
     j_name <- condition_nrs[j_idx]
     pl <- plot_ensemble_helper(
@@ -1775,7 +2301,9 @@ plot.verify_stockflow <- function(x,
       font_family = font_family,
       font_size = font_size,
       alpha = alpha,
-      theme = subplot_theme
+      theme = subplot_theme,
+      frame = frame,
+      webgl = webgl
     )
   } else {
     # Pre-split the condition-filtered frames once (summary frames are empty for
@@ -1810,7 +2338,9 @@ plot.verify_stockflow <- function(x,
         font_family = font_family,
         font_size = font_size,
         alpha = alpha,
-        theme = subplot_theme
+        theme = subplot_theme,
+        frame = frame,
+        webgl = webgl
       )
     }
 
@@ -1863,5 +2393,14 @@ plot.verify_stockflow <- function(x,
     }
   }
 
-  pl
+  # Add play button and time slider for the cumulative reveal animation.
+  if (animation == "time") {
+    pl <- add_time_animation_controls(pl,
+      time_unit = if (is.null(time_unit)) "" else time_unit,
+      font_family = font_family,
+      font_size = font_size
+    )
+  }
+
+  set_plotly_export_format(pl)
 }

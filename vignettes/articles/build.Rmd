@@ -24,6 +24,10 @@ knitr::opts_chunk$set(
 
 ```{r, echo=TRUE, message=FALSE}
 library(sdbuildR)
+
+# Disable WebGL: many plotly widgets per HTML page can exceed the browser WebGL
+# context limit and render blank. SVG always renders.
+options(sdbuildR.webgl = FALSE)
 ```
 
 ```{r libraries, include=FALSE}
@@ -34,7 +38,7 @@ library(kableExtra)
 
 ```{r include=FALSE}
 # Set this to TRUE to recreate the figures in the paper
-recreate_figs <- FALSE
+recreate_figs <- TRUE #FALSE
 ```
 
 ```{r include=FALSE}
@@ -159,7 +163,7 @@ sfm_big <- stockflow() |>
   flow(inflowC, label = "Inflow", to = stockC) |>
   flow(outflowC, label = "Outflow", from = stockC)
 
-# copy (cat(viz_str))
+# copy (cat(plot(sfm), minlen = 1, nodesep= .8, pad=.1, order = c("stockA", "stockB", "stockC"), align = c("stockA", "stockB", "stockC"))$x$diagram) and paste into viz_str below
 {
   viz_str <- "
   digraph sfm {
@@ -486,7 +490,6 @@ if (recreate_figs) {
       vars = vars_,
       colors = colors_,
       main = "",
-      # ylim = ylim,
       showlegend = (letter == max_letter)
     ) |>
       rm_grid() |>
@@ -502,7 +505,6 @@ if (recreate_figs) {
   x3 <- .78
   y1 <- 1.06
   y2 <- 0.48
-  # y3 <- 0.45
 
   annot_ <- utils::modifyList(annot, list(
     font = list(size = font_size_subplot + 4, family = font_family)
@@ -518,10 +520,6 @@ if (recreate_figs) {
       margin = 0.075
     ), plotly::subplot(pl_list[5]),
     nrows = 1,
-    # shareX = TRUE
-    # shareY = FALSE,
-    # titleY = FALSE,
-    # titleX = FALSE,
     margin = 0.03
   ) |>
     plotly::layout(
@@ -550,18 +548,48 @@ if (recreate_figs) {
   pl
 
 
-  export_plot(pl, file.path(filepath_figs, "build_sfm.pdf"),
+  export_plot(pl, file.path(filepath_figs, "build_sim.pdf"),
     width = 7, height = 4
   )
 }
 ```
 
 
+
+```{r include=FALSE, eval = has_internet(), error = TRUE}
+if (recreate_figs) {
+
+  # Version 2: all plots in one column
+  pl <- plotly::subplot(pl_list,
+    nrows = length(pl_list),
+    shareX = TRUE, shareY = FALSE,
+    titleY = FALSE, titleX = FALSE,
+    margin = 0.025
+  ) |>
+    plotly::layout(
+      font = annot_font,
+      legend = utils::modifyList(annot_legend, list(
+        y = -.16,
+        font = list(size = font_size_legend)
+      )),
+      annotations = list(
+        utils::modifyList(annot_xlab, list(x = 0.5, y = -0.075))
+      )
+    )
+
+  export_plot(pl, file.path(filepath_figs, "build_sim_column.pdf"),
+    width = 3, height = 6
+  )
+
+}
+```
+
+
 ```{r include = FALSE}
 if (recreate_figs) {
-  # copy cat(viz_str) from plot.stockflow() with minlen=1.5
+  # cat(plot(sfm, minlen = 1, nodesep = .15, pad = .1, order = c("net_change", "energy", "recovery_rate"), align = c("net_change", "energy", "recovery_rate"))$x$diagram)
   {
-    viz_str <- "
+    viz_str0 <- "
 
     digraph sfm {
 
@@ -612,16 +640,81 @@ if (recreate_figs) {
       # 'net_change' [id='net_change',xlabel='',label='',tooltip = 'eqn = recovery - work',shape=circle,fontsize=16,fontname='Times New Roman', width=0.15, height=0.15, fixedsize=true, style=filled, fillcolor='grey90']
       'net_change' [id='net_change',xlabel='',label='',tooltip = 'eqn = recovery - work',shape=circle,fontsize=16,fontname='Times New Roman', width=0.15, height=0.15, fixedsize=true, style=filled, fillcolor='grey90']
       'net_change1' [id='net_change1',label='Net change in energy',tooltip = 'eqn = recovery - work',shape=plaintext,fontsize=16,fontname='Times New Roman', width=0.6, height=0.2, fixedsize=true]
-
     }
     "
 
+  }
+
+
+    {
+    viz_str <- '
+
+    digraph sfm {
+
+      graph [layout = dot, rankdir = LR, center=true, outputorder="edgesfirst", pad=0.1, nodesep= 0.3]
+
+      # Shared across all nodes (persists until overridden)
+      node [fontsize=18,fontname="Times New Roman",fontcolor="black"]
+
+      # Define stock nodes
+      node [shape=box,style=filled,fillcolor="#83d3d4"]
+      "energy" [id="energy",label=<Energy<BR/><FONT POINT-SIZE="13" COLOR="black">eqn = 0.3</FONT>>, tooltip = "Stock: Energy\nName: energy\nInitial value: 0.3\nInflows: Recovery\nOutflows: Depletion from work"]
+        "recovery_rate" [id="recovery_rate",label=<Recovery Rate<BR/><FONT POINT-SIZE="13" COLOR="black">eqn = 1</FONT>>, tooltip = "Stock: Recovery Rate\nName: recovery_rate\nInitial value: 1\nInflows: —\nOutflows: Recovery Erosion"]
+
+      # Define flow nodes (intermediate nodes for flows)
+      node [style = "",shape=plaintext, fontsize=16, width=0.6, height=0.3]
+      "erosion" [id="erosion",label=<Recovery Erosion<BR/><FONT POINT-SIZE="13" COLOR="black">eqn = recovery_rate * work</FONT>>, tooltip = "Flow: Recovery Erosion\nName: erosion\nEquation: recovery_rate * work\nFrom: Recovery Rate\nTo: outside model boundary"]
+        "recovery" [id="recovery",label=<Recovery<BR/><FONT POINT-SIZE="13" COLOR="black">eqn = recovery_rate</FONT>>, tooltip = "Flow: Recovery\nName: recovery\nEquation: recovery_rate\nFrom: outside model boundary\nTo: Energy"]
+        "work" [id="work",label=<Depletion from work<BR/><FONT POINT-SIZE="13" COLOR="black">eqn = work_rate * energy</FONT>>, tooltip = "Flow: Depletion from work\nName: work\nEquation: work_rate * energy\nFrom: Energy\nTo: outside model boundary"]
+
+      # Define external cloud nodes
+      node [shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
+      "Cloud1" [label="", tooltip = "Outside model boundary\nSink of: Recovery Erosion"]
+        "Cloud2" [label="", tooltip = "Outside model boundary\nSink of: Depletion from work"]
+        "Cloud3" [label="", tooltip = "Outside model boundary\nSource of: Recovery"]
+
+      # Define auxiliary nodes
+      node [shape=circle,fontsize=16, width=0.15, height=0.15, fixedsize=true, style=filled, fillcolor="grey90"]
+      "net_change" [id="net_change",xlabel=<Net change in energy<BR/><FONT POINT-SIZE="13" COLOR="black">eqn = recovery - work</FONT>>,label="", tooltip = "Auxiliary: Net change in energy\nName: net_change\nEquation: recovery - work"]
+
+      # Define constant nodes
+      
+      
+
+      # Define flow edges (stock -> flow_node)
+      edge [style = "", arrowhead="none", color="black:#f48153:black", penwidth=1.1, minlen=1, splines=false, tailport="e", headport="w"]
+      "recovery_rate" -> "erosion"
+        "Cloud3" -> "recovery"
+        "energy" -> "work"
+
+      # Define flow edges (flow_node -> stock)
+      edge [style = "", arrowhead="normal", color="black:#f48153:black", arrowsize=1.5, penwidth=1.1, minlen=1, splines=ortho, tailport="e", headport="w"]
+      "erosion" -> "Cloud1"
+        "recovery" -> "energy"
+        "work" -> "Cloud2"
+
+      # Define dependency edges
+      edge [style = "", color="#999999", arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport = "_", headport="_"]
+      "recovery_rate" -> "erosion"
+        "work" -> "erosion"
+        "recovery_rate" -> "recovery"
+        "energy" -> "work"
+        "recovery" -> "net_change"
+        "work" -> "net_change"
+
+
+      # Rank groupings
+      
+
+    }
+    '
+
+  }
 
     pl <- DiagrammeR::grViz(viz_str)
     pl
-  }
 
-  export_plot(pl, file.path(filepath_figs, "sfm_burnout_simple.pdf"))
+  export_plot(pl, file.path(filepath_figs, "build_sfm.pdf"))
 }
 ```
 

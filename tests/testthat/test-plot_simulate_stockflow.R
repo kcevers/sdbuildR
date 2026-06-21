@@ -406,3 +406,77 @@ test_that("plot.simulate_stockflow() uses default titles", {
   expect_equal(layout$yaxis$title, "")
   expect_plotly(pl)
 })
+
+# ============================================================================
+# TIME ANIMATION
+# ============================================================================
+
+test_that("plot.simulate_stockflow() supports cumulative time animation", {
+  sim <- sir_sim()
+  pl <- plot(sim, animation = "time")
+  expect_plotly(pl)
+
+  frames <- plotly_frames(pl)
+  expect_true(length(frames) > 0)
+
+  # Frame count is capped for performance; frame times are a subset of the
+  # simulation times, and the final frame reaches the last time point.
+  all_times <- sort(unique(sim[["df"]][["time"]]))
+  frame_names <- plotly_frame_names(pl)
+  expect_true(length(frame_names) <= 50)
+  expect_true(all(frame_names %in% as.character(all_times)))
+  expect_equal(frame_names[length(frame_names)], as.character(max(all_times)))
+
+  # Cumulative reveal: total plotted points never decrease across frames
+  point_counts <- vapply(frames, function(frame) {
+    sum(vapply(frame[["data"]], function(trace) length(trace[["x"]]), integer(1)))
+  }, integer(1))
+  expect_true(all(diff(point_counts) >= 0))
+})
+
+test_that("plot.simulate_stockflow() is static by default (no frames)", {
+  sim <- sir_sim()
+  expect_equal(length(plotly_frames(plot(sim))), 0L)
+  expect_equal(length(plotly_frames(plot(sim, animation = "none"))), 0L)
+})
+
+test_that("plot.simulate_stockflow() rejects invalid animation", {
+  sim <- sir_sim()
+  expect_error(plot(sim, animation = "fast"), "animation")
+})
+
+test_that("plot.simulate_stockflow() webgl toggles trace type", {
+  sim <- sir_sim()
+
+  types_gl <- vapply(plotly::plotly_build(plot(sim, webgl = TRUE))$x$data,
+    function(d) d$type %||% "", character(1))
+  expect_true(any(types_gl == "scattergl"))
+
+  types_svg <- vapply(plotly::plotly_build(plot(sim, webgl = FALSE))$x$data,
+    function(d) d$type %||% "", character(1))
+  expect_false(any(types_svg == "scattergl"))
+
+  expect_error(plot(sim, webgl = "no"), "webgl")
+})
+
+
+test_that("plot.simulate_stockflow() respects global webgl option", {
+  sim <- sir_sim()
+
+  withr::local_options(list(sdbuildR.webgl = TRUE))
+  types_gl <- vapply(plotly::plotly_build(plot(sim))$x$data,
+    function(d) d$type %||% "", character(1))
+  expect_true(any(types_gl == "scattergl"))
+
+  withr::local_options(list(sdbuildR.webgl = FALSE))
+  types_svg <- vapply(plotly::plotly_build(plot(sim))$x$data,
+    function(d) d$type %||% "", character(1))
+  expect_false(any(types_svg == "scattergl"))
+
+  # Setting webgl explicitly overrides the global option
+  types_svg <- vapply(plotly::plotly_build(plot(sim, webgl = TRUE))$x$data,
+    function(d) d$type %||% "", character(1))
+  expect_true(any(types_svg == "scattergl"))
+
+})
+

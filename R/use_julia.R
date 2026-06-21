@@ -316,6 +316,26 @@ is_julia_env_setup <- function(force = FALSE, error = TRUE) {
   env_exists <- nzchar(project_file)
   env_instantiated <- file.exists(manifest_file)
 
+  # The Manifest.toml is specific to the Julia version that built it: stdlib
+  # versions are pinned to that release, so reusing it under a different Julia
+  # (e.g. after a reinstall or update) can break instantiation and loading.
+  if (env_instantiated) {
+    manifest_jl_version <- find_manifest_julia_version(manifest_file)
+    current_jl_version <- julia_eval("string(VERSION)")
+
+    if (!is.null(manifest_jl_version) &&
+        !julia_version_compatible(manifest_jl_version, current_jl_version)) {
+      if (error) {
+        cli::cli_abort(c(
+          "x" = "The sdbuildR Julia environment was built with Julia {manifest_jl_version}, but you're running {current_jl_version}.",
+          ">" = "Run {.fn install_julia_env} to rebuild the environment."
+        ))
+      } else {
+        return(invisible(FALSE))
+      }
+    }
+  }
+
   if (!env_exists) {
     if (error) {
       cli::cli_abort(c(
@@ -359,6 +379,81 @@ is_julia_env_setup <- function(force = FALSE, error = TRUE) {
   .sdbuildR_env[["jl"]][["env_checked"]] <- TRUE
 
   invisible(TRUE)
+}
+
+
+#' Find the Julia version that built a Manifest.toml
+#'
+#' Parses the `julia_version` field from a v2.0 Manifest.toml. This is the
+#' version of Julia that resolved the environment; stdlib versions are pinned
+#' to it, so a mismatch with the running Julia can cause instantiation and
+#' loading errors.
+#'
+#' @param manifest_file Path to Manifest.toml file
+#'
+#' @returns Character version string (e.g. "1.10.4"), or `NULL` if not found.
+#' @noRd
+#' @keywords internal
+find_manifest_julia_version <- function(manifest_file) {
+  if (!file.exists(manifest_file)) {
+    return(NULL)
+  }
+
+  tryCatch(
+    {
+      manifest_content <- readLines(manifest_file, warn = FALSE)
+
+      # Manifest.toml (v2.0) records this near the top:
+      # julia_version = "1.10.4"
+      version_line <- grep("^julia_version\\s*=", manifest_content, value = TRUE)
+
+      if (length(version_line) == 0) {
+        return(NULL)
+      }
+
+      version_match <- regmatches(
+        version_line[1],
+        regexec("julia_version\\s*=\\s*\"([^\"]+)\"", version_line[1])
+      )
+
+      if (length(version_match[[1]]) > 1) {
+        version_match[[1]][2]
+      } else {
+        NULL
+      }
+    },
+    error = function(e) {
+      NULL
+    }
+  )
+}
+
+
+#' Check whether a Manifest.toml Julia version is compatible with the running Julia
+#'
+#' Compatibility is determined by major and minor version: stdlib versions are
+#' pinned per minor release, so a manifest built with a different major/minor
+#' Julia may break. Patch-level differences are considered compatible.
+#'
+#' @param manifest_version Julia version string from the manifest
+#' @param current_version Julia version string of the running session
+#'
+#' @returns Logical. `TRUE` if major and minor versions match.
+#' @noRd
+#' @keywords internal
+julia_version_compatible <- function(manifest_version, current_version) {
+  tryCatch(
+    {
+      m <- package_version(manifest_version)
+      c <- package_version(current_version)
+      unclass(m)[[1]][1] == unclass(c)[[1]][1] &&
+        unclass(m)[[1]][2] == unclass(c)[[1]][2]
+    },
+    error = function(e) {
+      # If versions can't be parsed, don't block the user
+      TRUE
+    }
+  )
 }
 
 

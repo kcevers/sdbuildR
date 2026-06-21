@@ -1,5 +1,41 @@
 # sdbuildR (development version)
 
+
+* `plot.stockflow()` gains three layout-control arguments. `direction` sets the
+  overall flow direction (`"LR"`, `"TB"`, `"RL"`, or `"BT"`; default `"LR"`).
+  `align` lines variables up across the flow direction (one or more groups,
+  placed on the same Graphviz rank). `order` sequences variables along the flow
+  direction as a soft hint via invisible edges, so it nudges the layout without
+  overriding the real flows. All three accept any variable (not only stocks).
+
+* `use_julia()` and `simulate()` now detect when the sdbuildR Julia environment
+  was built with a different version of Julia than the one currently running
+  (for example after reinstalling or updating Julia) and prompt you to rebuild
+  it with `install_julia_env()`, instead of failing with an unclear error.
+
+* `plot.stockflow()` now uses default `minlen = 1` instead of `minlen = 2` to create shorter flow edges.
+
+* `plot.stockflow()` gains a `show_eqn` argument (default `TRUE`). Each
+  variable's equation is shown on a new line beneath its label, in a smaller
+  font and the same colour as the label, wrapped to `wrap_width`. Set
+  `show_eqn = FALSE` to hide the equations.
+
+* `plot.stockflow()` gains a `show_tooltip` argument (default `TRUE`) to control
+  whether equations are shown as tooltips on hover.
+
+* `plot.stockflow()` gains a `label_col` argument to set the colour of variable
+  labels (and of the equation text when `show_eqn = TRUE`).
+
+* `plot()` for simulation, ensemble, and verify results gains an `animation`
+  argument. Use `animation = "time"` to cumulatively reveal trajectories over
+  time with a play button and time slider. For ensemble and verify plots, time
+  animation is supported for a single condition (one panel).
+
+* `plot.ensemble_stockflow()` and `plot.verify_stockflow()` gain a
+  `condition_display` argument. In addition to the default `"subplots"`, use
+  `"slider"` or `"dropdown"` to show one condition/test at a time and select it
+  interactively.
+
 # sdbuildR 2.0.0
 
 ## Breaking changes

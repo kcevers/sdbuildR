@@ -3,31 +3,27 @@
     {
       "x": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
       "y": [10, 9.04, 8.18, 7.4, 6.69, 6.05, 5.47, 4.95, 4.48, 4.05, 3.66],
-      "legendgroup": "S",
-      "type": "scatter",
-      "mode": "lines",
-      "opacity": 1,
-      "showlegend": true,
-      "connectgaps": false,
-      "visible": true,
       "name": "S",
+      "legendgroup": "S",
+      "type": "scattergl",
+      "mode": "lines",
+      "line": {
+        "color": "#FFC5D0FF"
+      },
+      "showlegend": true,
+      "visible": true,
+      "connectgaps": false,
       "marker": {
-        "color": "rgba(255,197,208,1)",
+        "color": "rgba(31,119,180,1)",
         "line": {
-          "color": "rgba(255,197,208,1)"
+          "color": "rgba(31,119,180,1)"
         }
       },
-      "textfont": {
-        "color": "rgba(255,197,208,1)"
-      },
       "error_y": {
-        "color": "rgba(255,197,208,1)"
+        "color": "rgba(31,119,180,1)"
       },
       "error_x": {
-        "color": "rgba(255,197,208,1)"
-      },
-      "line": {
-        "color": "rgba(255,197,208,1)"
+        "color": "rgba(31,119,180,1)"
       },
       "xaxis": "x",
       "yaxis": "y",
@@ -48,7 +44,7 @@
       }
     },
     "showlegend": true,
-    "title": "Unit Tests of My Model<span style='font-size:16px;'><br />1unit test across 1 condition<\/span>",
+    "title": "Unit Tests of My Model<span style='font-size:16px;'><br />1 unit test across 1 condition<\/span>",
     "xaxis": {
       "domain": [0, 1],
       "automargin": true,

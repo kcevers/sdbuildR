@@ -14,6 +14,8 @@
   font_size = 16,
   wrap_width = 25,
   showlegend = TRUE,
+  animation = c("none", "time"),
+  webgl = getOption("sdbuildR.webgl", default = TRUE),
   ...
 )
 }
@@ -34,7 +36,16 @@
 
 \item{wrap_width}{Width of text wrapping for labels. Must be an integer. Defaults to 25.}
 
-\item{showlegend}{Whether to show legend. Must be TRUE or FALSE. Defaults to TRUE.}
+\item{showlegend}{Whether to show legend. Must be \code{TRUE} or \code{FALSE}. Defaults to \code{TRUE}.}
+
+\item{animation}{Animation mode. Use \code{"none"} for a static plot or \code{"time"}
+to cumulatively reveal trajectories over time. Defaults to \code{"none"}.}
+
+\item{webgl}{If \code{TRUE}, render trajectories with WebGL (plotly \code{scattergl}) for
+performance with many lines; if \code{FALSE}, use SVG (\code{scatter}). Defaults to
+\code{getOption("sdbuildR.webgl", default = TRUE)}. Set
+\code{options(sdbuildR.webgl = FALSE)} (e.g. in vignettes or dashboards, or when
+a plot renders blank) to disable WebGL globally.}
 
 \item{...}{Optional parameters}
 }
@@ -54,6 +65,9 @@ plot(sim, main = "Simulated trajectory", xlab = "Time", ylab = "Value")
 
 # Add constants to the plot
 plot(sim, show_constants = TRUE)
+
+# Cumulatively reveal the trajectories over time
+plot(sim, animation = "time")
 
 }
 \seealso{

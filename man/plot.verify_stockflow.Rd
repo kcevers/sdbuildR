@@ -25,6 +25,9 @@
   label_subplots = TRUE,
   alpha = 1,
   margin = 0.05,
+  condition_display = c("subplots", "slider", "dropdown"),
+  animation = c("none", "time"),
+  webgl = getOption("sdbuildR.webgl", default = TRUE),
   ...
 )
 }
@@ -78,6 +81,20 @@ with a matching status.
 
 \item{margin}{Margin between subplots. Either a single numeric or a vector of length four(left, right, top, bottom). See \code{?plotly::subplot()} for more details. Defaults to 0.05.}
 
+\item{condition_display}{How to display multiple conditions. Use \code{"subplots"}
+to show conditions as panels, \code{"slider"} to select one condition with a
+slider, or \code{"dropdown"} to select one condition with a dropdown. Defaults
+to \code{"subplots"}.}
+
+\item{animation}{Animation mode. Use \code{"none"} for a static plot or \code{"time"}
+to cumulatively reveal trajectories over time. Defaults to \code{"none"}.}
+
+\item{webgl}{If \code{TRUE}, render trajectories with WebGL (plotly \code{scattergl}) for
+performance with many lines; if \code{FALSE}, use SVG (\code{scatter}). Defaults to
+\code{getOption("sdbuildR.webgl", default = TRUE)}. Set
+\code{options(sdbuildR.webgl = FALSE)} (e.g. in vignettes or dashboards, or when
+a plot renders blank) to disable WebGL globally.}
+
 \item{...}{Additional arguments passed to \code{\link[=plot.simulate_stockflow]{plot.simulate_stockflow()}}.}
 }
 \value{
@@ -93,6 +110,13 @@ sfm <- stockflow("SIR") |>
   unit_test(expr = all(susceptible >= 0))
 res <- verify(sfm)
 plot(res)
+
+# Select one condition at a time with a slider or dropdown
+plot(res, condition_display = "slider")
+plot(res, condition_display = "dropdown")
+
+# Cumulatively reveal the trajectories over time
+plot(res, animation = "time")
 }
 \seealso{
 \code{\link[=verify]{verify()}}, \code{\link[=plot.simulate_stockflow]{plot.simulate_stockflow()}}, \code{\link[=plot.ensemble_stockflow]{plot.ensemble_stockflow()}}

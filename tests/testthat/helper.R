@@ -331,6 +331,17 @@ expect_plotly <- function(x) {
   testthat::expect_s3_class(x, "plotly")
 }
 
+#' Built animation frames of a plotly object
+plotly_frames <- function(pl) {
+  plotly::plotly_build(pl)[["x"]][["frames"]]
+}
+
+#' Names of the built animation frames
+plotly_frame_names <- function(pl) {
+  frames <- plotly_frames(pl)
+  vapply(frames, function(frame) frame[["name"]], character(1))
+}
+
 ##### Plotly attribute helpers #####
 
 `%||%` <- function(a, b) if (is.null(a)) b else a
@@ -537,26 +548,70 @@ extract_diagram_nodes <- function(pl) {
     return(data.frame())
   }
 
-  parsed <- lapply(defs, function(def) {
-    parts <- regmatches(def, regexec('(?s)^"([^"]+)"\\s*\\[(.*)\\]$', def, perl = TRUE))[[1]]
-    name <- parts[2]
-    attrs_str <- parts[3]
+  # Parse a bracket body ("key = value, key = value, ...") into a named list.
+  # value may be "...", '...', or <...> (an HTML-like label, whose content can
+  # itself contain < and >, e.g. <BR/> and <FONT ...>...</FONT>). A single regex
+  # cannot handle the nested angle brackets, so scan character by character,
+  # tracking quotes and angle-bracket depth.
+  parse_attrs <- function(s) {
+    kv <- list()
+    i <- 1L
+    n <- nchar(s)
+    is_space <- function(ch) ch %in% c(" ", "\t", "\n", "\r")
+    while (i <= n) {
+      while (i <= n && (is_space(substr(s, i, i)) || substr(s, i, i) == ",")) i <- i + 1L
+      if (i > n) break
 
-    # key = value, where value is "...", '...', or <...>. A negated class like
-    # [^"] also matches newlines, so values with embedded \n are captured whole.
-    pat <- '(\\w+)\\s*=\\s*("[^"]*"|\'[^\']*\'|<[^>]*>)'
-    m <- regmatches(attrs_str, gregexpr(pat, attrs_str, perl = TRUE))[[1]]
+      # key (letters/digits/underscore)
+      key_start <- i
+      while (i <= n && grepl("[A-Za-z0-9_]", substr(s, i, i))) i <- i + 1L
+      key <- substr(s, key_start, i - 1L)
 
-    kv <- list(name = name)
-    for (pair in m) {
-      key <- trimws(sub("(?s)\\s*=.*$", "", pair, perl = TRUE))
-      val <- sub("(?s)^[^=]*=\\s*", "", pair, perl = TRUE)
-      val <- sub('(?s)^["\'<](.*)["\'>]$', "\\1", val, perl = TRUE) # strip delimiters
-      # NB: embedded newlines in (wrapped) labels are preserved, so callers can
-      # verify wrapping, e.g. grepl("\n", nodes$label).
-      kv[[key]] <- trimws(val)
+      # '=' and surrounding whitespace
+      while (i <= n && is_space(substr(s, i, i))) i <- i + 1L
+      if (i <= n && substr(s, i, i) == "=") i <- i + 1L
+      while (i <= n && is_space(substr(s, i, i))) i <- i + 1L
+      if (i > n) break
+
+      ch <- substr(s, i, i)
+      if (ch == '"' || ch == "'") { # quoted string
+        i <- i + 1L
+        val_start <- i
+        while (i <= n && substr(s, i, i) != ch) i <- i + 1L
+        val <- substr(s, val_start, i - 1L)
+        i <- i + 1L # consume closing quote
+      } else if (ch == "<") { # HTML-like label: read to the matching '>'
+        depth <- 0L
+        val_start <- i + 1L
+        while (i <= n) {
+          c2 <- substr(s, i, i)
+          if (c2 == "<") {
+            depth <- depth + 1L
+          } else if (c2 == ">") {
+            depth <- depth - 1L
+            if (depth == 0L) break
+          }
+          i <- i + 1L
+        }
+        val <- substr(s, val_start, i - 1L)
+        i <- i + 1L # consume closing '>'
+      } else { # bare token
+        val_start <- i
+        while (i <= n && !(is_space(substr(s, i, i)) || substr(s, i, i) == ",")) i <- i + 1L
+        val <- substr(s, val_start, i - 1L)
+      }
+
+      # NB: embedded newlines (in wrapped labels) and HTML tags are preserved,
+      # so callers can verify wrapping, e.g. grepl("\n", nodes$label), or HTML,
+      # e.g. grepl("<FONT", nodes$label).
+      if (nzchar(key)) kv[[key]] <- trimws(val)
     }
     kv
+  }
+
+  parsed <- lapply(defs, function(def) {
+    parts <- regmatches(def, regexec('(?s)^"([^"]+)"\\s*\\[(.*)\\]$', def, perl = TRUE))[[1]]
+    c(list(name = parts[2]), parse_attrs(parts[3]))
   })
 
   # Bind rows on the union of all attribute names
@@ -624,6 +679,26 @@ extract_diagram_edges <- function(pl) {
   }))
   rownames(df) <- NULL
   df
+}
+
+
+#' Extract {rank=same; ...} groupings from a plot.stockflow() diagram
+#'
+#' @param pl Output of plot.stockflow()
+#' @return A list of character vectors, one per `{rank=same; ...}` statement,
+#'   each holding the (unquoted) node names in that group.
+extract_diagram_ranks <- function(pl) {
+  diagram <- pl[["x"]][["diagram"]]
+  if (is.null(diagram)) stop("No diagram string found in plot object.")
+
+  stmts <- regmatches(
+    diagram,
+    gregexpr("\\{\\s*rank\\s*=\\s*same\\s*;[^}]*\\}", diagram, perl = TRUE)
+  )[[1]]
+  lapply(stmts, function(s) {
+    names <- regmatches(s, gregexpr('"([^"]+)"', s, perl = TRUE))[[1]]
+    gsub('"', "", names, fixed = TRUE)
+  })
 }
 
 

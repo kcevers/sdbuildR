@@ -51,8 +51,11 @@ validate_plot_params <- function(showlegend = NULL,
                                  font_family = NULL,
                                  font_size = NULL,
                                  wrap_width = NULL,
-                                 label_subplots = NULL) {
+                                 label_subplots = NULL,
+                                 webgl = NULL) {
   .assert_plot_type(showlegend, "showlegend", "logical", "Use {.code TRUE} or {.code FALSE}.")
+
+  .assert_plot_type(webgl, "webgl", "logical", "Use {.code TRUE} or {.code FALSE}.")
 
   if (!is.null(vars)) {
     if (!is.character(vars)) {
@@ -155,6 +158,117 @@ prepare_labels <- function(names_df, wrap_width, format_label = FALSE, deduplica
 }
 
 
+#' Escape characters that are special in Graphviz HTML-like labels
+#'
+#' @param x Character vector.
+#' @returns Character vector with &, <, and > escaped.
+#' @noRd
+#'
+escape_html_ <- function(x) {
+  x <- gsub("&", "&amp;", x, fixed = TRUE)
+  x <- gsub("<", "&lt;", x, fixed = TRUE)
+  x <- gsub(">", "&gt;", x, fixed = TRUE)
+  x
+}
+
+
+#' Build an HTML-like node label that shows the label and its equation
+#'
+#' Produce a Graphviz HTML-like label body that places the variable label on one
+#' line and its equation underneath, in a smaller font and a given colour. The
+#' returned value is the inner HTML, WITHOUT the surrounding angle brackets, so
+#' callers assign it via `label=<...>` or `xlabel=<...>`.
+#'
+#' @param label Character vector of variable labels (may contain "\\n" from wrapping).
+#' @param eqn Character vector of equations (same length as label).
+#' @param eqn_font_size Numeric, font size for the equation line.
+#' @param eqn_col Character, colour of the equation text.
+#' @param wrap_width Integer, text wrap width applied to the equation.
+#' @param italic Logical, if TRUE wrap the label portion in <I></I> (constants).
+#' @returns Character vector of HTML-like label bodies (no surrounding angle brackets).
+#' @noRd
+#'
+make_eqn_label <- function(label, eqn, eqn_font_size, eqn_col, wrap_width, italic = FALSE) {
+  # Labels arrive from prepare_labels() with single quotes escaped for quoted
+  # Graphviz strings; undo that escaping for HTML-like labels.
+  label <- gsub("\\'", "'", label, fixed = TRUE)
+  label_html <- gsub("\n", "<BR/>", escape_html_(label), fixed = TRUE)
+  if (italic) {
+    label_html <- paste0("<I>", label_html, "</I>")
+  }
+
+  # Wrap the equation to the same width as the labels, then break and escape.
+  eqn <- str_wrap_(eqn, width = wrap_width)
+  eqn_html <- gsub("\n", "<BR/>", escape_html_(eqn), fixed = TRUE)
+
+  sprintf(
+    "%s<BR/><FONT POINT-SIZE=\"%s\" COLOR=\"%s\">eqn = %s</FONT>",
+    label_html, eqn_font_size, eqn_col, eqn_html
+  )
+}
+
+
+#' Compose an informative tooltip for a stock-and-flow diagram node
+#'
+#' Build a multi-line tooltip string describing a single variable: its type and
+#' label, its name (only when it differs from the label), its equation/value,
+#' and its structural role (inflows/outflows for stocks, from/to for flows).
+#' Lines are joined with the literal escape "\\n", which Graphviz renders as a
+#' line break in the SVG tooltip.
+#'
+#' @param type Variable type ("stock", "flow", "aux", or "constant").
+#' @param label Human-readable (unwrapped) label.
+#' @param name Variable name.
+#' @param eqn Equation string (may be NA or "").
+#' @param inflows,outflows Character vectors of flow labels (stocks only).
+#' @param from_label,to_label Source/destination labels (flows only); NA to omit.
+#' @returns A single tooltip string with "\\n"-separated lines.
+#' @noRd
+#'
+node_tooltip <- function(type, label, name, eqn,
+                         inflows = character(0), outflows = character(0),
+                         from_label = NA_character_, to_label = NA_character_) {
+  type_title <- switch(type,
+    stock = "Stock",
+    flow = "Flow",
+    aux = "Auxiliary",
+    constant = "Constant",
+    type
+  )
+
+  lines <- sprintf("%s: %s", type_title, label)
+
+  if (!identical(name, label)) {
+    lines <- c(lines, sprintf("Name: %s", name))
+  }
+
+  eqn_field <- switch(type,
+    stock = "Initial value",
+    constant = "Value",
+    "Equation"
+  )
+  if (!is.na(eqn) && nzchar(eqn)) {
+    lines <- c(lines, sprintf("%s: %s", eqn_field, eqn))
+  }
+
+  none <- "\u2014" # em dash
+  if (type == "stock") {
+    lines <- c(
+      lines,
+      sprintf("Inflows: %s", if (length(inflows)) paste(inflows, collapse = ", ") else none),
+      sprintf("Outflows: %s", if (length(outflows)) paste(outflows, collapse = ", ") else none)
+    )
+  }
+
+  if (type == "flow") {
+    if (!is.na(from_label)) lines <- c(lines, sprintf("From: %s", from_label))
+    if (!is.na(to_label)) lines <- c(lines, sprintf("To: %s", to_label))
+  }
+
+  paste(lines, collapse = "\\n")
+}
+
+
 #' Create plotly theme with consistent styling
 #'
 #' Generate a reusable theme configuration for plotly plots, including fonts,
@@ -240,7 +354,7 @@ extract_plot_params <- function(dots, defaults) {
     }
   }
 
-  return(result)
+  result
 }
 
 
@@ -298,6 +412,90 @@ validate_vars_in_model <- function(vars, names_df, df = NULL, context = "model")
   }
 
   invisible(TRUE)
+}
+
+
+#' Normalize and validate a layout-grouping argument for plot.stockflow()
+#'
+#' Used for the `align` and `order` arguments. Accepts either a single character
+#' vector (one group) or a list of character vectors (several groups), normalizes
+#' both to a list of character vectors, and validates the variable names:
+#' \itemize{
+#'   \item names absent from the model are treated as typos and abort;
+#'   \item names that exist but are not currently drawn (hidden by `vars`,
+#'     `show_constants`, or `show_aux`) are dropped with a warning;
+#'   \item within-group whitespace is trimmed and duplicates removed (order kept);
+#'   \item groups with fewer than `min_len` drawn members are dropped (a group of
+#'     one has nothing to align or order).
+#' }
+#'
+#' @param x The `align`/`order` argument: `NULL`, a character vector, or a list
+#'   of character vectors.
+#' @param plot_var Character vector of variable names actually drawn in the diagram.
+#' @param model_var Character vector of all variable names in the model (typo check).
+#' @param arg Argument name for messages ("align" or "order").
+#' @param min_len Minimum number of drawn members for a group to be kept. Defaults to 2.
+#'
+#' @returns A list of character vectors, each with at least `min_len` drawn names,
+#'   in the user-specified order. Returns an empty list when `x` is `NULL` or
+#'   nothing survives filtering.
+#' @noRd
+prepare_layout_groups <- function(x, plot_var, model_var, arg, min_len = 2L) {
+  if (is.null(x)) {
+    return(list())
+  }
+
+  # A single character vector is one group
+  if (is.character(x)) {
+    x <- list(x)
+  }
+
+  if (!is.list(x) || length(x) == 0L || !all(vapply(x, is.character, logical(1)))) {
+    cli::cli_abort(c(
+      "x" = "Invalid {.arg {arg}} argument.",
+      ">" = "{.arg {arg}} must be a character vector or a list of character vectors."
+    ))
+  }
+
+  # Trim, drop blanks, de-duplicate within each group (preserving order)
+  x <- lapply(x, function(g) {
+    g <- trimws(g)
+    unique(g[nzchar(g)])
+  })
+
+  flat <- unique(unlist(x, use.names = FALSE))
+
+  # Typo protection: names absent from the model abort
+  unknown <- setdiff(flat, model_var)
+  if (length(unknown) > 0) {
+    cli::cli_abort(c(
+      "!" = paste0(
+        "{.arg {arg}}: ",
+        paste0(unknown, collapse = ", "),
+        ifelse(length(unknown) == 1, " is not a variable", " are not variables"),
+        " in the model."
+      ),
+      "i" = paste0("Model variables: ", paste0(sort(model_var), collapse = ", "))
+    ))
+  }
+
+  # Known but not currently drawn: drop with a warning
+  not_drawn <- setdiff(flat, plot_var)
+  if (length(not_drawn) > 0) {
+    cli::cli_warn(c(
+      "!" = paste0(
+        "{.arg {arg}}: ",
+        paste0(not_drawn, collapse = ", "),
+        ifelse(length(not_drawn) == 1, " is", " are"),
+        " not shown in the diagram and will be ignored."
+      ),
+      "i" = "Hidden by {.arg vars}, {.arg show_constants}, or {.arg show_aux}."
+    ))
+    x <- lapply(x, function(g) g[g %in% plot_var])
+  }
+
+  # Keep only groups with enough drawn members to matter
+  x[vapply(x, function(g) length(g) >= min_len, logical(1))]
 }
 
 
@@ -535,6 +733,8 @@ add_visibility_pair <- function(pl, add_fn,
 #' @param line_width Numeric, line width for "lines" mode.
 #' @param marker_size Numeric, marker size for "markers" mode.
 #' @param split Optional formula for splitting traces (e.g., \code{~interaction(variable, i)}).
+#' @param frame Optional formula (e.g. \code{~.frame}) mapping traces to animation
+#'   frames. When \code{NULL} (default), no animation frame is added.
 #'
 #' @returns Updated plotly object.
 #' @noRd
@@ -552,6 +752,7 @@ add_trace_pair <- function(pl,
                            line_width = NULL,
                            marker_size = NULL,
                            split = NULL,
+                           frame = NULL,
                            visible_highlight = TRUE,
                            visible_nonhighlight = "legendonly") {
   # Build an explicit variable->color mapping for variables actually present in
@@ -582,38 +783,35 @@ add_trace_pair <- function(pl,
     names(colors) <- vars_present
   }
 
+  # Build a single add_trace() call, injecting split/frame only when supplied so
+  # behaviour is identical to before when neither is requested.
+  add_one <- function(pl, data, showlegend_val, visible_val) {
+    args <- list(
+      pl,
+      data = data,
+      x = ~ get(x_col),
+      y = ~ get(y_col),
+      color = ~variable,
+      legendgroup = ~variable,
+      type = type,
+      mode = mode,
+      opacity = opacity,
+      colors = colors,
+      showlegend = showlegend_val,
+      visible = visible_val
+    )
+    if (!is.null(split)) args[["split"]] <- split
+    if (!is.null(frame)) args[["frame"]] <- frame
+    do.call(plotly::add_trace, args)
+  }
+
   # Add nonhighlight traces first (will be hidden behind highlight traces)
   if (!is.null(df_nonhighlight) && nrow(df_nonhighlight) > 0) {
-    if (is.null(split)) {
-      pl <- plotly::add_trace(pl,
-        data = df_nonhighlight,
-        x = ~ get(x_col),
-        y = ~ get(y_col),
-        color = ~variable,
-        legendgroup = ~variable,
-        type = type,
-        mode = mode,
-        opacity = opacity,
-        colors = colors,
-        showlegend = showlegend,
-        visible = visible_nonhighlight
-      )
-    } else {
-      pl <- plotly::add_trace(pl,
-        data = df_nonhighlight,
-        x = ~ get(x_col),
-        y = ~ get(y_col),
-        color = ~variable,
-        legendgroup = ~variable,
-        type = type,
-        mode = mode,
-        opacity = opacity,
-        colors = colors,
-        split = split,
-        showlegend = FALSE,
-        visible = visible_nonhighlight
-      )
-    }
+    # When splitting, individual trajectories must not each add a legend entry.
+    pl <- add_one(pl, df_nonhighlight,
+      showlegend_val = if (is.null(split)) showlegend else FALSE,
+      visible_val = visible_nonhighlight
+    )
 
     # Add line width or marker size if specified
     if (!is.null(line_width) && mode %in% c("lines", "lines+markers")) {
@@ -626,37 +824,371 @@ add_trace_pair <- function(pl,
 
   # Add highlight traces (will be visible by default)
   if (!is.null(df_highlight) && nrow(df_highlight) > 0) {
-    if (is.null(split)) {
-      pl <- plotly::add_trace(pl,
-        data = df_highlight,
-        x = ~ get(x_col),
-        y = ~ get(y_col),
-        color = ~variable,
-        legendgroup = ~variable,
-        type = type,
-        mode = mode,
-        opacity = opacity,
-        colors = colors,
-        showlegend = showlegend,
-        visible = visible_highlight
-      )
-    } else {
-      pl <- plotly::add_trace(pl,
-        data = df_highlight,
-        x = ~ get(x_col),
-        y = ~ get(y_col),
-        color = ~variable,
-        legendgroup = ~variable,
-        type = type,
-        mode = mode,
-        opacity = opacity,
-        colors = colors,
-        split = split,
-        showlegend = FALSE,
-        visible = visible_highlight
-      )
-    }
+    pl <- add_one(pl, df_highlight,
+      showlegend_val = if (is.null(split)) showlegend else FALSE,
+      visible_val = visible_highlight
+    )
   }
 
-  return(pl)
+  pl
+}
+
+
+#' Set the export format for Plotly's "Download plot as a png/svg/jpeg/webp" button
+#' 
+#' @param pl Plotly object to configure.
+#' @param format Character, one of "png", "svg", "jpeg", or "webp". Defaults to "svg" for better quality and scalability.
+#' @returns Updated Plotly object with configured export format.
+#' @noRd
+set_plotly_export_format <- function(pl, format = "svg") {
+
+  # Check format
+  format <- match.arg(format, choices = c("png", "svg", "jpeg", "webp"))
+
+  plotly::config(pl,
+    toImageButtonOptions = list(
+      format = format
+      # Use currently-rendered size by not specifying width/height
+      # width = width,
+      # height = height
+    )
+  )
+}
+
+
+#' Validate the animation argument
+#'
+#' @param animation Character, one of "none" or "time".
+#' @returns The matched value.
+#' @noRd
+.clean_animation <- function(animation) {
+  choices <- c("none", "time")
+  if (length(animation) > 1) animation <- animation[1]
+  if (!is.character(animation) || length(animation) != 1 || !animation %in% choices) {
+    cli::cli_abort(c(
+      "x" = "Invalid {.arg animation} value.",
+      "i" = "The {.arg animation} argument must be {.code 'none'} or {.code 'time'}."
+    ))
+  }
+  animation
+}
+
+
+#' Validate the condition_display argument
+#'
+#' @param condition_display Character, one of "subplots", "slider", or "dropdown".
+#' @returns The matched value.
+#' @noRd
+.clean_condition_display <- function(condition_display) {
+  choices <- c("subplots", "slider", "dropdown")
+  if (length(condition_display) > 1) condition_display <- condition_display[1]
+  if (!is.character(condition_display) || length(condition_display) != 1 ||
+    !condition_display %in% choices) {
+    cli::cli_abort(c(
+      "x" = "Invalid {.arg condition_display} value.",
+      "i" = "The {.arg condition_display} argument must be {.code 'subplots'}, {.code 'slider'}, or {.code 'dropdown'}."
+    ))
+  }
+  condition_display
+}
+
+
+#' Accumulate rows cumulatively by time for a line-drawing animation
+#'
+#' Duplicates the data so that the frame for time `t` contains every row with
+#' `time <= t`. This produces the "line drawing itself" effect when the frame
+#' column is mapped to a Plotly animation frame. All other columns (e.g.
+#' `variable`, `condition`, `sim`) are preserved, including factor levels.
+#'
+#' @param df Data frame with a time column, or NULL.
+#' @param time_col Name of the time column. Defaults to "time".
+#' @param frame_col Name of the frame column to create. Defaults to ".frame".
+#' @param max_frames Maximum number of animation frames. When the data has more
+#'   unique time points than this, evenly spaced thresholds are used (always
+#'   keeping the last time so the final frame is complete). This keeps the
+#'   animation responsive: a naive one-frame-per-time-point expansion is
+#'   quadratic in the number of time points and can freeze plotly for finely
+#'   sampled simulations. Defaults to 50.
+#' @returns Data frame with a `frame_col` column, or `df` unchanged if empty/NULL.
+#' @noRd
+accumulate_by_time <- function(df, time_col = "time", frame_col = ".frame",
+                               max_frames = 50) {
+  if (is.null(df) || nrow(df) == 0L) {
+    return(df)
+  }
+
+  times <- sort(unique(df[[time_col]]))
+
+  # Cap the number of frames for performance. Use "nice" rounded breakpoints
+  # (snapped to the nearest available time) so the slider tick labels read like
+  # ordinary x-axis ticks (e.g. 0, 5, 10, ...) instead of raw sample times. The
+  # line itself still draws at full resolution within each frame, since each
+  # frame includes every row up to its threshold.
+  if (length(times) > max_frames) {
+    rng <- range(times)
+    nice <- pretty(rng, n = min(max_frames, 20))
+    nice <- nice[nice > rng[1] & nice < rng[2]]
+    snapped <- vapply(nice, function(v) times[which.min(abs(times - v))], numeric(1))
+    times <- sort(unique(c(rng[1], snapped, rng[2])))
+  }
+
+  out <- lapply(times, function(time_value) {
+    d <- df[df[[time_col]] <= time_value, , drop = FALSE]
+    d[[frame_col]] <- time_value
+    d
+  })
+
+  out <- do.call(rbind, out)
+  rownames(out) <- NULL
+  out
+}
+
+
+#' Add Plotly animation controls (play button and time slider)
+#'
+#' @param pl Plotly object with animation frames.
+#' @param time_unit Time unit (e.g. "weeks"), used to build the slider's
+#'   dynamic title, formatted like the x-axis title (e.g. "Time (20 weeks)").
+#' @param font_family,font_size Font of the slider title, matched to the x-axis title.
+#' @param frame_ms Frame duration in milliseconds. Defaults to 100.
+#' @param transition_ms Transition duration in milliseconds. Defaults to 0.
+#' @param show_slider Whether to add an animation slider. Defaults to TRUE.
+#' @param show_button Whether to add a play button. Defaults to TRUE.
+#' @returns Updated plotly object.
+#' @noRd
+add_time_animation_controls <- function(pl,
+                                        time_unit = "",
+                                        font_family = "Times New Roman",
+                                        font_size = 16,
+                                        frame_ms = 100,
+                                        transition_ms = 0,
+                                        show_slider = TRUE,
+                                        show_button = TRUE) {
+  pl <- plotly::animation_opts(
+    pl,
+    frame = frame_ms,
+    transition = transition_ms,
+    redraw = FALSE
+  )
+
+  # The slider replaces the x-axis, so drop the axis title and ticks. The slider
+  # step labels (the frame times) then act as the x-axis tick labels. Margin is
+  # merged recursively, so existing top/left/right margins are preserved.
+  pl <- plotly::layout(pl,
+    xaxis = list(title = "", showticklabels = FALSE, ticks = ""),
+    margin = list(b = 120)
+  )
+
+  # Dynamic slider title in the x-axis-title style, e.g. "Time (20 weeks)".
+  if (nzchar(time_unit)) {
+    cv_prefix <- "Time ("
+    cv_suffix <- paste0(" ", time_unit, ")")
+  } else {
+    cv_prefix <- "Time "
+    cv_suffix <- ""
+  }
+
+  # Place the controls below where the x-axis title used to sit (paper y < 0 is
+  # the bottom margin).
+  control_y <- -0.18
+
+  if (show_slider) {
+    pl <- plotly::animation_slider(
+      pl,
+      currentvalue = list(
+        prefix = cv_prefix,
+        suffix = cv_suffix,
+        xanchor = "center",
+        font = list(family = font_family, size = font_size)
+      ),
+      x = 0,
+      xanchor = "left",
+      len = 1,
+      y = control_y,
+      yanchor = "top",
+      pad = list(t = 0, b = 0),
+      font = list(family = font_family, size = ceiling(font_size * 0.85))
+    )
+  }
+
+  if (show_button) {
+    pl <- plotly::animation_button(
+      pl,
+      x = 1,
+      xanchor = "right",
+      y = control_y,
+      yanchor = "top"
+    )
+  }
+
+  pl
+}
+
+
+#' Add condition selection controls (slider or dropdown) to a combined plot
+#'
+#' Given a plot whose traces span several conditions, add a control that shows
+#' one condition's traces at a time by toggling trace visibility.
+#'
+#' @param pl Plotly object containing traces for all conditions.
+#' @param trace_conditions Vector identifying each trace's condition, the same
+#'   length as the number of traces in `pl`.
+#' @param original_visible List of each trace's intended visibility
+#'   (`TRUE`, `FALSE`, or `"legendonly"`) when its condition is selected.
+#' @param condition_ids Vector of condition values in display order.
+#' @param labels Character vector of display labels for each condition. Defaults
+#'   to `paste0(title_prefix, " ", condition_ids)`.
+#' @param type Either "slider" or "dropdown".
+#' @param title_prefix Prefix used for default labels and the slider prefix.
+#' @returns Updated plotly object with `sliders` or `updatemenus` in its layout.
+#' @noRd
+add_condition_controls <- function(pl,
+                                   trace_conditions,
+                                   original_visible,
+                                   condition_ids,
+                                   labels = NULL,
+                                   type = c("slider", "dropdown"),
+                                   title_prefix = "Condition") {
+  type <- match.arg(type)
+  if (is.null(labels)) {
+    labels <- paste0(title_prefix, " ", condition_ids)
+  }
+
+  n_traces <- length(trace_conditions)
+
+  # Visibility mask for a given selected condition: a trace keeps its intended
+  # visibility when it belongs to the condition, otherwise it is hidden.
+  make_mask <- function(cond) {
+    lapply(seq_len(n_traces), function(i) {
+      if (identical(trace_conditions[[i]], cond)) original_visible[[i]] else FALSE
+    })
+  }
+
+  steps <- lapply(seq_along(condition_ids), function(k) {
+    list(
+      method = "update",
+      args = list(list(visible = make_mask(condition_ids[[k]]))),
+      label = as.character(labels[[k]])
+    )
+  })
+
+  if (type == "slider") {
+    pl <- plotly::layout(pl,
+      sliders = list(list(
+        active = 0,
+        currentvalue = list(prefix = paste0(title_prefix, ": ")),
+        steps = steps
+      ))
+    )
+  } else {
+    pl <- plotly::layout(pl,
+      updatemenus = list(list(
+        type = "dropdown",
+        active = 0,
+        showactive = TRUE,
+        buttons = steps
+      ))
+    )
+  }
+
+  pl
+}
+
+
+#' Assemble a single plot with condition selection controls
+#'
+#' Builds each condition's traces (via `pl_list`, one plotly object per
+#' condition), merges them into one figure, hides all but the first condition,
+#' and adds a slider or dropdown to switch between conditions.
+#'
+#' @param pl_list List of single-condition plotly objects (one per condition).
+#' @param condition_ids Vector of condition values, aligned with `pl_list`.
+#' @param type Either "slider" or "dropdown".
+#' @param labels Character vector of condition labels, or NULL for defaults.
+#' @param theme Theme list from `plotly_theme()`.
+#' @param main,xlab,ylab Title and axis labels.
+#' @param font_family,font_size Font settings.
+#' @returns A combined plotly object with condition controls.
+#' @noRd
+assemble_condition_control_plot <- function(pl_list, condition_ids, type,
+                                            labels, theme,
+                                            main, xlab, ylab,
+                                            font_family, font_size) {
+  # Built trace lists for each condition.
+  built <- lapply(pl_list, function(p) plotly::plotly_build(p)[["x"]][["data"]])
+  trace_counts <- lengths(built)
+  all_traces <- do.call(c, built)
+  trace_conditions <- rep(condition_ids, times = trace_counts)
+
+  original_visible <- lapply(all_traces, function(tr) {
+    v <- tr[["visible"]]
+    if (is.null(v)) TRUE else v
+  })
+
+  # Start from the first condition's built object to retain its layout, then
+  # swap in the full set of traces.
+  combined <- plotly::plotly_build(pl_list[[1]])
+  combined[["x"]][["data"]] <- all_traces
+
+  # Only the first condition is visible initially.
+  first_cond <- condition_ids[[1]]
+  for (i in seq_along(all_traces)) {
+    combined[["x"]][["data"]][[i]][["visible"]] <-
+      if (identical(trace_conditions[[i]], first_cond)) original_visible[[i]] else FALSE
+  }
+
+  combined <- plotly::layout(combined,
+    title = list(text = main),
+    xaxis = list(title = xlab),
+    yaxis = list(title = ylab),
+    font = list(family = font_family, size = font_size),
+    margin = theme[["margin"]],
+    legend = theme[["legend"]]
+  )
+
+  add_condition_controls(combined,
+    trace_conditions = trace_conditions,
+    original_visible = original_visible,
+    condition_ids = condition_ids,
+    labels = labels,
+    type = type
+  )
+}
+
+
+#' Build informative condition labels for verify plots
+#'
+#' Uses the `test` and `conditions` columns from
+#' `as.data.frame.verify_stockflow(which = "sims")` to make labels such as
+#' "Test 1" or "Test 2: rate = 0", falling back to "Condition j" when no test
+#' or condition information is available.
+#'
+#' @param df Verify simulation data frame with `test`, `condition`, and
+#'   optionally `conditions` columns.
+#' @param condition_ids Vector of condition values to label.
+#' @returns Character vector of labels, one per `condition_ids`.
+#' @noRd
+make_verify_condition_labels <- function(df, condition_ids) {
+  vapply(condition_ids, function(j) {
+    rows <- df[df[["condition"]] == j, , drop = FALSE]
+    if (nrow(rows) == 0L) {
+      return(paste0("Condition ", j))
+    }
+
+    test_str <- as.character(rows[["test"]][1L])
+    lab <- if (!is.na(test_str) && nzchar(test_str)) {
+      paste0("Test ", test_str)
+    } else {
+      paste0("Condition ", j)
+    }
+
+    if ("conditions" %in% colnames(rows)) {
+      cond_str <- as.character(rows[["conditions"]][1L])
+      if (!is.na(cond_str) && nzchar(cond_str)) {
+        lab <- paste0(lab, ": ", cond_str)
+      }
+    }
+
+    lab
+  }, character(1))
 }

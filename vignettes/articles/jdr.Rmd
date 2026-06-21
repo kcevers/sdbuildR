@@ -30,12 +30,16 @@ Stock-and-flow models present an intuitive way to formalize psychological system
 
 ```{r libraries, results='hide', message=FALSE}
 library(sdbuildR)
+
+# Disable WebGL: many plotly widgets per HTML page can exceed the browser WebGL
+# context limit and render blank. SVG always renders.
+options(sdbuildR.webgl = FALSE)
 library(kableExtra)
 ```
 
 ```{r include=FALSE}
 # Set recreate_figs <- TRUE to reproduce the figures in the paper
-recreate_figs <- FALSE # TRUE
+recreate_figs <- TRUE # FALSE # TRUE
 ```
 
 ```{r include=FALSE}
@@ -1050,8 +1054,6 @@ if (recreate_figs) {
   #  engagement -> performance -> energy -> resources -> demands [style=invis]
   {
     viz_str <- '
-
-
     digraph sfm {
 
       graph [layout = dot, rankdir = LR, center=true, outputorder="edgesfirst", pad=0.1, nodesep= 0.3, overlap = false]
@@ -1261,10 +1263,6 @@ if (recreate_figs) {
   }
   pl <- DiagrammeR::grViz(viz_str2)
 
-
-  pl <- DiagrammeR::grViz(viz_str)
-
-
   export_plot(pl, file.path(filepath_figs, "sfm_JDR_full.pdf"))
 }
 ```
@@ -1365,7 +1363,8 @@ if (recreate_figs) {
       main = "",
       # ylim = ylim,
       showlegend = (letter == max_letter)
-    ) |> rm_grid()
+    ) |> rm_grid()  |>
+        plotly::layout(yaxis = list(range = c(0, 1.9)))
 
     if (letter != min_letter) {
       # Remove x-axis labels and ticks
@@ -1374,8 +1373,7 @@ if (recreate_figs) {
           tickvals = list(0, 150),
           showticklabels = FALSE
         )) |>
-        rm_grid() |>
-        plotly::layout(yaxis = list(range = c(0, 2.25)))
+        plotly::layout(yaxis = list(range = c(0, 2.6)))
     }
   }
 
@@ -1390,7 +1388,7 @@ if (recreate_figs) {
 
   pl <- plotly::subplot(
     inner_pl,
-    plotly::subplot(pl_list[1]),
+    suppressWarnings({plotly::subplot(pl_list[1])}),
     nrows = 2, titleY = TRUE, shareY = TRUE,
     heights = c(1 / 3, 2 / 3),
     margin = c(0.025, 0.025, 0.025, 0.025)
@@ -1399,11 +1397,11 @@ if (recreate_figs) {
       font = annot_font,
       legend = utils::modifyList(annot_legend, list(
         y = -0.15,
-        traceorder = "normal",
-        tracegroupgap = 0,
-        itemwidth = 8,
-        entrywidth = 100, # removes left/right padding between entries
-        entrywidthmode = "pixels",
+        # traceorder = "normal",
+        # tracegroupgap = 0,
+        # # itemwidth = 15,
+        # entrywidth = 125, # removes left/right padding between entries
+        # entrywidthmode = "pixels",
         borderpad = 0 # removes padding inside legend border
       ))
     ) |>
@@ -1416,7 +1414,7 @@ if (recreate_figs) {
   pl
 
   export_plot(pl, file.path(filepath_figs, "sim_JDR_full.pdf"),
-    width = 5, height = 5.5
+    width = 5.5, height = 4.5
   )
 }
 ```
@@ -1709,13 +1707,13 @@ if (recreate_figs) {
     save_at = save_at_fine,
     stop = 500, only_stocks = FALSE
   )
-  pl1 <- plot(sim1, vars = vars_, colors = colors_, main = "", xlab = "")
+  pl1 <- plot(sim1, vars = vars_, ylim = c(0, 2.25), colors = colors_, main = "", xlab = "")
 
   sim2 <- simulate(sfm2,
     save_at = save_at_fine,
     stop = 500, only_stocks = FALSE
   )
-  pl2 <- plot(sim2, vars = vars_, colors = colors_, main = "", xlab = "")
+  pl2 <- plot(sim2, vars = vars_, ylim = c(0, 8.5), colors = colors_, main = "", xlab = "")
 
   plot_func <- function(pl) {
     pl |>
@@ -1866,7 +1864,7 @@ sims <- ensemble(sfm, n = n, conditions = conditions)
 # Plot all trajectories
 plot(sims,
   which = "sims", sim = 1:n, alpha = .75,
-  nrows = 3, central_tendency = FALSE,
+  nrows = 3, central_tendency = "none",
   vars = c("engagement", "demands")
 )
 ```
@@ -1915,7 +1913,7 @@ Run an ensemble simulation:
 sfm <- sim_settings(sfm, save_sims = TRUE)
 sims <- ensemble(sfm, n = n)
 plot(sims,
-  which = "sims", sim = 1:n, alpha = .75, central_tendency = FALSE,
+  which = "sims", sim = 1:n, alpha = .75, central_tendency = "none",
   vars = c("engagement", "demands", "motivation_rate")
 )
 ```
@@ -1967,41 +1965,42 @@ if (recreate_figs) {
   colors_ <- COLORS[VARS %in% show_vars]
   ylim <- c(-0.1, 3)
   margin <- 0.05
-  alpha <- .15
+  alpha <- .2
   annot_ <- utils::modifyList(annot, list(font = list(size = font_size_subplot + 1, family = font_family)))
 
   # Ensemble (plain)
   sfm <- sfm_ens_par |> sim_settings(save_at = save_at_fine, save_sims = TRUE)
-  sims <- ensemble(sfm, n = 1000, save_sims = FALSE)
+  sims_ens <- ensemble(sfm, n = 1000, save_sims = FALSE)
 
-  pl_ens <- plot(sims,
+  pl_ens <- plot(sims_ens,
     vars = vars_, colors = colors_,
     showlegend = FALSE,
-    main = "", sub = "", ylim = ylim, xlab = ""
+    main = "", sub = "", ylim = c(ylim[1], 2.5), xlab = ""
   ) |> rm_grid()
 
   # Parameter variation
-  sims <- ensemble(sfm,
+  sims_par <- ensemble(sfm,
     n = n_ens_par,
     conditions = conditions
   )
 
-  pl_par <- plot(sims,
+  pl_par <- plot(sims_par,
     which = "sims", sim = 1:n_ens_par, ylim = ylim,
     vars = vars_, colors = colors_, alpha = alpha,
-    main = "", sub = "", shareY = TRUE,
-    nrows = 3, central_tendency = FALSE, margin = margin,
+    main = "", sub = "", shareX = TRUE,
+    nrows = 3, central_tendency = "none", #margin = margin,
     showlegend = FALSE, label_subplots = FALSE, xlab = ""
   ) |>
     # Remove grid lines
     rm_grid() |>
     plotly::layout(
+      xaxis = list(showgrid = FALSE, showline = TRUE),
+      yaxis = list(showgrid = FALSE, showline = TRUE, range = c(ylim[1], 3)),
       xaxis2 = list(showgrid = FALSE, showline = TRUE),
-      yaxis2 = list(showgrid = FALSE, showline = TRUE, range = c(ylim[1], 3.5)),
+      yaxis2 = list(showgrid = FALSE, showline = TRUE, range = c(ylim[1], 3)),
       xaxis3 = list(showgrid = FALSE, showline = TRUE),
-      yaxis3 = list(showgrid = FALSE, showline = TRUE, range = c(ylim[1], 3.5))
+      yaxis3 = list(showgrid = FALSE, showline = TRUE, range = c(ylim[1], 4.5))
     )
-  pl_par
 
   # Intervention
   show_vars <- c("engagement", "demands", "motivation_rate") |> rev()
@@ -2009,29 +2008,27 @@ if (recreate_figs) {
   colors_ <- COLORS[VARS %in% show_vars]
 
   sfm <- sim_settings(sfm_int, save_at = save_at_fine, only_stocks = FALSE, save_sims = TRUE)
-  sims <- ensemble(sfm, n = n_ens_par)
+  sims_int <- ensemble(sfm, n = n_ens_par)
 
-  pl_int <- plot(sims,
+  pl_int <- plot(sims_int,
     which = "sims", sim = 1:n_ens_par,
-    alpha = alpha, central_tendency = FALSE,
+    alpha = alpha, central_tendency = "none",
     showlegend = TRUE,
     vars = vars_, colors = colors_, ylim = ylim,
     main = "", sub = "",
     wrap_width = 40
   ) |> rm_grid()
 
-  pl_int
-
   # Plot thicker line for motivation_rate
   col_ <- COLORS[VARS == "motivation_rate"]
-  pl_int <- pl_int |>
+  pl_int_with_rate <- pl_int |>
     plotly::add_trace(
-      data = sims$df[sims$df$variable == "motivation_rate", , drop = FALSE],
+      data = sims_int$df[sims_int$df$variable == "motivation_rate", , drop = FALSE],
       x = ~time,
       y = ~value,
       line = list(
         color = col_,
-        linewidth = 7
+        linewidth = 15
       ),
       showlegend = FALSE,
       split = ~ interaction(variable, sim), # ensures each line is treated separately
@@ -2047,9 +2044,9 @@ if (recreate_figs) {
   y4 <- .32
 
   pl <- plotly::subplot(
-    plotly::subplot(pl_ens, pl_int,
+    plotly::subplot(pl_ens, pl_int_with_rate,
       shareX = TRUE,
-      shareY = TRUE,
+      # shareY = TRUE,
       titleY = FALSE,
       titleX = FALSE,
       margin = margin,
@@ -2081,7 +2078,8 @@ if (recreate_figs) {
       )
     )
 
-  export_plot(pl, file.path(filepath_figs, "learning_JDR.pdf"),
+  export_plot(pl |> plotly::toWebGL(), 
+  file.path(filepath_figs, "learning_JDR.pdf"),
     width = 5.5, height = 5.5
   )
 

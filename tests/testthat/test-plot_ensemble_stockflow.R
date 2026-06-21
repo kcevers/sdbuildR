@@ -20,9 +20,10 @@ test_that("plot.ensemble_stockflow() validates central_tendency", {
   withr::local_pdf(NULL)
   sims <- make_r_ens(n = 2)
   expect_no_error(plot(sims, central_tendency = "median"))
+  expect_no_error(plot(sims, central_tendency = "none"))
   expect_error(
     plot(sims, central_tendency = "medians"),
-    "must be.*mean.*median.*FALSE"
+    "must be.*mean.*median.*none"
   )
 })
 
@@ -134,9 +135,9 @@ test_that("plot.ensemble_stockflow() central_tendency = 'median'", {
   expect_snapshot_plot("ens-central-tendency-median", pl)
 })
 
-test_that("plot.ensemble_stockflow() central_tendency = FALSE (no central line)", {
+test_that("plot.ensemble_stockflow() central_tendency = 'none' (no central line)", {
   sims <- make_r_ens()
-  pl <- plot(sims, central_tendency = FALSE)
+  pl <- plot(sims, central_tendency = "none")
   expect_plotly(pl)
   expect_true(nrow(plotly_traces(pl)) > 0)
   expect_snapshot_plot("ens-central-tendency-false", pl)
@@ -333,4 +334,113 @@ test_that("plot.ensemble_stockflow() with show_constants = TRUE", {
 
   # Snapshot last
   expect_snapshot_plot("ens-show-constants", pl)
+})
+
+# ============================================================================
+# CONDITION DISPLAY AND TIME ANIMATION
+# ============================================================================
+
+test_that("plot.ensemble_stockflow(condition_display = 'slider') builds a slider", {
+  sims <- make_r_ens_2cond()
+  pl <- plot(sims, condition_display = "slider")
+  expect_plotly(pl)
+
+  layout <- plotly_layout(pl)
+  expect_true(length(layout$sliders) > 0)
+  expect_equal(length(layout$sliders[[1]]$steps), sims[["n_conditions"]])
+
+  # Only the first condition's traces are visible initially: at least one
+  # visible trace, and some traces hidden (FALSE) for the other condition.
+  traces <- plotly_traces(pl)
+  expect_true(any(traces[["visible"]] == "FALSE"))
+})
+
+test_that("plot.ensemble_stockflow(condition_display = 'dropdown') builds a dropdown", {
+  sims <- make_r_ens_2cond()
+  pl <- plot(sims, condition_display = "dropdown")
+  expect_plotly(pl)
+
+  layout <- plotly_layout(pl)
+  expect_true(length(layout$updatemenus) > 0)
+  expect_equal(length(layout$updatemenus[[1]]$buttons), sims[["n_conditions"]])
+})
+
+test_that("plot.ensemble_stockflow() condition controls work with which = 'sims'", {
+  sims <- make_r_ens_2cond(save_sims = TRUE)
+  pl <- plot(sims, which = "sims", condition_display = "slider")
+  expect_plotly(pl)
+  expect_true(length(plotly_layout(pl)$sliders) > 0)
+})
+
+test_that("plot.ensemble_stockflow(animation = 'time') builds frames for one condition", {
+  sims <- make_r_ens(save_sims = TRUE)
+  pl <- plot(sims, which = "sims", animation = "time")
+  expect_plotly(pl)
+  expect_true(length(plotly_frames(pl)) > 0)
+})
+
+test_that("plot.ensemble_stockflow() animates a single selected condition", {
+  sims <- make_r_ens_2cond(save_sims = TRUE)
+  pl <- plot(sims, which = "sims", condition = 1, animation = "time")
+  expect_plotly(pl)
+  expect_true(length(plotly_frames(pl)) > 0)
+})
+
+test_that("plot.ensemble_stockflow() rejects invalid / unsupported combinations", {
+  sims <- make_r_ens_2cond(save_sims = TRUE)
+  expect_error(plot(sims, condition_display = "tabs"), "condition_display")
+  expect_error(plot(sims, animation = "fast"), "animation")
+  expect_error(
+    plot(sims, which = "sims", animation = "time", condition_display = "slider"),
+    "not supported"
+  )
+  # Multiple conditions (subplots) cannot be animated together
+  expect_error(plot(sims, which = "sims", animation = "time"), "not supported|multiple conditions")
+  # Summary confidence ribbons cannot be animated
+  expect_error(plot(sims, which = "summary", condition = 1, animation = "time"), "not supported|ribbons")
+})
+
+test_that("plot.ensemble_stockflow() webgl toggles trace type for which = 'sims'", {
+  sims <- make_r_ens(n = 5, save_sims = TRUE)
+
+  pl_gl <- plot(sims, which = "sims", webgl = TRUE)
+  types_gl <- vapply(plotly::plotly_build(pl_gl)$x$data, function(d) d$type %||% "", character(1))
+  expect_true(any(types_gl == "scattergl"))
+
+  pl_svg <- plot(sims, which = "sims", webgl = FALSE)
+  data_svg <- plotly::plotly_build(pl_svg)$x$data
+  types_svg <- vapply(data_svg, function(d) d$type %||% "", character(1))
+  expect_false(any(types_svg == "scattergl"))
+  # Per-sim traces produce more traces than the webgl single-trace-per-variable
+  expect_gt(length(data_svg), length(plotly::plotly_build(pl_gl)$x$data))
+
+})
+
+test_that("plot.ensemble_stockflow() obeys global webgl option", {
+  sims <- make_r_ens(n = 5, save_sims = TRUE)
+
+  withr::local_options(list(sdbuildR.webgl = TRUE))
+  pl_gl <- plot(sims, which = "sims")
+  types_gl <- vapply(plotly::plotly_build(pl_gl)$x$data, function(d) d$type %||% "", character(1))
+  expect_true(any(types_gl == "scattergl"))
+
+  withr::local_options(list(sdbuildR.webgl = FALSE))
+  pl_svg <- plot(sims, which = "sims")
+  data_svg <- plotly::plotly_build(pl_svg)$x$data
+  types_svg <- vapply(data_svg, function(d) d$type %||% "", character(1))
+  expect_false(any(types_svg == "scattergl"))
+  # Per-sim traces produce more traces than the webgl single-trace-per-variable
+  expect_gt(length(data_svg), length(plotly::plotly_build(pl_gl)$x$data))
+  
+  # Setting webgl explicitly overrides the global option
+  pl_gl2 <- plot(sims, which = "sims", webgl = TRUE)
+  types_gl2 <- vapply(plotly::plotly_build(pl_gl2)$x$data, function(d) d$type %||% "", character(1))
+  expect_true(any(types_gl2 == "scattergl"))
+
+})
+
+
+test_that("plot.ensemble_stockflow() rejects non-logical webgl", {
+  sims <- make_r_ens(n = 3, save_sims = TRUE)
+  expect_error(plot(sims, which = "sims", webgl = "yes"), "webgl")
 })

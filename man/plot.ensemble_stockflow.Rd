@@ -23,8 +23,11 @@
   wrap_width = 25,
   showlegend = TRUE,
   label_subplots = TRUE,
-  central_tendency = c("mean", "median", FALSE)[1],
+  central_tendency = c("mean", "median", "none")[1],
   central_tendency_width = 3,
+  condition_display = c("subplots", "slider", "dropdown"),
+  animation = c("none", "time"),
+  webgl = getOption("sdbuildR.webgl", default = TRUE),
   ...
 )
 }
@@ -65,9 +68,26 @@
 
 \item{label_subplots}{Whether to plot labels indicating the condition of the subplot.}
 
-\item{central_tendency}{Central tendency to use for the mean line. Either "mean", "median", or FALSE to not plot the central tendency. Defaults to "mean".}
+\item{central_tendency}{Central tendency to use for the mean line. Either "mean", "median", or "none" to not plot the central tendency. Defaults to "mean".}
 
 \item{central_tendency_width}{Line width of central tendency. Defaults to 3.}
+
+\item{condition_display}{How to display multiple conditions. Use \code{"subplots"}
+to show conditions as panels, \code{"slider"} to select one condition with a
+slider, or \code{"dropdown"} to select one condition with a dropdown. Defaults
+to \code{"subplots"}.}
+
+\item{animation}{Animation mode. Use \code{"none"} for a static plot or \code{"time"}
+to cumulatively reveal trajectories over time. Defaults to \code{"none"}.
+Time animation requires \code{which = "sims"} (confidence ribbons cannot be
+animated) and a single condition (one panel); combining it with
+\code{condition_display} controls or multiple conditions is not supported.}
+
+\item{webgl}{If \code{TRUE}, render trajectories with WebGL (plotly \code{scattergl}) for
+performance with many lines; if \code{FALSE}, use SVG (\code{scatter}). Defaults to
+\code{getOption("sdbuildR.webgl", default = TRUE)}. Set
+\code{options(sdbuildR.webgl = FALSE)} (e.g. in vignettes or dashboards, or when
+a plot renders blank) to disable WebGL globally.}
 
 \item{...}{Optional parameters}
 }

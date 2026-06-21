@@ -267,3 +267,79 @@ test_that("plot() custom alpha is accepted", {
   expect_true(nrow(plotly_traces(pl)) > 0)
   expect_snapshot_plot("verify-alpha-low", pl)
 })
+
+# ============================================================================
+# CONDITION DISPLAY AND TIME ANIMATION
+# ============================================================================
+
+test_that("plot.verify_stockflow(condition_display = 'slider') builds a slider", {
+  res <- make_verify_model(n_tests = 2)
+  pl <- plot(res, condition_display = "slider")
+  expect_plotly(pl)
+
+  layout <- plotly_layout(pl)
+  expect_true(length(layout$sliders) > 0)
+  expect_equal(length(layout$sliders[[1]]$steps), res[["n_conditions"]])
+})
+
+test_that("plot.verify_stockflow(condition_display = 'dropdown') builds a dropdown", {
+  res <- make_verify_model(n_tests = 2)
+  pl <- plot(res, condition_display = "dropdown")
+  expect_plotly(pl)
+
+  layout <- plotly_layout(pl)
+  expect_true(length(layout$updatemenus) > 0)
+  expect_equal(length(layout$updatemenus[[1]]$buttons), res[["n_conditions"]])
+})
+
+test_that("plot.verify_stockflow(animation = 'time') builds frames for one condition", {
+  res <- make_verify_model(n_tests = 1)
+  pl <- plot(res, animation = "time")
+  expect_plotly(pl)
+  expect_true(length(plotly_frames(pl)) > 0)
+})
+
+test_that("plot.verify_stockflow() rejects unsupported combinations", {
+  res <- make_verify_model(n_tests = 2)
+  expect_error(
+    plot(res, animation = "time", condition_display = "slider"),
+    "not supported"
+  )
+  # Multiple conditions (subplots) cannot be animated together
+  expect_error(plot(res, animation = "time"), "not supported|multiple conditions")
+})
+
+test_that("plot.verify_stockflow() webgl toggles scatter type", {
+  res <- make_verify_model()
+
+  types_gl <- vapply(plotly::plotly_build(plot(res, webgl = TRUE))$x$data,
+    function(d) d$type %||% "", character(1))
+  expect_true(any(types_gl == "scattergl"))
+
+  types_svg <- vapply(plotly::plotly_build(plot(res, webgl = FALSE))$x$data,
+    function(d) d$type %||% "", character(1))
+  expect_false(any(types_svg == "scattergl"))
+
+  expect_error(plot(res, webgl = 1L), "webgl")
+})
+
+
+test_that("plot.verify_stockflow() obeys global webgl option", {
+  res <- make_verify_model()
+
+  withr::local_options(list(sdbuildR.webgl = TRUE))
+  types_gl <- vapply(plotly::plotly_build(plot(res))$x$data,
+    function(d) d$type %||% "", character(1))
+  expect_true(any(types_gl == "scattergl"))
+
+  withr::local_options(list(sdbuildR.webgl = FALSE))
+  types_svg <- vapply(plotly::plotly_build(plot(res))$x$data,
+    function(d) d$type %||% "", character(1))
+  expect_false(any(types_svg == "scattergl"))
+
+  # Setting webgl explicitly overrides the global option
+  types_gl <- vapply(plotly::plotly_build(plot(res, webgl = TRUE))$x$data,
+    function(d) d$type %||% "", character(1))
+  expect_true(any(types_gl == "scattergl"))
+
+})

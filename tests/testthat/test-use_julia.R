@@ -86,6 +86,38 @@ test_that("use_julia() with threads works", {
 })
 
 
+test_that("find_manifest_julia_version() parses the julia_version field", {
+  # v2.0 Manifest.toml records the Julia version that resolved the environment
+  manifest <- tempfile()
+  on.exit(unlink(manifest))
+  writeLines(c('julia_version = "1.10.4"', 'manifest_format = "2.0"'), manifest)
+  expect_equal(find_manifest_julia_version(manifest), "1.10.4")
+
+  # Older manifests without the field should return NULL (check is skipped)
+  no_field <- tempfile()
+  on.exit(unlink(no_field), add = TRUE)
+  writeLines('manifest_format = "1.0"', no_field)
+  expect_null(find_manifest_julia_version(no_field))
+
+  # Missing file should return NULL
+  expect_null(find_manifest_julia_version(tempfile()))
+})
+
+
+test_that("julia_version_compatible() compares major and minor versions", {
+  # Same major and minor is compatible, regardless of patch
+  expect_true(julia_version_compatible("1.10.4", "1.10.9"))
+  expect_true(julia_version_compatible("1.10.0", "1.10.0"))
+
+  # Differing minor or major is incompatible
+  expect_false(julia_version_compatible("1.10.4", "1.11.0"))
+  expect_false(julia_version_compatible("1.10.4", "2.10.4"))
+
+  # Unparseable versions should not block the user
+  expect_true(julia_version_compatible("not-a-version", "1.10.4"))
+})
+
+
 test_that("install_julia_env() works", {
   skip_if_julia_not_ready()
   skip_if(interactive())
