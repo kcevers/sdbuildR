@@ -13,7 +13,7 @@
     tryCatch(
       {
         # Check existence Manifest.toml file
-        manifest_file <- system.file("Manifest.toml", package = "sdbuildR")
+        manifest_file <- file.path(julia_env_dir(), "Manifest.toml")
         if (!file.exists(manifest_file)) {
           install_julia_env()
 

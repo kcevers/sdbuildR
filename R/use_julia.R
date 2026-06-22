@@ -13,7 +13,7 @@
 #'
 #' Note that this may take 10-25 minutes the first time as Julia downloads and compiles packages.
 #'
-#' @param remove If `TRUE`, remove Julia environment for sdbuildR. This will delete the Manifest.toml file, as well as the SystemDynamicsBuildR.jl package. All other Julia packages remain untouched.
+#' @param remove If `TRUE`, remove Julia environment for sdbuildR. This will remove the SystemDynamicsBuildR.jl package and delete the environment directory (containing Project.toml and Manifest.toml). All other Julia packages remain untouched.
 #'
 #' @returns Invisibly returns `NULL` after instantiating the Julia environment.
 #' @export
@@ -28,13 +28,26 @@
 #' install_julia_env(remove = TRUE)
 #' }
 install_julia_env <- function(remove = FALSE) {
-  # Just in case a Julia session is already running:
+  # Track whether setup ran to completion. If an error or a user interrupt
+  # (likely during the 10-25 min install) stops us partway, the Manifest.toml
+  # may have been deleted without being rebuilt, leaving a broken environment.
+  setup_complete <- FALSE
+
   on.exit(
     {
       .sdbuildR_env[["jl"]][["use_threads"]] <- FALSE
 
       # Stop Julia
       JuliaConnectoR::stopJulia()
+
+      # Warn if the install was interrupted before completing (on.exit also
+      # runs on user interrupts, which tryCatch(error=) would miss)
+      if (!remove && !setup_complete) {
+        cli::cli_inform(c(
+          "!" = "Julia environment setup was interrupted.",
+          ">" = "Run {.fn install_julia_env} to try again."
+        ))
+      }
     },
     add = TRUE
   )
@@ -48,29 +61,44 @@ install_julia_env <- function(remove = FALSE) {
   # Invalidate cached env check
   .sdbuildR_env[["jl"]][["env_checked"]] <- FALSE
 
-  if (remove) {
-    # Find set-up location for sdbuildR in Julia
-    env_path <- dirname(system.file("Project.toml", package = "sdbuildR"))
+  env_dir <- julia_env_dir()
+  manifest_file <- file.path(env_dir, "Manifest.toml")
 
+  if (remove) {
     # Activate the Julia environment for sdbuildR; juliaEval() automatically starts Julia
-    julia_cmd <- sprintf("using Pkg; Pkg.activate(\"%s\"; io=devnull)", jl_path(env_path))
+    julia_cmd <- sprintf("using Pkg; Pkg.activate(\"%s\"; io=devnull)", jl_path(env_dir))
     julia_eval(julia_cmd)
 
-    # Delete SystemDynamicsBuildR.jl, but only if it is installed, to avoid unnecessary warnings
+    # Is there anything to remove? (the package, or leftover environment files)
     status <- is_julia_env_setup(force = TRUE, error = FALSE)
-    if (!isTRUE(status)) {
+    env_present <- isTRUE(status) ||
+      file.exists(manifest_file) ||
+      file.exists(julia_env_marker_file()) ||
+      (!julia_env_in_package() && dir.exists(env_dir))
+
+    if (!env_present) {
       cli::cli_inform(c("i" = paste0(P[["jl_pkg_name"]], ".jl not found in Julia environment; no need to remove.")))
       return(invisible())
     }
 
-    julia_eval(sprintf(
-      'Pkg.rm("%s")',
-      P[["jl_pkg_name"]]
-    ))
+    # Delete SystemDynamicsBuildR.jl, but only if it is installed, to avoid unnecessary warnings
+    if (isTRUE(status)) {
+      julia_eval(sprintf(
+        'Pkg.rm("%s")',
+        P[["jl_pkg_name"]]
+      ))
+      julia_eval("Pkg.gc()")
+    }
 
-    manifest_file <- system.file("Manifest.toml", package = "sdbuildR")
-    remove_files(manifest_file)
-    julia_eval("Pkg.gc()")
+    # Remove the environment files. When the environment lives in its own
+    # directory (R_user_dir), delete the whole directory so nothing is left
+    # behind; in-package mode keeps the shipped Project.toml.
+    if (julia_env_in_package()) {
+      remove_files(c(manifest_file, julia_env_marker_file()))
+    } else {
+      unlink(env_dir, recursive = TRUE, force = TRUE)
+    }
+
     status <- is_julia_env_setup(force = TRUE, error = FALSE)
 
     if (isTRUE(status)) {
@@ -82,9 +110,16 @@ install_julia_env <- function(remove = FALSE) {
     # First stop Julia for a clean installation
     JuliaConnectoR::stopJulia()
 
+    # Ensure the environment directory exists and holds a fresh copy of the
+    # shipped Project.toml
+    env_dir <- prepare_julia_env_dir()
+    manifest_file <- file.path(env_dir, "Manifest.toml")
+
     # For a clean installation, remove the Manifest.toml file
-    manifest_file <- system.file("Manifest.toml", package = "sdbuildR")
     remove_files(manifest_file)
+
+    # Tell setup.jl which environment directory to activate
+    julia_eval(sprintf('sdbuildR_env_path = "%s"', jl_path(env_dir)))
 
     # Run the setup script
     setup_script <- system.file("setup.jl", package = "sdbuildR")
@@ -92,10 +127,15 @@ install_julia_env <- function(remove = FALSE) {
     status <- is_julia_env_setup(force = TRUE, error = TRUE)
 
     if (isTRUE(status)) {
+      # Record provenance (sdbuildR version + Project.toml hash) so a future
+      # version with changed dependencies can detect a stale environment
+      write_julia_env_marker()
       cli::cli_inform(c("v" = "Julia environment installed."))
     } else {
       cli::cli_inform(c("x" = "Failed to install Julia environment."))
     }
+
+    setup_complete <- TRUE
   }
 
   invisible()
@@ -289,6 +329,155 @@ is_julia_version_ok <- function() {
 }
 
 
+#' Whether to keep the Julia environment inside the installed package
+#'
+#' Single toggle controlling where the Julia environment lives. Defaults to
+#' `FALSE` (persistent user directory via [tools::R_user_dir()]). Set
+#' `options(sdbuildR.julia_env_in_package = TRUE)` to revert to the pre-2.x
+#' behaviour of storing the environment inside the installed package directory
+#' (for example if a persistent user directory is undesirable).
+#'
+#' @returns Logical.
+#' @noRd
+julia_env_in_package <- function() {
+  isTRUE(getOption("sdbuildR.julia_env_in_package", FALSE))
+}
+
+
+#' Location of the sdbuildR Julia environment
+#'
+#' Single source of truth for where the Julia environment (Project.toml,
+#' Manifest.toml, and provenance marker) lives. By default this is a
+#' persistent, user-writable directory via [tools::R_user_dir()] which, unlike
+#' the installed package directory, survives package reinstalls and works on
+#' read-only/system libraries. Everything else keys off this one function, so
+#' switching back to the in-package location only requires julia_env_in_package().
+#'
+#' @returns Path to the environment directory.
+#' @noRd
+julia_env_dir <- function() {
+  if (julia_env_in_package()) {
+    return(norm_path(dirname(system.file("Project.toml", package = "sdbuildR"))))
+  }
+  norm_path(file.path(tools::R_user_dir("sdbuildR", which = "data"), "julia"))
+}
+
+
+#' Path to the environment provenance marker file
+#'
+#' @returns Path to the marker file inside julia_env_dir().
+#' @noRd
+julia_env_marker_file <- function() {
+  file.path(julia_env_dir(), "env_meta.dcf")
+}
+
+
+#' Ensure the environment directory exists with a fresh Project.toml
+#'
+#' Creates the environment directory (when stored outside the package) and
+#' copies the shipped Project.toml into it, so the environment is built from
+#' the dependency list that ships with this version of sdbuildR. In-package
+#' mode is a no-op, since Project.toml already lives there.
+#'
+#' @returns Path to the environment directory.
+#' @noRd
+prepare_julia_env_dir <- function() {
+  env_dir <- julia_env_dir()
+
+  if (julia_env_in_package()) {
+    return(env_dir)
+  }
+
+  if (!dir.exists(env_dir)) {
+    dir.create(env_dir, recursive = TRUE, showWarnings = FALSE)
+  }
+
+  # The shipped Project.toml is the source of truth for dependencies; copy it
+  # into the environment directory where Julia resolves and writes Manifest.toml.
+  src_project <- system.file("Project.toml", package = "sdbuildR")
+  file.copy(src_project, file.path(env_dir, "Project.toml"), overwrite = TRUE)
+
+  env_dir
+}
+
+
+#' Hash of the shipped Project.toml
+#'
+#' Used to detect when a new version of sdbuildR ships a changed dependency
+#' list, so the environment can be rebuilt.
+#'
+#' @returns md5 hash string, or `NA` if the file cannot be found.
+#' @noRd
+project_toml_hash <- function() {
+  src <- system.file("Project.toml", package = "sdbuildR")
+  if (!nzchar(src) || !file.exists(src)) {
+    return(NA_character_)
+  }
+  unname(tools::md5sum(src))
+}
+
+
+#' Record provenance of the installed Julia environment
+#'
+#' Writes a marker file recording the sdbuildR version and the hash of the
+#' Project.toml the environment was built from.
+#'
+#' @returns NULL, invisibly.
+#' @noRd
+write_julia_env_marker <- function() {
+  marker <- julia_env_marker_file()
+  meta <- matrix(
+    c(as.character(utils::packageVersion("sdbuildR")), project_toml_hash()),
+    nrow = 1,
+    dimnames = list(NULL, c("sdbuildR_version", "project_toml_md5"))
+  )
+  tryCatch(write.dcf(meta, marker), error = function(e) invisible())
+  invisible()
+}
+
+
+#' Compare a marker file against the current Project.toml hash
+#'
+#' Pure comparison helper. Returns `TRUE` (current) when the marker is missing
+#' or either hash is indeterminate, so the caller never hard-blocks on missing
+#' provenance; the package- and Julia-version checks still apply.
+#'
+#' @param marker Path to the provenance marker file.
+#' @param current_hash Hash of the currently shipped Project.toml.
+#'
+#' @returns Logical; `TRUE` if current (or indeterminate).
+#' @noRd
+is_julia_env_marker_current <- function(marker, current_hash) {
+  if (!file.exists(marker)) {
+    return(TRUE)
+  }
+
+  stored <- tryCatch(
+    unname(read.dcf(marker)[1, "project_toml_md5"]),
+    error = function(e) NA_character_
+  )
+
+  if (is.na(stored) || is.na(current_hash)) {
+    return(TRUE)
+  }
+
+  identical(stored, current_hash)
+}
+
+
+#' Check the environment matches the shipped Project.toml
+#'
+#' Compares the hash of the currently shipped Project.toml against the hash
+#' recorded when the environment was built. A mismatch means a newer sdbuildR
+#' changed the dependency list and the environment is stale.
+#'
+#' @returns Logical; `TRUE` if current (or indeterminate).
+#' @noRd
+is_julia_project_current <- function() {
+  is_julia_env_marker_current(julia_env_marker_file(), project_toml_hash())
+}
+
+
 #' Check if Julia environment for sdbuildR is set up and up to date
 #'
 #' Checks if the Julia environment for sdbuildR has been instantiated by verifying that the required package is installed and up to date. This should only be run if a Julia session was already initialized with JuliaConnectoR.
@@ -308,10 +497,10 @@ is_julia_env_setup <- function(force = FALSE, error = TRUE) {
   # Julia version needs to be correct
   is_julia_version_ok()
 
-  # Manifest.toml should exist in sdbuildR package to indicate Julia environment was instantiated
-  # Check sdbuildR environment files
+  # Project.toml ships with the package (the dependency source of truth); the
+  # Manifest.toml is generated into the environment directory on installation.
   project_file <- system.file("Project.toml", package = "sdbuildR")
-  manifest_file <- system.file("Manifest.toml", package = "sdbuildR")
+  manifest_file <- file.path(julia_env_dir(), "Manifest.toml")
 
   env_exists <- nzchar(project_file)
   env_instantiated <- file.exists(manifest_file)
@@ -352,6 +541,19 @@ is_julia_env_setup <- function(force = FALSE, error = TRUE) {
       cli::cli_abort(c(
         "x" = "Julia environment for sdbuildR has not been set up.",
         ">" = "Run {.fn install_julia_env}."
+      ))
+    } else {
+      return(invisible(FALSE))
+    }
+  }
+
+  # If a newer sdbuildR ships a changed Project.toml (new or updated
+  # dependencies), the existing environment is stale and must be rebuilt.
+  if (!is_julia_project_current()) {
+    if (error) {
+      cli::cli_abort(c(
+        "x" = "The sdbuildR Julia environment is out of date with this version of the package.",
+        ">" = "Run {.fn install_julia_env} to rebuild the environment."
       ))
     } else {
       return(invisible(FALSE))
@@ -607,7 +809,7 @@ check_julia_env_for_pkg <- function(pkg_name) {
 #'
 find_jl_pkg_version <- function(pkg_name) {
   # Check if {jl_pkg_name}.jl is installed by examining Manifest.toml
-  manifest_file <- system.file("Manifest.toml", package = "sdbuildR")
+  manifest_file <- file.path(julia_env_dir(), "Manifest.toml")
   pkg_check <- check_manifest_for_pkg(
     manifest_file,
     pkg_name
@@ -624,13 +826,14 @@ find_jl_pkg_version <- function(pkg_name) {
 
 #' Normalize a file path for use in Julia strings
 #'
-#' Ensures forward slashes so Julia doesn't interpret backslashes as escapes.
+#' Builds on norm_path(), with an extra guard converting any remaining
+#' backslashes to forward slashes so Julia doesn't interpret them as escapes.
 #'
 #' @param path File path
 #' @returns Normalized path with forward slashes
 #' @noRd
 jl_path <- function(path) {
-  gsub("\\\\", "/", normalizePath(path, winslash = "/", mustWork = FALSE))
+  gsub("\\\\", "/", norm_path(path))
 }
 
 
@@ -640,7 +843,7 @@ jl_path <- function(path) {
 #' @noRd
 run_init_julia_env <- function() {
   # Find set-up location for sdbuildR in Julia
-  env_path <- dirname(system.file("Project.toml", package = "sdbuildR"))
+  env_path <- julia_env_dir()
 
   cli::cli_inform(c("i" = "Activating Julia environment for {.pkg sdbuildR} at {.file {env_path}}..."))
 

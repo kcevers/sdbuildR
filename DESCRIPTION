@@ -33,6 +33,8 @@ Imports:
     stringi,
     stringr,
     textutils,
+    tools,
+    utils,
     withr,
     xml2
 Suggests: 

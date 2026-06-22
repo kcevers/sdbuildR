@@ -8,10 +8,21 @@
   direction as a soft hint via invisible edges, so it nudges the layout without
   overriding the real flows. All three accept any variable (not only stocks).
 
+* The sdbuildR Julia environment is now stored in a persistent user directory
+  (via `tools::R_user_dir()`) instead of inside the installed package. It now
+  survives reinstalling or updating sdbuildR, so you no longer have to rebuild
+  it after every package update, and installation works on read-only or
+  system-wide library locations. You are prompted to rebuild it with
+  `install_julia_env()` only when its dependencies actually change.
+
 * `use_julia()` and `simulate()` now detect when the sdbuildR Julia environment
   was built with a different version of Julia than the one currently running
   (for example after reinstalling or updating Julia) and prompt you to rebuild
   it with `install_julia_env()`, instead of failing with an unclear error.
+
+* `install_julia_env()` now reports clearly when setup is interrupted (for
+  example by cancelling the 10-25 minute install), prompting you to run it
+  again.
 
 * `plot.stockflow()` now uses default `minlen = 1` instead of `minlen = 2` to create shorter flow edges.
 

@@ -7,7 +7,7 @@
 install_julia_env(remove = FALSE)
 }
 \arguments{
-\item{remove}{If \code{TRUE}, remove Julia environment for sdbuildR. This will delete the Manifest.toml file, as well as the SystemDynamicsBuildR.jl package. All other Julia packages remain untouched.}
+\item{remove}{If \code{TRUE}, remove Julia environment for sdbuildR. This will remove the SystemDynamicsBuildR.jl package and delete the environment directory (containing Project.toml and Manifest.toml). All other Julia packages remain untouched.}
 }
 \value{
 Invisibly returns \code{NULL} after instantiating the Julia environment.

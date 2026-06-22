@@ -7,7 +7,7 @@
 #' @noRd
 write_script <- function(script,
                          filepath) {
-  filepath <- normalizePath(filepath, winslash = "/", mustWork = FALSE)
+  filepath <- norm_path(filepath)
 
   # Decode unicode characters when writing to Julia
   if (tools::file_ext(filepath) == "jl") {
@@ -30,7 +30,7 @@ write_script <- function(script,
 #' @returns Filepath to temporary file
 #' @noRd
 get_tempfile <- function(fileext) {
-  filepath <- normalizePath(tempfile(fileext = fileext), winslash = "/", mustWork = FALSE)
+  filepath <- norm_path(tempfile(fileext = fileext))
   filepath
 }
 

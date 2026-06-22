@@ -1,13 +1,30 @@
-meta <- packageDescription("sdbuildR")
+if (!exists("meta") || is.null(meta)) {
+  meta <- packageDescription("sdbuildR")
+}
+year <- sub("-.*", "", meta[["Date/Publication"]])
+if (!length(year) || is.na(year) || !nzchar(year)) {
+  year <- format(Sys.Date(), "%Y")
+}
+# Drop the development suffix (e.g. "2.0.0.9000" -> "2.0.0")
+version <- sub("\\.9[0-9]{3}$", "", meta$Version)
+vers <- sprintf("R package version %s", version)
 
 bibentry(
   bibtype = "Manual",
-  title = meta$Title,
-  author = person(given = "Kyra Caitlin", family = "Evers",
+  key = "sdbuildR",
+  title = "{sdbuildR}: Easily Build, Simulate, and Explore Stock-and-Flow Models",
+  author = person(
+    given = "Kyra Caitlin", family = "Evers",
     email = "kyra.c.evers@gmail.com",
-    role = c("aut", "cre", "cph"),
-    comment = c(ORCID = "0000-0001-6890-3482")),
-  year = "2026",
-  note = sprintf("R package version %s", meta$Version),
-  doi = "10.32614/CRAN.package.sdbuildR"
+    comment = c(ORCID = "0000-0001-6890-3482")
+  ),
+  year = year,
+  note = vers,
+  url = "https://kcevers.github.io/sdbuildR/",
+  doi = "10.32614/CRAN.package.sdbuildR",
+  textVersion = paste0(
+    "Evers, K. (", year, "). ",
+    "sdbuildR: Easily Build, Simulate, and Explore Stock-and-Flow Models. ",
+    vers, ". https://doi.org/10.32614/CRAN.package.sdbuildR"
+  )
 )

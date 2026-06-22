@@ -7,11 +7,18 @@
 
 test_that("plot() honours direction for every valid value", {
   sfm <- stockflow("predator_prey")
-  for (dir in c("LR", "TB", "RL", "BT")) {
+  directions <- c("LR", "TB", "RL", "BT")
+  for (dir in directions) {
     # print(plot(sfm, direction = dir))
     d <- plot(sfm, direction = dir)[["x"]][["diagram"]]
     expect_match(d, paste0("rankdir = ", dir))
   }
+
+  # snapshot tests
+  expect_snapshot_plot(
+    paste0("plot_stockflow_direction_", directions),
+    lapply(directions, function(dir) plot(sfm, direction = dir))
+  )
 })
 
 test_that("plot() rejects an invalid direction", {

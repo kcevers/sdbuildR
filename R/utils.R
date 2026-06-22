@@ -1,3 +1,17 @@
+#' Normalize a file path with forward slashes
+#'
+#' Cross-platform tidy path: makes the path absolute and uses forward slashes on
+#' all platforms (Windows accepts these everywhere), avoiding mixed separators in
+#' constructed paths and user-facing messages. Does not require the path to exist.
+#'
+#' @param path Character vector of file paths.
+#' @returns Normalized path(s) with forward slashes.
+#' @noRd
+norm_path <- function(path) {
+  normalizePath(path, winslash = "/", mustWork = FALSE)
+}
+
+
 #' Remove files if they exist
 #'
 #' Deletes each path that exists, ignoring those that do not. Used in `on.exit()`

@@ -118,19 +118,70 @@ test_that("julia_version_compatible() compares major and minor versions", {
 })
 
 
+test_that("julia_env_dir() honours the in-package toggle", {
+  # Default: persistent user directory via tools::R_user_dir()
+  withr::local_options(sdbuildR.julia_env_in_package = FALSE)
+  expect_false(julia_env_in_package())
+  expect_match(julia_env_dir(), "julia$")
+
+  # Toggled: inside the installed package directory (pre-2.x behaviour)
+  withr::local_options(sdbuildR.julia_env_in_package = TRUE)
+  expect_true(julia_env_in_package())
+  expect_identical(
+    julia_env_dir(),
+    dirname(system.file("Project.toml", package = "sdbuildR"))
+  )
+})
+
+
+test_that("Project.toml hash drift is detected", {
+  # The shipped Project.toml should produce a stable, non-NA hash
+  h <- project_toml_hash()
+  expect_false(is.na(h))
+  expect_identical(h, project_toml_hash())
+
+  # Missing marker should not block (other version checks still apply)
+  tmp <- tempfile()
+  expect_true(is_julia_env_marker_current(tmp, h))
+
+  # Matching hash is current; differing hash is stale
+  writeLines(c("sdbuildR_version: 9.9.9", paste0("project_toml_md5: ", h)), tmp)
+  on.exit(unlink(tmp))
+  expect_true(is_julia_env_marker_current(tmp, h))
+  expect_false(is_julia_env_marker_current(tmp, "deadbeef"))
+})
+
+
 test_that("install_julia_env() works", {
   skip_if_julia_not_ready()
   skip_if(interactive())
   skip_if_no_internet()
 
   manifest_exists <- function() {
-    file.exists(system.file("Manifest.toml", package = "sdbuildR"))
+    file.exists(file.path(julia_env_dir(), "Manifest.toml"))
+  }
+  marker_exists <- function() {
+    file.exists(julia_env_marker_file())
+  }
+  # Any sdbuildR-created file left behind in the environment directory
+  env_files_exist <- function() {
+    d <- julia_env_dir()
+    file.exists(file.path(d, "Manifest.toml")) ||
+      file.exists(file.path(d, "Project.toml")) ||
+      file.exists(julia_env_marker_file())
   }
 
-  # Test installation
+  # Test installation: environment, manifest, and provenance marker all created
   expect_no_error(install_julia_env())
+  expect_true(manifest_exists())
+  expect_true(marker_exists())
+
+  # Removal cleans up *all* created files (no leftovers in R_user_dir)
   expect_no_error(install_julia_env(remove = TRUE))
   expect_false(manifest_exists())
+  expect_false(marker_exists())
+  expect_false(env_files_exist())
+  expect_false(dir.exists(julia_env_dir()))
   expect_false(is_julia_env_setup(error = FALSE))
   expect_false(is_julia_env_setup(error = FALSE, force = TRUE))
 
@@ -140,6 +191,7 @@ test_that("install_julia_env() works", {
   # Install again and check that environment is ready
   expect_no_error(install_julia_env())
   expect_true(manifest_exists())
+  expect_true(marker_exists())
   expect_true(is_julia_env_setup())
   expect_true(is_julia_env_setup(force = TRUE))
 })

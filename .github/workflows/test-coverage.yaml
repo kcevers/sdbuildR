@@ -2,7 +2,7 @@
 # Need help debugging build failures? Start at https://github.com/r-lib/actions#where-to-find-help
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, stockflow]
   pull_request:
 name: test-coverage.yaml
 permissions: read-all
@@ -29,6 +29,9 @@ jobs:
         uses: julia-actions/setup-julia@v3
         with:
           version: '1.12.6'
+
+      # Cache the Julia depot (packages + precompiled cache) for faster reruns
+      - uses: julia-actions/cache@v2
 
       - name: Print Julia environment
         run: |
