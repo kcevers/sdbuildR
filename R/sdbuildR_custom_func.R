@@ -617,10 +617,9 @@ mod <- function(a, b) {
 #' logistic(0, slope = 5, midpoint = 0.5, upper = 10)
 #'
 #' # Visualize different slopes
-#' x <- seq(-5, 5, length.out = 1000)
-#' plot(x, logistic(x, slope = 1), type = "l", ylab = "f(x)", ylim = c(0, 1))
-#' lines(x, logistic(x, slope = 5), col = "blue")
-#' lines(x, logistic(x, slope = 50), col = "red")
+#' curve(logistic(x, slope = 1), from = -5, to = 5, ylab = "f(x)", ylim = c(0, 1))
+#' curve(logistic(x, slope = 5), add = TRUE, col = "blue")
+#' curve(logistic(x, slope = 50), add = TRUE, col = "red")
 #' legend("topleft",
 #'   legend = c("slope = 1", "slope = 5", "slope = 50"),
 #'   col = c("black", "blue", "red"), lty = 1
@@ -723,6 +722,150 @@ hill <- function(x, slope = 1, midpoint = 0.5, upper = 1) {
   upper * x^slope / (midpoint^slope + x^slope)
 }
 
+
+#' Generalized Ricker function
+#'
+#' Computes the generalized Ricker function, a smooth hump-shaped curve that rises
+#' from zero, peaks, and then decays back towards zero. It is commonly used to
+#' describe humped (non-monotonic) dependencies, such as stock-recruitment
+#' relationships in ecology or size-dependent predation.
+#'
+#' @param x Value at which to evaluate the function. Because the curve involves a fractional power of `x`, `x` is expected to be non-negative.
+#' @param location Value of `x` at which the function reaches its peak. Defaults to 1.
+#' @param upper Maximal value (height) of the function, attained at the peak. Defaults to 1.
+#' @param shape Exponent controlling the width of the peak: values above 1 narrow
+#'   the peak, values below 1 broaden it. `shape = 1` gives the standard Ricker
+#'   function. Defaults to 1.
+#' @param a,b Coefficients of the equivalent expanded form
+#'   \eqn{f(x) = a \cdot x^{shape} \cdot e^{-b \cdot x}}. Optional alternative to
+#'   `location` and `upper`: when both `a` and `b` are supplied, they take
+#'   precedence and set `location = shape / b` and `upper = a \cdot (location / e)^{shape}`.
+#'   With `shape = 1` this is the standard Ricker parameterization
+#'   \eqn{f(x) = a \cdot x \cdot e^{-b \cdot x}}. Supplying only one of them, or
+#'   combining them with an explicit `location` or `upper`, is an error. Default
+#'   to `NULL`.
+#'
+#' @returns Numeric value given by \deqn{f(x) = upper \cdot \left(\frac{x}{location} \cdot e^{1 - x / location}\right)^{shape}}
+#'
+#' @details
+#' The generalized Ricker function (Persson et al., 1998) is defined as:
+#' 
+#' \deqn{f(x) = upper \cdot \left(\frac{x}{location} \cdot e^{1 - x / location}\right)^{shape}}
+#' 
+#' with a power parameter (\eqn{\alpha}, or `shape`) that broadens or narrows the
+#' peak. The function peaks at `x = location`, where it attains the value `upper`,
+#' for any `shape`.
+#'
+#' Expanding the expression shows that it is equivalent to:
+#'
+#' \deqn{f(x) = a \cdot x^{shape} \cdot e^{-b \cdot x}}
+#'
+#' with coefficients
+#'
+#' \deqn{a = upper \cdot (e / location)^{shape}}
+#' \deqn{b = shape / location}
+#'
+#' or equivalently
+#'
+#' \deqn{location = shape / b}
+#' \deqn{upper = a \cdot (location / e)^{shape}.}
+#'
+#' Note that \eqn{e} is the base of the natural logarithm (i.e., `exp(1)`). When
+#' `shape = 1`, the power on `x` is 1 and this reduces to the standard Ricker
+#' function \eqn{f(x) = a \cdot x \cdot e^{-b \cdot x}}, with \eqn{a = upper \cdot e / location}
+#' and \eqn{b = 1 / location}.
+#'
+#' See Bolker, B. M. (2008). \emph{Ecological Models and Data in R}. Princeton
+#' University Press, Section 8.1.
+#'
+#' @concept convenience
+#' @export
+#'
+#' @examples
+#' ricker(1)
+#'
+#' # Adjust parameters
+#' ricker(2, location = 2, upper = 10, shape = 1)
+#'
+#' # Use the expanded form f(x) = a * x^shape * exp(-b * x) instead.
+#' # With shape = 1 this is the standard Ricker f(x) = a * x * exp(-b * x).
+#' ricker(3, a = 2.5, b = 0.4)
+#' # equivalent to:
+#' ricker(3, location = 1 / 0.4, upper = 2.5 * (1 / 0.4 / exp(1)))
+#'
+#' # The mapping holds for any shape, e.g. f(x) = a * x^2 * exp(-b * x)
+#' ricker(3, a = 2.5, b = 0.4, shape = 2)
+#'
+#' # Visualize different peak widths
+#' curve(ricker(x, location = 2), from = 0, to = 10, ylab = "f(x)", ylim = c(0, 1.5))
+#' curve(ricker(x, location = 2, shape = 0.5), add = TRUE, col = "blue")
+#' curve(ricker(x, location = 2, shape = 3), add = TRUE, col = "red")
+#' legend("topright",
+#'   legend = c("shape = 1", "shape = 0.5", "shape = 3"),
+#'   col = c("black", "blue", "red"), lty = 1
+#' )
+ricker <- function(x, location = 1, upper = 1, shape = 1, a = NULL, b = NULL) {
+  if (!is.numeric(shape)) {
+    cli::cli_abort(c(
+      "Invalid {.arg shape} parameter.",
+      "x" = "The {.arg shape} parameter must be numeric."
+    ))
+  }
+
+  # Standard (a, b) parameterization, when supplied, overrides location/upper.
+  # These are the coefficients of the generalized form f(x) = a * x^shape * exp(-b * x).
+  if (!is.null(a) || !is.null(b)) {
+    if (is.null(a) || is.null(b)) {
+      cli::cli_abort(c(
+        "Incomplete standard Ricker parameterization.",
+        "x" = "Both {.arg a} and {.arg b} must be supplied together.",
+        "i" = "Either use {.arg location} and {.arg upper}, or supply both {.arg a} and {.arg b}."
+      ))
+    }
+
+    if (!missing(location) || !missing(upper)) {
+      cli::cli_abort(c(
+        "Conflicting Ricker parameterizations.",
+        "x" = "Supply either {.arg location} and {.arg upper}, or {.arg a} and {.arg b}, not both."
+      ))
+    }
+
+    if (!is.numeric(a)) {
+      cli::cli_abort(c(
+        "Invalid {.arg a} parameter.",
+        "x" = "The {.arg a} parameter must be numeric."
+      ))
+    }
+
+    if (!is.numeric(b)) {
+      cli::cli_abort(c(
+        "Invalid {.arg b} parameter.",
+        "x" = "The {.arg b} parameter must be numeric."
+      ))
+    }
+
+    # Convert the generalized coefficients to the peak parameterization
+    location <- shape / b
+    upper <- a * (location / exp(1))^shape
+  }
+
+  if (!is.numeric(location)) {
+    cli::cli_abort(c(
+      "Invalid {.arg location} parameter.",
+      "x" = "The {.arg location} parameter must be numeric."
+    ))
+  }
+
+  if (!is.numeric(upper)) {
+    cli::cli_abort(c(
+      "Invalid {.arg upper} parameter.",
+      "x" = "The {.arg upper} parameter must be numeric."
+    ))
+  }
+
+  upper * (x / location * exp(1 - x / location))^shape
+}
+
 #' Internal function to save data frame at specific times
 #'
 #' Internal function used to save the data frame at specific times in case save_at is not equal to dt in the simulation specifications.
@@ -737,7 +880,7 @@ hill <- function(x, slope = 1, midpoint = 0.5, upper = 1) {
 #' @export
 #' @examples
 #' # Recommended: Use save_at in sim_settings() to downsample simulations
-#' sfm <- stockflow("SIR") |> sim_settings(dt = 0.01, save_at = 1)
+#' sfm <- stockflow("sir") |> sim_settings(dt = 0.01, save_at = 1)
 #' sim <- simulate(sfm)
 #' df <- as.data.frame(sim)
 #' nrow(df) # Returns only times at intervals of 1

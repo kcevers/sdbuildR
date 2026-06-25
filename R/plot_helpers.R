@@ -25,6 +25,26 @@
 }
 
 
+#' Resolve a preference vector against the available options
+#'
+#' Returns the first element of `pref` that is in `available` (or the literal
+#' `"none"`), falling back to `"none"` when nothing matches. Used by
+#' [plot.ensemble_stockflow()] to pick the central tendency and spread band from
+#' user preference vectors, given which statistics are present in the summary.
+#'
+#' @param pref Character preference vector, in priority order.
+#' @param available Character vector of options that can actually be used.
+#' @returns A single character value: the first usable option, or `"none"`.
+#' @noRd
+resolve_summary_choice <- function(pref, available) {
+  usable <- pref[pref %in% c(available, "none")]
+  if (length(usable) == 0) {
+    return("none")
+  }
+  usable[1]
+}
+
+
 #' Validate plot parameters
 #'
 #' Validate common parameters used across all plotting functions (plot.simulate_stockflow,
@@ -34,6 +54,8 @@
 #' @param vars Character vector of variable names to plot, or NULL.
 #' @param palette Character, color palette name.
 #' @param colors Character vector of colors, or NULL.
+#' @param line_width Numeric line width (single value or one per variable), or NULL.
+#' @param central_line_width Numeric central-tendency line width (single value or one per variable), or NULL.
 #' @param alpha Numeric, transparency.
 #' @param font_family Character, font family name.
 #' @param font_size Numeric, font size in points.
@@ -47,6 +69,8 @@ validate_plot_params <- function(showlegend = NULL,
                                  vars = NULL,
                                  palette = NULL,
                                  colors = NULL,
+                                 line_width = NULL,
+                                 central_line_width = NULL,
                                  alpha = NULL,
                                  font_family = NULL,
                                  font_size = NULL,
@@ -77,6 +101,24 @@ validate_plot_params <- function(showlegend = NULL,
   .assert_plot_type(palette, "palette", "character", "Use {.code hcl.pals()} to see available palettes.")
 
   .assert_plot_type(colors, "colors", "character", "Provide a character vector of valid color names or hex codes.")
+
+  .assert_plot_type(line_width, "line_width", "numeric", "Provide a single value or one value per variable.")
+
+  if (!is.null(line_width) && any(line_width <= 0)) {
+    cli::cli_abort(c(
+      "x" = "Invalid {.arg line_width} argument.",
+      ">" = "All {.arg line_width} values must be positive."
+    ))
+  }
+
+  .assert_plot_type(central_line_width, "central_line_width", "numeric", "Provide a single value or one value per variable.")
+
+  if (!is.null(central_line_width) && any(central_line_width <= 0)) {
+    cli::cli_abort(c(
+      "x" = "Invalid {.arg central_line_width} argument.",
+      ">" = "All {.arg central_line_width} values must be positive."
+    ))
+  }
 
   .assert_plot_type(alpha, "alpha", "numeric", "Provide a numeric value between 0 and 1.")
 
@@ -396,18 +438,9 @@ validate_vars_in_model <- function(vars, names_df, df = NULL, context = "model")
 
   # Check whether variables are in the data frame (if provided)
   if (!is.null(df) && "variable" %in% colnames(df)) {
-    idx <- !(vars %in% df[["variable"]])
-    if (any(idx)) {
-      cli::cli_abort(
-        c(
-          "x" = paste0(
-            paste0(vars[idx], collapse = ", "),
-            ifelse(sum(idx) == 1, " is", " are"),
-            " in the model, but not in the simulated data frame."
-          ),
-          ">" = "Run simulate() with only_stocks = FALSE."
-        )
-      )
+    not_saved <- vars[!(vars %in% df[["variable"]])]
+    if (length(not_saved) > 0) {
+      vars_not_saved(not_saved, names_df, arg = "vars", action = "abort")
     }
   }
 
@@ -543,6 +576,59 @@ generate_colors <- function(n_vars, colors = NULL, palette = "Dark 2") {
 }
 
 
+#' Generate or validate line widths for variables
+#'
+#' Centralize line-width handling: recycle a single value across variables or
+#' validate a custom vector, mirroring \code{\link{generate_colors}}.
+#'
+#' @param n_vars Integer, number of variables needing line widths.
+#' @param line_width Numeric, either a single value applied to all variables or a
+#'   vector with one value per variable, or NULL to use \code{default}.
+#' @param default Numeric, the line width used when \code{line_width} is NULL.
+#'   Defaults to 2 (plotly's default).
+#' @param arg Character, the argument name used in error messages. Defaults to
+#'   "line_width".
+#'
+#' @returns Numeric vector of line widths (length = n_vars).
+#' @noRd
+#'
+generate_line_width <- function(n_vars, line_width = NULL, default = 2,
+                                arg = "line_width") {
+  if (is.null(line_width)) {
+    return(rep(default, n_vars))
+  }
+
+  if (!is.numeric(line_width)) {
+    cli::cli_abort(c(
+      "x" = "Invalid {.arg {arg}} argument.",
+      "i" = "The {.arg {arg}} argument must be {.cls numeric}."
+    ))
+  }
+
+  if (any(line_width <= 0)) {
+    cli::cli_abort(c(
+      "x" = "Invalid {.arg {arg}} argument.",
+      "i" = "All {.arg {arg}} values must be positive."
+    ))
+  }
+
+  # A single value is recycled across all variables.
+  if (length(line_width) == 1) {
+    return(rep(unname(line_width), n_vars))
+  }
+
+  if (length(line_width) < n_vars) {
+    cli::cli_abort(c(
+      "x" = "Insufficient line widths provided.",
+      "i" = "The {.arg {arg}} vector has length {.val {length(line_width)}}, but {.val {n_vars}} variables need line widths.",
+      ">" = "Provide a single value, {.val {n_vars}} values, or omit {.arg {arg}}."
+    ))
+  }
+
+  unname(line_width[seq_len(n_vars)])
+}
+
+
 #' Filter variables in simulation data and metadata
 #'
 #' Keep only specified variables in both the names_df and simulation data frame.
@@ -563,17 +649,13 @@ filter_variables <- function(vars, names_df, df) {
   vars_missing_df <- setdiff(vars, vars_in_df)
 
   if (length(vars_in_df) == 0) {
-    cli::cli_abort(c(
-      "x" = "Requested variables are not available in the simulated data.",
-      ">" = "Run {.fn simulate} with {.code only_stocks = FALSE} or choose different {.arg vars}."
-    ))
+    # None of the requested variables were saved: abort with guidance
+    vars_not_saved(vars_missing_df, names_df, arg = "vars", action = "abort")
   }
 
   if (length(vars_missing_df) > 0) {
-    cli::cli_warn(c(
-      "!" = "Some requested variables are not available in the simulated data and will be ignored.",
-      "i" = "Missing: {paste0(vars_missing_df, collapse = ', ')}"
-    ))
+    # Some were saved: warn about the rest and continue with what is available
+    vars_not_saved(vars_missing_df, names_df, arg = "vars", action = "warn")
   }
 
   # Filter both dataframes to include only specified variables
@@ -730,7 +812,9 @@ add_visibility_pair <- function(pl, add_fn,
 #' @param mode Character, "lines", "markers", or "lines+markers".
 #' @param type Character, trace type (default "scatter").
 #' @param opacity Numeric, opacity/transparency (0-1).
-#' @param line_width Numeric, line width for "lines" mode.
+#' @param line_width Numeric line width for "lines" mode. Either a single value
+#'   applied to all variables, or a named vector (keyed by variable label) giving
+#'   one width per variable. \code{NULL} uses plotly's default.
 #' @param marker_size Numeric, marker size for "markers" mode.
 #' @param split Optional formula for splitting traces (e.g., \code{~interaction(variable, i)}).
 #' @param frame Optional formula (e.g. \code{~.frame}) mapping traces to animation
@@ -779,30 +863,78 @@ add_trace_pair <- function(pl,
         "i" = "Need {.val {length(vars_present)}} colors for plotted variables but got {.val {length(colors)}}."
       ))
     }
-    colors <- unname(colors[seq_along(vars_present)])
-    names(colors) <- vars_present
+    if (isTRUE(attr(colors, "sdbuildR_preserve_names")) && all(vars_present %in% names(colors))) {
+      colors <- colors[vars_present]
+    } else {
+      colors <- unname(colors[seq_along(vars_present)])
+      names(colors) <- vars_present
+    }
   }
 
-  # Build a single add_trace() call, injecting split/frame only when supplied so
-  # behaviour is identical to before when neither is requested.
+  # Resolve per-variable line widths for the variables present in this trace pair.
+  # line_width may be a single value (applied to all variables), a named vector
+  # keyed by variable label, or NULL (use plotly's default width).
+  lw <- NULL
+  if (!is.null(line_width) && length(vars_present) > 0) {
+    if (length(line_width) == 1 && is.null(names(line_width))) {
+      lw <- stats::setNames(rep(unname(line_width), length(vars_present)), vars_present)
+    } else {
+      lw <- line_width[vars_present]
+    }
+  }
+  # When all widths are identical, a single color-mapped trace suffices; otherwise
+  # each variable needs its own trace so it can carry its own width.
+  uniform_width <- is.null(lw) || length(unique(unname(lw))) == 1L
+
+  # Build the trace(s) for one data frame (highlight or nonhighlight), injecting
+  # split/frame only when supplied so behaviour is identical to before when
+  # neither is requested.
   add_one <- function(pl, data, showlegend_val, visible_val) {
-    args <- list(
-      pl,
-      data = data,
-      x = ~ get(x_col),
-      y = ~ get(y_col),
-      color = ~variable,
-      legendgroup = ~variable,
-      type = type,
-      mode = mode,
-      opacity = opacity,
-      colors = colors,
-      showlegend = showlegend_val,
-      visible = visible_val
-    )
-    if (!is.null(split)) args[["split"]] <- split
-    if (!is.null(frame)) args[["frame"]] <- frame
-    do.call(plotly::add_trace, args)
+    if (uniform_width) {
+      args <- list(
+        pl,
+        data = data,
+        x = ~ get(x_col),
+        y = ~ get(y_col),
+        color = ~variable,
+        legendgroup = ~variable,
+        type = type,
+        mode = mode,
+        opacity = opacity,
+        colors = colors,
+        showlegend = showlegend_val,
+        visible = visible_val
+      )
+      if (!is.null(lw)) args[["line"]] <- list(width = unname(lw)[1])
+      if (!is.null(split)) args[["split"]] <- split
+      if (!is.null(frame)) args[["frame"]] <- frame
+      return(do.call(plotly::add_trace, args))
+    }
+
+    # Per-variable widths: add one trace per variable, setting line colour and
+    # width explicitly (plotly cannot map width across colour levels).
+    for (v in levels(droplevels(data[["variable"]]))) {
+      dv <- data[data[["variable"]] == v, , drop = FALSE]
+      if (nrow(dv) == 0) next
+      args <- list(
+        pl,
+        data = dv,
+        x = ~ get(x_col),
+        y = ~ get(y_col),
+        name = v,
+        legendgroup = v,
+        type = type,
+        mode = mode,
+        opacity = opacity,
+        line = list(width = unname(lw[v]), color = unname(colors[v])),
+        showlegend = showlegend_val,
+        visible = visible_val
+      )
+      if (!is.null(split)) args[["split"]] <- split
+      if (!is.null(frame)) args[["frame"]] <- frame
+      pl <- do.call(plotly::add_trace, args)
+    }
+    pl
   }
 
   # Add nonhighlight traces first (will be hidden behind highlight traces)
@@ -812,14 +944,6 @@ add_trace_pair <- function(pl,
       showlegend_val = if (is.null(split)) showlegend else FALSE,
       visible_val = visible_nonhighlight
     )
-
-    # Add line width or marker size if specified
-    if (!is.null(line_width) && mode %in% c("lines", "lines+markers")) {
-      pl <- plotly::layout(pl, xaxis = list(title = "")) # Placeholder to avoid error
-    }
-    if (!is.null(marker_size) && mode %in% c("markers", "lines+markers")) {
-      pl <- plotly::layout(pl, xaxis = list(title = "")) # Placeholder to avoid error
-    }
   }
 
   # Add highlight traces (will be visible by default)
@@ -835,13 +959,12 @@ add_trace_pair <- function(pl,
 
 
 #' Set the export format for Plotly's "Download plot as a png/svg/jpeg/webp" button
-#' 
+#'
 #' @param pl Plotly object to configure.
 #' @param format Character, one of "png", "svg", "jpeg", or "webp". Defaults to "svg" for better quality and scalability.
 #' @returns Updated Plotly object with configured export format.
 #' @noRd
 set_plotly_export_format <- function(pl, format = "svg") {
-
   # Check format
   format <- match.arg(format, choices = c("png", "svg", "jpeg", "webp"))
 
@@ -1025,134 +1148,424 @@ add_time_animation_controls <- function(pl,
 }
 
 
-#' Add condition selection controls (slider or dropdown) to a combined plot
+#' Drop the bookkeeping `condition` index column from a conditions table
 #'
-#' Given a plot whose traces span several conditions, add a control that shows
-#' one condition's traces at a time by toggling trace visibility.
+#' `ensemble()` prepends a `condition` index column to `x$conditions`
+#' (see `R/ensemble_r.R` / `R/ensemble_julia.R`). Only the actual parameter
+#' columns should drive sliders/dropdowns.
 #'
-#' @param pl Plotly object containing traces for all conditions.
-#' @param trace_conditions Vector identifying each trace's condition, the same
-#'   length as the number of traces in `pl`.
-#' @param original_visible List of each trace's intended visibility
-#'   (`TRUE`, `FALSE`, or `"legendonly"`) when its condition is selected.
-#' @param condition_ids Vector of condition values in display order.
-#' @param labels Character vector of display labels for each condition. Defaults
-#'   to `paste0(title_prefix, " ", condition_ids)`.
-#' @param type Either "slider" or "dropdown".
-#' @param title_prefix Prefix used for default labels and the slider prefix.
-#' @returns Updated plotly object with `sliders` or `updatemenus` in its layout.
+#' @param conditions The `conditions` element of an ensemble object (a data
+#'   frame, or `NULL`).
+#' @returns A data frame of parameter columns only (zero columns if none).
 #' @noRd
-add_condition_controls <- function(pl,
-                                   trace_conditions,
-                                   original_visible,
-                                   condition_ids,
-                                   labels = NULL,
-                                   type = c("slider", "dropdown"),
-                                   title_prefix = "Condition") {
-  type <- match.arg(type)
-  if (is.null(labels)) {
-    labels <- paste0(title_prefix, " ", condition_ids)
+condition_param_table <- function(conditions) {
+  if (is.null(conditions)) {
+    return(data.frame())
   }
+  cond <- as.data.frame(conditions)
+  cond[, setdiff(names(cond), "condition"), drop = FALSE]
+}
 
-  n_traces <- length(trace_conditions)
 
-  # Visibility mask for a given selected condition: a trace keeps its intended
-  # visibility when it belongs to the condition, otherwise it is hidden.
-  make_mask <- function(cond) {
-    lapply(seq_len(n_traces), function(i) {
-      if (identical(trace_conditions[[i]], cond)) original_visible[[i]] else FALSE
-    })
-  }
-
-  steps <- lapply(seq_along(condition_ids), function(k) {
-    list(
-      method = "update",
-      args = list(list(visible = make_mask(condition_ids[[k]]))),
-      label = as.character(labels[[k]])
+#' Build a name -> human-readable label lookup from a stockflow model
+#'
+#' @param object A stockflow model (or `NULL`).
+#' @returns A function mapping a character vector of variable names to their
+#'   model labels, falling back to the name when no label is found.
+#' @noRd
+model_label_lookup <- function(object) {
+  ld <- NULL
+  if (!is.null(object)) {
+    ld <- tryCatch(
+      as.data.frame(object, properties = c("name", "label")),
+      error = function(e) NULL
     )
+  }
+  if (is.null(ld) || !all(c("name", "label") %in% names(ld))) {
+    return(function(nm) nm)
+  }
+  function(nm) {
+    out <- ld[["label"]][match(nm, ld[["name"]])]
+    ifelse(is.na(out), nm, out)
+  }
+}
+
+
+#' Rich per-condition labels for ensemble condition controls
+#'
+#' Produces labels that surface the parameter values of each condition, e.g.
+#' `"Contact rate = 1"` (single parameter) or
+#' `"Condition 3 (Contact rate = 1, Recovery rate = 0.05)"` (multiple).
+#'
+#' @param param_tbl Parameter table from condition_param_table().
+#' @param object Stockflow model, used to map parameter names to labels.
+#' @param condition_ids Condition indices (rows of `param_tbl`) in display order.
+#' @returns Character vector of labels, one per `condition_ids`.
+#' @noRd
+ensemble_condition_labels <- function(param_tbl, object, condition_ids) {
+  if (is.null(param_tbl) || ncol(param_tbl) == 0L) {
+    return(paste0("Condition ", condition_ids))
+  }
+  labof <- model_label_lookup(object)
+  cvars <- names(param_tbl)
+  plabs <- labof(cvars)
+  vapply(condition_ids, function(i) {
+    vals <- vapply(cvars, function(cn) {
+      formatC(param_tbl[i, cn], format = "g")
+    }, character(1))
+    parts <- paste0(plabs, " = ", vals)
+    if (length(cvars) == 1L) {
+      paste(parts)
+    } else {
+      paste0("Condition ", i, " (", paste(parts, collapse = ", "), ")")
+    }
+  }, character(1))
+}
+
+
+#' Capture per-condition trace `y` arrays for client-side swapping
+#'
+#' Builds each condition's plotly object and extracts, per trace, the `y` array.
+#' Because every condition shares the same variables and time grid, the trace
+#' structure and `x` arrays are identical across conditions, so only `y` (which
+#' also encodes ribbon polygons and NA-broken trajectories) needs swapping.
+#'
+#' @param pl_list List of single-condition plotly objects.
+#' @returns A list over conditions, each a list of `y` arrays (one per trace).
+#' @noRd
+capture_swapdata <- function(pl_list) {
+  built <- lapply(pl_list, function(p) plotly::plotly_build(p)[["x"]][["data"]])
+  n_tr <- length(built[[1]])
+  ylen1 <- vapply(built[[1]], function(tr) length(tr[["y"]]), integer(1))
+
+  for (c in seq_along(built)) {
+    if (length(built[[c]]) != n_tr) {
+      cli::cli_abort(c(
+        "x" = "Conditions produced different numbers of traces ({length(built[[c]])} vs {n_tr}).",
+        "i" = "Interactive condition controls require the same variables in every condition."
+      ))
+    }
+    ylc <- vapply(built[[c]], function(tr) length(tr[["y"]]), integer(1))
+    if (!identical(ylc, ylen1)) {
+      cli::cli_abort(c(
+        "x" = "Conditions produced series of different lengths.",
+        "i" = "Interactive condition controls assume a shared time grid across conditions."
+      ))
+    }
+  }
+
+  lapply(built, function(traces) lapply(traces, function(tr) tr[["y"]]))
+}
+
+
+#' Resolve and validate the `control_options` list for condition controls
+#'
+#' Users pass a named list to fine-tune the slider/dropdown without bloating the
+#' `plot()` signature (cf. the `control` lists of [stats::optim()] /
+#' [stats::loess()]). Unknown names are rejected so typos surface early.
+#'
+#' Supported options:
+#' * `max_labels` -- maximum number of slider tick labels to keep visible when
+#'   many conditions are varied (a positive integer; the slider always keeps one
+#'   step per condition). Defaults to 10.
+#'
+#' @param control_options A named list, or `NULL`/empty for defaults.
+#' @returns A list with all supported options filled in.
+#' @noRd
+resolve_control_options <- function(control_options = list()) {
+  defaults <- list(max_labels = 10L)
+
+  if (is.null(control_options)) {
+    return(defaults)
+  }
+  if (!is.list(control_options)) {
+    cli::cli_abort(c(
+      "x" = "{.arg control_options} must be a named list.",
+      "i" = "For example, {.code control_options = list(max_labels = 8)}."
+    ))
+  }
+
+  unknown <- setdiff(names(control_options), names(defaults))
+  if (length(control_options) > 0 &&
+    (is.null(names(control_options)) || length(unknown) > 0)) {
+    bad <- if (is.null(names(control_options))) "<unnamed>" else unknown
+    cli::cli_abort(c(
+      "x" = "Unknown {.arg control_options}: {.val {bad}}.",
+      "i" = "Supported options: {.val {names(defaults)}}."
+    ))
+  }
+
+  out <- utils::modifyList(defaults, control_options)
+
+  ml <- out[["max_labels"]]
+  if (!is.numeric(ml) || length(ml) != 1L || is.na(ml) || ml < 1) {
+    cli::cli_abort(c(
+      "x" = "{.arg control_options$max_labels} must be a single positive number.",
+      "i" = "You supplied {.val {ml}}."
+    ))
+  }
+  out[["max_labels"]] <- as.integer(ml)
+
+  out
+}
+
+
+#' Thin slider tick labels to at most `max_labels`, keeping the endpoints
+#'
+#' A slider keeps one step (jump) per parameter value, but printing every tick
+#' label overprints when many values are varied. This blanks intermediate
+#' labels so at most `max_labels` evenly spaced ticks (always including the
+#' first and last) are labelled, while the number of steps is unchanged.
+#'
+#' @param labels Character vector of tick labels, one per step.
+#' @param max_labels Maximum number of labels to keep visible.
+#' @returns `labels` with intermediate entries blanked when there are more than
+#'   `max_labels` of them.
+#' @noRd
+thin_slider_labels <- function(labels, max_labels = 10L) {
+  n <- length(labels)
+  if (n <= max_labels) {
+    return(labels)
+  }
+  keep <- unique(round(seq(1, n, length.out = max_labels)))
+  out <- rep("", n)
+  out[keep] <- labels[keep]
+  out
+}
+
+
+#' Build per-parameter controls (sliders or dropdowns) for a crossed ensemble
+#'
+#' One control per condition variable. The browser-side handler reads each
+#' control's active value and finds the matching condition (cross-product).
+#'
+#' @param param_tbl Full parameter table from condition_param_table().
+#' @param condition_ids Condition indices built into `pl_list`/`ydata`, in order.
+#' @param type Either "slider" or "dropdown".
+#' @param object Stockflow model, for parameter labels.
+#' @param max_labels Maximum number of slider tick labels to keep visible.
+#' @returns List with `layout` (named list for [plotly::layout()]), `condVals`
+#'   (per built condition, the parameter values), and `levels` (per parameter,
+#'   its sorted unique values) for the JS handler.
+#' @noRd
+build_param_controls <- function(param_tbl, condition_ids, type, object,
+                                 max_labels = 10L) {
+  labof <- model_label_lookup(object)
+  cvars <- names(param_tbl)
+  plabs <- labof(cvars)
+  steps_per <- lapply(param_tbl, function(x) sort(unique(x)))
+
+  controls <- lapply(seq_along(cvars), function(j) {
+    vals <- steps_per[[cvars[j]]]
+    nm <- as.character(j - 1L) # 0-based index tag read by the JS handler
+    if (type == "slider") {
+      tick_labels <- thin_slider_labels(formatC(vals, format = "g"), max_labels)
+      list(
+        active = 0, name = nm,
+        x = 0, len = 0.9, y = -0.18 - 0.22 * (j - 1),
+        pad = list(t = 10, b = 10),
+        currentvalue = list(prefix = paste0(plabs[j], " = ")),
+        steps = lapply(seq_along(vals), function(k) {
+          list(label = tick_labels[k], method = "skip")
+        })
+      )
+    } else {
+      list(
+        type = "dropdown", active = 0, showactive = TRUE, name = nm,
+        direction = "up", x = 0, xanchor = "left",
+        y = -0.1 - 0.16 * (j - 1), yanchor = "top",
+        buttons = lapply(vals, function(v) {
+          list(
+            label = paste0(plabs[j], " = ", formatC(v, format = "g")),
+            method = "skip"
+          )
+        })
+      )
+    }
   })
 
-  if (type == "slider") {
-    pl <- plotly::layout(pl,
-      sliders = list(list(
-        active = 0,
-        currentvalue = list(prefix = paste0(title_prefix, ": ")),
-        steps = steps
-      ))
-    )
+  layout <- if (type == "slider") {
+    list(sliders = controls)
   } else {
-    pl <- plotly::layout(pl,
-      updatemenus = list(list(
-        type = "dropdown",
-        active = 0,
-        showactive = TRUE,
-        buttons = steps
-      ))
-    )
+    list(updatemenus = controls)
   }
 
-  pl
+  # Values aligned with the built conditions (= ydata order).
+  condVals <- lapply(condition_ids, function(i) {
+    as.list(as.numeric(param_tbl[i, cvars, drop = TRUE]))
+  })
+  levels <- lapply(cvars, function(cn) as.list(as.numeric(steps_per[[cn]])))
+
+  list(layout = layout, condVals = condVals, levels = levels)
+}
+
+
+#' JavaScript handler that swaps trace `y` arrays on control change
+#'
+#' Used only for the per-parameter (crossed) layout, where independent controls
+#' must be combined into a single condition via a cross-product lookup. Sliders
+#' emit `plotly_sliderchange`; dropdowns update via `plotly_relayout`.
+#'
+#' @returns A length-one character vector with the handler source.
+#' @noRd
+swap_onrender_js <- function() {
+  "
+  function(el, x, data) {
+    var gd = el;
+    var K = data.levels.length;
+    var state = new Array(K).fill(0);
+    var idx = []; for (var t = 0; t < data.nTraces; t++) idx.push(t);
+
+    function apply() {
+      var chosen = state.map(function(a, j){ return data.levels[j][a]; });
+      var ci = -1;
+      for (var c = 0; c < data.condVals.length; c++) {
+        var ok = true;
+        for (var j = 0; j < K; j++) {
+          if (Math.abs(data.condVals[c][j] - chosen[j]) > 1e-9) { ok = false; break; }
+        }
+        if (ok) { ci = c; break; }
+      }
+      if (ci < 0 || !data.ydata[ci]) return; // combination not simulated
+      Plotly.restyle(gd, {y: data.ydata[ci]}, idx);
+    }
+
+    function readActives(arr) {
+      if (!arr) return;
+      for (var i = 0; i < arr.length; i++) {
+        var nm = arr[i].name;
+        state[nm != null ? +nm : i] = arr[i].active || 0;
+      }
+    }
+
+    gd.on('plotly_sliderchange', function(e) {
+      if (e && e.slider && e.slider.name != null && e.slider.active != null) {
+        state[+e.slider.name] = e.slider.active;
+      } else {
+        readActives(gd._fullLayout && gd._fullLayout.sliders);
+      }
+      apply();
+    });
+
+    gd.on('plotly_relayout', function() {
+      if (!(gd._fullLayout && gd._fullLayout.updatemenus &&
+            gd._fullLayout.updatemenus.length)) return;
+      readActives(gd._fullLayout.updatemenus);
+      apply();
+    });
+  }
+  "
 }
 
 
 #' Assemble a single plot with condition selection controls
 #'
 #' Builds each condition's traces (via `pl_list`, one plotly object per
-#' condition), merges them into one figure, hides all but the first condition,
-#' and adds a slider or dropdown to switch between conditions.
+#' condition), keeps only the first condition's traces in the live figure, and
+#' swaps their `y` arrays client-side as the user changes the control(s). For a
+#' crossed ensemble (`cross = TRUE`, >= 2 parameters) one control is shown per
+#' parameter; otherwise a single control steps through the conditions.
 #'
 #' @param pl_list List of single-condition plotly objects (one per condition).
 #' @param condition_ids Vector of condition values, aligned with `pl_list`.
 #' @param type Either "slider" or "dropdown".
-#' @param labels Character vector of condition labels, or NULL for defaults.
+#' @param labels Character vector of condition labels for the single-control
+#'   layout.
 #' @param theme Theme list from `plotly_theme()`.
 #' @param main,xlab,ylab Title and axis labels.
 #' @param font_family,font_size Font settings.
+#' @param condition_table Optional parameter table (from
+#'   condition_param_table()) enabling per-parameter controls.
+#' @param cross Whether the ensemble conditions were crossed.
+#' @param object Optional stockflow model, for parameter labels.
+#' @param max_labels Maximum number of slider tick labels to keep visible.
 #' @returns A combined plotly object with condition controls.
 #' @noRd
 assemble_condition_control_plot <- function(pl_list, condition_ids, type,
                                             labels, theme,
                                             main, xlab, ylab,
-                                            font_family, font_size) {
-  # Built trace lists for each condition.
-  built <- lapply(pl_list, function(p) plotly::plotly_build(p)[["x"]][["data"]])
-  trace_counts <- lengths(built)
-  all_traces <- do.call(c, built)
-  trace_conditions <- rep(condition_ids, times = trace_counts)
+                                            font_family, font_size,
+                                            condition_table = NULL,
+                                            cross = FALSE,
+                                            object = NULL,
+                                            max_labels = 10L) {
+  ydata <- capture_swapdata(pl_list)
+  n_traces <- length(ydata[[1]])
 
-  original_visible <- lapply(all_traces, function(tr) {
-    v <- tr[["visible"]]
-    if (is.null(v)) TRUE else v
-  })
+  use_param <- isTRUE(cross) && !is.null(condition_table) &&
+    ncol(condition_table) >= 2L
+  n_controls <- if (use_param) ncol(condition_table) else 1L
 
-  # Start from the first condition's built object to retain its layout, then
-  # swap in the full set of traces.
-  combined <- plotly::plotly_build(pl_list[[1]])
-  combined[["x"]][["data"]] <- all_traces
-
-  # Only the first condition is visible initially.
-  first_cond <- condition_ids[[1]]
-  for (i in seq_along(all_traces)) {
-    combined[["x"]][["data"]][[i]][["visible"]] <-
-      if (identical(trace_conditions[[i]], first_cond)) original_visible[[i]] else FALSE
-  }
-
-  combined <- plotly::layout(combined,
+  # Live figure: the first condition's traces, with shared title/axes/theme.
+  combined <- plotly::layout(pl_list[[1]],
     title = list(text = main),
     xaxis = list(title = xlab),
     yaxis = list(title = ylab),
     font = list(family = font_family, size = font_size),
-    margin = theme[["margin"]],
+    margin = utils::modifyList(theme[["margin"]],
+      list(b = max(theme[["margin"]][["b"]], 40 + 60 * n_controls))),
     legend = theme[["legend"]]
   )
 
-  add_condition_controls(combined,
-    trace_conditions = trace_conditions,
-    original_visible = original_visible,
-    condition_ids = condition_ids,
-    labels = labels,
-    type = type
-  )
+  if (use_param) {
+    ctrl <- build_param_controls(
+      condition_table, condition_ids, type, object, max_labels
+    )
+    combined <- do.call(plotly::layout, c(list(combined), ctrl[["layout"]]))
+    combined <- htmlwidgets::onRender(combined, swap_onrender_js(),
+      data = list(
+        nTraces = n_traces, ydata = ydata,
+        condVals = ctrl[["condVals"]], levels = ctrl[["levels"]]
+      )
+    )
+    return(combined)
+  }
+
+  # Single control: each step/button natively restyles to its condition's y
+  # arrays (no JS needed). For a slider over a single parameter, the parameter
+  # label lives in the slider title (currentvalue prefix) and the tick labels
+  # carry only the values; otherwise the full condition labels are used.
+  trace_idx <- seq_len(n_traces) - 1L
+
+  slider_prefix <- ""
+  step_labels <- as.character(unlist(labels))
+  single_param <- !is.null(condition_table) && ncol(condition_table) == 1L
+  if (type == "slider" && single_param) {
+    cn <- names(condition_table)[1]
+    slider_prefix <- paste0(model_label_lookup(object)(cn), " = ")
+    step_labels <- formatC(condition_table[condition_ids, cn], format = "g")
+  }
+  if (type == "slider") {
+    step_labels <- thin_slider_labels(step_labels, max_labels)
+  }
+
+  steps <- lapply(seq_along(condition_ids), function(k) {
+    list(
+      method = "restyle",
+      args = list(list(y = ydata[[k]]), as.list(trace_idx)),
+      label = step_labels[[k]]
+    )
+  })
+
+  if (type == "slider") {
+    plotly::layout(combined,
+      sliders = list(list(
+        active = 0, x = 0, len = 0.9, y = -0.18,
+        pad = list(t = 10, b = 10),
+        currentvalue = list(prefix = slider_prefix),
+        steps = steps
+      ))
+    )
+  } else {
+    plotly::layout(combined,
+      updatemenus = list(list(
+        type = "dropdown", active = 0, showactive = TRUE,
+        direction = "up", x = 0, xanchor = "left",
+        y = -0.1, yanchor = "top",
+        buttons = steps
+      ))
+    )
+  }
 }
 
 

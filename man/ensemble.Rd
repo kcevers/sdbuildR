@@ -9,7 +9,9 @@ ensemble(
   n = 10,
   conditions = NULL,
   cross = TRUE,
-  quantiles = c(0.025, 0.975),
+  central,
+  spread,
+  quantiles,
   verbose = TRUE,
   ...
 )
@@ -37,7 +39,24 @@ Defaults to \code{NULL} (no parameter variation).}
 \item{cross}{If \code{TRUE}, cross the parameters in the conditions list to
 generate all possible combinations of parameters. Defaults to \code{TRUE}.}
 
-\item{quantiles}{Quantiles to calculate in the summary, e.g., \code{c(0.025, 0.975)}.}
+\item{central}{Which central-tendency statistic(s) to compute across the
+simulations at each time point: any of \code{"mean"}, \code{"median"}, or \code{"none"}.
+Each one becomes a column of the same name in \code{summary}. Defaults to the
+model's \code{central} setting (see \code{\link[=sim_settings]{sim_settings()}}); set it here to override
+that for this run. Note that \code{central} and \code{spread} choose what is
+\emph{computed}; \code{\link[=plot.ensemble_stockflow]{plot.ensemble_stockflow()}} then chooses what to \emph{show}.}
+
+\item{spread}{Which measures of spread to compute: \code{"quantile"} (columns
+\code{quant1}, \code{quant2}, ... at the probabilities in \code{quantiles}), \code{"sd"},
+\code{"range"} (a \code{min} and a \code{max} column), or \code{"none"}. Several can be
+combined, e.g. \code{c("quantile", "sd")}. Defaults to the model's \code{spread}
+setting.}
+
+\item{quantiles}{Probabilities for the quantile columns, used when \code{spread}
+includes \code{"quantile"}, e.g. \code{c(0.025, 0.975)}. They become columns
+\code{quant1}, \code{quant2}, ... in the order given (so here \code{quant1} is the 2.5\%
+quantile and \code{quant2} the 97.5\%); the probabilities themselves are kept in
+\code{sims$quantiles}. Defaults to the model's \code{quantiles} setting.}
 
 \item{verbose}{If \code{TRUE} (default), print details and duration of simulation.}
 
@@ -54,9 +73,12 @@ failed.}
 \item{df}{data.frame with simulation results in long format, if save_sims
 is \code{TRUE}. The iteration number is indicated by column "sim". If conditions
 was specified, the condition is indicated by column "condition".}
-\item{summary}{data.frame with summary statistics of the ensemble,
-including quantiles specified in quantiles. If conditions was specified,
-summary statistics are calculated for each condition in the ensemble.}
+\item{summary}{data.frame with summary statistics of the ensemble. Contains
+the statistics requested via \code{central} and \code{spread} (as columns named after
+each statistic, plus \code{quant1}, \code{quant2}, ... when \code{spread} includes
+\code{"quantile"}), as well as a \code{missing_count} column. If conditions was
+specified, summary statistics are calculated for each condition in the
+ensemble.}
 \item{n}{Number of simulations run in the ensemble (per condition if
 conditions is specified).}
 \item{n_total}{Total number of simulations run in the ensemble (across all
@@ -126,7 +148,7 @@ plot(sims, which = "sims")
 plot(sims, which = "sims", sim = 1)
 
 # Plot the median with lighter individual trajectories
-plot(sims, central_tendency = "median", which = "sims", alpha = 0.1)
+plot(sims, central = "median", which = "sims", alpha = 0.1)
 
 # For larger ensembles, we can use parallelization with future
 if (requireNamespace("future", quietly = TRUE) &&

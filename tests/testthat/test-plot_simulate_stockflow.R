@@ -57,7 +57,7 @@ test_that("plot() warns and continues when some vars are missing from data", {
 
   expect_warning(
     pl <- plot(sim, vars = c("susceptible", "new_infections")),
-    "not available in the simulated data"
+    "not saved in the output"
   )
   expect_plotly(pl)
 })
@@ -68,7 +68,7 @@ test_that("plot() errors when all requested vars are missing from data", {
 
   expect_error(
     plot(sim, vars = c("new_recoveries", "new_infections")),
-    "not available in the simulated data"
+    "not saved in the output"
   )
 })
 
@@ -138,6 +138,64 @@ test_that("plot() validates colors as character vector", {
     plot(sim, colors = "#FF0000"),
     "Insufficient colors provided"
   )
+})
+
+# ============================================================================
+# LINE WIDTH TESTS
+# ============================================================================
+
+# Extract the line width of every built trace (NA when unset).
+trace_line_widths <- function(pl) {
+  traces <- plotly::plotly_build(pl)[["x"]][["data"]]
+  vapply(traces, function(t) {
+    w <- t[["line"]][["width"]]
+    if (is.null(w)) NA_real_ else as.numeric(w)[1L]
+  }, numeric(1))
+}
+
+test_that("plot() validates line_width as positive numeric", {
+  sim <- sir_sim()
+
+  expect_error(plot(sim, line_width = "thick"), "line_width")
+  expect_error(plot(sim, line_width = -1), "positive")
+  expect_error(plot(sim, line_width = 0), "positive")
+})
+
+test_that("plot() errors when line_width vector is too short", {
+  sim <- sir_sim(only_stocks = FALSE)
+  n <- length(unique(as.data.frame(sim)[["variable"]]))
+
+  expect_error(
+    plot(sim, line_width = rep(2, n - 1)),
+    "Insufficient line widths"
+  )
+})
+
+test_that("plot() applies a scalar line_width to every trace", {
+  sim <- sir_sim()
+  pl <- plot(sim, line_width = 5)
+
+  widths <- trace_line_widths(pl)
+  expect_true(all(widths == 5, na.rm = TRUE))
+  expect_false(anyNA(widths))
+})
+
+test_that("plot() applies a per-variable line_width vector", {
+  sim <- sir_sim(only_stocks = FALSE)
+  n <- length(unique(as.data.frame(sim)[["variable"]]))
+  lw <- seq_len(n)
+
+  pl <- plot(sim, line_width = lw)
+  widths <- trace_line_widths(pl)
+
+  # Each requested width must appear exactly once across the traces.
+  expect_setequal(widths, lw)
+})
+
+test_that("plot() defaults to a line width of 2", {
+  sim <- sir_sim()
+  widths <- trace_line_widths(plot(sim))
+  expect_true(all(widths == 2, na.rm = TRUE))
 })
 
 # ============================================================================
@@ -237,6 +295,34 @@ test_that("plot.simulate_stockflow() with custom colors vector", {
 
   # Snapshot last
   expect_snapshot_plot("sim-custom-colors", pl_colors)
+})
+
+test_that("plot.simulate_stockflow() maps trace labels to source data and named colors", {
+  sim <- sir_sim(only_stocks = FALSE)
+  names_df <- as.data.frame(sim[["object"]])
+  labels <- names_df[["label"]]
+  colors <- stats::setNames(
+    grDevices::rainbow(length(labels)),
+    labels
+  )
+  colors <- rev(colors)
+
+  pl <- plot(sim, colors = colors, webgl = FALSE)
+  built_traces <- plotly::plotly_build(pl)[["x"]][["data"]]
+  trace_info <- plotly_traces(pl)
+  label_to_name <- stats::setNames(names_df[["name"]], names_df[["label"]])
+
+  for (i in seq_along(built_traces)) {
+    trace_label <- built_traces[[i]][["name"]]
+    variable <- unname(label_to_name[[trace_label]])
+    expected_y <- sim[["df"]][["value"]][sim[["df"]][["variable"]] == variable]
+
+    expect_equal(as.numeric(built_traces[[i]][["y"]]), as.numeric(expected_y))
+    expect_equal(
+      trace_info[["color"]][i],
+      normalize_color_string(colors[[trace_label]])
+    )
+  }
 })
 
 test_that("plot.simulate_stockflow() with custom font family", {
@@ -396,7 +482,7 @@ test_that("plot.simulate_stockflow() with vars = constant automatically enables 
 # ============================================================================
 
 test_that("plot.simulate_stockflow() uses default titles", {
-  sfm <- stockflow("SIR") |> meta(name = "My Model")
+  sfm <- stockflow("sir") |> meta(name = "My Model")
   sim <- simulate(sfm)
 
   pl <- plot(sim)
@@ -448,12 +534,16 @@ test_that("plot.simulate_stockflow() rejects invalid animation", {
 test_that("plot.simulate_stockflow() webgl toggles trace type", {
   sim <- sir_sim()
 
-  types_gl <- vapply(plotly::plotly_build(plot(sim, webgl = TRUE))$x$data,
-    function(d) d$type %||% "", character(1))
+  types_gl <- vapply(
+    plotly::plotly_build(plot(sim, webgl = TRUE))$x$data,
+    function(d) d$type %||% "", character(1)
+  )
   expect_true(any(types_gl == "scattergl"))
 
-  types_svg <- vapply(plotly::plotly_build(plot(sim, webgl = FALSE))$x$data,
-    function(d) d$type %||% "", character(1))
+  types_svg <- vapply(
+    plotly::plotly_build(plot(sim, webgl = FALSE))$x$data,
+    function(d) d$type %||% "", character(1)
+  )
   expect_false(any(types_svg == "scattergl"))
 
   expect_error(plot(sim, webgl = "no"), "webgl")
@@ -464,19 +554,23 @@ test_that("plot.simulate_stockflow() respects global webgl option", {
   sim <- sir_sim()
 
   withr::local_options(list(sdbuildR.webgl = TRUE))
-  types_gl <- vapply(plotly::plotly_build(plot(sim))$x$data,
-    function(d) d$type %||% "", character(1))
+  types_gl <- vapply(
+    plotly::plotly_build(plot(sim))$x$data,
+    function(d) d$type %||% "", character(1)
+  )
   expect_true(any(types_gl == "scattergl"))
 
   withr::local_options(list(sdbuildR.webgl = FALSE))
-  types_svg <- vapply(plotly::plotly_build(plot(sim))$x$data,
-    function(d) d$type %||% "", character(1))
+  types_svg <- vapply(
+    plotly::plotly_build(plot(sim))$x$data,
+    function(d) d$type %||% "", character(1)
+  )
   expect_false(any(types_svg == "scattergl"))
 
   # Setting webgl explicitly overrides the global option
-  types_svg <- vapply(plotly::plotly_build(plot(sim, webgl = TRUE))$x$data,
-    function(d) d$type %||% "", character(1))
+  types_svg <- vapply(
+    plotly::plotly_build(plot(sim, webgl = TRUE))$x$data,
+    function(d) d$type %||% "", character(1)
+  )
   expect_true(any(types_svg == "scattergl"))
-
 })
-

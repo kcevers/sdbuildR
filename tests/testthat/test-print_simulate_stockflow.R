@@ -11,7 +11,7 @@ test_that("print.simulate_stockflow() snapshot: successful simulation", {
 })
 
 test_that("print.simulate_stockflow() snapshot: named model", {
-  sfm <- stockflow("SIR") |> meta(name = "My SIR Model")
+  sfm <- stockflow("sir") |> meta(name = "My SIR Model")
   sim <- silence(simulate(sfm))
   expect_snapshot(print(sim))
 })

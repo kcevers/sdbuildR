@@ -20,7 +20,7 @@
 #' # Only if dependencies are installed
 #' if (requireNamespace("DiagrammeRsvg", quietly = TRUE) &&
 #'   requireNamespace("rsvg", quietly = TRUE)) {
-#'   sfm <- stockflow("SIR")
+#'   sfm <- stockflow("sir")
 #'   file <- tempfile(fileext = ".png")
 #'   export_plot(plot(sfm), file)
 #'
@@ -246,7 +246,7 @@ export_plotly <- function(pl, file, format, width, height) {
 #' @seealso [import_insightmaker()], [stockflow()], [plot.simulate_stockflow()]
 #'
 #' @examples
-#' sfm <- stockflow("SIR")
+#' sfm <- stockflow("sir")
 #' plot(sfm)
 #'
 #' # Don't show constants or auxiliaries
@@ -893,7 +893,7 @@ plot.stockflow <- function(x,
 #'
 prep_plot <- function(
   object, type_sim, df, constants,
-  show_constants, vars, palette, colors, wrap_width
+  show_constants, vars, palette, colors, line_width = NULL, wrap_width
 ) {
   # Get names of stocks and non-stock variables
   names_df <- get_names(object)
@@ -986,15 +986,26 @@ prep_plot <- function(
 
   # Generate colors
   nr_var <- length(unique(df[["variable"]]))
+  plot_labels <- c(names(highlight_names), names(nonhighlight_names))
+  preserve_color_names <- !is.null(colors) && !is.null(names(colors)) && all(plot_labels %in% names(colors))
+  if (preserve_color_names) {
+    colors <- colors[plot_labels]
+  }
   colors <- generate_colors(nr_var, colors = colors, palette = palette)
-  colors <- stats::setNames(colors, c(names(highlight_names), names(nonhighlight_names)))
+  colors <- stats::setNames(colors, plot_labels)
+  attr(colors, "sdbuildR_preserve_names") <- preserve_color_names
+
+  # Resolve line widths, keyed by label like colors (highlight then nonhighlight)
+  line_width <- generate_line_width(nr_var, line_width = line_width)
+  line_width <- stats::setNames(line_width, plot_labels)
 
   list(
     highlight_names = highlight_names,
     nonhighlight_names = nonhighlight_names,
     df_highlight = df_highlight,
     df_nonhighlight = df_nonhighlight,
-    colors = colors
+    colors = colors,
+    line_width = line_width
   )
 }
 
@@ -1004,10 +1015,11 @@ prep_plot <- function(
 #' Visualize simulation results of a stock-and-flow model. Plot the evolution of stocks over time, with the option of also showing other model variables.
 #'
 #' @param x Output of [`simulate()`][simulate.stockflow()].
-#' @param show_constants If TRUE, include constants in plot. Defaults to FALSE.
-#' @param vars Variables to plot. Defaults to NULL to plot all variables.
+#' @param show_constants If `TRUE`, include constants in plot. Defaults to `FALSE`.
+#' @param vars Variables to plot. Defaults to `NULL` to plot all variables.
 #' @param palette Colour palette. Must be one of hcl.pals().
-#' @param colors Vector of colours. If NULL, the color palette will be used. If specified, will override palette. The number of colours must be equal to the number of variables in the simulation data frame. Defaults to NULL.
+#' @param colors Vector of colours. If `NULL`, the color palette will be used. If specified, will override palette. The number of colours must be equal to the number of variables in the simulation data frame. Defaults to `NULL`.
+#' @param line_width Line width of the plotted trajectories. Either a single value applied to all variables, or a vector with one value per variable (like `colors`). Defaults to `2`.
 #' @param font_family Font family. Defaults to "Times New Roman".
 #' @param font_size Font size. Defaults to 16.
 #' @param wrap_width Width of text wrapping for labels. Must be an integer. Defaults to 25.
@@ -1028,7 +1040,7 @@ prep_plot <- function(
 #' @method plot simulate_stockflow
 #'
 #' @examples
-#' sfm <- stockflow("SIR")
+#' sfm <- stockflow("sir")
 #' sim <- simulate(sfm)
 #' plot(sim)
 #'
@@ -1046,6 +1058,7 @@ plot.simulate_stockflow <- function(x,
                                     vars = NULL,
                                     palette = "Dark 2",
                                     colors = NULL,
+                                    line_width = 2,
                                     font_family = "Times New Roman",
                                     font_size = 16,
                                     wrap_width = 25,
@@ -1080,6 +1093,7 @@ plot.simulate_stockflow <- function(x,
     vars = vars,
     palette = palette,
     colors = colors,
+    line_width = line_width,
     font_family = font_family,
     font_size = font_size,
     wrap_width = wrap_width,
@@ -1101,13 +1115,14 @@ plot.simulate_stockflow <- function(x,
 
   out <- prep_plot(
     x[["object"]], "sim", x[["df"]], x[["constants"]], show_constants,
-    vars, palette, colors, wrap_width
+    vars, palette, colors, line_width, wrap_width
   )
   highlight_names <- out[["highlight_names"]]
   nonhighlight_names <- out[["nonhighlight_names"]]
   df_highlight <- out[["df_highlight"]]
   df_nonhighlight <- out[["df_nonhighlight"]]
   colors <- out[["colors"]]
+  line_width <- out[["line_width"]]
 
   # For time animation, cumulatively reveal each trajectory frame by frame.
   if (animation == "time") {
@@ -1129,6 +1144,7 @@ plot.simulate_stockflow <- function(x,
     df_highlight = df_highlight,
     df_nonhighlight = df_nonhighlight,
     colors = colors,
+    line_width = line_width,
     x_col = "time",
     y_col = "value",
     showlegend = showlegend,
@@ -1190,7 +1206,7 @@ plot.simulate_stockflow <- function(x,
 #' @param x Output of [ensemble()].
 #' @param which Type of plot. Either `"summary"` for a summary plot with mean or median lines and confidence intervals, or `"sims"` for individual simulation trajectories with mean or median lines. Defaults to `"summary"`.
 #' @param sim Indices of the individual trajectories to plot if which = `"sims"`. Defaults to 1:10. Including a high number of trajectories will slow down plotting considerably.
-#' @param condition Indices of the condition to plot. Defaults to 1:9. If only one condition is specified, the plot will not be a grid of subplots.
+#' @param condition Indices of the condition(s) to plot. Defaults to 1:9.
 #' @param nrows Number of rows in the plot grid. Defaults to ceiling(sqrt(n_conditions)).
 #' @param margin Margin between subplots. Either a single numeric or a vector of length four(left, right, top, bottom). See `?plotly::subplot()` for more details. Defaults to 0.05.
 #' @param shareX If `TRUE`, share the x-axis across subplots. Defaults to `TRUE`.
@@ -1203,12 +1219,27 @@ plot.simulate_stockflow <- function(x,
 #' @param wrap_width Width of text wrapping for labels. Must be an integer. Defaults to 25.
 #' @param showlegend Whether to show legend. Must be TRUE or FALSE. Defaults to TRUE.
 #' @param label_subplots Whether to plot labels indicating the condition of the subplot.
-#' @param central_tendency Central tendency to use for the mean line. Either "mean", "median", or "none" to not plot the central tendency. Defaults to "mean".
-#' @param central_tendency_width Line width of central tendency. Defaults to 3.
+#' @param central Which central-tendency line to draw, given as preferences in
+#'   order: the first one that [ensemble()] computed is used. For example,
+#'   `c("mean", "median")` draws the mean if it is available, otherwise the
+#'   median, and `"none"` draws no line. Defaults to `c("mean", "median",
+#'   "none")`.
+#' @param spread Which uncertainty band to draw, again as ordered preferences:
+#'   `"quantile"` (between the lowest and highest quantile), `"sd"` (the central
+#'   line plus/minus one standard deviation), `"range"` (between `min` and
+#'   `max`), or `"none"`. The first band the computed statistics can support is
+#'   used; `"sd"` also needs a central line. Defaults to `c("quantile", "sd",
+#'   "range")`.
+#' @param central_line_width Line width of the central tendency line (and marker size for single time points). Either a single value applied to all variables, or a vector with one value per variable (like `line_width`). Defaults to 3.
 #' @param condition_display How to display multiple conditions. Use `"subplots"`
 #'   to show conditions as panels, `"slider"` to select one condition with a
 #'   slider, or `"dropdown"` to select one condition with a dropdown. Defaults
 #'   to `"subplots"`.
+#' @param control_options Named list fine-tuning the `"slider"`/`"dropdown"`
+#'   condition control. Currently supports `max_labels`: the maximum number of
+#'   slider tick labels to keep visible when many conditions are varied (the
+#'   slider always keeps one step per condition; intermediate labels are thinned
+#'   above this count). Defaults to `list(max_labels = 10)`.
 #' @param animation Animation mode. Use `"none"` for a static plot or `"time"`
 #'   to cumulatively reveal trajectories over time. Defaults to `"none"`.
 #'   Time animation requires `which = "sims"` (confidence ribbons cannot be
@@ -1236,20 +1267,24 @@ plot.ensemble_stockflow <- function(x,
                                     palette = "Dark 2",
                                     alpha = 0.3,
                                     colors = NULL,
+                                    line_width = 2,
                                     font_family = "Times New Roman",
                                     font_size = 16,
                                     wrap_width = 25,
                                     showlegend = TRUE,
                                     label_subplots = TRUE,
-                                    central_tendency = c("mean", "median", "none")[1],
-                                    central_tendency_width = 3,
+                                    central = c("mean", "median", "none"),
+                                    spread = c("quantile", "sd", "range"),
+                                    central_line_width = 3,
                                     condition_display = c("subplots", "slider", "dropdown"),
+                                    control_options = list(),
                                     animation = c("none", "time"),
                                     webgl = getOption("sdbuildR.webgl", default = TRUE),
                                     ...) {
   check_ensemble_stockflow(x)
 
   condition_display <- .clean_condition_display(condition_display)
+  control_options <- resolve_control_options(control_options)
   animation <- .clean_animation(animation)
 
   if (animation == "time" && condition_display != "subplots") {
@@ -1265,6 +1300,8 @@ plot.ensemble_stockflow <- function(x,
     vars = vars,
     palette = palette,
     colors = colors,
+    line_width = line_width,
+    central_line_width = central_line_width,
     alpha = alpha,
     font_family = font_family,
     font_size = font_size,
@@ -1284,33 +1321,88 @@ plot.ensemble_stockflow <- function(x,
     ))
   }
 
-  # Check central tendency
-  # Normalize legacy FALSE to "none" for internal handling
-  if (isFALSE(central_tendency)) {
-    central_tendency <- "none"
-  }
-  central_tendency <- trimws(tolower(central_tendency))
-  if (!central_tendency %in% c("mean", "median", "none")) {
-    cli::cli_abort(c(
-      "x" = "Invalid {.arg central_tendency} value.",
-      "i" = "The {.arg central_tendency} argument must be {.code 'mean'}, {.code 'median'}, or {.code 'none'}."
-    ))
-  }
-
   # Get passed arguments
   passed_arg <- names(as.list(match.call())[-1])
 
   dots <- list(...)
 
-  # Build default subtitle based on plot type and central tendency
+  # Internal helpers still use the historical `line_width_central_tendency` name.
+  line_width_central_tendency <- central_line_width
+
+  # Resolve the central tendency and spread choices against the statistics that
+  # are actually present in the ensemble summary. Both arguments are preference
+  # vectors: the first available option wins, otherwise we fall back to "none".
+  summary_cols <- names(x[["summary"]])
+
+  if (isFALSE(central)) central <- "none"
+  # Lenient matching: accept e.g. "medians" or "Mean" for "median"/"mean".
+  central <- normalize_synonyms(central, central_synonyms)
+  invalid_central <- setdiff(central, c("mean", "median", "none"))
+  if (length(invalid_central) > 0) {
+    cli::cli_abort(c(
+      "x" = "Invalid {.arg central} value{?s}: {.val {invalid_central}}.",
+      "i" = "{.arg central} must be one or more of {.code 'mean'}, {.code 'median'}, or {.code 'none'}."
+    ))
+  }
+  # Lenient matching: accept e.g. "quantiles" or "SDs" for "quantile"/"sd".
+  spread <- normalize_synonyms(spread, spread_synonyms)
+  invalid_spread <- setdiff(spread, c("quantile", "sd", "range", "none"))
+  if (length(invalid_spread) > 0) {
+    cli::cli_abort(c(
+      "x" = "Invalid {.arg spread} value{?s}: {.val {invalid_spread}}.",
+      "i" = "{.arg spread} must be one or more of {.code 'quantile'}, {.code 'sd'}, {.code 'range'}, or {.code 'none'}."
+    ))
+  }
+
+  central_avail <- intersect(c("mean", "median"), summary_cols)
+  central_tendency <- resolve_summary_choice(central, central_avail)
+  if (central_tendency == "none" && !("none" %in% central)) {
+    cli::cli_warn(c(
+      "!" = "None of the requested {.arg central} statistics are saved in the ensemble summary.",
+      "i" = "Saved central statistics: {.val {central_avail}}.",
+      ">" = "Re-run {.fn ensemble} with {.code central = 
+      {.val {central}}}."
+    ))
+  }
+
+  quant_cols <- grep("^quant[0-9]+$", summary_cols, value = TRUE)
+  spread_avail <- character(0)
+  if (length(quant_cols) > 0) spread_avail <- c(spread_avail, "quantile")
+  if ("sd" %in% summary_cols && central_tendency != "none") {
+    spread_avail <- c(spread_avail, "sd")
+  }
+  if (all(c("min", "max") %in% summary_cols)) {
+    spread_avail <- c(spread_avail, "range")
+  }
+  spread_resolved <- resolve_summary_choice(spread, spread_avail)
+  if (spread_resolved == "none" && !("none" %in% spread)) {
+    cli::cli_warn(c(
+      "!" = "None of the requested {.arg spread} options are saved in the ensemble summary.",
+      "i" = "Saved spread options: {.val {spread_avail}}.",
+      # "i" = "{.code 'quantile'} needs quantile columns; {.code 'sd'} needs the {.field sd} statistic and a central line; {.code 'range'} needs the {.field min} and {.field max} statistics.",
+      ">" = "Re-run {.fn ensemble} with {.code spread = 
+      {.val {spread}}}."
+    ))
+  }
+
+  # Build default subtitle based on plot type, central tendency and spread
+  band_txt <- if (spread_resolved == "quantile") {
+    paste0("[", min(x[["quantiles"]]), ", ", max(x[["quantiles"]]), "] confidence interval")
+  } else if (spread_resolved == "sd") {
+    "+/- 1 SD band"
+  } else if (spread_resolved == "range") {
+    "min-max range"
+  } else {
+    ""
+  }
   default_sub <- if (which == "summary") {
+    lead <- paste(c(
+      if (central_tendency != "none") title_case_ascii(central_tendency) else NULL,
+      if (nzchar(band_txt)) band_txt else NULL
+    ), collapse = " with ")
     paste0(
-      ifelse(central_tendency == "none", "",
-        paste0(title_case_ascii(central_tendency), " with ")
-      ), "[",
-      min(x[["quantiles"]]), ", ", max(x[["quantiles"]]),
-      "] confidence interval of ", x[["n"]], " simulation",
-      ifelse(x[["n"]] == 1, "", "s")
+      if (nzchar(lead)) paste0(lead, " of ") else "",
+      x[["n"]], " simulation", ifelse(x[["n"]] == 1, "", "s")
     )
   } else if (which == "sims") {
     paste0(
@@ -1351,6 +1443,15 @@ plot.ensemble_stockflow <- function(x,
   # Validate condition index
   if ("condition" %in% passed_arg) {
     .check_condition_index(condition, x[["n_conditions"]])
+  }
+
+  # For a single-figure condition control, expose every condition. The default
+  # `condition` is capped at 9 for readable subplot grids, which is irrelevant
+  # when conditions are selected one at a time (and would break the per-
+  # parameter cross-product for larger crossed designs).
+  if (condition_display %in% c("slider", "dropdown") &&
+    !("condition" %in% passed_arg)) {
+    condition <- seq_len(x[["n_conditions"]])
   }
 
   # Filter to the selected condition(s). This is a no-op for the default (all
@@ -1406,16 +1507,19 @@ plot.ensemble_stockflow <- function(x,
   # Prepare for plotting
   out <- prep_plot(x[["object"]], "ensemble", summary_df,
     constants = x[["constants"]][["summary"]], show_constants = show_constants,
-    vars = vars, palette = palette, colors = colors, wrap_width = wrap_width
+    vars = vars, palette = palette, colors = colors, line_width = line_width,
+    wrap_width = wrap_width
   )
   summary_df_highlight <- out[["df_highlight"]]
   summary_df_nonhighlight <- out[["df_nonhighlight"]]
   colors <- out[["colors"]]
+  line_width <- out[["line_width"]]
 
   if (which == "sims") {
     out <- prep_plot(x[["object"]], "ensemble", df,
       constants = x[["constants"]][["df"]], show_constants = show_constants,
-      vars = vars, palette = palette, colors = colors, wrap_width = wrap_width
+      vars = vars, palette = palette, colors = colors, line_width = line_width,
+      wrap_width = wrap_width
     )
     df_highlight <- out[["df_highlight"]]
     df_nonhighlight <- out[["df_nonhighlight"]]
@@ -1439,11 +1543,37 @@ plot.ensemble_stockflow <- function(x,
   # Whether to replace the subplot grid with a single condition selector.
   condition_control <- condition_display %in% c("slider", "dropdown")
 
-  # Find qlow and qhigh
-  q_cols <- colnames(summary_df)[grepl("^q", colnames(summary_df))]
-  q_num <- as.numeric(gsub("^q", "", q_cols))
-  q_low <- q_cols[which.min(q_num)]
-  q_high <- q_cols[which.max(q_num)]
+  # Resolve the band bounds based on the spread choice. `q_low`/`q_high` are the
+  # column names the helper draws the band from; NULL means no band.
+  if (spread_resolved == "quantile") {
+    # quant{i} corresponds to x[["quantiles"]][i]; pick lowest & highest prob.
+    probs <- x[["quantiles"]]
+    qi <- as.integer(sub("^quant", "", quant_cols))
+    ord <- order(probs[qi])
+    q_low <- quant_cols[ord[1]]
+    q_high <- quant_cols[ord[length(ord)]]
+  } else if (spread_resolved == "sd") {
+    # Build a symmetric central +/- sd band as explicit columns.
+    add_sd_band <- function(d) {
+      if (is.null(d) || nrow(d) == 0) {
+        return(d)
+      }
+      d[[".band_low"]] <- d[[central_tendency]] - d[["sd"]]
+      d[[".band_high"]] <- d[[central_tendency]] + d[["sd"]]
+      d
+    }
+    summary_df_highlight <- add_sd_band(summary_df_highlight)
+    summary_df_nonhighlight <- add_sd_band(summary_df_nonhighlight)
+    q_low <- ".band_low"
+    q_high <- ".band_high"
+  } else if (spread_resolved == "range") {
+    # Band spans the min and max statistics directly.
+    q_low <- "min"
+    q_high <- "max"
+  } else {
+    q_low <- NULL
+    q_high <- NULL
+  }
 
   # Check whether there are multiple time points
   mode <- ifelse(length(unique(summary_df[["time"]])) == 1, "markers", "lines")
@@ -1471,11 +1601,12 @@ plot.ensemble_stockflow <- function(x,
         df_highlight = get_cond(hl_by, j_name, df_highlight),
         df_nonhighlight = get_cond(nhl_by, j_name, df_nonhighlight),
         central_tendency = central_tendency,
-        central_tendency_width = central_tendency_width,
+        line_width_central_tendency = line_width_central_tendency,
         q_low = q_low,
         q_high = q_high,
         mode = mode,
         colors = colors,
+        line_width = line_width,
         showlegend = showlegend,
         dots = dots,
         main = main,
@@ -1493,14 +1624,19 @@ plot.ensemble_stockflow <- function(x,
       font_family = font_family, font_size = font_size, margin_t = 100
     )
 
+    cond_tbl <- condition_param_table(x[["conditions"]])
     pl <- assemble_condition_control_plot(
       pl_list,
       condition_ids = condition,
       type = condition_display,
-      labels = paste0("Condition ", condition),
+      labels = ensemble_condition_labels(cond_tbl, x[["object"]], condition),
       theme = control_theme,
       main = main, xlab = xlab, ylab = ylab,
-      font_family = font_family, font_size = font_size
+      font_family = font_family, font_size = font_size,
+      condition_table = cond_tbl,
+      cross = isTRUE(x[["cross"]]),
+      object = x[["object"]],
+      max_labels = control_options[["max_labels"]]
     )
   } else if (!create_subplots) {
     j_idx <- 1
@@ -1514,11 +1650,12 @@ plot.ensemble_stockflow <- function(x,
       df_highlight = df_highlight,
       df_nonhighlight = df_nonhighlight,
       central_tendency = central_tendency,
-      central_tendency_width = central_tendency_width,
+      line_width_central_tendency = line_width_central_tendency,
       q_low = q_low,
       q_high = q_high,
       mode = mode,
       colors = colors,
+      line_width = line_width,
       showlegend = showlegend,
       dots = dots,
       main = main,
@@ -1552,11 +1689,12 @@ plot.ensemble_stockflow <- function(x,
         df_highlight = get_cond(hl_by, j_name, df_highlight),
         df_nonhighlight = get_cond(nhl_by, j_name, df_nonhighlight),
         central_tendency = central_tendency,
-        central_tendency_width = central_tendency_width,
+        line_width_central_tendency = line_width_central_tendency,
         q_low = q_low,
         q_high = q_high,
         mode = mode,
         colors = colors,
+        line_width = line_width,
         # Only show legend if it's the last subplot
         showlegend = ifelse(j_idx != length(condition), FALSE, showlegend),
         dots = dots,
@@ -1750,6 +1888,7 @@ get_cond <- function(lst, key, template) {
 #' @param q_high Column name for the upper bound of the confidence interval (e.g., "q0.975").
 #' @param mode Plotting mode. Either "lines" if there are multiple time points or "markers" for a single time point.
 #' @param colors Vector of colours. If NULL, the color palette will be used. If specified, will override palette. The number of colours must be equal to the number of variables in the simulation data frame. Defaults to NULL.
+#' @param line_width Line width of individual trajectories. Either a single value, a named per-variable vector (keyed by label), or NULL for the default.
 #' @param dots List of additional parameters passed to the plotly functions.
 #' @param main Main title of the plot. Defaults to the name of the stock-and-flow model and the number of simulations.
 #' @param xlab Label on x-axis.
@@ -1768,10 +1907,10 @@ plot_ensemble_helper <- function(subplot_label,
                                  df_highlight,
                                  df_nonhighlight,
                                  central_tendency,
-                                 central_tendency_width,
+                                 line_width_central_tendency,
                                  q_low, q_high,
                                  mode,
-                                 colors, showlegend, dots,
+                                 colors, line_width = NULL, showlegend, dots,
                                  main, xlab, ylab,
                                  font_family, font_size, alpha, theme,
                                  frame = NULL, webgl = TRUE) {
@@ -1794,12 +1933,50 @@ plot_ensemble_helper <- function(subplot_label,
 
   nr_var <- length(colors)
 
+  # Resolve per-variable line widths keyed like colors. line_width may arrive as
+  # a named per-variable vector (from prep_plot), a single value, or NULL.
+  if (is.null(line_width)) {
+    lw <- stats::setNames(generate_line_width(nr_var), names(colors))
+  } else if (!is.null(names(line_width))) {
+    lw <- line_width
+  } else {
+    lw <- stats::setNames(generate_line_width(nr_var, line_width = line_width), names(colors))
+  }
+
+  # Resolve per-variable central-tendency line widths the same way. Unlike
+  # line_width, this arrives unkeyed (a single value or a user-ordered vector),
+  # so it is keyed to the same label order as colors here.
+  if (!is.null(line_width_central_tendency) && !is.null(names(line_width_central_tendency))) {
+    lw_ct <- line_width_central_tendency
+  } else {
+    lw_ct <- stats::setNames(
+      generate_line_width(nr_var,
+        line_width = line_width_central_tendency, default = 3,
+        arg = "central_line_width"
+      ),
+      names(colors)
+    )
+  }
+  ct_uniform <- length(unique(unname(lw_ct))) == 1L
+
+  # The uniform fast path maps colours via plotly's `color = ~variable` aesthetic
+  # and `colors =` palette. That palette is silently dropped (plotly falls back to
+  # its default colourway) when the figure already contains traces with an
+  # explicit `line$color` and no colour aesthetic -- which is exactly the case in
+  # `which = "sims"`, where individual trajectories are drawn with explicit rgba
+  # colours. When such traces are present we must therefore colour the central
+  # tendency traces explicitly too, so the legend matches the trajectories.
+  explicit_color_traces <- which == "sims"
+
   # Initialize plotly object
   pl <- plotly::plot_ly()
 
   if (which == "summary") {
-    if (mode == "lines") {
-      # Confidence bands: nonhighlight (visible = "legendonly") then highlight (visible = TRUE)
+    # q_low/q_high are NULL when no spread band was requested/available.
+    if (mode == "lines" && !is.null(q_low)) {
+      # Confidence bands: nonhighlight (visible = "legendonly") then highlight (visible = TRUE).
+      # No legend entry: the band shares legendgroup = ~variable with the central
+      # tendency trace, which already carries the legend and toggles both together.
       pl <- avp(pl, plotly::add_ribbons,
         data_nonhighlight = summary_df_nonhighlight,
         data_highlight = summary_df_highlight,
@@ -1815,7 +1992,7 @@ plot_ensemble_helper <- function(subplot_label,
         type = "scatter",
         mode = mode,
         colors = colors,
-        showlegend = showlegend
+        showlegend = FALSE
       )
     }
   } else if (which == "sims") {
@@ -1860,7 +2037,10 @@ plot_ensemble_helper <- function(subplot_label,
           legendgroup = v,
           type = trace_type,
           mode = mode,
-          line = list(color = grDevices::adjustcolor(colors[[v]], alpha.f = alpha)),
+          line = list(
+            color = grDevices::adjustcolor(colors[[v]], alpha.f = alpha),
+            width = unname(lw[[v]])
+          ),
           showlegend = sim_showlegend,
           visible = visible
         )
@@ -1884,79 +2064,130 @@ plot_ensemble_helper <- function(subplot_label,
     }
   }
 
-  # When central_tendency = "none", we still want a legend
+  # When central_tendency = "none", we still want a legend. Draw an invisible
+  # central trace from a synthetic column (self-contained, so it works even when
+  # no mean/median statistic is present in the summary).
   if (central_tendency == "none" && plot_summary) {
-    # Overwrite with default
-    central_tendency <- "mean"
-
-    # Same trick does not work for mode == "markers" to not plot central_tendency
-    if (mode == "markers") {
-      # When mode == "markers" and the only value available is Infinity, no trace is plotted but the legend still shows up, which is exactly what we want when central_tendency is "none"
-
-      summary_df_highlight[[central_tendency]] <- Inf
-      summary_df_nonhighlight[[central_tendency]] <- Inf
-    } else if (mode == "lines") {
-      # When only one time point is available and mode == "lines", no trace is plotted but the legend still shows up, which is exactly what we want when central_tendency is "none"
-      summary_df_highlight <- summary_df_highlight[summary_df_highlight[["time"]] == summary_df_highlight[["time"]][1], ]
-      summary_df_nonhighlight <- summary_df_nonhighlight[summary_df_nonhighlight[["time"]] == summary_df_nonhighlight[["time"]][1], ]
+    # Prefer an existing mean/median column for the invisible legend trace, so
+    # behaviour (and snapshots) match the historical default; only synthesise a
+    # column when the summary has no central statistic at all.
+    avail_ct <- intersect(c("mean", "median"), colnames(summary_df_highlight))
+    if (length(avail_ct) == 0) {
+      avail_ct <- intersect(c("mean", "median"), colnames(summary_df_nonhighlight))
     }
+    central_tendency <- if (length(avail_ct) > 0) avail_ct[1] else ".ct_legend"
+
+    if (mode == "markers") {
+      # An all-Infinity value plots no marker, but the legend still shows up.
+      summary_df_highlight[[central_tendency]] <- rep(Inf, nrow(summary_df_highlight))
+      summary_df_nonhighlight[[central_tendency]] <- rep(Inf, nrow(summary_df_nonhighlight))
+    } else if (mode == "lines") {
+      # A single time point plots no line, but the legend still shows up.
+      summary_df_highlight <- summary_df_highlight[summary_df_highlight[["time"]] == summary_df_highlight[["time"]][1], , drop = FALSE]
+      summary_df_nonhighlight <- summary_df_nonhighlight[summary_df_nonhighlight[["time"]] == summary_df_nonhighlight[["time"]][1], , drop = FALSE]
+      if (central_tendency == ".ct_legend") {
+        summary_df_highlight[[central_tendency]] <- rep(Inf, nrow(summary_df_highlight))
+        summary_df_nonhighlight[[central_tendency]] <- rep(Inf, nrow(summary_df_nonhighlight))
+      }
+    }
+  }
+
+  # Add the central-tendency trace(s) for one summary data frame at a given
+  # visibility. When all widths are equal, a single colour-mapped trace per
+  # visibility suffices (identical to before); when they differ -- or when
+  # explicit-colour trajectories are present and would break plotly's palette
+  # resolution -- one trace per variable is added so each carries its own
+  # explicit colour and line width / marker size.
+  add_ct_one <- function(pl, data, visible_val, extra_uniform, extra_by_var) {
+    if (is.null(data) || nrow(data) == 0) {
+      return(pl)
+    }
+    if (ct_uniform && !explicit_color_traces) {
+      args <- c(
+        list(pl,
+          data = data, x = ~time, y = ~ get(central_tendency),
+          color = ~variable, legendgroup = ~variable, type = "scatter",
+          mode = mode, colors = colors, showlegend = showlegend
+        ),
+        extra_uniform
+      )
+      # Match the historical key order (extras and frame before visible) so
+      # uniform-width plots produce byte-identical output to the previous code.
+      if (!is.null(frame)) args[["frame"]] <- frame
+      args[["visible"]] <- visible_val
+      return(do.call(plotly::add_trace, args))
+    }
+    for (v in levels(droplevels(data[["variable"]]))) {
+      dv <- data[data[["variable"]] == v, , drop = FALSE]
+      if (nrow(dv) == 0) next
+      args <- c(
+        list(pl,
+          data = dv, x = ~time, y = ~ get(central_tendency),
+          name = v, legendgroup = v, type = "scatter", mode = mode,
+          showlegend = showlegend
+        ),
+        extra_by_var(v, dv)
+      )
+      if (!is.null(frame)) args[["frame"]] <- frame
+      args[["visible"]] <- visible_val
+      pl <- do.call(plotly::add_trace, args)
+    }
+    pl
+  }
+
+  # nonhighlight (visible = "legendonly") then highlight (visible = TRUE)
+  add_ct_pair <- function(pl, extra_uniform, extra_by_var) {
+    if (plot_nonhighlight) {
+      pl <- add_ct_one(pl, summary_df_nonhighlight, "legendonly", extra_uniform, extra_by_var)
+    }
+    if (plot_highlight) {
+      pl <- add_ct_one(pl, summary_df_highlight, TRUE, extra_uniform, extra_by_var)
+    }
+    pl
   }
 
   # Plot mean/median points/lines
   if (plot_summary) {
     if (mode == "lines") {
-      pl <- avp(pl, plotly::add_trace,
-        data_nonhighlight = summary_df_nonhighlight,
-        data_highlight = summary_df_highlight,
-        plot_nonhighlight = plot_nonhighlight,
-        plot_highlight = plot_highlight,
-        x = ~time,
-        y = ~ get(central_tendency),
-        color = ~variable,
-        legendgroup = ~variable,
-        type = "scatter",
-        mode = mode,
-        colors = colors,
-        showlegend = showlegend,
-        line = list(width = central_tendency_width) # thicker line for mean
+      pl <- add_ct_pair(pl,
+        extra_uniform = list(line = list(width = unname(lw_ct)[1])), # thicker line for mean
+        extra_by_var = function(v, dv) {
+          list(line = list(width = unname(lw_ct[v]), color = unname(colors[v])))
+        }
       )
-    } else if (mode == "markers" && which == "summary") {
-      pl <- avp(pl, plotly::add_trace,
-        data_nonhighlight = summary_df_nonhighlight,
-        data_highlight = summary_df_highlight,
-        plot_nonhighlight = plot_nonhighlight,
-        plot_highlight = plot_highlight,
-        x = ~time,
-        y = ~ get(central_tendency),
-        color = ~variable,
-        legendgroup = ~variable,
-        type = "scatter",
-        error_y = ~ list(
-          symmetric = FALSE,
-          arrayminus = get(central_tendency) - get(q_low),
-          array = get(q_high) - get(central_tendency),
-          color = colors
+    } else if (mode == "markers" && which == "summary" && !is.null(q_low)) {
+      pl <- add_ct_pair(pl,
+        extra_uniform = list(
+          error_y = ~ list(
+            symmetric = FALSE,
+            arrayminus = get(central_tendency) - get(q_low),
+            array = get(q_high) - get(central_tendency),
+            color = colors
+          ),
+          marker = list(size = unname(lw_ct)[1] * 3) # bigger marker for mean
         ),
-        mode = mode,
-        colors = colors,
-        showlegend = showlegend,
-        marker = list(size = central_tendency_width * 3) # thicker line for mean
+        # Build error bars from the per-variable subset directly (a formula would
+        # capture `v` by reference and resolve it after the loop has ended).
+        extra_by_var = function(v, dv) {
+          list(
+            error_y = list(
+              symmetric = FALSE,
+              arrayminus = dv[[central_tendency]] - dv[[q_low]],
+              array = dv[[q_high]] - dv[[central_tendency]],
+              color = unname(colors[v])
+            ),
+            marker = list(size = unname(lw_ct[v]) * 3, color = unname(colors[v]))
+          )
+        }
       )
-    } else if (mode == "markers" && which == "sims") {
-      pl <- avp(pl, plotly::add_trace,
-        data_nonhighlight = summary_df_nonhighlight,
-        data_highlight = summary_df_highlight,
-        plot_nonhighlight = plot_nonhighlight,
-        plot_highlight = plot_highlight,
-        x = ~time,
-        y = ~ get(central_tendency),
-        color = ~variable,
-        legendgroup = ~variable,
-        type = "scatter",
-        mode = mode,
-        colors = colors,
-        showlegend = showlegend,
-        marker = list(size = central_tendency_width * 3) # thicker line for mean
+    } else if (mode == "markers") {
+      # Single time point, no error bars: plain markers for sims, or for summary
+      # plots without a spread band.
+      pl <- add_ct_pair(pl,
+        extra_uniform = list(marker = list(size = unname(lw_ct)[1] * 3)), # bigger marker for mean
+        extra_by_var = function(v, dv) {
+          list(marker = list(size = unname(lw_ct[v]) * 3, color = unname(colors[v])))
+        }
       )
     }
   }
@@ -2054,7 +2285,7 @@ plot_ensemble_helper <- function(subplot_label,
 #' @seealso [verify()], [plot.simulate_stockflow()], [plot.ensemble_stockflow()]
 #'
 #' @examples
-#' sfm <- stockflow("SIR") |>
+#' sfm <- stockflow("sir") |>
 #'   unit_test(expr = all(susceptible >= 0))
 #' res <- verify(sfm)
 #' plot(res)
@@ -2078,6 +2309,7 @@ plot.verify_stockflow <- function(x,
                                   shareY = TRUE,
                                   palette = "Dark 2",
                                   colors = NULL,
+                                  line_width = 2,
                                   font_family = "Times New Roman",
                                   font_size = 16,
                                   wrap_width = 25,
@@ -2086,6 +2318,7 @@ plot.verify_stockflow <- function(x,
                                   alpha = 1,
                                   margin = .05,
                                   condition_display = c("subplots", "slider", "dropdown"),
+                                  control_options = list(),
                                   animation = c("none", "time"),
                                   webgl = getOption("sdbuildR.webgl", default = TRUE),
                                   ...) {
@@ -2093,6 +2326,7 @@ plot.verify_stockflow <- function(x,
   check_verify_stockflow(x)
 
   condition_display <- .clean_condition_display(condition_display)
+  control_options <- resolve_control_options(control_options)
   animation <- .clean_animation(animation)
 
   if (animation == "time" && condition_display != "subplots") {
@@ -2108,6 +2342,7 @@ plot.verify_stockflow <- function(x,
     vars = vars,
     palette = palette,
     colors = colors,
+    line_width = line_width,
     alpha = alpha,
     font_family = font_family,
     font_size = font_size,
@@ -2199,11 +2434,13 @@ plot.verify_stockflow <- function(x,
   # Prepare for plotting
   out <- prep_plot(sfm, "verify", df,
     constants = constants, show_constants = show_constants,
-    vars = vars, palette = palette, colors = colors, wrap_width = wrap_width
+    vars = vars, palette = palette, colors = colors, line_width = line_width,
+    wrap_width = wrap_width
   )
   df_highlight <- out[["df_highlight"]]
   df_nonhighlight <- out[["df_nonhighlight"]]
   colors <- out[["colors"]]
+  line_width <- out[["line_width"]]
 
   # For time animation, cumulatively reveal trajectories (see ensemble plot).
   if (animation == "time") {
@@ -2223,7 +2460,7 @@ plot.verify_stockflow <- function(x,
   # Plot
   which <- "sims"
   summary_df_highlight <- summary_df_nonhighlight <- data.frame()
-  central_tendency_width <- q_low <- q_high <- NULL
+  line_width_central_tendency <- q_low <- q_high <- NULL
   central_tendency <- "none"
 
   # Per-subplot theme is invariant across conditions; compute once.
@@ -2246,11 +2483,12 @@ plot.verify_stockflow <- function(x,
         df_highlight = get_cond(hl_by, j_name, df_highlight),
         df_nonhighlight = get_cond(nhl_by, j_name, df_nonhighlight),
         central_tendency = central_tendency,
-        central_tendency_width = central_tendency_width,
+        line_width_central_tendency = line_width_central_tendency,
         q_low = q_low,
         q_high = q_high,
         mode = mode,
         colors = colors,
+        line_width = line_width,
         showlegend = showlegend,
         dots = dots,
         main = main,
@@ -2275,7 +2513,8 @@ plot.verify_stockflow <- function(x,
       labels = make_verify_condition_labels(df, condition_nrs),
       theme = control_theme,
       main = main, xlab = xlab, ylab = ylab,
-      font_family = font_family, font_size = font_size
+      font_family = font_family, font_size = font_size,
+      max_labels = control_options[["max_labels"]]
     )
   } else if (!create_subplots) {
     j_idx <- 1
@@ -2289,11 +2528,12 @@ plot.verify_stockflow <- function(x,
       df_highlight = df_highlight,
       df_nonhighlight = df_nonhighlight,
       central_tendency = central_tendency,
-      central_tendency_width = central_tendency_width,
+      line_width_central_tendency = line_width_central_tendency,
       q_low = q_low,
       q_high = q_high,
       mode = mode,
       colors = colors,
+      line_width = line_width,
       showlegend = showlegend,
       dots = dots,
       main = main,
@@ -2325,11 +2565,12 @@ plot.verify_stockflow <- function(x,
         df_highlight = get_cond(hl_by, j_name, df_highlight),
         df_nonhighlight = get_cond(nhl_by, j_name, df_nonhighlight),
         central_tendency = central_tendency,
-        central_tendency_width = central_tendency_width,
+        line_width_central_tendency = line_width_central_tendency,
         q_low = q_low,
         q_high = q_high,
         mode = mode,
         colors = colors,
+        line_width = line_width,
         # Only show legend if it's the last subplot
         showlegend = ifelse(j_idx != length(condition), FALSE, showlegend),
         dots = dots,

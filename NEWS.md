@@ -1,5 +1,60 @@
 # sdbuildR (development version)
 
+* `ensemble()` chooses which summary statistics to compute via `central` and
+  `spread`, mirroring the vocabulary of `plot.ensemble_stockflow()`. `central` is
+  one or more of `"mean"`, `"median"`, or `"none"`; `spread` is one or more of
+  `"quantile"` (quantile columns at the probabilities given by `quantiles`),
+  `"sd"`, `"range"` (returned as `min`/`max` columns), or `"none"`. Unlike in
+  `plot()`, here they are the *set* of statistics to compute (each becomes a
+  column), not a preference order. A `missing_count` column is now always
+  returned. `central`, `spread`, and `quantiles` can also be set on the model via
+  `sim_settings()`; passing them to `ensemble()` overrides the model's settings
+  for that call. *Breaking:* this replaces the short-lived `summary_stats`
+  argument; quantile columns are named `quant1`, `quant2`, ... (in the order of
+  `quantiles`; the probabilities are stored in the object's `quantiles` field).
+  Both accept lenient spellings (e.g. `"Medians"`, `"SDs"`, `"min-max"`).
+
+* `plot.ensemble_stockflow()` gains `central` and `spread` arguments, each a
+  preference vector. `central` (`"mean"`, `"median"`, `"none"`) picks the central
+  line and `spread` (`"quantile"`, `"sd"`, `"range"`, `"none"`) picks the
+  uncertainty band; the first option whose statistics are present in the summary
+  is used, otherwise it falls back gracefully. `central` replaces the previous
+  `central_tendency` argument. Both accept lenient spellings (e.g. `"Medians"`,
+  `"SDs"`).
+
+* Fixed a bug in `plot.ensemble_stockflow(which = "sims")` where the legend
+  swatches did not match the trajectory colours: the legend-carrying central
+  tendency traces were coloured via plotly's palette, which plotly silently
+  dropped (falling back to its default colourway) because the explicitly-coloured
+  trajectory traces were already present. The central tendency traces are now
+  coloured explicitly so the legend always matches the trajectories.
+
+* Fixed a bug where `simulate()` with `language = "julia"` ignored the `seed` set
+  via `sim_settings()`, so models with random elements were not reproducible.
+  Seeded Julia simulations are now reproducible, matching the R backend and the
+  existing behaviour of `ensemble()`.
+
+* The `plot()` methods for `simulate_stockflow`, `ensemble_stockflow`, and
+  `verify_stockflow` results gain a `line_width` argument controlling the width
+  of the plotted trajectories. It accepts either a single value applied to all
+  variables, or a vector with one value per variable (mirroring `colors`).
+  Defaults to `2`.
+
+* In `plot.ensemble_stockflow()`, the `central_tendency_width` argument has been
+  renamed to `central_line_width` and now also accepts a vector with one
+  value per variable (like `line_width`), in addition to a single value.
+
+* The `as.data.frame()` methods for `simulate_stockflow`, `ensemble_stockflow`,
+  and `verify_stockflow` results can now subset their output by variable with
+  `vars` and by variable type with `type`, matching `as.data.frame.stockflow()`
+  and `plot()`. For consistency, the selection argument is now called `vars`
+  everywhere (in both `as.data.frame()` and `plot()`); `name` remains reserved
+  for the model-editing functions (`update()`, `stock()`, `flow()`, ...). The
+  `name` argument of `as.data.frame.stockflow()` has been renamed to `vars`.
+
+* Requesting a variable that exists in the model but was not saved in the output
+  now raises a clear, actionable error (re-run with `only_stocks = FALSE`, or set
+  `vars` in `sim_settings()`), instead of a generic message.
 
 * `plot.stockflow()` gains three layout-control arguments. `direction` sets the
   overall flow direction (`"LR"`, `"TB"`, `"RL"`, or `"BT"`; default `"LR"`).
@@ -45,7 +100,17 @@
 * `plot.ensemble_stockflow()` and `plot.verify_stockflow()` gain a
   `condition_display` argument. In addition to the default `"subplots"`, use
   `"slider"` or `"dropdown"` to show one condition/test at a time and select it
-  interactively.
+  interactively. These controls now (a) draw only one condition's traces and
+  swap the data client-side, so they stay fast and compact even for ensembles
+  with many conditions; (b) label each condition with its parameter values; and
+  (c) for a crossed ensemble (`cross = TRUE`) with two or more parameters, show
+  one control per parameter instead of a single condition selector. The
+  interactive controls are self-contained and require no running R session, so
+  they work in static HTML (e.g. pkgdown articles and Quarto slides).
+
+## Bug fixes
+
+* Fixed `citation("sdbuildR")` to report the package's release year and version number without the developmental suffix.
 
 # sdbuildR 2.0.0
 

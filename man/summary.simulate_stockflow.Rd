@@ -19,7 +19,7 @@ Returns a data frame with per-variable summary statistics (min, mean, max,
 and final value) over the simulated time range.
 }
 \examples{
-sfm <- stockflow("SIR")
+sfm <- stockflow("sir")
 sim <- simulate(sfm)
 summary(sim)
 

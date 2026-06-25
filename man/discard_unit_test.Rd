@@ -25,7 +25,7 @@ Remove one or more unit tests by \code{test} (integer position as shown by
 not found. Remaining tests are renumbered sequentially after removal.
 }
 \examples{
-sfm <- stockflow("SIR") |>
+sfm <- stockflow("sir") |>
   unit_test(label = "susceptible is non-negative", expr = all(susceptible >= 0)) |>
   unit_test(label = "recovered increases", expr = all(diff(recovered) >= 0))
 

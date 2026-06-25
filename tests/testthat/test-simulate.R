@@ -159,7 +159,7 @@ test_that("simulate() with graphical function dependency", {
 })
 
 test_that("simulate() filters output to vars", {
-  sfm <- stockflow("SIR") |>
+  sfm <- stockflow("sir") |>
     sim_settings(language = "R", vars = c("susceptible", "new_infections"))
 
   sim <- simulate(sfm)
@@ -168,7 +168,7 @@ test_that("simulate() filters output to vars", {
 })
 
 test_that("simulate() vars overrides only_stocks", {
-  sfm <- stockflow("SIR") |>
+  sfm <- stockflow("sir") |>
     sim_settings(language = "R", only_stocks = TRUE, vars = c("new_infections"))
 
   sim <- simulate(sfm)
@@ -179,7 +179,7 @@ test_that("simulate() vars overrides only_stocks", {
 test_that("simulate() with Julia filters output to vars", {
   skip_if_julia_not_ready()
 
-  sfm <- stockflow("SIR") |>
+  sfm <- stockflow("sir") |>
     sim_settings(
       language = "Julia",
       start = 0,
@@ -197,7 +197,7 @@ test_that("simulate() with Julia filters output to vars", {
 test_that("simulate() with Julia vars overrides only_stocks", {
   skip_if_julia_not_ready()
 
-  sfm <- stockflow("SIR") |>
+  sfm <- stockflow("sir") |>
     sim_settings(
       language = "Julia",
       start = 0,
@@ -287,7 +287,7 @@ test_that("bank_account: exponential growth matches analytical solution within 1
 
 test_that("SIR: total population is conserved at every timestep", {
   skip_if_julia_not_ready()
-  sfm <- sim_settings(templates("SIR"), only_stocks = TRUE)
+  sfm <- sim_settings(templates("sir"), only_stocks = TRUE)
   sim <- simulate(sfm, seed = 42)
   expect_true(sim$success)
   wide <- as.data.frame(sim, direction = "wide")
@@ -374,7 +374,7 @@ test_that("simulate with save_n = 1 returns a single-row data frame", {
 # ============================================================================
 
 test_that("simulation is reproducible with seed and random static and dynamic elements", {
-  sfm <- sim_settings(stockflow("SIR"),
+  sfm <- sim_settings(stockflow("sir"),
     language = "R",
     # runif() should only be done with euler
     method = "euler"
@@ -391,8 +391,86 @@ test_that("simulation is reproducible with seed and random static and dynamic el
 })
 
 
+test_that("simulation in Julia is reproducible with seed", {
+  skip_if_julia_not_ready()
+
+  sfm <- stockflow("predator_prey") |>
+    sim_settings(
+      language = "Julia",
+      start = 0, stop = 10, dt = 0.1,
+      seed = 42
+    ) |>
+    update(c("predator", "prey"), eqn = "runif(1, 1, 10)")
+
+  sim1 <- simulate(sfm)
+  sim2 <- simulate(sfm)
+  expect_equal(
+    as.data.frame(sim1, direction = "wide"),
+    as.data.frame(sim2, direction = "wide")
+  )
+
+  # Without a seed, random elements should differ between runs
+  sfm_no_seed <- sim_settings(sfm, seed = NULL)
+  sim3 <- simulate(sfm_no_seed)
+  sim4 <- simulate(sfm_no_seed)
+  expect_false(isTRUE(all.equal(
+    as.data.frame(sim3, direction = "wide"),
+    as.data.frame(sim4, direction = "wide")
+  )))
+})
+
+
 test_that("NULL seed still produces a successful simulation", {
   sfm <- sim_settings(make_verifiable_sfm(), seed = NULL)
   sim <- simulate(sfm)
   expect_true(sim$success)
+})
+
+
+# ============================================================================
+# as.data.frame.simulate_stockflow() — vars/type filtering
+# ============================================================================
+
+test_that("as.data.frame(sim, type=) filters to variables of that type", {
+  sim <- sir_sim(only_stocks = FALSE)
+  df <- as.data.frame(sim, type = "flow")
+  stock_df <- as.data.frame(sim, type = "stock")
+  flow_names <- as.data.frame(stockflow("sir"), type = "flow")$name
+  expect_setequal(unique(df$variable), intersect(flow_names, unique(sim$df$variable)))
+  expect_false(any(unique(stock_df$variable) %in% flow_names))
+})
+
+test_that("as.data.frame(sim, vars=) accepts bare names and strings", {
+  sim <- sir_sim(only_stocks = FALSE)
+  expect_equal(unique(as.data.frame(sim, vars = infected)$variable), "infected")
+  expect_equal(unique(as.data.frame(sim, vars = "infected")$variable), "infected")
+})
+
+test_that("as.data.frame(sim) vars/type filter is respected in wide format", {
+  sim <- sir_sim(only_stocks = FALSE)
+  w <- as.data.frame(sim, type = "flow", direction = "wide")
+  flow_names <- as.data.frame(stockflow("sir"), type = "flow")$name
+  expect_true(all(setdiff(names(w), "time") %in% flow_names))
+})
+
+test_that("as.data.frame(sim): both vars and type warns and uses vars", {
+  sim <- sir_sim(only_stocks = FALSE)
+  expect_warning(df <- as.data.frame(sim, type = "stock", vars = "infected"))
+  expect_equal(unique(df$variable), "infected")
+})
+
+test_that("as.data.frame(sim): unknown vars errors as a typo", {
+  sim <- sir_sim(only_stocks = FALSE)
+  expect_error(as.data.frame(sim, vars = "does_not_exist"), "not.*variable")
+})
+
+test_that("as.data.frame(sim): variable in model but not saved gives informative error", {
+  sim <- sir_sim(only_stocks = TRUE)
+  expect_error(as.data.frame(sim, vars = "new_infections"), "not saved in the output")
+  expect_error(as.data.frame(sim, vars = "new_infections"), "only_stocks = FALSE")
+})
+
+test_that("as.data.frame(sim): requesting a constant explains it is not a time-series", {
+  sim <- sir_sim(only_stocks = FALSE)
+  expect_error(as.data.frame(sim, vars = "contact_rate"), "not part of the time-series")
 })

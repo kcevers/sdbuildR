@@ -38,10 +38,9 @@ sigmoid(0)
 logistic(0, slope = 5, midpoint = 0.5, upper = 10)
 
 # Visualize different slopes
-x <- seq(-5, 5, length.out = 1000)
-plot(x, logistic(x, slope = 1), type = "l", ylab = "f(x)", ylim = c(0, 1))
-lines(x, logistic(x, slope = 5), col = "blue")
-lines(x, logistic(x, slope = 50), col = "red")
+curve(logistic(x, slope = 1), from = -5, to = 5, ylab = "f(x)", ylim = c(0, 1))
+curve(logistic(x, slope = 5), add = TRUE, col = "blue")
+curve(logistic(x, slope = 50), add = TRUE, col = "red")
 legend("topleft",
   legend = c("slope = 1", "slope = 5", "slope = 50"),
   col = c("black", "blue", "red"), lty = 1

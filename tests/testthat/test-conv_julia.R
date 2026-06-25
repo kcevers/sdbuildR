@@ -488,9 +488,15 @@ test_that("corrected builtin conversions to Julia", {
   # getwd typo fixed (was getcd, never matched)
   expect_equal(conv("getwd()"), "pwd()")
 
-  # diff -> r_diff; positional lag is preserved (was dropped under old varargs path)
-  expect_equal(conv("diff(x)"), "r_diff(x)")
-  expect_equal(conv("diff(x, 2)"), "r_diff(x, 2.0)") # **to do: should this be an integer literal in Julia?
+  # diff -> r_diff. diff now fills defaults (fill_defaults = TRUE) so that NAMED
+  # args map to the right slot of r_diff(x, lag, differences); the trade-off is
+  # that the lag/differences defaults are emitted explicitly.
+  expect_equal(conv("diff(x)"), "r_diff(x, 1.0, 1.0)")
+  expect_equal(conv("diff(x, 2)"), "r_diff(x, 2.0, 1.0)") # lag = 2
+  expect_equal(conv("diff(x, lag = 2)"), "r_diff(x, 2.0, 1.0)")
+  # Regression: differences = 2 must set `differences`, not `lag`.
+  expect_equal(conv("diff(x, differences = 2)"), "r_diff(x, 1.0, 2.0)")
+  expect_equal(conv("diff(x, differences = 3, lag = 2)"), "r_diff(x, 2.0, 3.0)")
 })
 
 

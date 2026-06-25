@@ -29,7 +29,7 @@ sdbuildR is an R package for building, simulating, and testing stock-and-flow mo
 Dozens of example models can be loaded using `stockflow()`. Here we load the SIR (Susceptible-Infected-Recovered) model, a classic model in epidemiology:
 
 ```{r SIR_print}
-sfm <- stockflow("SIR")
+sfm <- stockflow("sir")
 print(sfm)
 ```
 
@@ -52,42 +52,47 @@ The equivalent stock-and-flow model can also be built from scratch. We initialis
 
 ```{r scratch_build}
 sfm <- stockflow() |>
-  stock(susceptible, eqn = 99999, label = "Susceptible") |>
-  stock(infected, eqn = 1, label = "Infected") |>
-  stock(recovered, eqn = 0, label = "Recovered")
+  stock(Susceptible, eqn = 99999) |>
+  stock(Infected, eqn = 1) |>
+  stock(Recovered, eqn = 0)
 ```
 
-Above, we use the pipe operator `|>` for better legibility. It simply passes the result of an expression to the next expression as its first argument. Next, we add four constants to the model:
+Above, we use the pipe operator `|>` for better legibility. It simply passes the result of an expression to the next expression as its first argument. 
 
-```{r scratch_build2}
-sfm <- sfm |>
-  constant(total_population,
-    eqn = "susceptible + infected + recovered",
-    label = "Total population"
-  ) |>
-  constant(contact_rate, eqn = 2, label = "Contact rate") |>
-  constant(recovery_rate, eqn = 0.1, label = "Recovery rate") |>
-  constant(infection_rate,
-    eqn = "contact_rate / total_population",
-    label = "Infection rate"
-  )
+```{r}
+plot(sfm)
 ```
 
-Finally, we add two flows that move population from one stock to another:
+Next, we add two flows that move population from one stock to another:
 
 ```{r scratch_build3}
 sfm <- sfm |>
-  flow(new_infections,
-    eqn = "infection_rate * susceptible * infected",
-    from = "susceptible", to = "infected", label = "New infections"
+  flow(New_infections,
+    eqn = "Infection_rate * Susceptible * Infected",
+    from = "Susceptible", to = "Infected"
   ) |>
-  flow(new_recoveries,
-    eqn = "recovery_rate * infected",
-    from = "infected", to = "recovered", label = "New recoveries"
+  flow(New_recoveries,
+    eqn = "Recovery_rate * Infected",
+    from = "Infected", to = "Recovered"
   )
 
-print(sfm)
+plot(sfm)
 ```
+
+The flows refer to four constants, which still need to be defined:
+
+```{r scratch_build2}
+sfm <- sfm |>
+  constant(Total_population,
+    eqn = "Susceptible + Infected + Recovered"
+  ) |>
+  constant(Contact_rate, eqn = 2) |>
+  constant(Recovery_rate, eqn = 0.1) |>
+  constant(Infection_rate,
+    eqn = "Contact_rate / Total_population"
+  )
+```
+
 
 Simulation settings such as the time range and time step (`dt`) are configured with `sim_settings()`.
 
@@ -110,8 +115,8 @@ See the [Build](https://kcevers.github.io/sdbuildR/articles/build.html) vignette
 Running multiple simulations (i.e., an ensemble) provides insight into a model's behavioural variability. Here, we initialize all stocks to a random value:
 
 ```{r ensemble_setup}
-sfm_ens <- stockflow("SIR") |>
-  update(c(susceptible, infected, recovered), eqn = runif(1, 1, 1000)) |>
+sfm_ens <- sfm |>
+  update(c(Susceptible, Infected, Recovered), eqn = runif(1, 1, 1000)) |>
   # Save fewer values for computational efficiency
   sim_settings(stop = 50, save_at = 1)
 ```
@@ -130,10 +135,10 @@ See the [Ensemble](https://kcevers.github.io/sdbuildR/articles/ensemble.html) vi
 Stock-and-flow models can easily become complex, producing unexpected behaviours as the model is developed. Unit tests assert that a model behaves as expected. An expression that evaluates to `TRUE` means the test passes. Here we check that the susceptible population never becomes negative, and that the total population is conserved:
 
 ```{r unit_tests}
-sfm <- stockflow("SIR") |>
-  unit_test(expr = all(susceptible >= 0)) |>
+sfm <- sfm |>
+  unit_test(expr = all(Susceptible >= 0)) |>
   unit_test(
-    expr = all(abs(susceptible + infected + recovered - total_population) < 1e-8),
+    expr = all(abs(Susceptible + Infected + Recovered - Total_population) < 1e-8),
     label = "Population is conserved"
   )
 
@@ -150,11 +155,3 @@ See the [Unit tests](https://kcevers.github.io/sdbuildR/articles/unit-tests.html
 * [Job Demands-Resources Theory](https://kcevers.github.io/sdbuildR/articles/jdr.html): An example of formalizing psychological theory with sdbuildR.
 * [Julia setup](https://kcevers.github.io/sdbuildR/articles/julia-setup.html): Speed up simulations with Julia.
 * [Import/Export](https://kcevers.github.io/sdbuildR/articles/import-export.html): Import models from deSolve or Insight Maker, and export to other formats.
-
-## Citation
-
-To cite sdbuildR, please use:
-
-```{r include=TRUE}
-citation("sdbuildR")
-```

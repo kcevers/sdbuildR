@@ -22,7 +22,7 @@ List, with for each model variable what other variables it depends on, or if \co
 Find which other variables each variable is dependent on.
 }
 \examples{
-sfm <- stockflow("SIR")
+sfm <- stockflow("sir")
 dependencies(sfm)
 
 }

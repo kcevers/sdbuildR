@@ -98,7 +98,7 @@ Stock-and-flow diagram
 Visualize a stock-and-flow diagram using the R package DiagrammeR. Stocks are represented as boxes. Flows are represented as arrows between stocks and/or double circles, where the latter represent what it outside of the model boundary. Thin grey edges indicate dependencies between variables. By default, constants (indicated by italic labels) are not shown. Hover over the variables to see their equations.
 }
 \examples{
-sfm <- stockflow("SIR")
+sfm <- stockflow("sir")
 plot(sfm)
 
 # Don't show constants or auxiliaries

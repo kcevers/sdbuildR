@@ -8,7 +8,7 @@
   x,
   row.names = NULL,
   optional = FALSE,
-  name = NULL,
+  vars = NULL,
   type = NULL,
   properties = NULL,
   ...
@@ -21,7 +21,7 @@
 
 \item{optional}{Ignored parameter.}
 
-\item{name}{Variable names to retain in the data frame. Defaults to \code{NULL} to include all variables.}
+\item{vars}{Variable names to retain in the data frame. Defaults to \code{NULL} to include all variables.}
 
 \item{type}{Variable types to retain in the data frame. Must be one or more of 'stock', 'flow', 'constant', 'aux', 'gf', or 'func'. Defaults to \code{NULL} to include all types.}
 
@@ -41,13 +41,16 @@ if no components match the filters.
 Create a data frame with properties of all model variables and functions. Specify the variable types, variable names, and/or properties to get a subset of the data frame.
 }
 \examples{
-as.data.frame(stockflow("SIR"))
+as.data.frame(stockflow("sir"))
 
 # Only show stocks
-as.data.frame(stockflow("SIR"), type = "stock")
+as.data.frame(stockflow("sir"), type = "stock")
+
+# Only show specific variables
+as.data.frame(stockflow("sir"), vars = c("susceptible", "infected"))
 
 # Only show equation and label
-as.data.frame(stockflow("SIR"), properties = c("eqn", "label"))
+as.data.frame(stockflow("sir"), properties = c("eqn", "label"))
 
 }
 \concept{build}

@@ -39,7 +39,7 @@ lookup(
 \item{non_negative}{If TRUE, variable is enforced to be non-negative (i.e., strictly 0 or positive). Defaults to \code{FALSE}.}
 }
 \value{
-A stock-and-flow model object of class \code{\link[=stockflow]{stockflow}}
+A stock-and-flow model object of class \code{\link{stockflow}}
 }
 \description{
 Lookup variables define piecewise relationships using specified (x, y) points. \code{\link[=lookup]{lookup()}} adds or changes a lookup variable. This is a convenience wrapper around \code{\link[=update]{update()}} with \code{type = "lookup"}. See the \strong{Lookup Variables} section of \code{\link[=update]{update()}} for more details.

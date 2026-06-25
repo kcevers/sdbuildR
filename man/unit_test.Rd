@@ -74,7 +74,7 @@ an error is thrown if an identical \code{expr} already exists on another test.
 }
 
 \examples{
-sfm <- stockflow("SIR") |>
+sfm <- stockflow("sir") |>
   unit_test(expr = all(susceptible >= 0))
 
 # Run unit tests

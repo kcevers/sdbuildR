@@ -13,7 +13,7 @@ test_that("assemble cache keeps canonical structure after invalidation", {
 
 
 test_that("R script components are pre-cached in sfm after sim_settings", {
-  sfm <- stockflow("SIR") |>
+  sfm <- stockflow("sir") |>
     sim_settings(language = "R", start = 0, stop = 10, dt = 0.1)
 
   # Check that all standard fields exist
@@ -35,7 +35,7 @@ test_that("R script components are pre-cached in sfm after sim_settings", {
 })
 
 test_that("R script components persist through simulation", {
-  sfm <- stockflow("SIR") |>
+  sfm <- stockflow("sir") |>
     sim_settings(language = "R", start = 0, stop = 10, dt = 0.1)
 
   # Capture field names before simulate
@@ -83,7 +83,7 @@ test_that("R funcs are pre-cached in assemble", {
 test_that("Julia script components are pre-cached after sim_settings", {
   skip_if_julia_not_ready()
 
-  sfm <- stockflow("SIR") |>
+  sfm <- stockflow("sir") |>
     sim_settings(language = "Julia", start = 0, stop = 10, dt = 0.1)
 
   expect_true(!is.null(sfm$assemble$language))
@@ -100,7 +100,7 @@ test_that("Julia script components are pre-cached after sim_settings", {
 test_that("Julia script components persist through simulation", {
   skip_if_julia_not_ready()
 
-  sfm <- stockflow("SIR") |>
+  sfm <- stockflow("sir") |>
     sim_settings(language = "Julia", start = 0, stop = 10, dt = 0.1)
 
   # Capture field names before simulate
@@ -128,10 +128,10 @@ test_that("Julia script components persist through simulation", {
 test_that("Julia and R have identical assemble structure fields", {
   skip_if_julia_not_ready()
 
-  sfm_r <- stockflow("SIR") |>
+  sfm_r <- stockflow("sir") |>
     sim_settings(language = "R", start = 0, stop = 10, dt = 0.1)
 
-  sfm_julia <- stockflow("SIR") |>
+  sfm_julia <- stockflow("sir") |>
     sim_settings(language = "Julia", start = 0, stop = 10, dt = 0.1)
 
   # Both should have identical field names
@@ -144,10 +144,10 @@ test_that("Julia and R have identical assemble structure fields", {
 test_that("Julia equations differ from R equations in cached components", {
   skip_if_julia_not_ready()
 
-  sfm_r <- stockflow("SIR") |>
+  sfm_r <- stockflow("sir") |>
     sim_settings(language = "R", start = 0, stop = 10, dt = 0.1)
 
-  sfm_julia <- stockflow("SIR") |>
+  sfm_julia <- stockflow("sir") |>
     sim_settings(language = "Julia", start = 0, stop = 10, dt = 0.1)
 
   # Check that variables have different eqn_str for R vs Julia

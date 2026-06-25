@@ -110,6 +110,32 @@ test_that("plot.verify_stockflow uses explicit custom colors on legend traces", 
   expect_true(all(legend_check$matches_expected))
 })
 
+test_that("plot.verify_stockflow maps trace labels to source data and named colors", {
+  res <- make_verify_model()
+  names_df <- as.data.frame(res[["object"]])
+  labels <- names_df[["label"]]
+  colors <- stats::setNames(grDevices::rainbow(length(labels)), labels)
+  colors <- rev(colors)
+
+  pl <- plot(res, colors = colors, webgl = FALSE)
+  built_traces <- plotly::plotly_build(pl)[["x"]][["data"]]
+  trace_info <- plotly_traces(pl)
+  df <- as.data.frame(res, which = "sims", direction = "long")
+  label_to_name <- stats::setNames(names_df[["name"]], names_df[["label"]])
+
+  for (i in seq_along(built_traces)) {
+    trace_label <- built_traces[[i]][["name"]]
+    variable <- unname(label_to_name[[trace_label]])
+    expected_y <- df[["value"]][df[["variable"]] == variable]
+
+    expect_equal(as.numeric(built_traces[[i]][["y"]]), as.numeric(expected_y))
+    expect_equal(
+      trace_info[["color"]][i],
+      normalize_color_string(colors[[trace_label]])
+    )
+  }
+})
+
 
 # ============================================================================
 # VISUAL REGRESSION TESTS (expect_snapshot_plot)
@@ -312,12 +338,16 @@ test_that("plot.verify_stockflow() rejects unsupported combinations", {
 test_that("plot.verify_stockflow() webgl toggles scatter type", {
   res <- make_verify_model()
 
-  types_gl <- vapply(plotly::plotly_build(plot(res, webgl = TRUE))$x$data,
-    function(d) d$type %||% "", character(1))
+  types_gl <- vapply(
+    plotly::plotly_build(plot(res, webgl = TRUE))$x$data,
+    function(d) d$type %||% "", character(1)
+  )
   expect_true(any(types_gl == "scattergl"))
 
-  types_svg <- vapply(plotly::plotly_build(plot(res, webgl = FALSE))$x$data,
-    function(d) d$type %||% "", character(1))
+  types_svg <- vapply(
+    plotly::plotly_build(plot(res, webgl = FALSE))$x$data,
+    function(d) d$type %||% "", character(1)
+  )
   expect_false(any(types_svg == "scattergl"))
 
   expect_error(plot(res, webgl = 1L), "webgl")
@@ -328,18 +358,23 @@ test_that("plot.verify_stockflow() obeys global webgl option", {
   res <- make_verify_model()
 
   withr::local_options(list(sdbuildR.webgl = TRUE))
-  types_gl <- vapply(plotly::plotly_build(plot(res))$x$data,
-    function(d) d$type %||% "", character(1))
+  types_gl <- vapply(
+    plotly::plotly_build(plot(res))$x$data,
+    function(d) d$type %||% "", character(1)
+  )
   expect_true(any(types_gl == "scattergl"))
 
   withr::local_options(list(sdbuildR.webgl = FALSE))
-  types_svg <- vapply(plotly::plotly_build(plot(res))$x$data,
-    function(d) d$type %||% "", character(1))
+  types_svg <- vapply(
+    plotly::plotly_build(plot(res))$x$data,
+    function(d) d$type %||% "", character(1)
+  )
   expect_false(any(types_svg == "scattergl"))
 
   # Setting webgl explicitly overrides the global option
-  types_gl <- vapply(plotly::plotly_build(plot(res, webgl = TRUE))$x$data,
-    function(d) d$type %||% "", character(1))
+  types_gl <- vapply(
+    plotly::plotly_build(plot(res, webgl = TRUE))$x$data,
+    function(d) d$type %||% "", character(1)
+  )
   expect_true(any(types_gl == "scattergl"))
-
 })

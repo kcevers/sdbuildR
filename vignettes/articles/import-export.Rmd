@@ -60,8 +60,7 @@ After importing, use the model as usual:
 
 ```{r eval=FALSE}
 summary(sfm)
-sim <- simulate(sfm)
-plot(sim)
+sfm |> simulate() |> plot()
 ```
 
 
@@ -138,9 +137,8 @@ print(sfm)
 ```
 
 ```{r}
-sfm_plot <- sim_settings(sfm, save_at = 5)
-sim <- simulate(sfm_plot)
-plot(sim)
+sfm <- sim_settings(sfm, save_at = 5)
+sfm |> simulate() |> plot()
 ```
 
 The imported model is a full `stockflow` object. You can modify it with

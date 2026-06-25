@@ -13,17 +13,21 @@
 #' @returns Object of class [`ensemble_stockflow`][ensemble()]
 #' @noRd
 ensemble_julia <- function(object, n, save_sims, conditions, cross,
-                           quantiles, only_stocks, vars = NULL, verbose,
-                           n_conditions, total_sims) {
+                           quantiles, summary_stats, only_stocks, vars = NULL,
+                           verbose, n_conditions, total_sims) {
   use_julia()
 
   # Evaluate script
   start_t <- Sys.time()
 
+  # Order requested stats by catalog order for consistency with the R backend.
+  summary_stats <- intersect(names(ensemble_stat_funs), summary_stats)
+
   # Create ensemble parameters
   ensemble_pars <- list(
     n = n,
     quantiles = quantiles,
+    summary_stats = summary_stats,
     save_sims = save_sims,
     conditions = conditions,
     cross = cross
@@ -70,15 +74,9 @@ ensemble_julia <- function(object, n, save_sims, conditions, cross,
   # Evaluate script
   sim <- tryCatch(
     {
-      if (!is.null(seed_nr)) {
-        command <- paste0("with_rng(", as.numeric(seed_nr), ') do\n\tinclude("', jl_path(filepath), '")\nend')
-      } else {
-        command <- paste0('include("', jl_path(filepath), '")')
-      }
-
       # Wrap in invisible and capture.output to keep Julia output quiet
       invisible(utils::capture.output(
-        julia_eval(command)
+        julia_eval(jl_include_command(filepath, seed_nr))
       ))
 
       end_t <- Sys.time()

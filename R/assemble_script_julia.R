@@ -21,6 +21,7 @@ simulate_julia <- function(object,
 
   script <- result$script
   object <- result$object # Get updated object with cache populated
+  seed_nr <- object[["sim_settings"]][["seed"]]
 
   on.exit(
     # Ensure files are deleted even if an error occurs (both the .jl script and
@@ -40,7 +41,7 @@ simulate_julia <- function(object,
       # Evaluate script
       start_t <- Sys.time()
 
-      out <- julia_eval(paste0('include("', jl_path(filepath), '")'))
+      out <- julia_eval(jl_include_command(filepath, seed_nr))
 
       end_t <- Sys.time()
 
@@ -340,12 +341,10 @@ compile_run_ode_ensemble <- function(object, ensemble_pars, static, only_stocks)
     )
   }
 
-  # Determine whether to wrap solve in with_rng for reproducible seeding based on sim_settings seed value
+  # Seeding is applied by wrapping the whole script in with_rng() at include
+  # time (see jl_include_command()), so the per-iteration template hooks are
+  # left empty here.
   use_with_rng_open <- use_with_rng_close <- ""
-  # if (!is.null(object[["sim_settings"]][["seed"]])) {
-  #   use_with_rng_open <- paste0("with_rng(", P[["ensemble_ctx"]], ".", "rng",  ") do\n\t")
-  #   use_with_rng_close <- "\nend"
-  # }
 
   # When using EnsembleThreads(), add a warm-up solve to force JIT compilation
   # of all solver code paths before threads are spawned. This prevents a known
@@ -410,9 +409,15 @@ compile_post_ensemble <- function(object, ensemble_pars) {
   ensemble_summ_func <- ifelse(ensemble_pars[["threaded"]],
     " = ensemble_summ_threaded(", " = ensemble_summ("
   )
+  # Render the requested stats as a Julia string array, e.g. "mean", "median"
+  summary_stats_jl <- paste0(
+    "\"", ensemble_pars[["summary_stats"]], "\"",
+    collapse = ", "
+  )
   script <- paste0(script, fmt_script("ensemble_summary", "Julia",
     ensemble_summ_func = ensemble_summ_func,
     quantiles = paste0(ensemble_pars[["quantiles"]], collapse = ", "),
+    summary_stats = summary_stats_jl,
     filepath_summary_df = ensemble_pars[["filepath_summary"]][["df"]],
     filepath_summary_constants = ensemble_pars[["filepath_summary"]][["constants"]],
     filepath_summary_init = ensemble_pars[["filepath_summary"]][["init"]]

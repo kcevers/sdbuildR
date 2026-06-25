@@ -10,6 +10,7 @@
   vars = NULL,
   palette = "Dark 2",
   colors = NULL,
+  line_width = 2,
   font_family = "Times New Roman",
   font_size = 16,
   wrap_width = 25,
@@ -22,13 +23,15 @@
 \arguments{
 \item{x}{Output of \code{\link[=simulate.stockflow]{simulate()}}.}
 
-\item{show_constants}{If TRUE, include constants in plot. Defaults to FALSE.}
+\item{show_constants}{If \code{TRUE}, include constants in plot. Defaults to \code{FALSE}.}
 
-\item{vars}{Variables to plot. Defaults to NULL to plot all variables.}
+\item{vars}{Variables to plot. Defaults to \code{NULL} to plot all variables.}
 
 \item{palette}{Colour palette. Must be one of hcl.pals().}
 
-\item{colors}{Vector of colours. If NULL, the color palette will be used. If specified, will override palette. The number of colours must be equal to the number of variables in the simulation data frame. Defaults to NULL.}
+\item{colors}{Vector of colours. If \code{NULL}, the color palette will be used. If specified, will override palette. The number of colours must be equal to the number of variables in the simulation data frame. Defaults to \code{NULL}.}
+
+\item{line_width}{Line width of the plotted trajectories. Either a single value applied to all variables, or a vector with one value per variable (like \code{colors}). Defaults to \code{2}.}
 
 \item{font_family}{Font family. Defaults to "Times New Roman".}
 
@@ -56,7 +59,7 @@ Plotly object
 Visualize simulation results of a stock-and-flow model. Plot the evolution of stocks over time, with the option of also showing other model variables.
 }
 \examples{
-sfm <- stockflow("SIR")
+sfm <- stockflow("sir")
 sim <- simulate(sfm)
 plot(sim)
 

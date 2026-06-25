@@ -132,7 +132,7 @@ test_that("print.stockflow() snapshot: named model", {
 })
 
 test_that("print.stockflow() snapshot: SIR model", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
   expect_snapshot(print(sfm))
 })
 
@@ -155,48 +155,48 @@ test_that("print.stockflow() snapshot: default name not shown as title", {
 # ============================================================================
 
 test_that("as.data.frame with type='stock' returns only stock rows", {
-  sfm <- templates("SIR")
+  sfm <- templates("sir")
   df <- as.data.frame(sfm, type = "stock")
   expect_true(all(df$type == "stock"))
   expect_equal(nrow(df), 3)
 })
 
 test_that("as.data.frame with type='flow' returns only flow rows", {
-  sfm <- templates("SIR")
+  sfm <- templates("sir")
   df <- as.data.frame(sfm, type = "flow")
   expect_true(all(df$type == "flow"))
   expect_gt(nrow(df), 0)
 })
 
-test_that("as.data.frame with name filter returns exactly 1 row for a known variable", {
-  sfm <- templates("SIR")
+test_that("as.data.frame with vars filter returns exactly 1 row for a known variable", {
+  sfm <- templates("sir")
   var_name <- as.data.frame(sfm)$name[1]
-  df <- as.data.frame(sfm, name = !!var_name)
+  df <- as.data.frame(sfm, vars = !!var_name)
   expect_equal(nrow(df), 1)
   expect_equal(df$name, var_name)
 })
 
 test_that("as.data.frame with properties='eqn' returns name + type + eqn columns", {
-  sfm <- templates("SIR")
+  sfm <- templates("sir")
   df <- as.data.frame(sfm, properties = c("eqn"))
   # Always includes type and name in addition to requested columns
   expect_true("eqn" %in% names(df))
   expect_true("name" %in% names(df))
 })
 
-test_that("as.data.frame: both name AND type specified → issues a WARNING (type is ignored)", {
-  sfm <- templates("SIR")
+test_that("as.data.frame: both vars AND type specified → issues a WARNING (type is ignored)", {
+  sfm <- templates("sir")
   var_name <- as.data.frame(sfm)$name[1]
   expect_warning(
-    df <- as.data.frame(sfm, type = "stock", name = !!var_name)
+    df <- as.data.frame(sfm, type = "stock", vars = !!var_name)
   )
-  # After warning, type is ignored; result is filtered by name only
+  # After warning, type is ignored; result is filtered by vars only
   expect_equal(nrow(df), 1)
   expect_equal(df$name, var_name)
 })
 
 test_that("as.data.frame with no arguments returns all variables", {
-  sfm <- templates("SIR")
+  sfm <- templates("sir")
   df <- as.data.frame(sfm)
   n_total <- nrow(as.data.frame(sfm, type = "stock")) +
     nrow(as.data.frame(sfm, type = "flow")) +
@@ -218,7 +218,7 @@ test_that("print.stockflow: shows model name when set via meta()", {
 })
 
 test_that("print.stockflow: shows correct stock count", {
-  sfm <- templates("SIR")
+  sfm <- templates("sir")
   n_stocks <- nrow(as.data.frame(sfm, type = "stock"))
   output <- paste0(cli::cli_fmt(print(sfm)), collapse = "\n")
   expect_match(output, as.character(n_stocks))
@@ -231,7 +231,7 @@ test_that("print.stockflow: mentions the simulation stop time", {
 })
 
 test_that("print.stockflow: mentions all stock names from the model", {
-  sfm <- templates("SIR")
+  sfm <- templates("sir")
   stock_names <- as.data.frame(sfm, type = "stock")$name
   output <- paste0(cli::cli_fmt(print(sfm)), collapse = "\n")
   for (nm in stock_names) {

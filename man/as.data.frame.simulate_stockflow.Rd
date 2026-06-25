@@ -4,7 +4,15 @@
 \alias{as.data.frame.simulate_stockflow}
 \title{Create data frame of simulation results}
 \usage{
-\method{as.data.frame}{simulate_stockflow}(x, row.names = NULL, optional = FALSE, direction = "long", ...)
+\method{as.data.frame}{simulate_stockflow}(
+  x,
+  row.names = NULL,
+  optional = FALSE,
+  direction = "long",
+  vars = NULL,
+  type = NULL,
+  ...
+)
 }
 \arguments{
 \item{x}{Output of \code{\link[=simulate.stockflow]{simulate()}}.}
@@ -14,6 +22,10 @@
 \item{optional}{Ignored parameter.}
 
 \item{direction}{Format of data frame, either "long" (default) or "wide".}
+
+\item{vars}{Variable names to retain in the data frame. Defaults to \code{NULL} to include all variables.}
+
+\item{type}{Variable types to retain in the data frame. Must be one or more of 'stock', 'flow', 'constant', 'aux', 'gf', or 'func'. Defaults to \code{NULL} to include all types.}
 
 \item{...}{Optional parameters}
 }
@@ -27,7 +39,7 @@ one column per variable.
 Convert simulation results to a data.frame.
 }
 \examples{
-sfm <- stockflow("SIR")
+sfm <- stockflow("sir")
 sim <- simulate(sfm)
 df <- as.data.frame(sim)
 head(df)

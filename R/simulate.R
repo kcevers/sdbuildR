@@ -30,7 +30,7 @@
 #' @seealso [update()], [stockflow()], [summary()], [sim_settings()], [use_julia()]
 #'
 #' @examples
-#' sfm <- stockflow("SIR")
+#' sfm <- stockflow("sir")
 #' sim <- simulate(sfm)
 #' plot(sim)
 #'
@@ -182,7 +182,7 @@ check_simulate_stockflow <- function(x) {
 #'   [plot.simulate_stockflow()], [as.data.frame.simulate_stockflow()]
 #'
 #' @examples
-#' sfm <- stockflow("SIR")
+#' sfm <- stockflow("sir")
 #' sim <- simulate(sfm)
 #' print(sim)
 #'
@@ -330,7 +330,7 @@ model_properties <- function(object) {
 #' @concept build
 #' @export
 #' @examples
-#' sfm1 <- stockflow("SIR")
+#' sfm1 <- stockflow("sir")
 #' sfm2 <- stock(sfm1, "susceptible", eqn = 0.5)
 #' compare_models(sfm1, sfm2)
 #'
@@ -509,12 +509,13 @@ print.compare_stockflow <- function(x, ...) {
     )
   }
 
-  cli::cli_text(
-    paste0(
-      "  ", formatC("", width = 24, flag = "-"),
-      formatC(l1, width = 8), formatC(l2, width = 8)
-    )
-  )
+  # cli::cli_text(
+    # paste0(
+    #   "  ", formatC("", width = 24, flag = "-"),
+    #   formatC(l1, width = 8), formatC(l2, width = 8)
+    # )
+  #   "{l1} vs {l2}"
+  # )
   cli::cli_text(paste0("  ", strrep("-", 40)))
   row("Stocks", p1[["n_stocks"]], p2[["n_stocks"]])
   row("Flows", p1[["n_flows"]], p2[["n_flows"]])
@@ -656,6 +657,8 @@ compare_sim <- function(sim1, sim2, tolerance = .00001) {
 #'
 #' @inheritParams plot.simulate_stockflow
 #' @param direction Format of data frame, either "long" (default) or "wide".
+#' @param vars Variable names to retain in the data frame. Defaults to `NULL` to include all variables.
+#' @param type Variable types to retain in the data frame. Must be one or more of 'stock', 'flow', 'constant', 'aux', 'gf', or 'func'. Defaults to `NULL` to include all types.
 #' @param row.names NULL or a character vector giving the row names for the data frame. Missing values are not allowed.
 #' @param optional Ignored parameter.
 #'
@@ -669,7 +672,7 @@ compare_sim <- function(sim1, sim2, tolerance = .00001) {
 #' @method as.data.frame simulate_stockflow
 #'
 #' @examples
-#' sfm <- stockflow("SIR")
+#' sfm <- stockflow("sir")
 #' sim <- simulate(sfm)
 #' df <- as.data.frame(sim)
 #' head(df)
@@ -680,7 +683,9 @@ compare_sim <- function(sim1, sim2, tolerance = .00001) {
 #'
 as.data.frame.simulate_stockflow <- function(x,
                                              row.names = NULL, optional = FALSE,
-                                             direction = "long", ...) {
+                                             direction = "long",
+                                             vars = NULL, type = NULL, ...) {
+  vars <- .expr_to_char(rlang::enexpr(vars))
   check_simulate_stockflow(x)
 
   direction <- trimws(tolower(direction))
@@ -691,10 +696,11 @@ as.data.frame.simulate_stockflow <- function(x,
     ))
   }
 
-  if (direction == "long") {
-    df <- x[["df"]]
-  } else if (direction == "wide") {
-    df <- stats::reshape(x[["df"]],
+  # Filter long-format data by variable and/or type
+  df <- .filter_long_by_vars_type(x[["df"]], x[["object"]], vars = vars, type = type)
+
+  if (direction == "wide") {
+    df <- stats::reshape(df,
       timevar = "variable",
       idvar = "time",
       direction = "wide"
@@ -735,7 +741,7 @@ as.data.frame.simulate_stockflow <- function(x,
 #' @concept simulate
 #' @importFrom utils head
 #' @examples
-#' sfm <- stockflow("SIR")
+#' sfm <- stockflow("sir")
 #' sim <- simulate(sfm)
 #' head(sim)
 head.simulate_stockflow <- function(x, n = 6L, ...) {
@@ -758,7 +764,7 @@ head.simulate_stockflow <- function(x, n = 6L, ...) {
 #' @concept simulate
 #' @importFrom utils tail
 #' @examples
-#' sfm <- stockflow("SIR")
+#' sfm <- stockflow("sir")
 #' sim <- simulate(sfm)
 #' tail(sim)
 tail.simulate_stockflow <- function(x, n = 6L, ...) {
@@ -784,7 +790,7 @@ tail.simulate_stockflow <- function(x, n = 6L, ...) {
 #' @seealso [print.simulate_stockflow()], [simulate.stockflow()]
 #'
 #' @examples
-#' sfm <- stockflow("SIR")
+#' sfm <- stockflow("sir")
 #' sim <- simulate(sfm)
 #' summary(sim)
 #'

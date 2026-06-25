@@ -8,7 +8,7 @@ P <- list(
   jl_pkg_name = "SystemDynamicsBuildR",
   # jl_pkg_version = "0.2.5", # required version SystemDynamicsBuildR
   # jl_pkg_name = "StockFlowRSupport",
-  jl_pkg_version_github_release = "0.3.0", # required version SystemDynamicsBuildR
+  jl_pkg_version_github_release = "0.3.3", # required version SystemDynamicsBuildR
   model_setup_name = "model_setup",
   func_name = "func",
   initial_value_name = "init",
@@ -414,7 +414,7 @@ get_syntax_julia <- function() {
       # String manipulation
       "grep", "r_grep", "syntax1", "", "", FALSE,
       "strsplit", "split", "syntax1", "", "", FALSE,
-      "paste0", "string", "syntax1", "", "", TRUE,
+      "paste0", "string", "syntax_paste", "", "", TRUE,
       "toupper", "uppercase", "syntax1", "", "", TRUE,
       "tolower", "lowercase", "syntax1", "", "", TRUE,
       "startsWith", "startswith", "syntax1", "", "", TRUE,
@@ -445,6 +445,7 @@ get_syntax_julia <- function() {
       "logistic", "logistic", "syntax1", "", "", TRUE,
       "sigmoid", "logistic", "syntax1", "", "", TRUE,
       "hill", "hill", "syntax1", "", "", TRUE,
+      "ricker", "ricker", "syntax1", "", "", TRUE,
       "logit", "logit", "syntax1", "", "", TRUE,
       "expit", "expit", "syntax1", "", "", TRUE,
       # step() is already an existing function in Julia, so we use make_step()
@@ -548,8 +549,8 @@ get_syntax_julia <- function() {
   # provided arguments are passed through unchanged (Julia supplies its own
   # defaults). See sort_args().
   fill_defaults_funcs <- c(
-    "grep", "rep",
-    "logistic", "sigmoid", "hill",
+    "grep", "rep", "diff",
+    "logistic", "sigmoid", "hill", "ricker",
     "step", "pulse", "ramp", "seasonal"
   )
   conv_df[["fill_defaults"]] <-
@@ -649,7 +650,7 @@ println("\\nPrecompiling packages...")
 Pkg.precompile()
 
 println("\\nSetup complete!")
-', pkg_name, pkg_name, pkg_name,
+', pkg_name, pkg_name,
     jl_pkg_name, jl_pkg_name, jl_pkg_name,
     ifelse(use_github_release, paste0(", rev = \"v", P[["jl_pkg_version_github_release"]], "\""), "")
   )

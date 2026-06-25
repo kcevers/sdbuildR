@@ -22,7 +22,7 @@ Internal function used to save the data frame at specific times in case save_at 
 }
 \examples{
 # Recommended: Use save_at in sim_settings() to downsample simulations
-sfm <- stockflow("SIR") |> sim_settings(dt = 0.01, save_at = 1)
+sfm <- stockflow("sir") |> sim_settings(dt = 0.01, save_at = 1)
 sim <- simulate(sfm)
 df <- as.data.frame(sim)
 nrow(df) # Returns only times at intervals of 1

@@ -8,7 +8,8 @@
       "type": "scattergl",
       "mode": "lines",
       "line": {
-        "color": "#C87A8A4D"
+        "color": "#C87A8A4D",
+        "width": 2
       },
       "showlegend": false,
       "visible": true,
@@ -37,7 +38,8 @@
       "type": "scattergl",
       "mode": "lines",
       "line": {
-        "color": "#6B9D594D"
+        "color": "#6B9D594D",
+        "width": 2
       },
       "showlegend": false,
       "visible": true,
@@ -66,7 +68,8 @@
       "type": "scattergl",
       "mode": "lines",
       "line": {
-        "color": "#5F96C24D"
+        "color": "#5F96C24D",
+        "width": 2
       },
       "showlegend": false,
       "visible": true,
@@ -90,30 +93,27 @@
     {
       "x": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
       "y": [485.85, 819.84, 976.74, 987.84, 933.46, 859.01, 782.5, 709.96, 643.06, 582.03, 526.61],
+      "name": "Infected",
       "legendgroup": "Infected",
       "type": "scatter",
       "mode": "lines",
       "showlegend": true,
       "line": {
-        "color": "rgba(102,194,165,1)",
+        "color": "#C87A8A",
         "width": 3
       },
       "visible": true,
-      "name": "Infected",
       "marker": {
-        "color": "rgba(102,194,165,1)",
+        "color": "rgba(214,39,40,1)",
         "line": {
-          "color": "rgba(102,194,165,1)"
+          "color": "rgba(214,39,40,1)"
         }
       },
-      "textfont": {
-        "color": "rgba(102,194,165,1)"
-      },
       "error_y": {
-        "color": "rgba(102,194,165,1)"
+        "color": "rgba(214,39,40,1)"
       },
       "error_x": {
-        "color": "rgba(102,194,165,1)"
+        "color": "rgba(214,39,40,1)"
       },
       "xaxis": "x",
       "yaxis": "y",
@@ -122,30 +122,27 @@
     {
       "x": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
       "y": [529.2, 593.82, 684.42, 783.42, 880.05, 970.11, 1052.55, 1127.5, 1195.43, 1256.94, 1312.61],
+      "name": "Recovered",
       "legendgroup": "Recovered",
       "type": "scatter",
       "mode": "lines",
       "showlegend": true,
       "line": {
-        "color": "rgba(252,141,98,1)",
+        "color": "#6B9D59",
         "width": 3
       },
       "visible": true,
-      "name": "Recovered",
       "marker": {
-        "color": "rgba(252,141,98,1)",
+        "color": "rgba(148,103,189,1)",
         "line": {
-          "color": "rgba(252,141,98,1)"
+          "color": "rgba(148,103,189,1)"
         }
       },
-      "textfont": {
-        "color": "rgba(252,141,98,1)"
-      },
       "error_y": {
-        "color": "rgba(252,141,98,1)"
+        "color": "rgba(148,103,189,1)"
       },
       "error_x": {
-        "color": "rgba(252,141,98,1)"
+        "color": "rgba(148,103,189,1)"
       },
       "xaxis": "x",
       "yaxis": "y",
@@ -154,30 +151,27 @@
     {
       "x": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
       "y": [824.49, 425.88, 178.38, 68.28, 26.02, 10.42, 4.48, 2.08, 1.04, 0.56, 0.32],
+      "name": "Susceptible",
       "legendgroup": "Susceptible",
       "type": "scatter",
       "mode": "lines",
       "showlegend": true,
       "line": {
-        "color": "rgba(141,160,203,1)",
+        "color": "#5F96C2",
         "width": 3
       },
       "visible": true,
-      "name": "Susceptible",
       "marker": {
-        "color": "rgba(141,160,203,1)",
+        "color": "rgba(140,86,75,1)",
         "line": {
-          "color": "rgba(141,160,203,1)"
+          "color": "rgba(140,86,75,1)"
         }
       },
-      "textfont": {
-        "color": "rgba(141,160,203,1)"
-      },
       "error_y": {
-        "color": "rgba(141,160,203,1)"
+        "color": "rgba(140,86,75,1)"
       },
       "error_x": {
-        "color": "rgba(141,160,203,1)"
+        "color": "rgba(140,86,75,1)"
       },
       "xaxis": "x",
       "yaxis": "y",

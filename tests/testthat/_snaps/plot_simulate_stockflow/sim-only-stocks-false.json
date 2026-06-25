@@ -9,6 +9,10 @@
       "opacity": 1,
       "showlegend": true,
       "visible": "legendonly",
+      "line": {
+        "color": "rgba(200,122,138,1)",
+        "width": 2
+      },
       "name": "New infections",
       "marker": {
         "color": "rgba(200,122,138,1)",
@@ -25,9 +29,6 @@
       "error_x": {
         "color": "rgba(200,122,138,1)"
       },
-      "line": {
-        "color": "rgba(200,122,138,1)"
-      },
       "xaxis": "x",
       "yaxis": "y",
       "frame": null
@@ -41,6 +42,10 @@
       "opacity": 1,
       "showlegend": true,
       "visible": "legendonly",
+      "line": {
+        "color": "rgba(162,144,72,1)",
+        "width": 2
+      },
       "name": "New recoveries",
       "marker": {
         "color": "rgba(162,144,72,1)",
@@ -57,9 +62,6 @@
       "error_x": {
         "color": "rgba(162,144,72,1)"
       },
-      "line": {
-        "color": "rgba(162,144,72,1)"
-      },
       "xaxis": "x",
       "yaxis": "y",
       "frame": null
@@ -73,6 +75,10 @@
       "opacity": 1,
       "showlegend": true,
       "visible": true,
+      "line": {
+        "color": "rgba(69,162,113,1)",
+        "width": 2
+      },
       "name": "Infected",
       "marker": {
         "color": "rgba(69,162,113,1)",
@@ -89,9 +95,6 @@
       "error_x": {
         "color": "rgba(69,162,113,1)"
       },
-      "line": {
-        "color": "rgba(69,162,113,1)"
-      },
       "xaxis": "x",
       "yaxis": "y",
       "frame": null
@@ -105,6 +108,10 @@
       "opacity": 1,
       "showlegend": true,
       "visible": true,
+      "line": {
+        "color": "rgba(42,158,181,1)",
+        "width": 2
+      },
       "name": "Recovered",
       "marker": {
         "color": "rgba(42,158,181,1)",
@@ -121,9 +128,6 @@
       "error_x": {
         "color": "rgba(42,158,181,1)"
       },
-      "line": {
-        "color": "rgba(42,158,181,1)"
-      },
       "xaxis": "x",
       "yaxis": "y",
       "frame": null
@@ -137,6 +141,10 @@
       "opacity": 1,
       "showlegend": true,
       "visible": true,
+      "line": {
+        "color": "rgba(167,130,195,1)",
+        "width": 2
+      },
       "name": "Susceptible",
       "marker": {
         "color": "rgba(167,130,195,1)",
@@ -151,9 +159,6 @@
         "color": "rgba(167,130,195,1)"
       },
       "error_x": {
-        "color": "rgba(167,130,195,1)"
-      },
-      "line": {
         "color": "rgba(167,130,195,1)"
       },
       "xaxis": "x",

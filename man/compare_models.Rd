@@ -7,9 +7,9 @@
 compare_models(sfm1, sfm2)
 }
 \arguments{
-\item{sfm1}{A stock-and-flow model of class \code{\link[=stockflow]{stockflow}}.}
+\item{sfm1}{A stock-and-flow model of class \code{\link{stockflow}}.}
 
-\item{sfm2}{A stock-and-flow model of class \code{\link[=stockflow]{stockflow}}.}
+\item{sfm2}{A stock-and-flow model of class \code{\link{stockflow}}.}
 }
 \value{
 An object of class \code{compare_stockflow} (a list) containing:
@@ -28,7 +28,7 @@ Compares the structure, equations, and simulation settings of two
 \code{stockflow} models, and computes a nonlinearity score for each.
 }
 \examples{
-sfm1 <- stockflow("SIR")
+sfm1 <- stockflow("sir")
 sfm2 <- stock(sfm1, "susceptible", eqn = 0.5)
 compare_models(sfm1, sfm2)
 

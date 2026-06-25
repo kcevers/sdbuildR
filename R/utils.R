@@ -46,6 +46,49 @@ read_sim_csv <- function(path) {
   as.data.frame(data.table::fread(path, na.strings = c("", "NA")))
 }
 
+#' Normalize user-supplied keywords against a synonym table
+#'
+#' Lowercases and trims each element, then maps recognised synonyms to their
+#' canonical spelling so users can pass lenient variants like "medians" or
+#' "Means" wherever a fixed set of keywords is expected. Unrecognised values are
+#' returned lowercased/trimmed so the caller's own validation reports them.
+#'
+#' @param x Character vector of user input.
+#' @param synonyms Named list mapping each canonical value to a character vector
+#'   of accepted alternative spellings (the canonical value is always accepted).
+#' @returns Character vector the same length as `x`, canonicalised where possible.
+#' @noRd
+normalize_synonyms <- function(x, synonyms) {
+  x <- trimws(tolower(as.character(x)))
+  # Flat lookup mapping every accepted spelling to its canonical value.
+  lookup <- unlist(lapply(names(synonyms), function(canon) {
+    spellings <- unique(c(canon, synonyms[[canon]]))
+    stats::setNames(rep(canon, length(spellings)), spellings)
+  }))
+  hit <- x %in% names(lookup)
+  x[hit] <- unname(lookup[x[hit]])
+  x
+}
+
+#' Synonym tables for lenient keyword matching
+#'
+#' Each entry maps a canonical keyword to accepted alternative spellings
+#' (typically plurals and common abbreviations). Used by normalize_synonyms().
+#' @noRd
+central_synonyms <- list(
+  mean = c("means", "average", "averages", "avg"),
+  median = c("medians", "med", "meds"),
+  none = c("no", "off", "false")
+)
+
+#' @noRd
+spread_synonyms <- list(
+  quantile = c("quantiles", "quant", "quants", "ci"),
+  sd = c("sds", "std", "stds", "stdev", "stdevs"),
+  range = c("ranges", "minmax", "min_max", "min-max"),
+  none = c("no", "off", "false")
+)
+
 #' @noRd
 .clean_which <- function(which) {
   which <- trimws(tolower(which))
@@ -684,6 +727,126 @@ get_names <- function(object) {
 }
 
 
+#' Filter a long-format simulation data frame by variable and/or type
+#'
+#' Shared filtering logic for the `as.data.frame()` methods of simulation,
+#' ensemble, and verification results. Operates on a long-format data frame with
+#' a variable column (default `"variable"`), mirroring the `vars`/`type`
+#' behaviour of [as.data.frame.stockflow()]: `vars` and `type` are mutually
+#' exclusive (specifying both warns and ignores `type`), `type` is resolved to
+#' variable names via the model, and unknown variables raise an error.
+#'
+#' @param df Long-format data frame to filter.
+#' @param object Stock-and-flow model (the `object` element of the result) used
+#'   to map variable types to names.
+#' @param vars Character vector of variable names to retain, or `NULL`.
+#' @param type Character vector of variable types to retain, or `NULL`.
+#' @param var_col Name of the column holding variable names. Defaults to
+#'   `"variable"`.
+#'
+#' @returns The filtered data frame.
+#' @noRd
+.filter_long_by_vars_type <- function(df, object, vars = NULL, type = NULL,
+                                      var_col = "variable") {
+  if (is.null(vars) && is.null(type)) {
+    return(df)
+  }
+
+  # Check for mutually exclusive parameters
+  if (!is.null(vars) && !is.null(type)) {
+    cli::cli_warn(c("!" = "Both {.arg vars} and {.arg type} specified; ignoring {.arg type} and using {.arg vars} only."))
+    type <- NULL
+  }
+
+  names_df <- get_names(object)
+
+  # Filter by type: resolve requested types to variable names via the model
+  if (!is.null(type)) {
+    type <- .validate_type_arg(type, arg_name = "type")
+    if (length(type) == 0) {
+      cli::cli_abort(c("x" = "At least one {.arg type} must be specified"))
+    }
+    keep <- names_df[names_df[["type"]] %in% type, "name"]
+    df <- df[df[[var_col]] %in% keep, , drop = FALSE]
+  }
+
+  # Filter by vars: validate, then distinguish typos (not in the model) from
+  # variables that exist in the model but were not saved in the output.
+  if (!is.null(vars)) {
+    vars <- .validate_name_arg(vars, arg_name = "vars")
+    vars <- Filter(nzchar, unique(vars))
+    if (length(vars) == 0) {
+      cli::cli_abort(c("x" = "At least one {.arg vars} must be specified"))
+    }
+
+    # Variables absent from the model are typos
+    validate_vars_in_model(vars, names_df, NULL, context = "model")
+
+    # Variables that exist in the model but are missing from the saved output
+    not_saved <- setdiff(vars, df[[var_col]])
+    if (length(not_saved) > 0) {
+      vars_not_saved(not_saved, names_df, arg = "vars", action = "abort")
+    }
+
+    df <- df[df[[var_col]] %in% vars, , drop = FALSE]
+  }
+
+  rownames(df) <- NULL
+  df
+}
+
+
+#' Inform the user that requested variables were not saved in the output
+#'
+#' Produces a single, consistent, actionable message used across the package
+#' (e.g. by the [as.data.frame()] methods and the plotting functions) when a
+#' user requests a variable that exists in the model but is absent from the
+#' saved simulation output. Constants are called out separately, as they are
+#' never part of the time-series output regardless of `only_stocks`.
+#'
+#' @param vars Character vector of model variables missing from the output.
+#' @param names_df Optional data frame with `type`/`name` columns, used to tailor
+#'   the guidance when all the missing variables are constants.
+#' @param arg Offending argument name for the message (e.g. `"name"`, `"vars"`).
+#' @param action Either `"abort"` (default) to raise an error or `"warn"` to
+#'   emit a warning and let the caller continue with the available variables.
+#' @param call Calling environment for error attribution.
+#'
+#' @returns Invoked for its side effect (error or warning); returns nothing.
+#' @noRd
+vars_not_saved <- function(vars, names_df = NULL, arg = "vars",
+                           action = c("abort", "warn"),
+                           call = rlang::caller_env()) {
+  action <- match.arg(action)
+
+  # Constants (and lookups) are never written to the time-series output, so
+  # only_stocks = FALSE would not help; give them tailored guidance.
+  all_constants <- FALSE
+  if (!is.null(names_df) && "type" %in% names(names_df) && length(vars) > 0) {
+    types <- names_df[match(vars, names_df[["name"]]), "type"]
+    all_constants <- all(!is.na(types) & types %in% c("constant", "lookup"))
+  }
+
+  lead <- if (action == "warn") {
+    "Ignoring {.arg {arg}} {cli::qty(length(vars))}{?value/values} {.val {vars}}: {cli::qty(length(vars))}{?it exists/they exist} in the model but {cli::qty(length(vars))}{?was/were} not saved in the output."
+  } else {
+    "{cli::qty(length(vars))}{?Variable/Variables} {.val {vars}} {cli::qty(length(vars))}{?exists/exist} in the model but {cli::qty(length(vars))}{?was/were} not saved in the output."
+  }
+
+  remedy <- if (all_constants) {
+    "Constants are not part of the time-series output; inspect them on the model with {.code as.data.frame(model)}."
+  } else {
+    "Re-run with {.code only_stocks = FALSE} to save all variables, or set {.arg vars} in {.fn sim_settings} to save specific ones."
+  }
+
+  if (action == "warn") {
+    cli::cli_warn(c("!" = lead, ">" = remedy))
+  } else {
+    cli::cli_abort(c(lead, ">" = remedy), call = call)
+  }
+}
+
+
 #' Validate vars argument for simulation output selection
 #'
 #' @inheritParams update.stockflow
@@ -895,6 +1058,12 @@ sort_args <- function(arg, func_name, default_arg = NULL, var_names = NULL,
         # so named forms (each =, length.out =) map to the correct positions.
         # length.out = -1 is r_rep's "unset" sentinel.
         default_arg <- as.list(alist(x = , times = "1", length.out = "-1", each = "1"))
+      } else if (func_name == "diff") {
+        # formals(diff) is just (x, ...) — the real args live in diff.default.
+        # Hardcode them so named forms (e.g. differences =) map to the correct
+        # positions of r_diff(x, lag, differences) instead of silently landing
+        # in `lag`.
+        default_arg <- as.list(alist(x = , lag = "1", differences = "1"))
       }
     }
 

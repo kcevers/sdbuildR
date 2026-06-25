@@ -131,7 +131,7 @@ If \code{file} has no \code{.json} extension, one is appended.
 }
 }
 \examples{
-sfm <- stockflow("SIR")
+sfm <- stockflow("sir")
 
 # Get sdbuildR reconstruction code
 cat(export_model(sfm, format = "sdbuildR"))

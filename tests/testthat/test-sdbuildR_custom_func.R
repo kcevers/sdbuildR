@@ -116,82 +116,8 @@ test_that("contains_IM() checks substring in string", {
   expect_false(contains_IM("haystack", "needle"))
 })
 
-# Modulus and remainder functions ----
-
-test_that("rem() computes remainder correctly", {
-  expect_equal(rem(7, 3), 1)
-  expect_equal(rem(10, 5), 0)
-  expect_equal(rem(8, 3), 2)
-})
-
-test_that("rem() handles negative values differently than mod()", {
-  # When a is negative
-  expect_equal(rem(-7, 3), -1)
-  expect_equal(mod(-7, 3), 2)
-
-  # When b is negative
-  expect_equal(rem(7, -3), 1)
-  expect_equal(mod(7, -3), -2)
-})
-
-test_that("rem() and mod() agree for positive values", {
-  expect_equal(rem(7, 3), mod(7, 3))
-  expect_equal(rem(10, 4), mod(10, 4))
-})
-
-test_that("%REM% operator works", {
-  expect_equal(7 %REM% 3, rem(7, 3))
-  expect_equal(-7 %REM% 3, rem(-7, 3))
-})
-
-# Logistic functions ----
-
-test_that("logistic() computes at midpoint", {
-  # At midpoint, output should be upper/2
-  expect_equal(logistic(0, midpoint = 0, upper = 1), 0.5)
-  expect_equal(logistic(5, midpoint = 5, upper = 10), 5)
-})
-
-test_that("logistic() respects upper asymptote", {
-  # Values should be bounded by upper
-  expect_true(logistic(100, upper = 1) <= 1)
-  expect_true(logistic(100, upper = -10) <= -10)
-})
-
-test_that("logistic() handles slope parameter", {
-  # Higher slope means steeper transition, so at a given x-midpoint distance,
-  # higher slope gets closer to the upper asymptote (farther from midpoint)
-  expect_true(abs(logistic(1, slope = 1) - 0.5) < abs(logistic(1, slope = 10) - 0.5))
-})
-
-test_that("sigmoid() is alias for logistic()", {
-  expect_equal(sigmoid(0), logistic(0))
-  expect_equal(sigmoid(-10), logistic(-10))
-  expect_equal(sigmoid(1 / 3), logistic(1 / 3))
-  expect_equal(
-    sigmoid(1, slope = 2, midpoint = 1, upper = 5),
-    logistic(1, slope = 2, midpoint = 1, upper = 5)
-  )
-})
-
-test_that("logistic() returns numeric", {
-  expect_type(logistic(0), "double")
-  expect_length(logistic(0), 1)
-})
-
-# Non-negative function ----
-
-test_that("nonnegative() clamps negative values to zero", {
-  expect_equal(nonnegative(-5), 0)
-  expect_equal(nonnegative(-0.1), 0)
-  expect_equal(nonnegative(0), 0)
-})
-
-test_that("nonnegative() preserves positive values", {
-  expect_equal(nonnegative(5), 5)
-  expect_equal(nonnegative(0.1), 0.1)
-  expect_equal(nonnegative(100), 100)
-})
+# rem(), mod(), %REM%, logistic(), sigmoid(), and nonnegative() values are
+# covered more thoroughly in the "Extra tests" sections further below.
 
 # Error message tests ----
 
@@ -519,4 +445,153 @@ test_that("nonnegative: passes through non-negative values unchanged", {
   expect_equal(nonnegative(3), 3)
   expect_equal(nonnegative(0), 0)
   expect_equal(nonnegative(100), 100)
+})
+
+
+# ============================================================================
+# ricker()
+# ============================================================================
+
+test_that("ricker: peaks at x = location with value upper", {
+  expect_equal(ricker(1, location = 1, upper = 1), 1, tolerance = 1e-9)
+  expect_equal(ricker(2, location = 2, upper = 5), 5, tolerance = 1e-9)
+  expect_equal(ricker(3, location = 3, upper = 10, shape = 2), 10, tolerance = 1e-9)
+})
+
+test_that("ricker: equals 0 at x = 0", {
+  expect_equal(ricker(0, location = 2, upper = 5), 0, tolerance = 1e-9)
+  expect_equal(ricker(0, location = 1, upper = 1, shape = 0.5), 0, tolerance = 1e-9)
+})
+
+test_that("ricker: location is the global maximum (hump shape)", {
+  x <- seq(0, 20, by = 0.01)
+  vals <- ricker(x, location = 4, upper = 3, shape = 1.5)
+  expect_equal(x[which.max(vals)], 4, tolerance = 0.01)
+  # increasing before the peak, decreasing after
+  expect_true(all(diff(vals[x <= 4]) >= 0))
+  expect_true(all(diff(vals[x >= 4]) <= 0))
+})
+
+test_that("ricker: upper scales the curve with upper", {
+  x <- seq(0.1, 10, by = 0.1)
+  expect_equal(ricker(x, location = 2, upper = 6), 6 * ricker(x, location = 2, upper = 1),
+    tolerance = 1e-9
+  )
+})
+
+test_that("ricker: shape = 1 reduces to the standard Ricker a*x*exp(-b*x)", {
+  # f(x) = upper * (x/location) * exp(1 - x/location)
+  #      = (upper * e / location) * x * exp(-x / location)
+  location <- 2
+  upper <- 1
+  a <- upper * exp(1) / location
+  b <- 1 / location
+  x <- c(0.5, 1, 3, 5)
+  expect_equal(
+    ricker(x, location = location, upper = upper, shape = 1),
+    a * x * exp(-b * x),
+    tolerance = 1e-9
+  )
+})
+
+test_that("ricker: standard coefficients a, b map to location, upper", {
+  # Start from textbook coefficients, convert to our parameters via
+  # location = 1/b, upper = a/(b*e), and check the curves agree.
+  a <- 2.5
+  b <- 0.4
+  location <- 1 / b
+  upper <- a / (b * exp(1))
+  x <- c(0, 0.5, 1, 2.5, 5, 9)
+  expect_equal(
+    ricker(x, location = location, upper = upper, shape = 1),
+    a * x * exp(-b * x),
+    tolerance = 1e-9
+  )
+})
+
+test_that("ricker: location and upper are the peak position and height of a*x*exp(-b*x)", {
+  # The standard Ricker peaks at x = 1/b with value a/(b*e); these must equal
+  # the location and upper recovered from a = upper*e/location, b = 1/location.
+  location <- 3
+  upper <- 7
+  a <- upper * exp(1) / location
+  b <- 1 / location
+  expect_equal(1 / b, location, tolerance = 1e-9) # peak position
+  expect_equal(a / (b * exp(1)), upper, tolerance = 1e-9) # peak height
+})
+
+test_that("ricker: shape = alpha matches generalized form C * x^alpha * exp(-(alpha/location)*x)", {
+  location <- 2
+  upper <- 3
+  alpha <- 2.5
+  C <- upper * exp(alpha) / location^alpha
+  x <- c(0.5, 1, 2, 4, 6)
+  expect_equal(
+    ricker(x, location = location, upper = upper, shape = alpha),
+    C * x^alpha * exp(-(alpha / location) * x),
+    tolerance = 1e-9
+  )
+})
+
+test_that("ricker: larger shape narrows the peak (smaller values off-peak)", {
+  # Off the peak the inner term is in (0, 1), so a larger exponent lowers it
+  x <- 8 # away from the peak at location = 4
+  broad <- ricker(x, location = 4, upper = 1, shape = 0.5)
+  base <- ricker(x, location = 4, upper = 1, shape = 1)
+  narrow <- ricker(x, location = 4, upper = 1, shape = 3)
+  expect_true(narrow < base)
+  expect_true(base < broad)
+})
+
+test_that("ricker: is vectorized over x", {
+  vals <- ricker(seq(0, 5, by = 0.5), location = 2)
+  expect_length(vals, 11)
+  expect_type(vals, "double")
+})
+
+test_that("ricker: validates parameters", {
+  expect_error(ricker(1, location = "a"))
+  expect_error(ricker(1, upper = "b"))
+  expect_error(ricker(1, shape = "c"))
+})
+
+test_that("ricker: a, b equals the standard curve a*x*exp(-b*x) at shape = 1", {
+  a <- 2.5
+  b <- 0.4
+  x <- c(0, 0.5, 1, 2.5, 5, 9)
+  expect_equal(ricker(x, a = a, b = b), a * x * exp(-b * x), tolerance = 1e-9)
+})
+
+test_that("ricker: a, b equals the expanded form a*x^shape*exp(-b*x) for any shape", {
+  a <- 1.8
+  b <- 0.6
+  shape <- 2.5
+  x <- c(0.5, 1, 2, 4, 6)
+  expect_equal(
+    ricker(x, a = a, b = b, shape = shape),
+    a * x^shape * exp(-b * x),
+    tolerance = 1e-9
+  )
+})
+
+test_that("ricker: a, b maps to location = shape/b, upper = a*(location/e)^shape", {
+  a <- 1.8
+  b <- 0.6
+  shape <- 2.5
+  location <- shape / b
+  upper <- a * (location / exp(1))^shape
+  x <- c(0.5, 1, 2, 4)
+  expect_equal(
+    ricker(x, a = a, b = b, shape = shape),
+    ricker(x, location = location, upper = upper, shape = shape),
+    tolerance = 1e-9
+  )
+})
+
+test_that("ricker: errors on incomplete or conflicting parameterization", {
+  expect_error(ricker(1, a = 2)) # b missing
+  expect_error(ricker(1, b = 0.5)) # a missing
+  expect_error(ricker(1, a = 2, b = 0.5, location = 3)) # conflict
+  expect_error(ricker(1, a = 2, b = 0.5, upper = 4)) # conflict
+  expect_error(ricker(1, a = "x", b = 0.5)) # non-numeric
 })

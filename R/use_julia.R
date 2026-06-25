@@ -271,6 +271,27 @@ julia_eval <- function(string, suppressMessages = TRUE) {
 }
 
 
+#' Build a Julia command to include a script, optionally seeded
+#'
+#' Wraps the `include()` call in `with_rng(seed) do ... end` when a seed is
+#' specified, so random elements are reproducible. Used for both single and
+#' ensemble simulations.
+#'
+#' @param filepath Path to the Julia script to include
+#' @param seed_nr Seed number, or `NULL` for no seeding
+#'
+#' @returns Character string with the Julia command
+#' @noRd
+jl_include_command <- function(filepath, seed_nr = NULL) {
+  include_str <- paste0('include("', jl_path(filepath), '")')
+  if (is.null(seed_nr)) {
+    include_str
+  } else {
+    paste0("with_rng(", as.numeric(seed_nr), ") do\n\t", include_str, "\nend")
+  }
+}
+
+
 #' Check Julia environment was initialized
 #'
 #' This should only be run if a Julia session was already initialized with JuliaConnectoR.
@@ -513,7 +534,7 @@ is_julia_env_setup <- function(force = FALSE, error = TRUE) {
     current_jl_version <- julia_eval("string(VERSION)")
 
     if (!is.null(manifest_jl_version) &&
-        !julia_version_compatible(manifest_jl_version, current_jl_version)) {
+      !julia_version_compatible(manifest_jl_version, current_jl_version)) {
       if (error) {
         cli::cli_abort(c(
           "x" = "The sdbuildR Julia environment was built with Julia {manifest_jl_version}, but you're running {current_jl_version}.",

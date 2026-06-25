@@ -121,6 +121,9 @@ convert_builtin_functions_julia_old <- function(type, name, eqn, var_names) {
         bracket_arg <- stringr::str_sub(eqn, idx_func[["start_bracket"]] + 1, idx_func[["end"]] - 1)
 
         arg <- parse_args(bracket_arg)
+        # Keep the raw (named) parts for variadic handlers like paste0(), whose
+        # `...` cannot survive sort_args()'s formal-based resolution.
+        raw_arg <- arg
         named_arg <- sort_args(arg, idx_func[["R_first_iter"]],
           var_names = var_names,
           fill_defaults = as.logical(idx_func[["fill_defaults"]])
@@ -168,6 +171,15 @@ convert_builtin_functions_julia_old <- function(type, name, eqn, var_names) {
             named_arg,
             idx_func[["R_first_iter"]],
             idx_func[["julia"]]
+          )
+        } else if (idx_func[["syntax"]] == "syntax_paste") {
+          # paste0(): variadic, so use the raw parts (sort_args would drop the
+          # `collapse` name and fold it into the parts).
+          replacement <- conv_paste(
+            raw_arg,
+            idx_func[["R_first_iter"]],
+            idx_func[["julia"]],
+            add_broadcast = as.logical(idx_func[["add_broadcast"]])
           )
         }
 

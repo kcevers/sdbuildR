@@ -19,7 +19,7 @@ Prints the first rows of the simulation results in wide format. For a
 statistical summary per variable use \link[=summary.simulate_stockflow]{summary()}.
 }
 \examples{
-sfm <- stockflow("SIR")
+sfm <- stockflow("sir")
 sim <- simulate(sfm)
 print(sim)
 

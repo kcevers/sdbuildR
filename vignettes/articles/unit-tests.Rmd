@@ -39,7 +39,7 @@ Stock-and-flow models can easily become complex, producing unexpected behaviours
 We will demonstrate unit tests on the SIR (Susceptible-Infected-Recovered) model, a classic model in epidemiology of infectious diseases.
 
 ```{r}
-sfm <- stockflow("SIR")
+sfm <- stockflow("sir")
 plot(sfm)
 ```
 

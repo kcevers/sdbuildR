@@ -28,7 +28,7 @@ Returns an overview of all unit tests attached to the model. The result
 has a \code{print()} method.
 }
 \examples{
-sfm <- stockflow("SIR") |>
+sfm <- stockflow("sir") |>
   unit_test(expr = all(susceptible >= 0)) |>
   unit_test(
     label = "recovered increases over time",

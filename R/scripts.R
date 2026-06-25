@@ -229,12 +229,12 @@ CSV.write(\"%(filepath_init)s\", %(initial_value_name)s)
 
     ensemble_summary_julia = "
 # Compute summary statistics
-%(summary_df_name)s%(ensemble_summ_func)s%(sim_df_name)s, [%(quantiles)s])
+%(summary_df_name)s%(ensemble_summ_func)s%(sim_df_name)s, [%(quantiles)s], [%(summary_stats)s])
 
 %(parameter_name)s[!, :time] .= 0.0
-%(summary_df_constants_name)s%(ensemble_summ_func)s%(parameter_name)s, [%(quantiles)s])
+%(summary_df_constants_name)s%(ensemble_summ_func)s%(parameter_name)s, [%(quantiles)s], [%(summary_stats)s])
 select!(%(summary_df_constants_name)s, Not(:time))\n\n%(initial_value_name)s[!, :time] .= 0.0
-%(summary_df_init_name)s%(ensemble_summ_func)s%(initial_value_name)s, [%(quantiles)s])
+%(summary_df_init_name)s%(ensemble_summ_func)s%(initial_value_name)s, [%(quantiles)s], [%(summary_stats)s])
 select!(%(summary_df_init_name)s, Not(:time))
 
 # Save to CSV

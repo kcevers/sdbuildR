@@ -573,7 +573,7 @@ test_that("validate_vars_in_model validates presence in dataframe", {
 
   expect_error(
     validate_vars_in_model(c("S", "I"), names_df, df),
-    "not in the simulated data frame"
+    "not saved in the output"
   )
 })
 

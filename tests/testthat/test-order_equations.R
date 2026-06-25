@@ -261,28 +261,28 @@ test_that("order_equations() warns for circular dependencies in aux", {
 # ==============================================================================
 
 test_that("dependencies() accepts bare symbol for name", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
   deps <- dependencies(sfm, name = susceptible)
   expect_true("susceptible" %in% names(deps))
   expect_equal(length(deps), 1L)
 })
 
 test_that("dependencies() accepts c() of bare symbols for name", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
   deps <- dependencies(sfm, name = c(susceptible, infected))
   expect_equal(length(deps), 2L)
   expect_true(all(c("susceptible", "infected") %in% names(deps)))
 })
 
 test_that("dependencies() accepts string for type", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
   deps <- dependencies(sfm, type = "stock")
   stock_names <- as.data.frame(sfm, type = "stock")[["name"]]
   expect_true(all(names(deps) %in% stock_names))
 })
 
 test_that("dependencies() backward compat: strings still work for name", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
   deps <- dependencies(sfm, name = "susceptible")
   expect_equal(length(deps), 1L)
   expect_true("susceptible" %in% names(deps))

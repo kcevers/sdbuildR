@@ -35,7 +35,7 @@ Use \link[=as.data.frame.simulate_stockflow]{as.data.frame()} to extract results
 Simulate a stock-and-flow model with simulation specifications defined by \code{\link[=sim_settings]{sim_settings()}}. If \code{sim_settings(language = "julia")}, the Julia environment will first be set up with \code{\link[=use_julia]{use_julia()}}. If any problems are detected by \code{\link[=summary]{summary()}}, the model cannot be simulated.
 }
 \examples{
-sfm <- stockflow("SIR")
+sfm <- stockflow("sir")
 sim <- simulate(sfm)
 plot(sim)
 

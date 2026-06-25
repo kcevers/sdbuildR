@@ -40,6 +40,22 @@
 #'   of flows. Defaults to `TRUE`.
 #' @param save_sims If `TRUE`, individual simulations are retained in
 #'   [ensemble()] output. Defaults to `FALSE`.
+#' @param central Central-tendency statistics to compute across simulations in
+#'   [ensemble()]. One or more of `"mean"`, `"median"`, or `"none"` (compute no
+#'   central tendency). Each requested statistic becomes a column in the ensemble
+#'   summary. Defaults to `c("mean", "median")`. Can be overridden per call via
+#'   the `central` argument of [ensemble()].
+#' @param spread Spread (uncertainty) statistics to compute across simulations in
+#'   [ensemble()]. One or more of `"quantile"` (quantile columns at the
+#'   probabilities given by `quantiles`), `"sd"` (standard deviation), `"range"`
+#'   (minimum and maximum, returned as `min`/`max` columns), or `"none"` (compute
+#'   no spread). Defaults to `"quantile"`. Can be overridden per call via the
+#'   `spread` argument of [ensemble()].
+#' @param quantiles Quantile probabilities to compute when `spread` includes
+#'   `"quantile"`, e.g. `c(0.025, 0.975)`. Returned as columns `quant1`,
+#'   `quant2`, ... in the order given. At least two unique values are required.
+#'   Defaults to `c(0.025, 0.975)`. Can be overridden per call via the
+#'   `quantiles` argument of [ensemble()].
 #'
 #' @returns A stock-and-flow model object of class [`stockflow`][stockflow]
 #' @concept simulate
@@ -87,7 +103,10 @@ sim_settings <- function(object,
                          vars = NULL,
                          keep_nonnegative_stock = FALSE,
                          keep_nonnegative_flow = TRUE,
-                         save_sims = FALSE) {
+                         save_sims = FALSE,
+                         central = c("mean", "median"),
+                         spread = "quantile",
+                         quantiles = c(0.025, 0.975)) {
   # Basic check
   if (missing(object)) {
     missing_arg("object")
@@ -229,6 +248,11 @@ sim_settings <- function(object,
     vars <- validate_sim_vars(object, vars)
   }
 
+  # Validate ensemble summary choices (runtime-only; do not affect base codegen)
+  if (!missing(central)) central <- .validate_central(central)
+  if (!missing(spread)) spread <- .validate_spread(spread)
+  if (!missing(quantiles)) quantiles <- .validate_ensemble_quantiles(quantiles)
+
   # Collect remaining validated args
   if (!missing(method) || method_auto_set) argg$method <- method
   if (!missing(time_units)) argg$time_units <- time_units
@@ -237,6 +261,9 @@ sim_settings <- function(object,
   if (!missing(vars)) argg$vars <- vars
   if (!missing(keep_nonnegative_stock)) argg$keep_nonnegative_stock <- keep_nonnegative_stock
   if (!missing(keep_nonnegative_flow)) argg$keep_nonnegative_flow <- keep_nonnegative_flow
+  if (!missing(central)) argg$central <- central
+  if (!missing(spread)) argg$spread <- spread
+  if (!missing(quantiles)) argg$quantiles <- quantiles
   # seed handled separately: c() preserves NULL elements, unlike $ assignment
   if (!missing(seed)) argg <- c(argg, list(seed = seed))
 
@@ -453,4 +480,91 @@ sim_settings <- function(object,
     ))
   }
   as.character(n)
+}
+
+
+#' Validate the ensemble `central` argument
+#'
+#' Canonicalises lenient spellings and checks the values against the allowed set.
+#'
+#' @param central Character vector (or `FALSE`) supplied by the user.
+#' @returns Canonicalised character vector.
+#' @noRd
+.validate_central <- function(central) {
+  if (isFALSE(central)) central <- "none"
+  if (!is.character(central) || length(central) == 0) {
+    cli::cli_abort(c(
+      "Invalid {.arg central} argument.",
+      "x" = "The {.arg central} argument must be a non-empty {.cls character} vector.",
+      "i" = "Choose one or more of {.val mean}, {.val median}, or {.val none}."
+    ))
+  }
+  central <- normalize_synonyms(central, central_synonyms)
+  invalid <- setdiff(central, c("mean", "median", "none"))
+  if (length(invalid) > 0) {
+    cli::cli_abort(c(
+      "Invalid {.arg central} value{?s}: {.val {invalid}}.",
+      "i" = "The {.arg central} argument must be one or more of {.val mean}, {.val median}, or {.val none}."
+    ))
+  }
+  central
+}
+
+
+#' Validate the ensemble `spread` argument
+#'
+#' Canonicalises lenient spellings and checks the values against the allowed set.
+#'
+#' @param spread Character vector (or `FALSE`) supplied by the user.
+#' @returns Canonicalised character vector.
+#' @noRd
+.validate_spread <- function(spread) {
+  if (isFALSE(spread)) spread <- "none"
+  if (!is.character(spread) || length(spread) == 0) {
+    cli::cli_abort(c(
+      "Invalid {.arg spread} argument.",
+      "x" = "The {.arg spread} argument must be a non-empty {.cls character} vector.",
+      "i" = "Choose one or more of {.val quantile}, {.val sd}, {.val range}, or {.val none}."
+    ))
+  }
+  spread <- normalize_synonyms(spread, spread_synonyms)
+  invalid <- setdiff(spread, c("quantile", "sd", "range", "none"))
+  if (length(invalid) > 0) {
+    cli::cli_abort(c(
+      "Invalid {.arg spread} value{?s}: {.val {invalid}}.",
+      "i" = "The {.arg spread} argument must be one or more of {.val quantile}, {.val sd}, {.val range}, or {.val none}."
+    ))
+  }
+  spread
+}
+
+
+#' Validate the ensemble `quantiles` argument
+#'
+#' @param quantiles Numeric vector of probabilities supplied by the user.
+#' @returns The validated numeric vector.
+#' @noRd
+.validate_ensemble_quantiles <- function(quantiles) {
+  if (!is.numeric(quantiles)) {
+    cli::cli_abort(c(
+      "Invalid {.arg quantiles} argument.",
+      "x" = "The {.arg quantiles} argument must be {.cls numeric}.",
+      ">" = "Use a numeric vector, e.g., {.code quantiles = c(0.025, 0.975)}."
+    ))
+  }
+  if (length(unique(quantiles)) < 2) {
+    cli::cli_abort(c(
+      "Invalid {.arg quantiles} argument.",
+      "x" = "The {.arg quantiles} argument must have at least {.val {2}} unique values.",
+      ">" = "Provide at least 2 quantiles, e.g., {.code quantiles = c(0.025, 0.975)}."
+    ))
+  }
+  if (any(quantiles < 0 | quantiles > 1)) {
+    cli::cli_abort(c(
+      "Invalid {.arg quantiles} argument.",
+      "x" = "All values in {.arg quantiles} must be between {.val {0}} and {.val {1}}.",
+      ">" = "Use values like {.code c(0.025, 0.5, 0.975)} for 2.5%, 50%, 97.5% quantiles."
+    ))
+  }
+  quantiles
 }

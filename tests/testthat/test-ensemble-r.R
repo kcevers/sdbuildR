@@ -19,7 +19,11 @@ test_that("ensemble() R handles models with no constants", {
   sfm <- make_basic_sfm() |>
     sim_settings(language = "R", start = 0, stop = 10, dt = 0.1, save_at = 1)
 
-  sims <- silence(ensemble(sfm, n = 2, save_sims = TRUE, verbose = FALSE))
+  sims <- silence(ensemble(sfm,
+    n = 2, save_sims = TRUE,
+    central = c("mean", "median"), spread = c("quantile", "sd", "range"),
+    verbose = FALSE
+  ))
 
   expect_true(sims[["success"]])
   expect_equal(nrow(sims[["constants"]][["df"]]), 0)
@@ -29,8 +33,33 @@ test_that("ensemble() R handles models with no constants", {
     c("sim", "condition", "variable", "value")
   )
   expect_true(
-    all(c("condition", "variable", "mean", "median", "sd", "min", "max", "q0.025", "q0.975") %in%
+    all(c("condition", "variable", "mean", "median", "sd", "min", "max", "quant1", "quant2") %in%
       names(sims[["constants"]][["summary"]]))
+  )
+})
+
+test_that("ensemble() accepts lenient central/spread spellings", {
+  sfm <- make_basic_sfm() |>
+    sim_settings(language = "R", start = 0, stop = 10, dt = 0.1, save_at = 1)
+
+  # Plurals and case variants canonicalise to the catalog column names.
+  # "range" expands to min/max columns.
+  sims <- silence(ensemble(sfm,
+    n = 2, central = c("Means", "medians"), spread = c("SDs", "ranges"),
+    verbose = FALSE
+  ))
+
+  expect_true(sims[["success"]])
+  expect_true(all(c("mean", "median", "sd", "min", "max") %in% names(sims[["summary"]])))
+
+  # Unrecognised choices are still rejected.
+  expect_error(
+    silence(ensemble(sfm, n = 2, spread = "iqr", verbose = FALSE)),
+    "Invalid"
+  )
+  expect_error(
+    silence(ensemble(sfm, n = 2, central = "avg2", verbose = FALSE)),
+    "Invalid"
   )
 })
 
@@ -261,6 +290,7 @@ test_that("ensemble() in R respects seed", {
 
 test_that("ensemble() in R with parallel execution respects seed", {
   skip_if_not_installed("future")
+  skip_if_not_installed("future.apply")
   skip_on_cran()
 
   sfm <- make_r_ensemble_random_sfm() |> sim_settings(seed = 123)
@@ -315,6 +345,7 @@ test_that("ensemble() in R without seed", {
 
 test_that("ensemble() R runs sequentially with future::sequential plan", {
   skip_if_not_installed("future")
+  skip_if_not_installed("future.apply")
 
   future::plan(future::sequential)
   on.exit(future::plan(future::sequential), add = TRUE)
@@ -345,7 +376,7 @@ test_that("ensemble() R uses parallel path when future plan has multiple workers
 
 
 test_that("ensemble respects sim_settings save_sims and per-call override via ...", {
-  sfm <- stockflow("SIR") |>
+  sfm <- stockflow("sir") |>
     sim_settings(save_sims = TRUE)
 
   ens_keep <- ensemble(sfm, n = 2)
@@ -353,4 +384,47 @@ test_that("ensemble respects sim_settings save_sims and per-call override via ..
 
   ens_drop <- ensemble(sfm, n = 2, save_sims = FALSE)
   expect_null(ens_drop$df)
+})
+
+
+# ============================================================================
+# as.data.frame.ensemble_stockflow() — vars/type filtering
+# ============================================================================
+
+test_that("as.data.frame(ens, which='summary', type=) filters by type", {
+  ens <- make_r_ens(n = 3, save_sims = TRUE)
+  df <- as.data.frame(ens, which = "summary", type = "stock")
+  stock_names <- as.data.frame(stockflow("sir"), type = "stock")$name
+  expect_true(all(unique(df$variable) %in% stock_names))
+})
+
+test_that("as.data.frame(ens, which='sims', vars=) accepts bare names", {
+  ens <- make_r_ens(n = 3, save_sims = TRUE)
+  expect_equal(unique(as.data.frame(ens, which = "sims", vars = infected)$variable), "infected")
+  expect_equal(unique(as.data.frame(ens, which = "sims", vars = "infected")$variable), "infected")
+})
+
+test_that("as.data.frame(ens) vars filter is respected in wide format", {
+  ens <- make_r_ens(n = 3, save_sims = TRUE)
+  w <- as.data.frame(ens, which = "sims", vars = "infected", direction = "wide")
+  expect_true("infected" %in% names(w))
+  expect_false("susceptible" %in% names(w))
+})
+
+test_that("as.data.frame(ens): both vars and type warns and uses vars", {
+  ens <- make_r_ens(n = 3, save_sims = TRUE)
+  expect_warning(df <- as.data.frame(ens, which = "summary", type = "stock", vars = "infected"))
+  expect_equal(unique(df$variable), "infected")
+})
+
+test_that("as.data.frame(ens): unknown vars errors as a typo", {
+  ens <- make_r_ens(n = 3, save_sims = TRUE)
+  expect_error(as.data.frame(ens, which = "summary", vars = "does_not_exist"), "not.*variable")
+})
+
+test_that("as.data.frame(ens): variable in model but not saved gives informative error", {
+  ens <- make_r_ens(n = 3, save_sims = TRUE)
+  # SIR ensemble saves stocks only by default; flows exist in the model but are unsaved
+  expect_error(as.data.frame(ens, which = "summary", vars = "new_infections"), "not saved in the output")
+  expect_error(as.data.frame(ens, which = "summary", vars = "new_infections"), "only_stocks = FALSE")
 })

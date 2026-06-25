@@ -1259,3 +1259,39 @@ test_that("as.data.frame condition filter (sims): wide direction still respects 
   # wide format: variables become columns
   expect_false("variable" %in% names(df))
 })
+
+
+# ============================================================================
+# as.data.frame.verify_stockflow() — vars/type filtering (which = "sims")
+# ============================================================================
+
+test_that("as.data.frame(verify, which='sims', vars=) filters by variable", {
+  res <- make_verify_model(n_tests = 2)
+  df <- as.data.frame(res, which = "sims", vars = "S")
+  expect_equal(unique(df$variable), "S")
+})
+
+test_that("as.data.frame(verify, which='sims', type=) filters by type", {
+  res <- make_verify_model(n_tests = 2)
+  df <- as.data.frame(res, which = "sims", type = "stock")
+  expect_true(all(df$variable == "S"))
+})
+
+test_that("as.data.frame(verify, which='sims'): unknown vars errors as a typo", {
+  res <- make_verify_model(n_tests = 2)
+  expect_error(as.data.frame(res, which = "sims", vars = "nope"), "not.*variable")
+})
+
+test_that("as.data.frame(verify, which='sims'): variable not saved gives informative error", {
+  res <- make_verify_model(n_tests = 2)
+  # 'drain' is a flow in the model but is not saved in the verify output by default
+  expect_error(as.data.frame(res, which = "sims", vars = "drain"), "not saved in the output")
+})
+
+test_that("as.data.frame(verify, which='tests') informs that vars/type apply only to sims", {
+  res <- make_verify_model(n_tests = 2)
+  expect_message(df <- as.data.frame(res, which = "tests", type = "stock"), "only apply")
+  # tests table is returned unaffected by the ignored filter
+  expect_false("variable" %in% names(df))
+  expect_equal(df, suppressMessages(as.data.frame(res, which = "tests")))
+})

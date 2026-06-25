@@ -53,12 +53,23 @@ emit_julia_call_args <- function(args, var_names) {
 #' Emit a known mapped Julia function call
 #' @noRd
 emit_mapped_julia_call <- function(x, arg_strings, var_names) {
+  syntax <- x[["syntax"]]
+
+  # paste0() is variadic (its parts arrive via `...`), so sort_args() — which
+  # resolves against named formals — cannot tell the positional parts from the
+  # `collapse`/`recycle0` options. Parse the raw argument strings directly so
+  # `collapse =` maps to a join() rather than silently becoming another part.
+  if (syntax == "syntax_paste") {
+    return(conv_paste(arg_strings, x[["R_first_iter"]], x[["julia"]],
+      add_broadcast = as.logical(x[["add_broadcast"]])
+    ))
+  }
+
   named_arg <- sort_args(arg_strings, x[["R_first_iter"]],
     var_names = var_names,
     fill_defaults = as.logical(x[["fill_defaults"]])
   )
 
-  syntax <- x[["syntax"]]
   if (syntax == "syntax0") {
     return(x[["julia"]])
   } else if (syntax == "syntax1") {

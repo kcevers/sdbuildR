@@ -9,6 +9,10 @@
       "opacity": 1,
       "showlegend": true,
       "visible": true,
+      "line": {
+        "color": "rgba(200,122,138,1)",
+        "width": 2
+      },
       "name": "S",
       "marker": {
         "color": "rgba(200,122,138,1)",
@@ -25,9 +29,6 @@
       "error_x": {
         "color": "rgba(200,122,138,1)"
       },
-      "line": {
-        "color": "rgba(200,122,138,1)"
-      },
       "xaxis": "x",
       "yaxis": "y",
       "frame": null
@@ -41,6 +42,10 @@
       "opacity": 1,
       "showlegend": true,
       "visible": true,
+      "line": {
+        "color": "rgba(107,157,89,1)",
+        "width": 2
+      },
       "name": "const1",
       "marker": {
         "color": "rgba(107,157,89,1)",
@@ -55,9 +60,6 @@
         "color": "rgba(107,157,89,1)"
       },
       "error_x": {
-        "color": "rgba(107,157,89,1)"
-      },
-      "line": {
         "color": "rgba(107,157,89,1)"
       },
       "xaxis": "x",

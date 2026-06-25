@@ -348,23 +348,23 @@ test_that("full pipe chain with NSE works end-to-end", {
 # as.data.frame.stockflow() with NSE
 # ==============================================================================
 
-test_that("as.data.frame() accepts bare symbol for name", {
-  sfm <- stockflow("SIR")
-  df <- as.data.frame(sfm, name = susceptible)
+test_that("as.data.frame() accepts bare symbol for vars", {
+  sfm <- stockflow("sir")
+  df <- as.data.frame(sfm, vars = susceptible)
   expect_equal(nrow(df), 1L)
   expect_equal(df[["name"]], "susceptible")
 })
 
-test_that("as.data.frame() accepts c() of bare symbols for name", {
-  sfm <- stockflow("SIR")
-  df <- as.data.frame(sfm, name = c(susceptible, infected))
+test_that("as.data.frame() accepts c() of bare symbols for vars", {
+  sfm <- stockflow("sir")
+  df <- as.data.frame(sfm, vars = c(susceptible, infected))
   expect_equal(nrow(df), 2L)
   expect_true(all(c("susceptible", "infected") %in% df[["name"]]))
 })
 
 
-test_that("as.data.frame() backward compat: strings still work for name", {
-  sfm <- stockflow("SIR")
-  df_name <- as.data.frame(sfm, name = "susceptible")
-  expect_equal(nrow(df_name), 1L)
+test_that("as.data.frame() accepts strings for vars", {
+  sfm <- stockflow("sir")
+  df_vars <- as.data.frame(sfm, vars = "susceptible")
+  expect_equal(nrow(df_vars), 1L)
 })

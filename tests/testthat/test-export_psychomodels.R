@@ -1,5 +1,5 @@
 test_that("export_model(format='psychomodels') returns single JSON object", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
 
   out <- export_model(sfm,
     format = "psychomodels",
@@ -33,7 +33,7 @@ test_that("export_model(format='psychomodels') returns single JSON object", {
 
 
 test_that("export_model(format='psychomodels') writes json file and appends extension", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
   path <- tempfile(pattern = "psychomodel")
 
   out_path <- export_model(
@@ -54,7 +54,7 @@ test_that("export_model(format='psychomodels') writes json file and appends exte
 
 
 test_that("export_model(format='psychomodels') publication_doi is optional", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
 
   out <- export_model(sfm, format = "psychomodels")
   obj <- jsonlite::fromJSON(out, simplifyVector = FALSE)
@@ -63,7 +63,7 @@ test_that("export_model(format='psychomodels') publication_doi is optional", {
 
 
 test_that("export_model(format='psychomodels') supports include_latex = FALSE", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
 
   out <- export_model(
     sfm,

@@ -15,6 +15,8 @@
   ignore_case = TRUE,
   status = c("pass", "fail", "error", "skip"),
   condition = NULL,
+  vars = NULL,
+  type = NULL,
   ...
 )
 }
@@ -54,6 +56,13 @@ with a matching status.
 For \code{which = "sims"}, keeps only the matching condition simulations.
 For \code{which = "tests"}, keeps only tests belonging to those conditions.}
 
+\item{vars}{Variable names to retain in the data frame. Only applies when
+\code{which = "sims"}. Defaults to \code{NULL} to include all variables.}
+
+\item{type}{Variable types to retain in the data frame. Must be one or more of
+'stock', 'flow', 'constant', 'aux', 'gf', or 'func'. Only applies when
+\code{which = "sims"}. Defaults to \code{NULL} to include all types.}
+
 \item{...}{Additional arguments (unused).}
 }
 \value{
@@ -84,7 +93,7 @@ row(s). Use \code{direction = "wide"} to pivot variables into columns.
 }
 \examples{
 # Create model with 2 unit tests
-sfm <- stockflow("SIR") |>
+sfm <- stockflow("sir") |>
   unit_test(expr = all(susceptible >= 0)) |>
   # Add test with conditions
   unit_test(

@@ -290,6 +290,12 @@ new_sim_settings <- function() {
   spec_defaults[["save_type"]] <- "all"
   spec_defaults["save_at"] <- list(NULL)
   spec_defaults["save_n"] <- list(NULL)
+
+  # Ensemble summary defaults: formals() yields unevaluated c(...) calls for
+  # these, so set the realised vectors explicitly.
+  spec_defaults[["central"]] <- c("mean", "median")
+  spec_defaults[["spread"]] <- "quantile"
+  spec_defaults[["quantiles"]] <- c(0.025, 0.975)
   spec_defaults
 }
 
@@ -762,7 +768,7 @@ get_building_block_prop <- function() {
 #' Create a data frame with properties of all model variables and functions. Specify the variable types, variable names, and/or properties to get a subset of the data frame.
 #'
 #' @inheritParams plot.stockflow
-#' @param name Variable names to retain in the data frame. Defaults to `NULL` to include all variables.
+#' @param vars Variable names to retain in the data frame. Defaults to `NULL` to include all variables.
 #' @param type Variable types to retain in the data frame. Must be one or more of 'stock', 'flow', 'constant', 'aux', 'gf', or 'func'. Defaults to `NULL` to include all types.
 #' @param properties Variable properties to retain in the data frame. Defaults to `NULL` to include all properties.
 #' @param row.names `NULL` or a character vector giving the row names for the data frame. Missing values are not allowed.
@@ -778,32 +784,35 @@ get_building_block_prop <- function() {
 #' @concept build
 #' @method as.data.frame stockflow
 #'
-#' @examples as.data.frame(stockflow("SIR"))
+#' @examples as.data.frame(stockflow("sir"))
 #'
 #' # Only show stocks
-#' as.data.frame(stockflow("SIR"), type = "stock")
+#' as.data.frame(stockflow("sir"), type = "stock")
+#'
+#' # Only show specific variables
+#' as.data.frame(stockflow("sir"), vars = c("susceptible", "infected"))
 #'
 #' # Only show equation and label
-#' as.data.frame(stockflow("SIR"), properties = c("eqn", "label"))
+#' as.data.frame(stockflow("sir"), properties = c("eqn", "label"))
 #'
 as.data.frame.stockflow <- function(x,
                                     row.names = NULL, optional = FALSE,
-                                    name = NULL, type = NULL,
+                                    vars = NULL, type = NULL,
                                     properties = NULL, ...) {
-  name <- .expr_to_char(rlang::enexpr(name))
+  vars <- .expr_to_char(rlang::enexpr(vars))
   check_stockflow(x)
   sfm <- x
   rm(x)
 
   # Check for mutually exclusive parameters
-  if (!is.null(name) && !is.null(type)) {
-    cli::cli_warn(c("!" = "Both {.arg name} and {.arg type} specified; ignoring {.arg type} and using {.arg name} only."))
+  if (!is.null(vars) && !is.null(type)) {
+    cli::cli_warn(c("!" = "Both {.arg vars} and {.arg type} specified; ignoring {.arg type} and using {.arg vars} only."))
     type <- NULL
   }
 
   # Validate and clean parameters
-  if (!is.null(name)) {
-    .validate_name_arg(name, arg_name = "name")
+  if (!is.null(vars)) {
+    .validate_name_arg(vars, arg_name = "vars")
   }
 
   # Only keep specified types
@@ -848,25 +857,25 @@ as.data.frame.stockflow <- function(x,
     return(df)
   }
 
-  # Only keep specified names
-  if (!is.null(name)) {
-    # Clean names
-    name <- Filter(nzchar, unique(name))
+  # Only keep specified variables
+  if (!is.null(vars)) {
+    # Clean variable names
+    vars <- Filter(nzchar, unique(vars))
 
-    if (length(name) == 0) {
-      cli::cli_abort(c("x" = "At least one {.arg name} must be specified"))
+    if (length(vars) == 0) {
+      cli::cli_abort(c("x" = "At least one {.arg vars} must be specified"))
     }
 
-    # Check if names exist
-    idx_exist <- name %in% df[["name"]]
+    # Check if variables exist
+    idx_exist <- vars %in% df[["name"]]
     if (!all(idx_exist)) {
-      missing_names <- name[!idx_exist]
+      missing_names <- vars[!idx_exist]
       cli::cli_abort(c(
         "Variable{cli::qty(length(missing_names))}{?s} not found in model.",
         "x" = "{.code {missing_names}} {cli::qty(length(missing_names))}{?does/do} not exist."
       ))
     }
-    df <- df[df[["name"]] %in% name, , drop = FALSE]
+    df <- df[df[["name"]] %in% vars, , drop = FALSE]
     if (nrow(df) == 0) {
       return(df)
     }
@@ -959,7 +968,7 @@ as.data.frame.stockflow <- function(x,
 #' @seealso [summary.stockflow()], [dependencies()]
 #'
 #' @examples
-#' sfm <- stockflow("SIR")
+#' sfm <- stockflow("sir")
 #' print(sfm)
 #'
 print.stockflow <- function(x, ...) {

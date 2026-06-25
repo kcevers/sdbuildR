@@ -14,7 +14,7 @@ test_that("plot() method exists for stockflow objects", {
 })
 
 test_that("plot() returns DiagrammeR grViz object", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
 
   result <- plot(sfm)
 
@@ -28,7 +28,7 @@ test_that("plot() returns DiagrammeR grViz object", {
 # ============================================================================
 
 test_that("plot() checks vars argument", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
 
   expect_error(
     plot(sfm, vars = 123),
@@ -49,7 +49,7 @@ test_that("plot() checks vars argument", {
 # ============================================================================
 
 test_that("plot() creates diagram for SIR template", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
   pl <- plot(sfm, show_aux = FALSE, show_constants = FALSE)
   nodes <- extract_diagram_nodes(pl)
   edges <- extract_diagram_edges(pl)
@@ -147,7 +147,7 @@ test_that("plot() with show_constants = FALSE hides constants", {
 })
 
 test_that("plot() with show_aux = FALSE hides auxiliary variables", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
   pl <- plot(sfm, show_aux = FALSE, show_constants = TRUE)
   nodes <- extract_diagram_nodes(pl)
   edges <- extract_diagram_edges(pl)
@@ -162,7 +162,7 @@ test_that("plot() with show_aux = FALSE hides auxiliary variables", {
 })
 
 test_that("plot() filters variables correctly", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
   var_names <- c("susceptible", "infected")
   pl <- plot(sfm, vars = var_names, show_aux = TRUE, show_constants = TRUE)
   nodes <- extract_diagram_nodes(pl)
@@ -189,7 +189,7 @@ test_that("plot() filters variables correctly", {
 })
 
 test_that("plot() applies custom stock color", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
   stock_color <- "#FF6B6B"
   df <- as.data.frame(sfm, properties = "type")
   stock_names <- df$name[df$type == "stock"]
@@ -203,7 +203,7 @@ test_that("plot() applies custom stock color", {
 })
 
 test_that("plot() applies custom flow color", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
   flow_color <- "#4ECDC4"
   df <- as.data.frame(sfm, properties = "type")
   flow_names <- df$name[df$type == "flow"]
@@ -216,7 +216,7 @@ test_that("plot() applies custom flow color", {
 })
 
 test_that("plot() applies custom dependency color", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
   dependency_color <- "#FFE66D"
   df <- as.data.frame(sfm, properties = "type")
   pl <- plot(sfm, dependency_col = dependency_color, show_dependencies = TRUE)
@@ -276,7 +276,7 @@ test_that("plot.stockflow() with format_label = TRUE removes underscores", {
 # ============================================================================
 
 test_that("plot() with show_eqn = TRUE (default) shows equations beneath labels", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
   pl <- plot(sfm, show_constants = TRUE)
   d <- pl[["x"]][["diagram"]]
 
@@ -290,7 +290,7 @@ test_that("plot() with show_eqn = TRUE (default) shows equations beneath labels"
 })
 
 test_that("plot() with show_eqn = FALSE does not show equations in labels", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
   pl <- plot(sfm, show_eqn = FALSE)
   d <- pl[["x"]][["diagram"]]
 
@@ -299,16 +299,16 @@ test_that("plot() with show_eqn = FALSE does not show equations in labels", {
 })
 
 test_that("plot.stockflow() show_tooltip = TRUE (default) adds equation tooltips", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
   pl <- plot(sfm, show_constants = TRUE, show_tooltip = TRUE)
   d <- pl[["x"]][["diagram"]]
 
-  expect_true(grepl('tooltip', d, fixed = TRUE))
+  expect_true(grepl("tooltip", d, fixed = TRUE))
   expect_snapshot_plot("stockflow-tooltip", pl)
 })
 
 test_that("plot.stockflow() with show_tooltip = FALSE omits tooltips", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
   pl <- plot(sfm, show_tooltip = FALSE, show_constants = TRUE)
   d <- pl[["x"]][["diagram"]]
 
@@ -317,13 +317,13 @@ test_that("plot.stockflow() with show_tooltip = FALSE omits tooltips", {
 })
 
 test_that("plot.stockflow() validates show_tooltip", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
   expect_error(plot(sfm, show_tooltip = "yes"), "show_tooltip")
   expect_error(plot(sfm, show_tooltip = NA), "show_tooltip")
 })
 
 test_that("plot.stockflow() tooltips describe type, name, equation, and structure", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
   pl <- plot(sfm, show_constants = TRUE, show_tooltip = TRUE)
   nodes <- extract_diagram_nodes(pl)
 
@@ -368,7 +368,7 @@ test_that("plot.stockflow() cloud tooltips state they are outside the model boun
 })
 
 test_that("plot() show_eqn uses label_col for the equation text", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
   label_color <- "#123456"
   pl <- plot(sfm, show_eqn = TRUE, label_col = label_color)
   d <- pl[["x"]][["diagram"]]
@@ -381,7 +381,7 @@ test_that("plot() show_eqn uses label_col for the equation text", {
 })
 
 test_that("plot() show_eqn wraps long equations to wrap_width", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
   pl <- plot(sfm, show_eqn = TRUE, wrap_width = 8)
   d <- pl[["x"]][["diagram"]]
 
@@ -390,13 +390,13 @@ test_that("plot() show_eqn wraps long equations to wrap_width", {
 })
 
 test_that("plot() validates show_eqn", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
   expect_error(plot(sfm, show_eqn = "yes"), "show_eqn")
   expect_error(plot(sfm, show_eqn = NA), "show_eqn")
 })
 
 test_that("plot() applies label_col to node fontcolor", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
   label_color <- "#654321"
   pl <- plot(sfm, label_col = label_color)
   d <- pl[["x"]][["diagram"]]

@@ -20,7 +20,7 @@ A data.frame with the first rows of the simulation results.
 Print the first rows of a simulation data frame of a stock-and-flow model. This is a wrapper around \code{\link[=head]{head()}} that first converts the simulation results to a data frame using \link[=as.data.frame.simulate_stockflow]{as.data.frame()}.
 }
 \examples{
-sfm <- stockflow("SIR")
+sfm <- stockflow("sir")
 sim <- simulate(sfm)
 head(sim)
 }

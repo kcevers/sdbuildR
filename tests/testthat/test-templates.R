@@ -31,7 +31,7 @@ test_that("templates() with valid name creates stockflow without error/warning/m
 # ============================================================================
 
 test_that("SIR template has exactly 3 stocks", {
-  expect_equal(nrow(as.data.frame(templates("SIR"), type = "stock")), 3)
+  expect_equal(nrow(as.data.frame(templates("sir"), type = "stock")), 3)
 })
 
 test_that("Lorenz template has exactly 3 stocks", {
@@ -80,7 +80,7 @@ test_that("templates() with each template name simulates and produces a plotly o
 
 test_that("SIR: sum of all stocks is constant over time (population conservation)", {
   skip_if_julia_not_ready()
-  sfm <- sim_settings(templates("SIR"), only_stocks = TRUE)
+  sfm <- sim_settings(templates("sir"), only_stocks = TRUE)
   sim <- simulate(sfm, seed = 42)
   wide <- as.data.frame(sim, direction = "wide")
   stock_cols <- setdiff(names(wide), "time")

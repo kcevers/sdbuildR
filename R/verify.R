@@ -57,7 +57,7 @@ verify <- function(object, ...) {
 #'   [as.data.frame.verify_stockflow()], [plot.verify_stockflow()]
 #'
 #' @examples
-#' sfm <- stockflow("SIR") |>
+#' sfm <- stockflow("sir") |>
 #'   unit_test(expr = all(susceptible >= 0)) |>
 #'   unit_test(
 #'     label = "recovered increases over time",
@@ -277,7 +277,7 @@ check_verify_stockflow <- function(x) {
 #' @seealso [verify()], [unit_tests()], [discard_unit_test()]
 #'
 #' @examples
-#' sfm <- stockflow("SIR") |>
+#' sfm <- stockflow("sir") |>
 #'   unit_test(expr = all(susceptible >= 0))
 #'
 #' # Run unit tests
@@ -639,7 +639,7 @@ unit_test <- function(object, test, expr, label, conditions = list(), active = T
 #' @seealso [unit_test()], [unit_tests()]
 #'
 #' @examples
-#' sfm <- stockflow("SIR") |>
+#' sfm <- stockflow("sir") |>
 #'   unit_test(label = "susceptible is non-negative", expr = all(susceptible >= 0)) |>
 #'   unit_test(label = "recovered increases", expr = all(diff(recovered) >= 0))
 #'
@@ -740,7 +740,7 @@ discard_unit_test <- function(object, label, test) {
 #' @seealso [unit_test()], [verify()]
 #'
 #' @examples
-#' sfm <- stockflow("SIR") |>
+#' sfm <- stockflow("sir") |>
 #'   unit_test(expr = all(susceptible >= 0)) |>
 #'   unit_test(
 #'     label = "recovered increases over time",
@@ -965,6 +965,11 @@ print.verify_stockflow <- function(x, ...) {
 #' @param condition Optional integer vector of condition numbers to filter by.
 #'   For `which = "sims"`, keeps only the matching condition simulations.
 #'   For `which = "tests"`, keeps only tests belonging to those conditions.
+#' @param vars Variable names to retain in the data frame. Only applies when
+#'   `which = "sims"`. Defaults to `NULL` to include all variables.
+#' @param type Variable types to retain in the data frame. Must be one or more of
+#'   'stock', 'flow', 'constant', 'aux', 'gf', or 'func'. Only applies when
+#'   `which = "sims"`. Defaults to `NULL` to include all types.
 #' @inheritParams unit_tests
 #' @param ... Additional arguments (unused).
 #'
@@ -979,7 +984,7 @@ print.verify_stockflow <- function(x, ...) {
 #'
 #' @examples
 #' # Create model with 2 unit tests
-#' sfm <- stockflow("SIR") |>
+#' sfm <- stockflow("sir") |>
 #'   unit_test(expr = all(susceptible >= 0)) |>
 #'   # Add test with conditions
 #'   unit_test(
@@ -1009,10 +1014,20 @@ as.data.frame.verify_stockflow <- function(x, row.names = NULL, optional = FALSE
                                            test = NULL, label = NULL, ignore_case = TRUE,
                                            status = c("pass", "fail", "error", "skip"),
                                            condition = NULL,
+                                           vars = NULL, type = NULL,
                                            ...) {
+  vars <- .expr_to_char(rlang::enexpr(vars))
   check_verify_stockflow(x)
 
   which <- .clean_which_verify(which)
+
+  # vars/type only filter simulation time-series, not the test results table
+  if (which != "sims" && (!is.null(vars) || !is.null(type))) {
+    cli::cli_inform(c(
+      "i" = "The {.arg vars} and {.arg type} arguments only apply to {.code which = 'sims'}.",
+      ">" = "Set {.code which = 'sims'} to filter the time-series by variable."
+    ))
+  }
 
   # ---- which = "sims": return simulation time-series -------------------------
   if (which == "sims") {
@@ -1142,6 +1157,9 @@ as.data.frame.verify_stockflow <- function(x, row.names = NULL, optional = FALSE
     } else {
       df <- do.call(rbind, c(sims_dfs, list(make.row.names = FALSE)))
     }
+
+    # Filter by variable and/or type
+    df <- .filter_long_by_vars_type(df, x[["object"]], vars = vars, type = type)
 
     if (direction == "wide") {
       df <- stats::reshape(df,
@@ -1313,7 +1331,7 @@ as.data.frame.verify_stockflow <- function(x, row.names = NULL, optional = FALSE
 #' @method head verify_stockflow
 #'
 #' @examples
-#' sfm <- stockflow("SIR") |>
+#' sfm <- stockflow("sir") |>
 #'   unit_test(expr = all(susceptible >= 0))
 #' res <- verify(sfm)
 #' head(res)
@@ -1339,7 +1357,7 @@ head.verify_stockflow <- function(x, n = 6L, ...) {
 #' @method tail verify_stockflow
 #'
 #' @examples
-#' sfm <- stockflow("SIR") |>
+#' sfm <- stockflow("sir") |>
 #'   unit_test(expr = all(susceptible >= 0))
 #' res <- verify(sfm)
 #' tail(res)

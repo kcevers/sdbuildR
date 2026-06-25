@@ -18,6 +18,7 @@
   shareY = TRUE,
   palette = "Dark 2",
   colors = NULL,
+  line_width = 2,
   font_family = "Times New Roman",
   font_size = 16,
   wrap_width = 25,
@@ -26,6 +27,7 @@
   alpha = 1,
   margin = 0.05,
   condition_display = c("subplots", "slider", "dropdown"),
+  control_options = list(),
   animation = c("none", "time"),
   webgl = getOption("sdbuildR.webgl", default = TRUE),
   ...
@@ -37,9 +39,10 @@
 \item{test}{Integer vector of test numbers to plot.
 Combines with \code{label} and \code{status} as AND intersection.}
 
-\item{vars}{Variables to plot. Defaults to NULL to plot all variables.}
+\item{vars}{Variable names to retain in the data frame. Only applies when
+\code{which = "sims"}. Defaults to \code{NULL} to include all variables.}
 
-\item{show_constants}{If TRUE, include constants in plot. Defaults to FALSE.}
+\item{show_constants}{If \code{TRUE}, include constants in plot. Defaults to \code{FALSE}.}
 
 \item{label}{Character vector of regex patterns for partial, case-insensitive
 label matching. A test is included if its label matches any pattern.}
@@ -67,6 +70,8 @@ with a matching status.
 
 \item{colors}{Vector of colours overriding \code{palette}. Defaults to \code{NULL}.}
 
+\item{line_width}{Line width of the plotted trajectories. Either a single value applied to all variables, or a vector with one value per variable (like \code{colors}). Defaults to \code{2}.}
+
 \item{font_family}{Font family. Defaults to \code{"Times New Roman"}.}
 
 \item{font_size}{Font size. Defaults to \code{16}.}
@@ -85,6 +90,12 @@ with a matching status.
 to show conditions as panels, \code{"slider"} to select one condition with a
 slider, or \code{"dropdown"} to select one condition with a dropdown. Defaults
 to \code{"subplots"}.}
+
+\item{control_options}{Named list fine-tuning the \code{"slider"}/\code{"dropdown"}
+condition control. Currently supports \code{max_labels}: the maximum number of
+slider tick labels to keep visible when many conditions are varied (the
+slider always keeps one step per condition; intermediate labels are thinned
+above this count). Defaults to \code{list(max_labels = 10)}.}
 
 \item{animation}{Animation mode. Use \code{"none"} for a static plot or \code{"time"}
 to cumulatively reveal trajectories over time. Defaults to \code{"none"}.}
@@ -106,7 +117,7 @@ displayed as a subplot. Simulations are always available since \code{\link[=veri
 unconditionally retains them.
 }
 \examples{
-sfm <- stockflow("SIR") |>
+sfm <- stockflow("sir") |>
   unit_test(expr = all(susceptible >= 0))
 res <- verify(sfm)
 plot(res)

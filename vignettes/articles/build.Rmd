@@ -38,7 +38,7 @@ library(kableExtra)
 
 ```{r include=FALSE}
 # Set this to TRUE to recreate the figures in the paper
-recreate_figs <- TRUE #FALSE
+recreate_figs <- interactive()
 ```
 
 ```{r include=FALSE}
@@ -62,16 +62,28 @@ if (recreate_figs) {
 VARS <- c("engagement", "performance", "energy", "demands", "resources", "motivation_rate")
 PALETTE <- c("Geyser", "Temps", "Spectral", "Zissou 1", "Roma")[5]
 COLORS <- grDevices::hcl.colors(n = 50, palette = PALETTE)
+# scales::show_col(COLORS)
 
 inflow_col <- adjustcolor(COLORS[10], alpha.f = 1)
 outflow_col <- adjustcolor(COLORS[3], alpha.f = 1)
+
+inflow_fill <- adjustcolor(inflow_col, alpha.f = .5)
+outflow_fill <- adjustcolor(outflow_col, alpha.f = .5)
+
+# scales::show_col( grDevices::hcl.colors(n = 50, palette = "Greens"))
+increase_col <- adjustcolor(
+  grDevices::hcl.colors(n = 50, palette = "Greens")[20],
+  alpha.f = 1)
+decrease_col <- adjustcolor(COLORS[2], alpha.f = 1)
+# scales::show_col(c(increase_col, decrease_col))
+increase_fill <- adjustcolor(increase_col, alpha.f = .8)
+decrease_fill <- adjustcolor(decrease_col, alpha.f = .4)
 
 COLORS_alpha <- adjustcolor(COLORS, alpha.f = .25)
 
 COLORS <- COLORS[c(37, 9, 32, 1, 47, 17)]
 stock_col <- adjustcolor(COLORS[1], alpha.f = .75)
 flow_col <- COLORS[6]
-
 
 health_path <- adjustcolor(COLORS[4], alpha.f = .75)
 motivation_path <- adjustcolor(COLORS[1], alpha.f = .85)
@@ -80,12 +92,14 @@ motivation_path_fill <- adjustcolor(COLORS[1], alpha.f = .25)
 performance_path <- adjustcolor(COLORS[2], alpha.f = .75)
 performance_path_fill <- adjustcolor(COLORS[2], alpha.f = .25)
 
+line_width <- 1.5
+line_width_stock <- line_width + 2
+
 font_size <- 16
 font_size_xlab <- round(font_size * 1.4)
 font_size_legend <- round(font_size * 1.1)
 font_size_subplot <- font_size # round(font_size * 1.5)
 xlab <- "Time (days)"
-
 
 # Finer-grained simulation
 save_at_fine <- .1 # .01
@@ -128,7 +142,7 @@ rm_grid <- function(pl) {
 ```
 
 
-Stock-and-flow models represent systems as states (stocks) that accumulate over time with processes (flows) that change these variables. In this vignette, we will demonstrate how to create stock-and-flow models from scratch using sdbuildR. It covers the basics of stock-and-flow modelling in the context of psychology with an example of burnout. Note that this vignette serves as online supplemental material A accompanying the paper *Formalizing Psychological Theory with stockflow: A Stock-and-Flow Modelling Tutorial in R* by Evers et al. (under review). To reproduce the figures in the paper, please see the corresponding .Rmd file.
+Stock-and-flow models represent systems as states (stocks) that accumulate over time with processes (flows) that change these variables. In this vignette, we will demonstrate how to create stock-and-flow models from scratch using sdbuildR. It covers the basics of stock-and-flow modelling in the context of psychology with an example of burnout. Note that this vignette serves as online supplemental material A accompanying the paper *Formalizing Psychological Theory with sdbuildR: A Stock-and-Flow Modelling Tutorial in R* by Evers et al. (under review). To reproduce the figures in the paper, please see the corresponding .Rmd file.
 
 ## Stock-and-flow models
 
@@ -217,11 +231,11 @@ sfm_big <- stockflow() |>
 #       outflow_col = outflow_col
 #     )
 #   )
-# 
+#
 # pl <- DiagrammeR::grViz(viz_str)
 # }
 
-pl <- plot(sfm_big, minlen = 1, nodesep= .8, pad=.1, order = c("stockA", "stockB", "Stock"), align = c("stockA", "stockB", "Stock"))
+pl <- plot(sfm_big, minlen = 1, nodesep = .8, pad = .1, order = c("stockA", "stockB", "Stock"), align = c("stockA", "stockB", "Stock"), show_eqn = FALSE, show_dependencies = FALSE)
 
 
 if (recreate_figs) {
@@ -251,7 +265,7 @@ for (i in names(sfm_list)) {
   sim <- simulate(sfm_list[[i]], save_at = save_at_fine)
   pl_list[[i]] <- plot(sim,
     vars = vars[idx],
-    xlab = "", main = "", #line_width = 3,
+    xlab = "", main = "", # line_width = 3,
     colors = colors[idx],
     font_family = font_family,
     font_size = font_size_subplot,
@@ -277,7 +291,7 @@ pl_sim <- plotly::subplot(pl_list,
       utils::modifyList(annot_xlab, list(x = 0.5, y = 0.05))
     )
   )
-print(pl_sim)
+# print(pl_sim)
 ```
 
 ```{r, echo = FALSE, eval = has_internet(), error = TRUE}
@@ -287,30 +301,526 @@ if (recreate_figs) {
   )
 
 
-# Simulation
-pl_sim <- plotly::subplot(pl_list,
-  nrows = 1,
-  shareX = FALSE, shareY = TRUE,
-  margin = 0.025, widths = c(.25, .3, .25)
-) |>
-  plotly::layout(
-    # margin = 0.05,
-    font = annot_font,
-    legend = utils::modifyList(annot_legend, list(traceorder = "normal", y = -0.45))
+  # Simulation
+  pl_sim <- plotly::subplot(pl_list,
+    nrows = 1,
+    shareX = FALSE, shareY = TRUE,
+    margin = 0.025, widths = c(.25, .3, .25)
   ) |>
-  plotly::layout(
-    yaxis = list(range = c(-1.1, 1.1)),
-    # yaxis2 = list(range = c(-1.1, 1.1)),
-    # yaxis3 = list(range = c(0, 1.1)),
-    annotations = list(
-      utils::modifyList(annot_xlab, list(x = 0.5, y = -0.22))
+    plotly::layout(
+      # margin = 0.05,
+      font = annot_font,
+      legend = utils::modifyList(annot_legend, list(traceorder = "normal", y = -0.45))
+    ) |>
+    plotly::layout(
+      yaxis = list(range = c(-1.1, 1.1)),
+      # yaxis2 = list(range = c(-1.1, 1.1)),
+      # yaxis3 = list(range = c(0, 1.1)),
+      annotations = list(
+        utils::modifyList(annot_xlab, list(x = 0.5, y = -0.22))
+      )
     )
-  )
 
   export_plot(pl_sim, file.path(filepath_figs, "sim_row.pdf"),
     width = 6, height = 2
   )
 }
+```
+
+
+
+
+```{r, echo = FALSE}
+colors <- c(stock_col, inflow_col, outflow_col)
+
+sfm <- stockflow() |>
+  sim_settings(only_stocks = FALSE, stop = 1, save_at = save_at_fine, dt = .01) |>
+  stock(Stock) |>
+  flow(Inflow, eqn = 1, to = Stock) |>
+  flow(Outflow, eqn = 5 * Stock, from = Stock)
+
+pl <- plot(sfm, minlen = 1, nodesep = .8, pad = .1, show_eqn = FALSE, show_dependencies = FALSE)
+# cat(pl$x$diagram)
+
+# {
+#   viz_str <- '
+#      digraph sfm {
+
+#       graph [layout = dot, rankdir = LR, center=true, outputorder="edgesfirst", pad=0.1, nodesep=0.8]
+
+#       # Shared across all nodes (persists until overridden)
+#       node [fontsize=18,fontname="Times New Roman",fontcolor="black"]
+
+#       # Define stock nodes
+#       node [shape=box,style=filled,fillcolor="#83d3d4"]
+#       "Stock" [id="Stock",label="Stock", tooltip = "Stock: Stock\nInitial value: 0\nInflows: Inflow\nOutflows: Outflow"]
+
+#       # Define flow nodes (intermediate nodes for flows)
+#       node [style = "",shape=plaintext, fontsize=16, width=0.6, height=0.3]
+#       "Inflow" [id="Inflow",label="Inflow", tooltip = "Flow: Inflow\nEquation: 1\nFrom: outside model boundary\nTo: Stock"]
+#         "Outflow" [id="Outflow",label="Outflow", tooltip = "Flow: Outflow\nEquation: 5 * Stock\nFrom: Stock\nTo: outside model boundary"]
+
+#       # Define external cloud nodes
+#       node [shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
+#       "Cloud1" [label="", tooltip = "Outside model boundary\nSink of: Outflow"]
+#         "Cloud2" [label="", tooltip = "Outside model boundary\nSource of: Inflow"]
+
+#       # Define auxiliary nodes
+      
+      
+
+#       # Define constant nodes
+      
+      
+
+#       # Define flow edges (stock -> flow_node)
+#       edge [style = "", arrowhead="none", color="black:%(inflow_col)s:black", penwidth=1.1, minlen=1, splines=false, tailport="e", headport="w"]
+#       "Cloud2" -> "Inflow"
+#       edge [color="black:%(outflow_col)s:black"]
+#       "Stock" -> "Outflow"
+
+#       # Define flow edges (flow_node -> stock)
+#       edge [style = "", arrowhead="normal", color="black:%(inflow_col)s:black", arrowsize=1.5, penwidth=1.1, minlen=1, splines=ortho, tailport="e", headport="w"]
+#       "Inflow" -> "Stock"
+#       edge [color="black:%(outflow_col)s:black"]
+#       "Outflow" -> "Cloud1"
+
+#       # Define dependency edges
+      
+      
+
+      
+
+
+#       # Rank groupings
+      
+
+#     }'
+# }
+
+# viz_str <- sprintf_arg(
+#   viz_str,
+#   list(
+#     inflow_col = inflow_col,
+#     outflow_col = outflow_col
+#   )
+# )
+
+# pl <- DiagrammeR::grViz(viz_str)
+
+
+if (recreate_figs) {
+  export_plot(pl, file.path(filepath_figs, "build_sfm_inflow_outflow.pdf"))
+}
+
+print(pl)
+```
+
+
+
+```{r}
+
+# # --- Adjustable settings -----------------------------------------------------
+# t0 <- 0   # start (inflow == outflow, stock flat)
+# t1 <- 2   # equal -> rise: inflow > outflow
+# t2 <- 4   
+# t3 <- 6   # rise  -> fall: outflow > inflow
+# t4 <- 8   
+
+
+# sfm <- stockflow() |>
+# stock(Stock, eqn = 1) |>
+# custom_func(func1, eqn = pulse(times, start = !!t1, width = !!t2 - !!t1, height = .5)) |>
+# custom_func(func2, eqn = pulse(times, start = !!t3, width = !!t4 - !!t3, height = .5)) |>
+# # custom_func(func3, eqn = pulse(times, start = 4, 
+# # # Make width large just in case
+# # width = 4, height = .5)) |>
+# flow(Inflow, eqn = 1 + func1(t), to = Stock) |>
+# flow(Outflow, eqn = 1 + func2(t), from = Stock) |>
+# sim_settings(only_stocks=FALSE)
+
+# sim <- simulate(sfm, stop = 10)
+# df_stock <- as.data.frame(sim, vars = "Stock")
+# df_in    <- as.data.frame(sim, vars = "Inflow")
+# df_out   <- as.data.frame(sim, vars = "Outflow")
+
+
+
+# increase_col   <- inflow_col # 'rgba(46, 134, 171, 1)'   # inflow > outflow: arrow + shade
+# rise_fill  <- inflow_fill # 'rgba(46, 134, 171, 0.3)'
+# decrease_col   <- outflow_col # 'rgba(231, 76, 60, 1)'    # outflow > inflow: arrow + shade
+# fall_fill  <- outflow_fill # 'rgba(231, 76, 60, 0.3)'
+# size_marker <- 8
+# line_width  <- 5
+
+# # Stock value at each time point (robust to non-exact time matches)
+# stock_at <- function(tt) df_stock$value[which.min(abs(df_stock$time - tt))]
+# y0 <- stock_at(t0); y1 <- stock_at(t1); y2 <- stock_at(t2); y3 <- stock_at(t3); y4 <- stock_at(t4)
+
+# # Closed polygon spanning the gap between inflow and outflow over [a, b]
+# band <- function(a, b){
+#   ti <- df_in$time  >= a & df_in$time  <= b
+#   to <- df_out$time >= a & df_out$time <= b
+#   list(x = c(df_in$time[ti], rev(df_out$time[to])),
+#        y = c(df_in$value[ti], rev(df_out$value[to])))
+# }
+# band_rise <- band(t1, t2)   # inflow > outflow
+# band_fall <- band(t3, t4)   # outflow > inflow
+
+# # --- Top panel: stock with a change indicator per phase ----------------------
+# fig1 <- plot_ly(df_stock, x = ~time, y = ~value, type = 'scatter',
+# showlegend = FALSE,
+#                 mode = 'lines', name = 'Stock', line = list(color = stock_col, width = line_width)) 
+                
+                
+# # markers at the phase boundaries
+# fig1 <- fig1 |>
+#   add_trace(x = c(t1), y = c(y1), mode = 'markers', name = 't1', showlegend = FALSE,
+#             marker = list(color = increase_col, size = size_marker)) |>
+#   add_trace(x = c(t2), y = c(y2), mode = 'markers', name = 't2', showlegend = FALSE,
+#             marker = list(color = increase_col, size = size_marker)) |>
+#   add_trace(x = c(t3), y = c(y3), mode = 'markers', name = 't3', showlegend = FALSE,
+#             marker = list(color = decrease_col, size = size_marker)) |>
+#   add_trace(x = c(t4), y = c(y4), mode = 'markers', name = 't4', showlegend = FALSE,
+#             marker = list(color = decrease_col, size = size_marker))
+            
+
+# # # Horizontal reference lines at the end-of-phase levels (rise and fall phases)            
+# # fig1 <- fig1 |>
+# #   # horizontal reference line at the end-of-phase level (rise phase)
+# #   add_trace(x = c(t1, t2), y = c(y1, y1), mode = 'lines', name = 'rise',
+# #             line = list(width = line_width,
+# #               # dash = 'dot', 
+# #             color = increase_col), showlegend = FALSE) |>
+# #   # horizontal reference line at the end-of-phase level (fall phase)
+# #   add_trace(x = c(t3, t4), y = c(y3, y3), mode = 'lines', name = 'fall',
+# #             line = list(width = line_width,
+# #               # dash = 'dot', 
+# #             color = decrease_col), showlegend = FALSE)
+
+
+
+
+# # --- Bottom panel: inflow & outflow with the difference shaded ----------------
+# fig2 <- plot_ly() |>
+#   add_trace(x = band_rise$x, y = band_rise$y, type = 'scatter', mode = 'lines',
+#             fill = 'toself', fillcolor = rise_fill, line = list(width = 0),
+#             showlegend = FALSE,
+#             name = 'Inflow > Outflow', hoverinfo = 'skip') |>
+#   add_trace(x = band_fall$x, y = band_fall$y, type = 'scatter', mode = 'lines',
+#             fill = 'toself', fillcolor = fall_fill, line = list(width = 0),
+#             showlegend = FALSE,
+#             name = 'Outflow > Inflow', hoverinfo = 'skip') |>
+#   add_trace(data = df_in, x = ~time, y = ~value, type = 'scatter', mode = 'lines',
+#             name = 'Inflow', line = list(color = increase_col, width = line_width)) |>
+#   add_trace(data = df_out, x = ~time, y = ~value, type = 'scatter', mode = 'lines',
+#             name = 'Outflow', line = list(color = decrease_col, width = line_width, dash = 'dash'))
+
+
+# # Vertical reference lines at the end-of-phase levels (rise and fall phases)            
+# add_vert_lines <- function(fig, y_range = c(0, 2.5)) {
+#   fig |> 
+#     add_trace(x = c(t1, t1), y = y_range, mode = 'lines', name = 't1',
+#              line = list(width = 2, dash = 'dot', color = increase_col), showlegend = FALSE) |>
+#     add_trace(x = c(t2, t2), y = y_range, mode = 'lines', name = 't2',
+#               line = list(width = 2, dash = 'dot', color = increase_col), showlegend = FALSE) |>
+#     add_trace(x = c(t3, t3), y = y_range, mode = 'lines', name = 't3',
+#               line = list(width = 2, dash = 'dot', color = decrease_col), showlegend = FALSE) |>
+#     add_trace(x = c(t4, t4), y = y_range, mode = 'lines', name = 't4',
+#               line = list(width = 2, dash = 'dot', color = decrease_col), showlegend = FALSE)
+# }
+
+# fig1 <- add_vert_lines(fig1)
+# fig2 <- add_vert_lines(fig2)
+
+# # --- Combine panels ----------------------------------------------------------
+# sp_margin <- 0.12                       # vertical gap between the two panels (paper)
+# top_margin <- 100
+# pad_axis <- .2
+# fig <- plotly::subplot(fig1, fig2, nrows = 2, shareX = TRUE, titleY = TRUE,
+#                        margin = sp_margin)
+
+# # --- Phase labels above each panel -------------------------------------------
+# annot_ <- utils::modifyList(annot, list(
+#   font = list(size = font_size_subplot - 2, family = font_family)
+# ))
+# top_y    <- 1.0                         # top labels sit just above the top panel
+# bot_y    <- (0.5 - sp_margin) + 0.01    # bottom labels sit just above bottom panel
+# # bot_y    <- (0.5 - sp_margin) - 0.1
+
+# # phase mid-points on the (shared) data x-axis, used to centre each label
+# centers  <- c((t0 + t1)/2, (t1 + t2)/2, (t2 + t3)/2, (t3 + t4)/2, (t4 + 10)/2)
+# top_text <- paste0("<i>", c("Static", "Increases", "Static", "Decreases", "Static"), "</i>")
+# bot_text <- paste0("<i>", c("Inflow ≡ Outflow", "Inflow > Outflow", "Inflow ≡ Outflow",
+#               "Inflow < Outflow", "Inflow == Outflow"), "</i>")
+
+# phase_label <- function(text, x, y) list(
+#   x = x, y = y, text = text, xref = 'x', yref = 'paper',
+#   xanchor = 'center', yanchor = 'bottom', showarrow = FALSE, font = annot_
+# )
+
+# # arrows live in the combined layout: xref 'x' = shared axis, yref 'y' = top panel
+# arrow_anns <- list(
+#   # vertical arrow: change while inflow > outflow (stock rises)
+#   list(x = t2, y = y2, ax = t2, ay = y1,
+#        xref = 'x', yref = 'y', axref = 'x', ayref = 'y',
+#        showarrow = TRUE, arrowhead = 3, arrowsize = 1.5,
+#        arrowwidth = 2, arrowcolor = increase_col, text = ''),
+#   # vertical arrow: change while outflow > inflow (stock falls)
+#   list(x = t4, y = y4, ax = t4, ay = y3,
+#        xref = 'x', yref = 'y', axref = 'x', ayref = 'y',
+#        showarrow = TRUE, arrowhead = 3, arrowsize = 1.5,
+#        arrowwidth = 2, arrowcolor = decrease_col, text = '')
+# )
+
+# label_anns <- c(
+#   Map(phase_label, top_text, centers, MoreArgs = list(y = bot_y + .22)),
+#   Map(phase_label, bot_text, centers, MoreArgs = list(y = bot_y - .07))
+# )
+
+# fig <- fig |> layout(
+#   # unname(): Map() returns a named list, which plotly mis-parses
+#   annotations = unname(c(
+#     # arrow_anns, 
+#   label_anns)),
+#   margin = list(t = top_margin)                 # headroom for the top labels
+# ) |>
+#   plotly::layout(
+#     xaxis = list(title = ""),
+#     yaxis = list(title = "Units", range = c(1 - pad_axis, 2 + pad_axis),
+#      tickvals = c(1, 2), ticktext = c("1", "2")),
+#     yaxis2 = list(title = "Units / Time", range = c(1 - pad_axis, 1.5 + pad_axis), 
+#                   tickvals = c(1, 1.5), ticktext = c("1", "1.5")),
+#     font = annot_font,
+#     annotations = list(
+#       utils::modifyList(annot_xlab, list(text = "<i>Timeseries of Stock</i>", x = 0.5, y = top_y + .15)),
+#       utils::modifyList(annot_xlab, list(text = "<i>Timeseries of Flows</i>", x = 0.5, y = bot_y + .15)),
+#       phase_label("<i>Area = Increase\nin stock</i>", x = centers[2], y = bot_y - .25),
+#       phase_label("<i>Area = Decrease\nin stock</i>", x = centers[4], y = bot_y - .25),
+#       utils::modifyList(annot_xlab, list(text = "Time", x = 0.5, y = -0.05))
+#     ),
+#     legend = utils::modifyList(annot_legend, list(
+#       itemwidth = 50,
+#       traceorder = "normal", 
+#       # y = -0.15
+#       y = bot_y+.09
+#       ))
+#   )
+
+
+
+# # # --- Vertical lines spanning BOTH panels -------------------------------------
+# # # x positions and colors for the vertical lines
+# # x_lines  <- c(t1, t2, t3, t4)
+# # col_lines <- c(increase_col, increase_col, decrease_col, decrease_col)
+
+# # # build a list of shape objects: xref 'x' = shared data axis,
+# # # yref 'paper' with y0=0/y1=1 spans the whole figure height (across the gap)
+# # shapes_list <- lapply(seq_along(x_lines), function(i) {
+# #   list(
+# #     type = "line",
+# #     x0 = x_lines[i], x1 = x_lines[i],
+# #     y0 = 0, y1 = 1,       # span entire figure vertically
+# #     xref = "x",
+# #     yref = "paper",
+# #     line = list(
+# #       color = col_lines[i],
+# #       width = 2,
+# #       dash  = "dot"
+# #     )
+# #   )
+# # })
+
+# # # NOTE: `fig |> layout(shapes = shapes_list)` silently DROPS a list of shapes
+# # # when `fig` is a subplot, and attaching them before subplot() rescales
+# # # yref="paper" to a single panel. Assigning x$layout$shapes directly is the only
+# # # route that keeps every shape AND spans the full figure height.
+# # fig$x$layout$shapes <- shapes_list
+
+
+# if (recreate_figs) {
+#   export_plot(fig, file.path(filepath_figs, "build_stock_flow_phases2.pdf"),
+#     width = 6.2, height = 4.75
+#   )
+# }
+
+
+# fig
+```
+
+
+
+
+```{r}
+
+# Time points for the four phases of stock change (rise and fall)
+t0 <- 0   # start (inflow == outflow, stock flat)
+t1 <- 2   # equal -> rise: inflow > outflow
+t2 <- 4   
+t3 <- 6   # rise  -> fall: outflow > inflow
+t4 <- 8   
+
+
+sfm <- stockflow() |>
+stock(Stock, eqn = 1) |>
+custom_func(func1, eqn = pulse(times, start = !!t1, width = !!t2 - !!t1, height = .5)) |>
+custom_func(func2, eqn = pulse(times, start = !!t3, width = !!t4 - !!t3, height = .5)) |>
+# custom_func(func3, eqn = pulse(times, start = 4, 
+# # Make width large just in case
+# width = 4, height = .5)) |>
+flow(Inflow, eqn = 1 + func1(t), to = Stock) |>
+flow(Outflow, eqn = 1 + func2(t), from = Stock) |>
+sim_settings(only_stocks=FALSE)
+
+sim <- simulate(sfm, stop = 10)
+df_stock <- as.data.frame(sim, vars = "Stock")
+df_in    <- as.data.frame(sim, vars = "Inflow")
+df_out   <- as.data.frame(sim, vars = "Outflow")
+df_change <- df_in
+df_change$value <- df_change$value - df_out$value
+
+
+size_marker <- 8
+line_width_thick  <- 5
+
+# Stock value at each time point (robust to non-exact time matches)
+stock_at <- function(tt) df_stock$value[which.min(abs(df_stock$time - tt))]
+y0 <- stock_at(t0); y1 <- stock_at(t1); y2 <- stock_at(t2); y3 <- stock_at(t3); y4 <- stock_at(t4)
+
+# --- Top panel: stock with a change indicator per phase ----------------------
+fig1 <- plot_ly(df_stock, x = ~time, y = ~value, type = 'scatter',
+showlegend = FALSE,
+                mode = 'lines', name = 'Stock', line = list(color = stock_col, width = line_width_thick)) 
+                
+                
+# markers at the phase boundaries
+fig1 <- fig1 |>
+  add_trace(x = c(t1), y = c(y1), mode = 'markers', name = 't1', showlegend = FALSE,
+            marker = list(color = increase_col, size = size_marker)) |>
+  add_trace(x = c(t2), y = c(y2), mode = 'markers', name = 't2', showlegend = FALSE,
+            marker = list(color = increase_col, size = size_marker)) |>
+  add_trace(x = c(t3), y = c(y3), mode = 'markers', name = 't3', showlegend = FALSE,
+            marker = list(color = decrease_col, size = size_marker)) |>
+  add_trace(x = c(t4), y = c(y4), mode = 'markers', name = 't4', showlegend = FALSE,
+            marker = list(color = decrease_col, size = size_marker))
+
+
+# --- Bottom panel: inflow & outflow with the difference shaded ----------------
+fig2 <- plot_ly() 
+
+# Vertical reference lines at the end-of-phase levels (rise and fall phases)            
+add_vert_lines <- function(fig, y_range = c(-2.5, 2.5)) {
+  fig |> 
+    add_trace(x = c(t1, t1), y = y_range, mode = 'lines', name = 't1',
+             line = list(width = 2, dash = 'dot', color = increase_col), showlegend = FALSE) |>
+    add_trace(x = c(t2, t2), y = y_range, mode = 'lines', name = 't2',
+              line = list(width = 2, dash = 'dot', color = increase_col), showlegend = FALSE) |>
+    add_trace(x = c(t3, t3), y = y_range, mode = 'lines', name = 't3',
+              line = list(width = 2, dash = 'dot', color = decrease_col), showlegend = FALSE) |>
+    add_trace(x = c(t4, t4), y = y_range, mode = 'lines', name = 't4',
+              line = list(width = 2, dash = 'dot', color = decrease_col), showlegend = FALSE)
+}
+
+fig1 <- add_vert_lines(fig1)
+fig2 <- add_vert_lines(fig2)
+
+# Net flow
+fig2 <- fig2 |>
+  add_trace(data = df_change, x = ~time, y = ~value, type = 'scatter', mode = 'lines',
+  showlegend = FALSE, fill = 'tozeroy',
+  fillcolor = ifelse(df_change$value >= 0, increase_fill, decrease_fill),
+            name = 'Net Flow', line = list(width = 0)) |>
+
+  add_trace(data = df_change, x = ~time, y = ~value, type = 'scatter', mode = 'lines',
+  showlegend = FALSE, 
+            name = 'Net Flow', line = list(color = flow_col, width = line_width_thick)) 
+
+
+# --- Combine panels ----------------------------------------------------------
+sp_margin <- 0.12                       # vertical gap between the two panels (paper)
+top_margin <- 80 #40
+pad_axis <- .1
+pad_axis2 <- .25
+fig <- plotly::subplot(fig1, fig2, nrows = 2, shareX = FALSE, titleY = TRUE,
+heights = c(.5, .5),
+                       margin = sp_margin)
+
+# --- Phase labels above each panel -------------------------------------------
+annot_ <- utils::modifyList(annot, list(
+  font = list(size = font_size_subplot - 2, family = font_family)
+))
+top_y    <- 1.0                         # top labels sit just above the top panel
+bot_y    <- (0.5 - sp_margin) + 0.01    # bottom labels sit just above bottom panel
+top_text_y <- c(bot_y + c(.265, .35, .58, .35, .265))
+bot_text_y <- c(bot_y - c(.195, .065, .195, .39, .195))
+top_angles <- c(0, -43, 0, 43, 0)
+bot_angles <- c(0, 0, 0, 0, 0)
+# bot_y    <- (0.5 - sp_margin) - 0.1
+
+# phase mid-points on the (shared) data x-axis, used to centre each label
+centers  <- c((t0 + t1)/2, (t1 + t2)/2, (t2 + t3)/2, (t3 + t4)/2, (t4 + 10)/2)
+centers_top <- centers
+centers_top[c(2, 4)] <- centers_top[c(2, 4)] + c(-.17, .17)   # shift the bottom labels for the rise/fall phases
+top_text <- paste0("<i>", c("Static", "Increases", "Static", "Decreases", "Static"), "</i>")
+bot_text <- paste0("<i>", c("Inflow ≡ Outflow", "Inflow > Outflow", "Inflow ≡ Outflow",
+              "Inflow < Outflow", "Inflow ≡ Outflow"), "</i>")
+
+phase_label <- function(text, x, y, angle = 0) list(
+  x = x, y = y, text = text, xref = 'x', yref = 'paper',
+  textangle = angle,
+  xanchor = 'center', yanchor = 'bottom', showarrow = FALSE, font = annot_
+)
+
+
+label_anns <- c(
+  lapply(seq_along(top_text), function(i) phase_label(top_text[i], centers_top[i], y = top_text_y[i], angle = top_angles[i])),
+  lapply(seq_along(bot_text), function(i) phase_label(bot_text[i], centers[i], y = bot_text_y[i], angle = bot_angles[i]))
+)
+
+fig <- fig |> layout(
+  # unname(): Map() returns a named list, which plotly mis-parses
+  annotations = unname(c(
+  label_anns)),
+  margin = list(t = top_margin)                 # headroom for the top labels
+) |>
+  plotly::layout(
+    xaxis = list(title = "", showline = TRUE, zerolinewidth = 0, showgrid = FALSE),
+    xaxis2 = list(title = "", showline = TRUE, showgrid = FALSE,
+                              zerolinecolor = '#ffff',
+ zerolinewidth = 0),
+    yaxis = list(title = "Units", showgrid = FALSE,
+    # showline = TRUE,
+     range = c(1 - pad_axis, 2 + pad_axis),
+     tickvals = c(1, 2), ticktext = c("1", "2")),
+    yaxis2 = list(title = "Units / Time", 
+    zerolinewidth = 0, showgrid = FALSE,
+    showline = TRUE, 
+    range = c(-.5 - pad_axis2, .5 + pad_axis2), 
+                  tickvals = c(-.5, .5), ticktext = c("-0.5", "0.5")),
+    font = annot_font,
+    annotations = list(
+      utils::modifyList(annot_xlab, list(text = "<i>A. Stock-and-Flow Diagram</i>", x = 0.5, y = top_y + .22)),
+      utils::modifyList(annot_xlab, list(text = "<i>B. Timeseries of Stock</i>", x = 0.5, y = top_y + .13)),
+      utils::modifyList(annot_xlab, list(text = "<i>C. Timeseries of Change in Stock</i>", x = 0.5, 
+      y = bot_y + .11)),
+      phase_label("<i>Area = Increase\nin stock</i>", x = centers[2], 
+      
+      y = bot_y - .2
+      ),
+      phase_label("<i>Area = Decrease\nin stock</i>", x = centers[4], y = bot_y - .325),
+      utils::modifyList(annot_xlab, list(text = "Time", x = 0.5, y = -0.06))
+    )
+  )
+
+
+if (recreate_figs) {
+  export_plot(fig, file.path(filepath_figs, "build_stock_flow_phases.pdf"),
+    width = 6, height = 4.2
+  )
+}
+
+
+fig
 ```
 
 
@@ -328,7 +838,9 @@ print(sfm)
 Though the model contains no elements, it includes default simulation settings, such as the duration of the simulation and a solver (`euler`) specifying the numerical technique used to generate output from the model. We change the simulation settings to model energy over the course of 16 weeks (note that the time unit merely changes the labels on the axes of the resulting plots, and does not affect the model's behaviour). In addition, we set `only_stocks = FALSE` to return all model variables in the simulation output, not just the stocks:
 
 ```{r}
-sfm <- sim_settings(sfm, stop = 16, time_units = "weeks", only_stocks = FALSE)
+sfm <- sim_settings(sfm, stop = 16, time_units = "weeks",
+ only_stocks = FALSE
+ )
 ```
 
 A model name can be supplied with `meta()`.
@@ -364,7 +876,9 @@ plot(sfm)
 To assess its dynamics, we simulate the model over time and visualise the resulting timeseries:
 
 ```{r}
-simulate(sfm) |> plot()
+sfm |>
+  simulate() |>
+  plot()
 ```
 
 Above, we use the pipe operator `|>` for better legibility. It simply passes the result of an expression to the next expression as its first argument. Across the entirety of the simulation, energy remains at its initial state. Stocks without flows are static, as there is no process specifying how they change. To deplete energy, we introduce an outflow representing work. For simplicity, we specify that work occurs at a constant rate over time, say `.5`. Rather than defining the flow's `eqn` to be `.5` directly, we add a constant to the model, so that it can easily be changed later. This also helps to keep track of how parametrized the model is. 
@@ -395,7 +909,9 @@ Note that `eqn` accepts any valid R expression, including functions (e.g., `sqrt
 Flows require more than an `eqn`, and also need to be connected to a stock, at least as either an inflow (`to`) or an outflow (`from`). Note that by definition, outflows are subtracted from the stock, and as such do not need a minus sign in `eqn` to indicate that they decrease the stock. We simulate the model to check whether energy indeed depletes from work:
 
 ```{r}
-simulate(sfm) |> plot()
+sfm |>
+  simulate() |>
+  plot()
 ```
 
 
@@ -407,7 +923,9 @@ To assess whether this produces more plausible model behaviour, we modify the ou
 ```{r}
 sfm <- update(sfm, work, eqn = work_rate * energy)
 
-simulate(sfm) |> plot()
+sfm |>
+  simulate() |>
+  plot()
 ```
 
 
@@ -426,7 +944,9 @@ To allow energy to recover, we introduce an inflow, again specified as a simple 
 sfm <- constant(sfm, recovery_rate, eqn = .3, label = "Recovery Rate") |>
   flow(recovery, eqn = recovery_rate, to = energy, label = "Recovery")
 
-simulate(sfm) |> plot()
+sfm |>
+  simulate() |>
+  plot()
 ```
 
 
@@ -451,16 +971,20 @@ sfm <- flow(sfm, erosion,
   eqn = recovery_rate * work,
   from = recovery_rate, label = "Recovery Erosion"
 )
-simulate(sfm) |> plot()
+sfm |>
+  simulate() |>
+  plot()
 ```
 
 
 The plot shows how the erosion of the ability to recover produces a characteristic burnout pattern: a steep initial rise followed by a collapse of energy. Counter-intuitively, though the recovery rate only decreases over time, energy first rises. However, this becomes clear once we inspect the balance between the inflow and outflow. To track this balance, we introduce an auxiliary: an intermediate variable computed at each time step that does not itself feed into any stock, but can be used in flow equations or to monitor other dynamic quantities: 
 
 ```{r}
-# Add auxiliary to keep track of net change in energy (inflow - outflow)
-sfm <- aux(sfm, net_change, eqn = recovery - work, label = "Net change in energy")
-simulate(sfm) |> plot()
+# Add auxiliary to keep track of net flow to energy (inflow - outflow)
+sfm <- aux(sfm, net_flow, eqn = recovery - work, label = "Net flow to energy")
+sfm |>
+  simulate() |>
+  plot()
 ```
 
 
@@ -477,12 +1001,11 @@ if (recreate_figs) {
   # Create subplot figure
   pl_list <- list()
   max_letter <- max(names(sfm_list))
-  VARS_example <- c("energy", "work", "recovery", "recovery_rate", "net_change")
 
   VARS_example <- c(
-    "energy", "work", "recovery",
-    # "recovery_rate",
-    "net_change"
+    "energy", 
+    "work", "recovery",
+    "net_flow"
   )
 
   # Recovery = recovery_rate so plot as one line
@@ -490,6 +1013,8 @@ if (recreate_figs) {
     update(recovery, label = "Recovery / recovery rate")
 
   COLORS_example <- COLORS[seq_along(VARS_example)]
+  line_widths <- rep(line_width, length(VARS_example))
+  line_widths[VARS_example == "energy"] <- line_width_stock
 
   titles <- paste0(
     paste0(
@@ -500,11 +1025,17 @@ if (recreate_figs) {
         "Stock-Dependent<br>Outflow",
         "Constant Inflow",
         "Erosion of Recovery Rate"
-        # "Auxiliary variable tracking net change in energy"
+        # "Auxiliary variable tracking net flow to energy"
       ), "</i>"
     )
   )
   titles <- stats::setNames(titles, names(sfm_list))
+
+
+  annot_ <- utils::modifyList(annot, list(
+    font = list(size = font_size_subplot + 4, family = font_family)
+  ))
+
 
   for (letter in names(sfm_list)) {
     sim <- simulate(sfm_list[[letter]],
@@ -513,13 +1044,15 @@ if (recreate_figs) {
 
     vars_in_sim <- unique(sim$df$variable)
 
-    vars_ <- VARS_example[VARS_example %in% vars_in_sim] |> rev()
-    colors_ <- COLORS_example[VARS_example %in% vars_in_sim] |> rev()
+    vars_ <- VARS_example[VARS_example %in% vars_in_sim] 
+    colors_ <- COLORS_example[VARS_example %in% vars_in_sim]
     colors_ <- adjustcolor(colors_, alpha.f = .9)
+    line_widths_ <- line_widths[VARS_example %in% vars_in_sim]
 
     pl_list[[letter]] <- plot(sim,
       vars = vars_,
       colors = colors_,
+      line_width = line_widths_,
       main = "",
       showlegend = (letter == max_letter)
     ) |>
@@ -531,15 +1064,19 @@ if (recreate_figs) {
       ))
   }
 
+}
+```
+
+
+
+```{r, include=FALSE, eval = has_internet(), error = TRUE}
+if (recreate_figs) {
+  
   x1 <- 0.1
   x2 <- 0.37
   x3 <- .78
   y1 <- 1.06
   y2 <- 0.48
-
-  annot_ <- utils::modifyList(annot, list(
-    font = list(size = font_size_subplot + 4, family = font_family)
-  ))
 
   pl <- plotly::subplot(
     plotly::subplot(pl_list[1:4],
@@ -551,7 +1088,7 @@ if (recreate_figs) {
       margin = 0.075
     ), plotly::subplot(pl_list[5]),
     nrows = 1,
-    margin = 0.03
+    margin = 0.025
   ) |>
     plotly::layout(
       yaxis4 = list(range = c(0, 1)),
@@ -561,10 +1098,11 @@ if (recreate_figs) {
       # legend = utils::modifyList(annot_legend, list(x = 1.4, y = 0.8)),
       legend = utils::modifyList(annot_legend, list(
         y = -.16,
+                traceorder = "normal",
         font = list(size = font_size_legend)
       )),
       annotations = list(
-        utils::modifyList(annot_xlab, list(x = 0.5, y = -0.075))
+        utils::modifyList(annot_xlab, list(x = 0.5, y = -0.05))
       )
     ) |>
     plotly::layout(annotations = list(
@@ -576,9 +1114,6 @@ if (recreate_figs) {
       # utils::modifyList(annot_, list(x = .5, y = -.5, text = "F. Stock-and-Flow Diagram"))
     ))
 
-  pl
-
-
   export_plot(pl, file.path(filepath_figs, "build_sim.pdf"),
     width = 7, height = 4
   )
@@ -586,39 +1121,77 @@ if (recreate_figs) {
 ```
 
 
-
 ```{r include=FALSE, eval = has_internet(), error = TRUE}
 if (recreate_figs) {
-
   # Version 2: all plots in one column
+
+  y1 <- 1.01
+  y2 <- 0.81
+  y3 <- 0.63
+  y4 <- 0.45
+  y5 <- 0.275
+
+  heights <- c(rep(.2, 4), .3)
+  heights <- heights / sum(heights)
+
+  titles <- paste0(
+    paste0(
+      "<i>", LETTERS[seq_along(sfm_list)], ". ",
+      c(
+        "Static Stock",
+        "Constant Outflow",
+        "Stock-Dependent Outflow",
+        "Constant Inflow",
+        "Erosion of Recovery Rate"
+        # "Auxiliary variable tracking net flow to energy"
+      ), "</i>"
+    )
+  )
+  titles <- stats::setNames(titles, names(sfm_list))
+
   pl <- plotly::subplot(pl_list,
     nrows = length(pl_list),
     shareX = TRUE, shareY = FALSE,
     titleY = FALSE, titleX = FALSE,
-    margin = 0.025
+    margin = 0.0275,
+     heights = heights
   ) |>
     plotly::layout(
+    yaxis = list(range = c(0.1, 0.5)),
+    # yaxis2 = list(showline = TRUE),
+    yaxis3 = list(range = c(0, 0.35)),
+    # yaxis4 = list(showline = TRUE),
+    # yaxis5 = list(showline = TRUE),
+
       font = annot_font,
       legend = utils::modifyList(annot_legend, list(
-        y = -.16,
+        y = -.09,
+        traceorder = "normal",
         font = list(size = font_size_legend)
       )),
       annotations = list(
-        utils::modifyList(annot_xlab, list(x = 0.5, y = -0.075))
+        utils::modifyList(annot_xlab, list(x = 0.5, y = -0.04))
       )
-    )
+    ) |>
+    plotly::layout(annotations = list(
+      utils::modifyList(annot_, list(x = 0.5, y = y1, text = titles[["A"]])),
+      utils::modifyList(annot_, list(x = 0.5, y = y2, text = titles[["B"]])),
+      utils::modifyList(annot_, list(x = 0.5, y = y3, text = titles[["C"]])),
+      utils::modifyList(annot_, list(x = 0.5, y = y4, text = titles[["D"]])),
+      utils::modifyList(annot_, list(x = 0.5, y = y5, text = titles[["E"]]))
+      # utils::modifyList(annot_, list(x = .5, y = -.5, text = "F. Stock-and-Flow Diagram"))
+    ))
 
   export_plot(pl, file.path(filepath_figs, "build_sim_column.pdf"),
-    width = 3, height = 6
+    width = 2.5, height = 8
   )
-
 }
 ```
 
 
 ```{r include = FALSE}
 if (recreate_figs) {
-  # cat(plot(sfm, minlen = 1, nodesep = .15, pad = .1, order = c("net_change", "energy", "recovery_rate"), align = c("net_change", "energy", "recovery_rate"))$x$diagram)
+
   # {
   #   viz_str0 <- "
 
@@ -627,10 +1200,10 @@ if (recreate_figs) {
   #     graph [layout = dot, rankdir = LR, center=true, outputorder='edgesfirst', pad=.1, nodesep= .15]
 
   #     # Rank groupings
-  #     {rank=same; 'net_change1'; 'net_change'; 'invisnode1'; 'energy'; 'invisnode2'; 'recovery_rate'}
+  #     {rank=same; 'net_flow1'; 'net_flow'; 'invisnode1'; 'energy'; 'invisnode2'; 'recovery_rate'}
 
   #     # Invisible edge to fix order
-  #     'net_change1' -> 'net_change' -> 'invisnode1' -> 'energy' -> 'invisnode2' -> 'recovery_rate' [style=invis]
+  #     'net_flow1' -> 'net_flow' -> 'invisnode1' -> 'energy' -> 'invisnode2' -> 'recovery_rate' [style=invis]
 
   #     # Define stock nodes
   #     'recovery_rate' [id='recovery_rate',label='Recovery Rate',tooltip = 'eqn = 1',shape=box,style=filled,fillcolor='#09B0ACBF',fontsize=18,fontname='Times New Roman']
@@ -664,20 +1237,21 @@ if (recreate_figs) {
   #     'recovery_rate' -> 'recovery' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
   #     'recovery_rate' -> 'erosion' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
   #     'work' -> 'erosion' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-  #     'recovery' -> 'net_change' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
-  #     'work' -> 'net_change' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+  #     'recovery' -> 'net_flow' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
+  #     'work' -> 'net_flow' [color='#999999', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport='_']
 
   #     # Define auxiliary nodes
-  #     # 'net_change' [id='net_change',xlabel='',label='',tooltip = 'eqn = recovery - work',shape=circle,fontsize=16,fontname='Times New Roman', width=0.15, height=0.15, fixedsize=true, style=filled, fillcolor='grey90']
-  #     'net_change' [id='net_change',xlabel='',label='',tooltip = 'eqn = recovery - work',shape=circle,fontsize=16,fontname='Times New Roman', width=0.15, height=0.15, fixedsize=true, style=filled, fillcolor='grey90']
-  #     'net_change1' [id='net_change1',label='Net change in energy',tooltip = 'eqn = recovery - work',shape=plaintext,fontsize=16,fontname='Times New Roman', width=0.6, height=0.2, fixedsize=true]
+  #     # 'net_flow' [id='net_flow',xlabel='',label='',tooltip = 'eqn = recovery - work',shape=circle,fontsize=16,fontname='Times New Roman', width=0.15, height=0.15, fixedsize=true, style=filled, fillcolor='grey90']
+  #     'net_flow' [id='net_flow',xlabel='',label='',tooltip = 'eqn = recovery - work',shape=circle,fontsize=16,fontname='Times New Roman', width=0.15, height=0.15, fixedsize=true, style=filled, fillcolor='grey90']
+  #     'net_flow1' [id='net_flow1',label='Net flow to energy',tooltip = 'eqn = recovery - work',shape=plaintext,fontsize=16,fontname='Times New Roman', width=0.6, height=0.2, fixedsize=true]
   #   }
   #   "
 
   # }
 
+  # cat(plot(sfm, minlen = 1, nodesep = .15, pad = .1, order = c("net_flow", "energy", "recovery_rate"), align = c("net_flow", "energy", "recovery_rate"))$x$diagram)
 
-    {
+  {
     viz_str <- '
 
     digraph sfm {
@@ -707,13 +1281,13 @@ if (recreate_figs) {
       # Define auxiliary nodes
       node [shape=circle,fontsize=16, width=0.15, height=0.15, fixedsize=true, style=filled, fillcolor="grey90"]
 
-      "net_change" [id="net_change",xlabel="",label="", tooltip = "Auxiliary: Net change in energy\nName: net_change\nEquation: recovery - work"]
+      "net_flow" [id="net_flow",xlabel="",label="", tooltip = "Auxiliary: Net flow to energy\nName: net_flow\nEquation: recovery - work"]
 
-      "net_change1" [id="net_change1",label=<Net change in energy<BR/><FONT POINT-SIZE="13" COLOR="black">eqn = recovery - work</FONT>>,tooltip = "eqn = recovery - work",shape=plaintext, width=0.6, height=0.2, fillcolor="none", style=""]
+      "net_flow1" [id="net_flow1",label=<Net flow to energy<BR/><FONT POINT-SIZE="13" COLOR="black">eqn = recovery - work</FONT>>,tooltip = "eqn = recovery - work",shape=plaintext, width=0.6, height=0.2, fillcolor="none", style=""]
 
       # Define constant nodes
-      
-      
+
+
 
       # Define flow edges (stock -> flow_node)
       edge [style = "", arrowhead="none", color="black:#f48153:black", penwidth=1.1, minlen=1, splines=false, tailport="e", headport="w"]
@@ -733,27 +1307,27 @@ if (recreate_figs) {
         "work" -> "erosion"
         "recovery_rate" -> "recovery"
         "energy" -> "work"
-        "recovery" -> "net_change"
-        "work" -> "net_change"
+        "recovery" -> "net_flow"
+        "work" -> "net_flow"
 
       # Ordering hints (invisible edges)
       edge [style=invis, constraint=true]
-      "net_change" -> "energy"
+      "net_flow" -> "energy"
       "energy" -> "recovery_rate"
 
 
       # Rank groupings
-      
-      {rank=same; "net_change"; "energy"; "recovery_rate" }
+
+      {rank=same; "net_flow"; "energy"; "recovery_rate" }
 
 
 ### Additions
  # Rank groupings
-      {rank=same; "net_change1"; "net_change"; "invisnode1"; "energy"; "invisnode2"; "recovery_rate"}
+      {rank=same; "net_flow1"; "net_flow"; "invisnode1"; "energy"; "invisnode2"; "recovery_rate"}
 
 
       # Invisible edge to fix order
-      "net_change1" -> "net_change" -> "invisnode1" -> "energy" -> "invisnode2" -> "recovery_rate" [style=invis]
+      "net_flow1" -> "net_flow" -> "invisnode1" -> "energy" -> "invisnode2" -> "recovery_rate" [style=invis]
 
      # Define invisible node
       "invisnode1" [id="invisnode1",label="Invisible Node",shape=box,style=invis,fontsize=12,fontname="Times New Roman", width=.2, height=.1, fixedsize=true]
@@ -761,17 +1335,16 @@ if (recreate_figs) {
 
     }
     '
-
   }
 
-    pl <- DiagrammeR::grViz(viz_str)
-    pl
+  pl <- DiagrammeR::grViz(viz_str)
+  pl
 
   export_plot(pl, file.path(filepath_figs, "build_sfm.pdf"))
 }
 ```
 
-The net change in energy is initially positive, as recovery exceeds energy depletion from work. As erosion progressively reduces the recovery rate, this inflow weakens, eventually falling below the outflow from work. The net change in energy is negative, and energy begins to decline, leading to the observed collapse. This complex behaviour is produced by a simple stock-and-flow model consisting of two stocks and three flows:
+The net flow to energy is initially positive, as recovery exceeds energy depletion from work. As erosion progressively reduces the recovery rate, this inflow weakens, eventually falling below the outflow from work. The net flow to energy is negative, and energy begins to decline, leading to the observed collapse. This complex behaviour is produced by a simple stock-and-flow model consisting of two stocks and three flows:
 
 ```{r}
 plot(sfm)
@@ -1151,7 +1724,7 @@ sfm <- change_name(sfm, energy, new_name = recovery)
 To remove a variable from the model, use `discard()`:
 
 ```{r}
-sfm <- discard(sfm, net_change)
+sfm <- discard(sfm, net_flow)
 ```
 
 Note that this cannot be undone!

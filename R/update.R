@@ -1494,7 +1494,7 @@ add_from_df <- function(object, df) {
 #' @concept build
 #' @export
 #' @examples
-#' sfm <- stockflow("SIR")
+#' sfm <- stockflow("sir")
 #' sfm <- change_name(sfm, c(susceptible, infected, recovered),
 #'   new_name = c(S, I, R)
 #' )

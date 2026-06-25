@@ -200,7 +200,6 @@ svg_node_center <- function(pl, nm) {
 
 test_that("align places variables in the same rank (column) when direction = LR", {
   skip_on_cran()
-  skip_if_not_installed("DiagrammeRsvg")
   sfm <- stockflow("predator_prey")
 
   pl <- plot(sfm, align = c("predator", "prey"), show_constants = FALSE)
@@ -212,7 +211,6 @@ test_that("align places variables in the same rank (column) when direction = LR"
 
 test_that("order sets the position within an aligned rank", {
   skip_on_cran()
-  skip_if_not_installed("DiagrammeRsvg")
   sfm <- stockflow("predator_prey")
 
   top_first <- plot(sfm,
@@ -232,7 +230,6 @@ test_that("order sets the position within an aligned rank", {
 
 test_that("order alone sequences variables into separate ranks (columns)", {
   skip_on_cran()
-  skip_if_not_installed("DiagrammeRsvg")
   sfm <- stockflow("predator_prey")
 
   pl <- plot(sfm, order = c("predator", "prey"), show_constants = FALSE)

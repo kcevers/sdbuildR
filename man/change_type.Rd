@@ -14,7 +14,7 @@ change_type(object, name, new_type)
 \item{new_type}{New variable type; one of \code{'stock'}, \code{'flow'}, \code{'constant'}, \code{'aux'}, \code{'gf'}, or \code{'func'}. Character vector of the same length as name.}
 }
 \value{
-A stock-and-flow model object of class \code{\link[=stockflow]{stockflow}} with the variable type changed throughout the model. Note that changing the type may result in changes to other properties (e.g., a flow must have "to" and/or "from" properties, so these will be added if not already present), and may require changes to the equations of connected variables.
+A stock-and-flow model object of class \code{\link{stockflow}} with the variable type changed throughout the model. Note that changing the type may result in changes to other properties (e.g., a flow must have "to" and/or "from" properties, so these will be added if not already present), and may require changes to the equations of connected variables.
 }
 \description{
 Change the type of a variable in a stock-and-flow model.

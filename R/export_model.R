@@ -62,7 +62,7 @@
 #' @seealso [import_insightmaker()], [import_desolve()]
 #'
 #' @examples
-#' sfm <- stockflow("SIR")
+#' sfm <- stockflow("sir")
 #'
 #' # Get sdbuildR reconstruction code
 #' cat(export_model(sfm, format = "sdbuildR"))
@@ -218,10 +218,11 @@ export_desolve_ <- function(object) {
 build_stockflow_code_ <- function(object) {
   check_stockflow(object)
 
-  # Simulation specifications — filter out defaults
+  # Simulation specifications — filter out defaults. Use the realised defaults
+  # (new_sim_settings()) rather than formals(), since some defaults (central,
+  # spread, quantiles) are vector-valued and unevaluated in formals().
   sim_settings_list <- object[["sim_settings"]]
-  ss_defaults <- formals(sim_settings)
-  ss_defaults <- ss_defaults[!names(ss_defaults) %in% c("object", "save_at", "save_n")]
+  ss_defaults <- new_sim_settings()
 
   sim_settings_list <- sim_settings_list[vapply(names(sim_settings_list), function(nm) {
     val <- sim_settings_list[[nm]]
@@ -235,7 +236,13 @@ build_stockflow_code_ <- function(object) {
     !nm %in% names(ss_defaults) || !identical(val, ss_defaults[[nm]])
   }, logical(1))]
 
-  sim_settings_list <- lapply(sim_settings_list, function(z) if (is.character(z)) paste0("\"", z, "\"") else z)
+  # Serialize each value to R source, handling character/numeric scalars and
+  # vectors (e.g. central = c("mean", "median"), quantiles = c(0.025, 0.975)).
+  fmt_setting <- function(z) {
+    if (is.character(z)) z <- paste0("\"", z, "\"")
+    if (length(z) != 1) paste0("c(", paste0(z, collapse = ", "), ")") else as.character(z)
+  }
+  sim_settings_list <- lapply(sim_settings_list, fmt_setting)
   sim_settings_str <- if (length(sim_settings_list) > 0) {
     paste0(" |>\n\tsim_settings(", paste0(names(sim_settings_list), " = ", unname(sim_settings_list), collapse = ", "), ")")
   } else {

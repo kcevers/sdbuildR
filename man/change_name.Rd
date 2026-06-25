@@ -20,7 +20,7 @@ A stock-and-flow model object of class \code{\link{stockflow}} with the name cha
 Change the name of a variable throughout the model. This updates the data frame and all references in equations, flow connections, and labels.
 }
 \examples{
-sfm <- stockflow("SIR")
+sfm <- stockflow("sir")
 sfm <- change_name(sfm, c(susceptible, infected, recovered),
   new_name = c(S, I, R)
 )

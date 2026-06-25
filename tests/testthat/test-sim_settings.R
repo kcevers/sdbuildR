@@ -61,14 +61,14 @@ test_that("sim_settings() modifies seed", {
 })
 
 test_that("sim_settings() stores vars and preserves order after deduplication", {
-  sfm <- stockflow("SIR") |>
+  sfm <- stockflow("sir") |>
     sim_settings(vars = c("susceptible", "infected", "susceptible"))
 
   expect_equal(sfm$sim_settings$vars, c("susceptible", "infected"))
 })
 
 test_that("sim_settings() rejects unknown vars", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
   expect_error(sim_settings(sfm, vars = c("does_not_exist")), "Invalid variable name")
 })
 
@@ -312,12 +312,12 @@ test_that("sim_settings() save_at overwrites previous save_n", {
 })
 
 test_that("sim_settings() default save_sims is FALSE on new model", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
   expect_false(isTRUE(sfm[["sim_settings"]][["save_sims"]]))
 })
 
 test_that("verify() always retains sims regardless of save_sims", {
-  sfm <- stockflow("SIR") |>
+  sfm <- stockflow("sir") |>
     unit_test(expr = all(susceptible >= 0))
 
   res <- verify(sfm)

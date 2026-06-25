@@ -70,7 +70,7 @@ test_that("compare_models: result contains 'properties' with per-model stats", {
 # ============================================================================
 
 test_that("model_properties: stock/flow counts match as.data.frame() counts", {
-  sfm <- templates("SIR")
+  sfm <- templates("sir")
   props <- model_properties(sfm)
   expect_equal(props$n_stocks, nrow(as.data.frame(sfm, type = "stock")))
   expect_equal(props$n_flows, nrow(as.data.frame(sfm, type = "flow")))
@@ -84,7 +84,7 @@ test_that("model_properties: nonlinearity score is a non-negative number", {
 
 test_that("model_properties: SIR (multiplicative cross-infection) scores higher than bank_account (linear)", {
   p_linear <- model_properties(templates("bank_account"))
-  p_nonlin <- model_properties(templates("SIR"))
+  p_nonlin <- model_properties(templates("sir"))
   expect_gte(p_nonlin$nonlinearity$score, p_linear$nonlinearity$score)
 })
 
@@ -95,13 +95,13 @@ test_that("model_properties: logistic_model (nonlinear growth) scores higher tha
 })
 
 test_that("model_properties: nonlinearity$by_variable is a character vector (named)", {
-  sfm <- templates("SIR")
+  sfm <- templates("sir")
   props <- model_properties(sfm)
   expect_true(is.character(props$nonlinearity$by_variable))
 })
 
 test_that("model_properties: returns all expected top-level fields", {
-  props <- model_properties(templates("SIR"))
+  props <- model_properties(templates("sir"))
   expect_true("n_stocks" %in% names(props))
   expect_true("n_flows" %in% names(props))
   expect_true("n_aux" %in% names(props))

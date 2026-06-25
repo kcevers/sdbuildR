@@ -8,7 +8,8 @@
       "type": "scattergl",
       "mode": "lines",
       "line": {
-        "color": "#C87A8A80"
+        "color": "#C87A8A80",
+        "width": 2
       },
       "showlegend": true,
       "visible": true,

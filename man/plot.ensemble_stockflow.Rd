@@ -18,14 +18,17 @@
   palette = "Dark 2",
   alpha = 0.3,
   colors = NULL,
+  line_width = 2,
   font_family = "Times New Roman",
   font_size = 16,
   wrap_width = 25,
   showlegend = TRUE,
   label_subplots = TRUE,
-  central_tendency = c("mean", "median", "none")[1],
-  central_tendency_width = 3,
+  central = c("mean", "median", "none"),
+  spread = c("quantile", "sd", "range"),
+  central_line_width = 3,
   condition_display = c("subplots", "slider", "dropdown"),
+  control_options = list(),
   animation = c("none", "time"),
   webgl = getOption("sdbuildR.webgl", default = TRUE),
   ...
@@ -38,11 +41,11 @@
 
 \item{sim}{Indices of the individual trajectories to plot if which = \code{"sims"}. Defaults to 1:10. Including a high number of trajectories will slow down plotting considerably.}
 
-\item{condition}{Indices of the condition to plot. Defaults to 1:9. If only one condition is specified, the plot will not be a grid of subplots.}
+\item{condition}{Indices of the condition(s) to plot. Defaults to 1:9.}
 
-\item{vars}{Variables to plot. Defaults to NULL to plot all variables.}
+\item{vars}{Variables to plot. Defaults to \code{NULL} to plot all variables.}
 
-\item{show_constants}{If TRUE, include constants in plot. Defaults to FALSE.}
+\item{show_constants}{If \code{TRUE}, include constants in plot. Defaults to \code{FALSE}.}
 
 \item{nrows}{Number of rows in the plot grid. Defaults to ceiling(sqrt(n_conditions)).}
 
@@ -58,6 +61,8 @@
 
 \item{colors}{Vector of colours. If NULL, the color palette will be used. If specified, will override palette. The number of colours must be equal to the number of variables in the simulation data frame. Defaults to NULL.}
 
+\item{line_width}{Line width of the plotted trajectories. Either a single value applied to all variables, or a vector with one value per variable (like \code{colors}). Defaults to \code{2}.}
+
 \item{font_family}{Font family. Defaults to "Times New Roman".}
 
 \item{font_size}{Font size. Defaults to 16.}
@@ -68,14 +73,29 @@
 
 \item{label_subplots}{Whether to plot labels indicating the condition of the subplot.}
 
-\item{central_tendency}{Central tendency to use for the mean line. Either "mean", "median", or "none" to not plot the central tendency. Defaults to "mean".}
+\item{central}{Which central-tendency line to draw, given as preferences in
+order: the first one that \code{\link[=ensemble]{ensemble()}} computed is used. For example,
+\code{c("mean", "median")} draws the mean if it is available, otherwise the
+median, and \code{"none"} draws no line. Defaults to \code{c("mean", "median", "none")}.}
 
-\item{central_tendency_width}{Line width of central tendency. Defaults to 3.}
+\item{spread}{Which uncertainty band to draw, again as ordered preferences:
+\code{"quantile"} (between the lowest and highest quantile), \code{"sd"} (the central
+line plus/minus one standard deviation), \code{"range"} (between \code{min} and
+\code{max}), or \code{"none"}. The first band the computed statistics can support is
+used; \code{"sd"} also needs a central line. Defaults to \code{c("quantile", "sd", "range")}.}
+
+\item{central_line_width}{Line width of the central tendency line (and marker size for single time points). Either a single value applied to all variables, or a vector with one value per variable (like \code{line_width}). Defaults to 3.}
 
 \item{condition_display}{How to display multiple conditions. Use \code{"subplots"}
 to show conditions as panels, \code{"slider"} to select one condition with a
 slider, or \code{"dropdown"} to select one condition with a dropdown. Defaults
 to \code{"subplots"}.}
+
+\item{control_options}{Named list fine-tuning the \code{"slider"}/\code{"dropdown"}
+condition control. Currently supports \code{max_labels}: the maximum number of
+slider tick labels to keep visible when many conditions are varied (the
+slider always keeps one step per condition; intermediate labels are thinned
+above this count). Defaults to \code{list(max_labels = 10)}.}
 
 \item{animation}{Animation mode. Use \code{"none"} for a static plot or \code{"time"}
 to cumulatively reveal trajectories over time. Defaults to \code{"none"}.

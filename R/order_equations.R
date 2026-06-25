@@ -153,7 +153,7 @@ find_newly_defined_var <- function(eqn) {
 #' @export
 #'
 #' @examples
-#' sfm <- stockflow("SIR")
+#' sfm <- stockflow("sir")
 #' dependencies(sfm)
 #'
 dependencies <- function(object, name = NULL, type = NULL, reverse = FALSE) {

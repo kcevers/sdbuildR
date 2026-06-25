@@ -9,7 +9,7 @@ test_that("export_model() errors on non-sdbuildR input", {
 
 
 test_that("export_model() errors on unknown format", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
   expect_error(export_model(sfm, format = "xmile"))
 })
 
@@ -17,7 +17,7 @@ test_that("export_model() errors on unknown format", {
 # ---- psychomodels format ----
 
 test_that("export_model(format='psychomodels') returns JSON with expected fields", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
   out <- export_model(sfm,
     format = "psychomodels",
     publication_doi = "10.0000/example"
@@ -46,7 +46,7 @@ test_that("export_model(format='psychomodels') returns JSON with expected fields
 
 
 test_that("export_model(format='psychomodels') writes .json file, appending extension", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
   path <- tempfile(pattern = "psychomodel")
 
   out_path <- export_model(sfm,
@@ -64,7 +64,7 @@ test_that("export_model(format='psychomodels') writes .json file, appending exte
 
 
 test_that("export_model(format='psychomodels') include_latex = FALSE", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
   out <- export_model(sfm,
     format = "psychomodels",
     explanation = "Base explanation",
@@ -79,7 +79,7 @@ test_that("export_model(format='psychomodels') include_latex = FALSE", {
 # ---- sdbuildR format ----
 
 test_that("export_model(format='sdbuildR') returns character string with sdbuildR code", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
   out <- export_model(sfm, format = "sdbuildR")
   expect_type(out, "character")
   expect_match(out, "stockflow()", fixed = TRUE)
@@ -87,14 +87,14 @@ test_that("export_model(format='sdbuildR') returns character string with sdbuild
 })
 
 test_that("export_model(format='sdbuildR') matches build_stockflow_code_() output", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
   out_new <- export_model(sfm, format = "sdbuildR")
   out_old <- suppressWarnings(build_stockflow_code_(sfm))
   expect_identical(out_new, out_old)
 })
 
 test_that("export_model(format='sdbuildR') writes .R file, appending extension", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
   path <- tempfile(pattern = "stockflow_model")
   out_path <- export_model(sfm, format = "sdbuildR", file = path)
   expect_equal(out_path, paste0(path, ".R"))
@@ -107,7 +107,7 @@ test_that("export_model(format='sdbuildR') writes .R file, appending extension",
 # ---- deSolve format ----
 
 test_that("export_model(format='deSolve') returns character string with deSolve code", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
   out <- export_model(sfm, format = "deSolve")
   expect_type(out, "character")
   expect_match(out, "library(deSolve)", fixed = TRUE)
@@ -116,7 +116,7 @@ test_that("export_model(format='deSolve') returns character string with deSolve 
 })
 
 test_that("export_model(format='deSolve') output contains model variable names", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
   out <- export_model(sfm, format = "deSolve")
   expect_match(out, "susceptible", fixed = TRUE)
   expect_match(out, "infected", fixed = TRUE)
@@ -125,12 +125,12 @@ test_that("export_model(format='deSolve') output contains model variable names",
 })
 
 test_that("export_model(format='deSolve') errors on Julia language", {
-  sfm <- sim_settings(stockflow("SIR"), language = "Julia")
+  sfm <- sim_settings(stockflow("sir"), language = "Julia")
   expect_error(export_model(sfm, format = "deSolve"), class = "rlang_error")
 })
 
 test_that("export_model(format='deSolve') writes .R file, appending extension", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
   path <- tempfile(pattern = "desolve_model")
   out_path <- export_model(sfm, format = "deSolve", file = path)
   expect_equal(out_path, paste0(path, ".R"))
@@ -138,7 +138,7 @@ test_that("export_model(format='deSolve') writes .R file, appending extension", 
 })
 
 test_that("export_model(format='deSolve') output is valid R code", {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
   out <- export_model(sfm, format = "deSolve")
 
   withr::local_preserve_seed()

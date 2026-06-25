@@ -44,8 +44,22 @@
 #'
 #' @param cross If `TRUE`, cross the parameters in the conditions list to
 #'   generate all possible combinations of parameters. Defaults to `TRUE`.
-#' @param quantiles Quantiles to calculate in the summary, e.g., `c(0.025,
-#'   0.975)`.
+#' @param central Which central-tendency statistic(s) to compute across the
+#'   simulations at each time point: any of `"mean"`, `"median"`, or `"none"`.
+#'   Each one becomes a column of the same name in `summary`. Defaults to the
+#'   model's `central` setting (see [sim_settings()]); set it here to override
+#'   that for this run. Note that `central` and `spread` choose what is
+#'   *computed*; [plot.ensemble_stockflow()] then chooses what to *show*.
+#' @param spread Which measures of spread to compute: `"quantile"` (columns
+#'   `quant1`, `quant2`, ... at the probabilities in `quantiles`), `"sd"`,
+#'   `"range"` (a `min` and a `max` column), or `"none"`. Several can be
+#'   combined, e.g. `c("quantile", "sd")`. Defaults to the model's `spread`
+#'   setting.
+#' @param quantiles Probabilities for the quantile columns, used when `spread`
+#'   includes `"quantile"`, e.g. `c(0.025, 0.975)`. They become columns
+#'   `quant1`, `quant2`, ... in the order given (so here `quant1` is the 2.5%
+#'   quantile and `quant2` the 97.5%); the probabilities themselves are kept in
+#'   `sims$quantiles`. Defaults to the model's `quantiles` setting.
 #' @param verbose If `TRUE` (default), print details and duration of simulation.
 #' @param ... Optional arguments passed to [sim_settings()]; these can be used to override the simulation specifications set in the model object.
 #'
@@ -59,9 +73,12 @@
 #'  \item{df}{data.frame with simulation results in long format, if save_sims
 #'    is `TRUE`. The iteration number is indicated by column "sim". If conditions
 #'    was specified, the condition is indicated by column "condition".}
-#'  \item{summary}{data.frame with summary statistics of the ensemble,
-#'    including quantiles specified in quantiles. If conditions was specified,
-#'    summary statistics are calculated for each condition in the ensemble.}
+#'  \item{summary}{data.frame with summary statistics of the ensemble. Contains
+#'    the statistics requested via `central` and `spread` (as columns named after
+#'    each statistic, plus `quant1`, `quant2`, ... when `spread` includes
+#'    `"quantile"`), as well as a `missing_count` column. If conditions was
+#'    specified, summary statistics are calculated for each condition in the
+#'    ensemble.}
 #'  \item{n}{Number of simulations run in the ensemble (per condition if
 #'    conditions is specified).}
 #'  \item{n_total}{Total number of simulations run in the ensemble (across all
@@ -110,7 +127,7 @@
 #' plot(sims, which = "sims", sim = 1)
 #'
 #' # Plot the median with lighter individual trajectories
-#' plot(sims, central_tendency = "median", which = "sims", alpha = 0.1)
+#' plot(sims, central = "median", which = "sims", alpha = 0.1)
 #'
 #' # For larger ensembles, we can use parallelization with future
 #' if (requireNamespace("future", quietly = TRUE) &&
@@ -155,12 +172,18 @@ ensemble <- function(object,
                      n = 10,
                      conditions = NULL,
                      cross = TRUE,
-                     quantiles = c(0.025, 0.975),
+                     central,
+                     spread,
+                     quantiles,
                      verbose = TRUE, ...) {
   check_stockflow(object)
 
-  # Override sim_settings with any arguments passed via ...
+  # Override sim_settings with any arguments passed via ... or via the
+  # central/spread/quantiles arguments (which mirror sim_settings()).
   varargs <- list(...)
+  if (!missing(central)) varargs[["central"]] <- central
+  if (!missing(spread)) varargs[["spread"]] <- spread
+  if (!missing(quantiles)) varargs[["quantiles"]] <- quantiles
   if (length(varargs) > 0) {
     object <- do.call(sim_settings, c(list(object), varargs))
   }
@@ -177,7 +200,19 @@ ensemble <- function(object,
   only_stocks <- output_args[["only_stocks"]]
   vars <- output_args[["vars"]]
 
-  validate_ensemble_args(n = n, quantiles = quantiles, cross = cross)
+  # Read effective summary choices from the model (object defaults, overridden by
+  # any central/spread/quantiles supplied above) and resolve them to the internal
+  # statistic catalog.
+  central <- object[["sim_settings"]][["central"]]
+  spread <- object[["sim_settings"]][["spread"]]
+  quantiles <- object[["sim_settings"]][["quantiles"]]
+
+  resolved <- resolve_ensemble_stats(central, spread)
+  summary_stats <- resolved[["summary_stats"]]
+  # Only compute quantile columns when requested via spread = "quantile".
+  quantiles <- if (resolved[["want_quantile"]]) quantiles else numeric(0)
+
+  validate_ensemble_args(n = n, cross = cross)
   normalized_conditions <- normalize_ensemble_conditions(
     object = object,
     conditions = conditions,
@@ -209,6 +244,7 @@ ensemble <- function(object,
     out <- ensemble_julia(
       object = object, n = n, save_sims = save_sims,
       conditions = conditions, cross = cross, quantiles = quantiles,
+      summary_stats = summary_stats,
       only_stocks = only_stocks, vars = vars, verbose = verbose,
       n_conditions = n_conditions, total_sims = total_sims
     )
@@ -216,6 +252,7 @@ ensemble <- function(object,
     out <- ensemble_r(
       object = object, n = n, save_sims = save_sims,
       conditions = conditions, cross = cross, quantiles = quantiles,
+      summary_stats = summary_stats,
       only_stocks = only_stocks, vars = vars, verbose = verbose,
       n_conditions = n_conditions, total_sims = total_sims
     )
@@ -227,18 +264,58 @@ ensemble <- function(object,
     ))
   }
 
+  # Echo the user-facing summary choices back on the object (mirroring how
+  # `quantiles` is stored), so they are discoverable and so the validator can
+  # re-derive the expected summary columns.
+  out[["central"]] <- central
+  out[["spread"]] <- spread
+
   validate_ensemble_stockflow(out)
   out
 }
 
 
+#' Resolve `central`/`spread` choices to internal summary statistics
+#'
+#' Maps the user-facing `central` and `spread` keywords to the subset of the
+#' `ensemble_stat_funs` catalog to compute. `"range"` expands to `min` + `max`;
+#' `"quantile"` is reported via `want_quantile` (handled via the `quantiles`
+#' argument, not as a catalog statistic). `missing_count` is always included.
+#'
+#' @param central Canonicalised character vector (mean/median/none).
+#' @param spread Canonicalised character vector (quantile/sd/range/none).
+#' @returns List with `summary_stats` (character vector in catalog order) and
+#'   `want_quantile` (logical).
+#' @noRd
+resolve_ensemble_stats <- function(central, spread) {
+  central <- setdiff(central, "none")
+  spread <- setdiff(spread, "none")
+
+  spread_stats <- character(0)
+  if ("sd" %in% spread) spread_stats <- c(spread_stats, "sd")
+  if ("range" %in% spread) spread_stats <- c(spread_stats, "min", "max")
+
+  stats <- unique(c(central, spread_stats, "missing_count"))
+  # Order by catalog for consistency between the R and Julia backends.
+  stats <- intersect(names(ensemble_stat_funs), stats)
+
+  list(
+    summary_stats = stats,
+    want_quantile = "quantile" %in% spread
+  )
+}
+
+
 #' Validate ensemble control arguments
+#'
+#' Validates only the arguments handled directly by [ensemble()]. The summary
+#' choices (`central`, `spread`, `quantiles`) are validated by [sim_settings()].
 #'
 #' @inheritParams ensemble
 #'
 #' @returns Invisibly returns NULL.
 #' @noRd
-validate_ensemble_args <- function(n, quantiles, cross) {
+validate_ensemble_args <- function(n, cross) {
   if (!is.numeric(n)) {
     abort_ensemble(c(
       "x" = "The {.arg n} argument must be {.cls numeric}.",
@@ -249,30 +326,6 @@ validate_ensemble_args <- function(n, quantiles, cross) {
   if (n <= 0) {
     abort_ensemble(c(
       "x" = "The {.arg n} argument must be greater than {.val {0}}."
-    ))
-  }
-
-  if (!is.numeric(quantiles)) {
-    abort_ensemble(c(
-      "x" = "The {.arg quantiles} argument must be {.cls numeric}.",
-      "i" = "Received: {.cls {typeof(quantiles)}}",
-      ">" = "Use a numeric vector, e.g., {.code quantiles = c(0.025, 0.975)}."
-    ))
-  }
-
-  if (length(unique(quantiles)) < 2) {
-    abort_ensemble(c(
-      "x" = "The {.arg quantiles} argument must have at least {.val {2}} unique values.",
-      "i" = "Received {.val {length(unique(quantiles))}} unique value(s).",
-      ">" = "Provide at least 2 quantiles, e.g., {.code quantiles = c(0.025, 0.975)}."
-    ))
-  }
-
-  if (any(quantiles < 0 | quantiles > 1)) {
-    abort_ensemble(c(
-      "x" = "All values in {.arg quantiles} must be between {.val {0}} and {.val {1}}.",
-      "i" = "Quantiles represent probabilities and must be proportions.",
-      ">" = "Use values like {.code c(0.025, 0.5, 0.975)} for 2.5%, 50%, 97.5% quantiles."
     ))
   }
 
@@ -479,9 +532,38 @@ print.ensemble_stockflow <- function(x, ...) {
 }
 
 
+
+#' Create data frame of simulation results
+#'
+#' Convert simulation results to a data.frame.
+#'
+#' @inheritParams plot.simulate_stockflow
+#' @inheritParams as.data.frame.simulate_stockflow
+#' @param which Type of data to return. Either `"summary"` for a summary statistics, or `"sims"` for individual simulation trajectories. Defaults to `"summary"`.
+#' @param sim Indices of the individual trajectories to include if which = `"sims"`. Defaults to `NULL`, which includes all trajectories. Including a high number of trajectories will create a large object.
+#' @param condition Indices of the conditions to include. Defaults to `NULL`, which includes all conditions.
+#' @param row.names NULL or a character vector giving the row names for the data frame. Missing values are not allowed.
+#' @param optional Ignored parameter.
+#'
+#' @returns A data.frame with simulation results. For \code{direction = "long"} (default),
+#'   the data frame has three columns: \code{time}, \code{variable}, and \code{value}.
+#'   For \code{direction = "wide"}, the data frame has columns \code{time} followed by
+#'   one column per variable.
 #' @export
 #' @concept ensemble
 #' @method as.data.frame ensemble_stockflow
+#' @seealso [`ensemble()`][ensemble()], [stockflow()]
+#'
+#' @examples
+#' sfm <- stockflow("sir")
+#' sims <- ensemble(sfm, n = 10)
+#' df <- as.data.frame(sims)
+#' head(df)
+#'
+#' # Get results in wide format
+#' df_wide <- as.data.frame(sims, direction = "wide")
+#' head(df_wide)
+#'
 as.data.frame.ensemble_stockflow <- function(
   x, row.names = NULL,
   optional = FALSE,
@@ -489,8 +571,10 @@ as.data.frame.ensemble_stockflow <- function(
   direction = "long",
   sim = NULL,
   condition = NULL,
+  vars = NULL, type = NULL,
   ...
 ) {
+  vars <- .expr_to_char(rlang::enexpr(vars))
   check_ensemble_stockflow(x)
 
   which <- .clean_which(which)
@@ -528,6 +612,9 @@ as.data.frame.ensemble_stockflow <- function(
       df <- df[df[["condition"]] %in% condition, , drop = FALSE]
     }
 
+    # Filter by variable and/or type
+    df <- .filter_long_by_vars_type(df, x[["object"]], vars = vars, type = type)
+
     if (direction == "wide") {
       df <- stats::reshape(df,
         timevar = "variable", idvar = c("condition", "sim", "time"),
@@ -549,6 +636,9 @@ as.data.frame.ensemble_stockflow <- function(
     if (!is.null(condition)) {
       df <- df[df[["condition"]] %in% condition, , drop = FALSE]
     }
+
+    # Filter by variable and/or type
+    df <- .filter_long_by_vars_type(df, x[["object"]], vars = vars, type = type)
 
     if (direction == "wide") {
       df <- stats::reshape(df,
@@ -616,6 +706,8 @@ new_ensemble_stockflow <- function(success = FALSE,
                                    duration = NULL,
                                    cross = TRUE,
                                    quantiles = NULL,
+                                   central = NULL,
+                                   spread = NULL,
                                    object = NULL) {
   obj <- list(
     success = success,
@@ -632,6 +724,8 @@ new_ensemble_stockflow <- function(success = FALSE,
     duration = duration,
     cross = cross,
     quantiles = quantiles,
+    central = central,
+    spread = spread,
     object = object
   )
   structure(obj, class = "ensemble_stockflow")
@@ -654,7 +748,7 @@ validate_ensemble_stockflow <- function(x) {
   required <- c(
     "success", "error_message", "df", "summary", "n", "n_total",
     "n_conditions", "conditions", "init", "constants", "script",
-    "duration", "cross", "quantiles", "object"
+    "duration", "cross", "quantiles", "central", "spread", "object"
   )
   missing_fields <- setdiff(required, names(x))
   if (length(missing_fields) > 0) {
@@ -672,8 +766,12 @@ validate_ensemble_stockflow <- function(x) {
   }
 
   if (x[["success"]]) {
-    # Validate summary structure
-    expected_summary_cols <- c("condition", "variable", "time", "mean", "median")
+    # Validate summary structure: grouping columns plus the requested stats,
+    # resolved from the stored central/spread choices.
+    resolved <- resolve_ensemble_stats(x[["central"]], x[["spread"]])
+    expected_summary_cols <- c(
+      "condition", "variable", "time", resolved[["summary_stats"]]
+    )
     missing_summary_cols <- setdiff(expected_summary_cols, names(x[["summary"]]))
     if (length(missing_summary_cols) > 0) {
       cli::cli_abort(c(
@@ -682,12 +780,16 @@ validate_ensemble_stockflow <- function(x) {
       ))
     }
 
-    q_cols <- grep("^q", names(x[["summary"]]), value = TRUE)
-    if (length(q_cols) == 0) {
-      cli::cli_abort(c(
-        "x" = "Ensemble {.arg summary} has no quantile columns.",
-        "i" = "Expected columns prefixed with {.code q}."
-      ))
+    # Quantile columns are only expected when quantiles were requested (i.e.
+    # spread included "quantile"). An empty `quantiles` field means none.
+    if (length(x[["quantiles"]]) > 0) {
+      q_cols <- grep("^quant[0-9]+$", names(x[["summary"]]), value = TRUE)
+      if (length(q_cols) == 0) {
+        cli::cli_abort(c(
+          "x" = "Ensemble {.arg summary} has no quantile columns.",
+          "i" = "Expected columns named {.code quant1}, {.code quant2}, etc."
+        ))
+      }
     }
 
     # Validate individual sims df structure (if present)

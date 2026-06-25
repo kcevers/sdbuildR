@@ -25,7 +25,7 @@
 #'
 #' @examples
 #' # No issues
-#' sfm <- stockflow("SIR")
+#' sfm <- stockflow("sir")
 #' summary(sfm)
 #'
 #' # Detect absence of stocks or flows

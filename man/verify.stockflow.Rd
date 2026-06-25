@@ -48,7 +48,7 @@ object so that \code{\link[=plot.verify_stockflow]{plot.verify_stockflow()}} wor
 For repeated-run robustness testing use \code{\link[=ensemble]{ensemble()}} instead.
 }
 \examples{
-sfm <- stockflow("SIR") |>
+sfm <- stockflow("sir") |>
   unit_test(expr = all(susceptible >= 0)) |>
   unit_test(
     label = "recovered increases over time",

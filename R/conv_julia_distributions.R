@@ -306,3 +306,52 @@ conv_sample_julia <- function(arg, R_func, julia_func) {
 conv_sample <- function(arg, R_func, julia_func) {
   conv_sample_julia(arg, R_func, julia_func)
 }
+
+
+#' Convert R paste0() to Julia string()/join()
+#'
+#' `paste0()` concatenates its `...` parts element-wise; when `collapse` is
+#' supplied the resulting vector is flattened into a single string with that
+#' separator. The Julia equivalents are `string.(parts...)` for the element-wise
+#' concatenation and `join(string.(parts...), collapse)` when collapsing.
+#'
+#' Because `paste0()` is variadic, the parts cannot be resolved through
+#' `sort_args()` (it would mistake them for the `collapse`/`recycle0` options and
+#' drop `collapse`'s name, silently turning `collapse = "-"` into an extra part).
+#' This handler therefore parses the raw emitted argument strings itself,
+#' splitting off any `collapse =`/`recycle0 =` options from the positional parts.
+#'
+#' @param arg Character vector of already-emitted Julia argument strings; named
+#'   arguments are of the form `"name = value"`.
+#' @param R_func String with R function (`paste0`).
+#' @param julia_func String with Julia function (`string`).
+#' @param add_broadcast Logical; whether to broadcast the concatenation (`.`).
+#'
+#' @returns String with Julia code
+#' @noRd
+conv_paste <- function(arg, R_func, julia_func, add_broadcast = TRUE) {
+  # A named argument is a *bare* identifier followed by `=` (e.g. `collapse = x`).
+  # This deliberately does not match a positional part that merely contains `=`
+  # inside it (e.g. `itp(a, b, method = "linear")`), whose head is not a bare
+  # identifier.
+  name_re <- "^\\s*([.A-Za-z][.A-Za-z0-9_]*)\\s*=\\s*(.*)$"
+  nm <- ifelse(stringr::str_detect(arg, name_re), sub(name_re, "\\1", arg), NA_character_)
+  val <- ifelse(is.na(nm), arg, sub(name_re, "\\2", arg))
+
+  # Positional parts: everything that is not a recognised option.
+  parts <- val[is.na(nm)]
+
+  dot <- if (isTRUE(add_broadcast)) "." else ""
+  base <- sprintf("%s%s(%s)", julia_func, dot, paste(parts, collapse = ", "))
+
+  # collapse = NULL (the R default) means "do not collapse"; only wrap in join()
+  # when a real separator is supplied.
+  if ("collapse" %in% nm) {
+    collapse_val <- trimws(val[which(nm == "collapse")[1]])
+    if (!collapse_val %in% c("nothing", "NULL", "")) {
+      return(sprintf("join(%s, %s)", base, collapse_val))
+    }
+  }
+
+  base
+}

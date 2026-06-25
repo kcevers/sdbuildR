@@ -21,7 +21,7 @@ Wrapper around \code{\link[=head]{head()}} that first converts the results to a 
 \code{\link[=as.data.frame.verify_stockflow]{as.data.frame.verify_stockflow()}}.
 }
 \examples{
-sfm <- stockflow("SIR") |>
+sfm <- stockflow("sir") |>
   unit_test(expr = all(susceptible >= 0))
 res <- verify(sfm)
 head(res)

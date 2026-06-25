@@ -126,7 +126,7 @@ test_that("discard() removes variables", {
 })
 
 test_that("discard() removes discarded names from sim_settings vars", {
-  sfm <- stockflow("SIR") |>
+  sfm <- stockflow("sir") |>
     sim_settings(vars = c("susceptible", "new_infections"))
 
   sfm2 <- discard(sfm, "new_infections")
@@ -134,7 +134,7 @@ test_that("discard() removes discarded names from sim_settings vars", {
 })
 
 test_that("discard() clears sim_settings vars when all selected vars are removed", {
-  sfm <- stockflow("SIR") |>
+  sfm <- stockflow("sir") |>
     sim_settings(vars = c("new_recoveries"))
 
   sfm2 <- discard(sfm, "new_recoveries")

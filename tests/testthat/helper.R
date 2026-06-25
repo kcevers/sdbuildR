@@ -33,6 +33,10 @@ expect_snapshot_plot <- function(name, code, fileext = NULL, width = 4, height =
     stop("Unable to determine file extension for plot snapshot. Please specify fileext.")
   }
 
+  if (length(unique(plot_types)) > 1L) {
+    stop("All plots must be of the same type (plotly or grViz).")
+  }
+
   if (is.null(fileext)) {
     fileext <- ifelse(plot_types == "plotly", ".png", ".svg")
   } else {
@@ -84,6 +88,16 @@ expect_snapshot_plot <- function(name, code, fileext = NULL, width = 4, height =
       Sys.getenv("SDBUILDR_CREATE_TEST_FIGS") != "true",
       "Skipping plot snapshot creation (SDBUILDR_CREATE_TEST_FIGS not set to 'true')"
     )
+
+    if ("plotly" %in% plot_types) {
+      skip_if_not_installed("webshot2")
+      skip_if_not_installed("htmlwidgets")
+    } 
+
+    if ("grViz" %in% plot_types) {
+      skip_if_not_installed("DiagrammeRsvg")
+      skip_if_not_installed("rsvg")
+    }
 
     for (i in plotly_idx) {
       img_path <- tempfile(fileext = fileext[[i]])
@@ -204,7 +218,7 @@ silence <- function(expr) {
 #'
 #' Creates and simulates the SIR model, allowing overrides such as only_stocks.
 sir_sim <- function(..., only_stocks = TRUE, seed = 123) {
-  simulate(stockflow("SIR"), only_stocks = only_stocks, seed = seed, ...)
+  simulate(stockflow("sir"), only_stocks = only_stocks, seed = seed, ...)
 }
 
 
@@ -248,7 +262,7 @@ make_jl_ensemble_sfm <- function() {
 
 
 make_r_ensemble_random_sfm <- function() {
-  stockflow("SIR") |>
+  stockflow("sir") |>
     update(c(susceptible, infected, recovered), eqn = "runif(1, 1, 1000)") |>
     sim_settings(language = "R", start = 0, stop = 10, dt = 0.1, save_at = 1, seed = 42)
 }
@@ -737,3 +751,44 @@ expect_empty_assemble_cache <- function(assemble) {
 julia_ast_vnames <- function() {
   c("r", "X", "K", "a", "b", "c", "d", "x", "y", "gf1", "Stock1", "dt")
 }
+
+
+
+# Skip unless Julia is set up, and start the sdbuildR Julia session (loading the
+# SystemDynamicsBuildR functions) so direct julia_eval() calls resolve them. A bare
+# JuliaConnectoR session would not have run init.jl. use_julia() is idempotent.
+ready_julia <- function() {
+  skip_if_julia_not_ready()
+  use_julia()
+}
+
+# Evaluate an R expression in R, and its converted form in Julia, and assert the
+# two results are equal. This exercises the whole mapping: the converter plus the
+# Julia function it dispatches to. Literal arguments are used throughout so no
+# variable binding into Julia is required.
+expect_r_julia_equal <- function(expr, tolerance = 1e-9, var_names = character(0)) {
+  r_val <- eval(parse(text = expr), envir = globalenv())
+  jl_code <- decode_unicode(convert_equations_julia("aux", "z", expr, var_names)[["eqn"]])
+  jl_val <- julia_eval(jl_code)
+  expect_equal(r_val, jl_val, tolerance = tolerance, info = paste0(expr, "  ->  ", jl_code))
+}
+
+# Simulate a one-stock model driven by a time-input function in both languages and
+# compare the stock trajectory. This is the mapping test for the interpolation
+# functions (ramp/step/pulse/seasonal), which return time-dependent functions and
+# so cannot be compared as scalars.
+expect_input_sim_equal <- function(input_eqn, tolerance = 1e-4) {
+  sfm <- stockflow() |>
+    update("a", "stock") |>
+    update("input", "constant", eqn = !!input_eqn) |>
+    update("inflow", "flow", eqn = "input(t)", to = "a") |>
+    sim_settings(start = 0, stop = 20, dt = 0.1, save_at = 1)
+
+  r <- silence(simulate(sim_settings(sfm, language = "R"), only_stocks = FALSE))
+  j <- silence(simulate(sim_settings(sfm, language = "Julia"), only_stocks = FALSE))
+
+  ra <- r[["df"]][r[["df"]][["variable"]] == "a", "value"]
+  ja <- j[["df"]][j[["df"]][["variable"]] == "a", "value"]
+  expect_equal(ra, ja, tolerance = tolerance, info = input_eqn)
+}
+

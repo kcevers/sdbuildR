@@ -20,7 +20,7 @@ topology, variable names, and simulation settings. For model diagnostics,
 use \code{\link[=summary.stockflow]{summary()}}.
 }
 \examples{
-sfm <- stockflow("SIR")
+sfm <- stockflow("sir")
 print(sfm)
 
 }

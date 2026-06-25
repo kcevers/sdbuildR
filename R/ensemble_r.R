@@ -1,19 +1,35 @@
+#' Registry of supported ensemble summary statistics
+#'
+#' Single source of truth for the named summary statistics that [ensemble()] can
+#' compute. The names (in this order) define the column order of the summary
+#' output. The user-facing `central`/`spread` choices in [ensemble()] resolve to
+#' a subset of these via `resolve_ensemble_stats()`. The Julia backend mirrors
+#' this catalog (see `ensemble_summ` in SystemDynamicsBuildR.jl); it also defines
+#' a `var` statistic, which the R side no longer requests.
+#'
+#' @noRd
+ensemble_stat_funs <- list(
+  mean          = function(v) mean(v, na.rm = TRUE),
+  median        = function(v) stats::median(v, na.rm = TRUE),
+  sd            = function(v) stats::sd(v, na.rm = TRUE),
+  min           = function(v) min(v, na.rm = TRUE),
+  max           = function(v) max(v, na.rm = TRUE),
+  missing_count = function(v) sum(is.na(v))
+)
+
+
 #' Compute summary stats for a numeric vector
 #'
 #' @param vals Numeric vector.
+#' @param stats Character vector of summary statistic names (subset of
+#'   `names(ensemble_stat_funs)`), in catalog order.
 #' @param quantiles Numeric vector of quantile probabilities.
 #' @param q_names Character vector of quantile column names.
 #' @returns Named list of summary statistics.
 #' @noRd
-ensemble_summary_stats <- function(vals, quantiles, q_names) {
+ensemble_summary_stats <- function(vals, stats, quantiles, q_names) {
   c(
-    list(
-      mean   = mean(vals, na.rm = TRUE),
-      median = stats::median(vals, na.rm = TRUE),
-      sd     = stats::sd(vals, na.rm = TRUE),
-      min    = min(vals, na.rm = TRUE),
-      max    = max(vals, na.rm = TRUE)
-    ),
+    lapply(ensemble_stat_funs[stats], function(f) f(vals)),
     stats::setNames(
       lapply(quantiles, function(q) {
         stats::quantile(vals, probs = q, na.rm = TRUE, names = FALSE)
@@ -31,25 +47,26 @@ ensemble_summary_stats <- function(vals, quantiles, q_names) {
 #'
 #' @param df Data frame with a `value` column and the grouping columns.
 #' @param by Character vector of grouping column names.
+#' @param stats Character vector of summary statistic names, in catalog order.
 #' @param quantiles Numeric vector of quantile probabilities.
 #' @param q_names Character vector of quantile column names.
 #' @returns Data frame of summary statistics.
 #' @noRd
-summarise_by <- function(df, by, quantiles, q_names) {
+summarise_by <- function(df, by, stats, quantiles, q_names) {
   df <- as.data.frame(df)
   if (nrow(df) == 0L) {
     empty <- data.frame(matrix(
-      ncol = length(by) + 5L + length(q_names),
+      ncol = length(by) + length(stats) + length(q_names),
       nrow = 0L
     ))
-    names(empty) <- c(by, "mean", "median", "sd", "min", "max", q_names)
+    names(empty) <- c(by, stats, q_names)
     return(empty)
   }
   # Group by the 'by' columns using base R split
   split_df <- split(df, df[by], drop = TRUE)
   # Apply summary stats to each group's value column
   result_list <- lapply(split_df, function(group_df) {
-    stats_list <- ensemble_summary_stats(group_df$value, quantiles, q_names)
+    stats_list <- ensemble_summary_stats(group_df$value, stats, quantiles, q_names)
     # Combine grouping keys with stats into a single data frame
     group_keys_df <- group_df[1L, by, drop = FALSE]
     stats_df <- as.data.frame(t(unlist(stats_list)), stringsAsFactors = FALSE)
@@ -78,8 +95,8 @@ summarise_by <- function(df, by, quantiles, q_names) {
 #' @returns Object of class [`ensemble_stockflow`][ensemble()]
 #' @noRd
 ensemble_r <- function(object, n, save_sims, conditions, cross,
-                       quantiles, only_stocks, vars = NULL, verbose,
-                       n_conditions, total_sims) {
+                       quantiles, summary_stats, only_stocks, vars = NULL,
+                       verbose, n_conditions, total_sims) {
   # Find seed if specified
   has_seed <- !is.null(object[["sim_settings"]][["seed"]])
   if (has_seed) {
@@ -238,7 +255,7 @@ ensemble_r <- function(object, n, save_sims, conditions, cross,
     n = n, n_conditions = n_conditions, total_sims = total_sims,
     save_sims = save_sims, only_stocks = only_stocks,
     vars = vars,
-    quantiles = quantiles, cross = cross,
+    summary_stats = summary_stats, quantiles = quantiles, cross = cross,
     cond_matrix = cond_matrix, object = object,
     duration = end_t - start_t
   )
@@ -299,7 +316,8 @@ eval_sim_script_r <- function(parsed_expr, condition, sim) {
 #' @noRd
 assemble_ensemble_results_r <- function(good_results, n, n_conditions,
                                         total_sims, save_sims,
-                                        only_stocks, vars = NULL, quantiles, cross,
+                                        only_stocks, vars = NULL,
+                                        summary_stats, quantiles, cross,
                                         cond_matrix, object, duration) {
   # Build individual simulation data frames
   all_dfs <- vector("list", length(good_results))
@@ -349,26 +367,34 @@ assemble_ensemble_results_r <- function(good_results, n, n_conditions,
 
   # Compute summary statistics using base R (avoids data.table [.data.table
   # dispatch issues when the package is not attached)
-  q_names <- paste0("q", quantiles)
+  # Quantile columns are named positionally (quant1, quant2, ...) in the order
+  # of `quantiles`; the probabilities are recovered from the object's
+  # `quantiles` field. Order requested stats by catalog order for consistency
+  # with the Julia backend.
+  summary_stats <- intersect(names(ensemble_stat_funs), summary_stats)
+  # Guard against length-0 quantiles: paste0("quant", integer(0)) returns
+  # "quant" (length 1), not character(0), which would desync q_names from the
+  # (empty) quantile list.
+  q_names <- if (length(quantiles) > 0) paste0("quant", seq_along(quantiles)) else character(0)
 
   summary_df <- summarise_by(
     combined_df,
     by = c("condition", "variable", "time"),
-    quantiles = quantiles, q_names = q_names
+    stats = summary_stats, quantiles = quantiles, q_names = q_names
   )
 
   # Build init summary
   init_summary <- summarise_by(
     combined_init,
     by = c("condition", "variable"),
-    quantiles = quantiles, q_names = q_names
+    stats = summary_stats, quantiles = quantiles, q_names = q_names
   )
 
   # Build constants summary
   constants_summary <- summarise_by(
     combined_constants,
     by = c("condition", "variable"),
-    quantiles = quantiles, q_names = q_names
+    stats = summary_stats, quantiles = quantiles, q_names = q_names
   )
 
   # Prepare init and constants output

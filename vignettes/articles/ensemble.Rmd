@@ -61,8 +61,7 @@ sfm <- sim_settings(sfm, seed = 1)
 ```
 
 ```{r}
-sim <- simulate(sfm)
-plot(sim)
+sfm |> simulate() |> plot()
 ```
 
 As the model has random initial conditions, another run will be different:
@@ -73,8 +72,7 @@ sfm <- sim_settings(sfm, seed = 3)
 ```
 
 ```{r}
-sim <- simulate(sfm)
-plot(sim)
+sfm |> simulate() |> plot()
 ```
 
 To explore this more systematically, we can run an ensemble simulation using the `ensemble()` function. 
@@ -130,6 +128,30 @@ sims <- ensemble(sfm, n = 100, only_stocks = FALSE)
 
 ```{r}
 plot(sims)
+```
+
+### Choosing which summaries to keep
+
+Storing every simulation is expensive, so by default `ensemble()` keeps only summaries of the runs at each time point: the mean and a 95% interval (the 2.5% and 97.5% quantiles). Two arguments control what is computed. `central` picks the central tendency (`"mean"`, `"median"`, or `"none"`), and `spread` picks one or more measures of spread: `"quantile"`, `"sd"`, `"range"` (the minimum and maximum), or `"none"`. When you ask for quantiles, `quantiles` sets the probabilities.
+
+For example, to summarise each run by its median together with a standard deviation and an 80% interval:
+
+```{r}
+sims <- ensemble(sfm,
+  n = 100,
+  central = "median",
+  spread = c("quantile", "sd"),
+  quantiles = c(0.1, 0.9)
+)
+head(sims)
+```
+
+The quantiles appear as columns `quant1`, `quant2`, ... in the order you requested them; the probabilities they correspond to are kept in `sims$quantiles`. Requesting fewer statistics keeps the returned object smaller, which matters for large ensembles.
+
+When plotting, `central` and `spread` work the other way around: they are preferences for what to *show* from whatever was computed. `plot()` walks through your choices in order and uses the first one it can draw, so a sensible default still produces a plot even when a statistic is missing:
+
+```{r}
+plot(sims, central = "median", spread = "sd")
 ```
 
 ### Parallel simulations (R)
@@ -255,7 +277,7 @@ You can access the summary statistics per condition and per time point, such as 
 ```{r}
 head(sims)
 # or
-head(as.data.frame(sims))
+sims |> as.data.frame() |> head()
 ```
 
 By default, simulations are returned in long format, but can also be shaped in wide format as well: 

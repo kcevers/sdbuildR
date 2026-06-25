@@ -18,7 +18,7 @@ discard(
 \item{remove_references}{Where to remove references to the discarded variables. By default, references to discarded variables in \code{"to"}, \code{"from"}, \code{"source"}, and \code{"unit_test"} are removed. Set to \code{NULL} to keep all references (not recommended). Note that any lingering references in equations will cause errors in simulation and should be removed or updated with \code{update()} after discarding the variable.}
 }
 \value{
-A stock-and-flow model object of class \code{\link[=stockflow]{stockflow}}
+A stock-and-flow model object of class \code{\link{stockflow}}
 }
 \description{
 Remove variable(s) from a stock-and-flow model. All references in flow connections and graphical function sources are also removed. A warning will be thrown if any lingering references to the removed name remain in the model.

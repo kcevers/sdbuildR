@@ -19,7 +19,10 @@ sim_settings(
   vars = NULL,
   keep_nonnegative_stock = FALSE,
   keep_nonnegative_flow = TRUE,
-  save_sims = FALSE
+  save_sims = FALSE,
+  central = c("mean", "median"),
+  spread = "quantile",
+  quantiles = c(0.025, 0.975)
 )
 }
 \arguments{
@@ -73,6 +76,25 @@ of flows. Defaults to \code{TRUE}.}
 
 \item{save_sims}{If \code{TRUE}, individual simulations are retained in
 \code{\link[=ensemble]{ensemble()}} output. Defaults to \code{FALSE}.}
+
+\item{central}{Central-tendency statistics to compute across simulations in
+\code{\link[=ensemble]{ensemble()}}. One or more of \code{"mean"}, \code{"median"}, or \code{"none"} (compute no
+central tendency). Each requested statistic becomes a column in the ensemble
+summary. Defaults to \code{c("mean", "median")}. Can be overridden per call via
+the \code{central} argument of \code{\link[=ensemble]{ensemble()}}.}
+
+\item{spread}{Spread (uncertainty) statistics to compute across simulations in
+\code{\link[=ensemble]{ensemble()}}. One or more of \code{"quantile"} (quantile columns at the
+probabilities given by \code{quantiles}), \code{"sd"} (standard deviation), \code{"range"}
+(minimum and maximum, returned as \code{min}/\code{max} columns), or \code{"none"} (compute
+no spread). Defaults to \code{"quantile"}. Can be overridden per call via the
+\code{spread} argument of \code{\link[=ensemble]{ensemble()}}.}
+
+\item{quantiles}{Quantile probabilities to compute when \code{spread} includes
+\code{"quantile"}, e.g. \code{c(0.025, 0.975)}. Returned as columns \code{quant1},
+\code{quant2}, ... in the order given. At least two unique values are required.
+Defaults to \code{c(0.025, 0.975)}. Can be overridden per call via the
+\code{quantiles} argument of \code{\link[=ensemble]{ensemble()}}.}
 }
 \value{
 A stock-and-flow model object of class \code{\link{stockflow}}
