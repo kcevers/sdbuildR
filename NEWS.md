@@ -1,5 +1,27 @@
 # sdbuildR (development version)
 
+* The plotting `line_width` and `alpha` arguments now accept a richer grammar.
+  In `plot.ensemble_stockflow()` they style three layers independently: the
+  central-tendency line (`central`), the uncertainty band (`spread`), and the
+  individual trajectories (`sims`). Pass a single value (applied everywhere), a
+  named per-variable vector (names are variable labels, like `colors`), or a list
+  keyed by layer (e.g. `line_width = list(central = 3, spread = 0, sims = 1)`),
+  optionally with per-variable vectors inside each layer. `colors` likewise
+  accepts a *partial* named vector now: name only the variables you want to
+  recolour and the palette fills the rest. *Breaking:* the `central_line_width`
+  argument is removed; use `line_width = list(central = ...)` instead. The
+  ensemble defaults changed to `line_width = list(central = 3, spread = 0,
+  sims = 1)` and `alpha = list(central = 1, spread = 0.3, sims = 0.3)` (the
+  trajectory width is thinner and the band is drawn without a border by default).
+
+* `plot.ensemble_stockflow()` and `plot.verify_stockflow()` place condition
+  sliders/dropdowns (`condition_display = "slider"`/`"dropdown"`) more robustly:
+  the per-control spacing, the reserved bottom margin, and the x-axis title are
+  now sized from a single geometry so the controls no longer overlap each other
+  or the axis title when several condition parameters are varied. The gap can be
+  tuned via `control_options = list(spacing = ...)` (paper units; `NULL` keeps
+  the automatic default).
+
 * `ensemble()` chooses which summary statistics to compute via `central` and
   `spread`, mirroring the vocabulary of `plot.ensemble_stockflow()`. `central` is
   one or more of `"mean"`, `"median"`, or `"none"`; `spread` is one or more of

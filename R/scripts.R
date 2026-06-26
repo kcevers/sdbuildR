@@ -111,7 +111,7 @@ end
     # -- compile_run_ode -------------------------------------------------------
 
     run_ode_r = "\n\n# Run ODE\n%(sim_df_name)s = as.data.frame(deSolve::ode(\n  func=%(ode_func_name)s,\n  y=%(initial_value_name)s,\n  times=%(times_name)s,\n  parms=%(parameter_name)s,\n  method = '%(method)s'%(root_arg)s\n)) %(check_root)s\n",
-    post_ode_r = "%(saveat_script)s# Wide to long\n    %(sim_df_name)s <- stats::reshape(\n       data = as.data.frame(%(sim_df_name)s),\n       direction = \"long\",\n       idvar = \"time\",\n       varying = colnames(%(sim_df_name)s)[colnames(%(sim_df_name)s) != \"time\"],\n       v.names = \"value\",\n       timevar = \"variable\",\n       # Ensure variable names are used\n       times = colnames(%(sim_df_name)s)[colnames(%(sim_df_name)s) != \"time\"]\n     )\nrownames(%(sim_df_name)s) <- NULL",
+    post_ode_r = "%(saveat_script)s# Wide to long (fast manual melt; equivalent to stats::reshape but avoids its per-call overhead)\n    %(sim_df_name)s <- as.data.frame(%(sim_df_name)s)\n    .sdb_melt_vars <- colnames(%(sim_df_name)s)[colnames(%(sim_df_name)s) != \"time\"]\n    .sdb_melt_n <- nrow(%(sim_df_name)s)\n    %(sim_df_name)s <- data.frame(\n       time = rep(%(sim_df_name)s[[\"time\"]], times = length(.sdb_melt_vars)),\n       variable = rep(.sdb_melt_vars, each = .sdb_melt_n),\n       value = unlist(%(sim_df_name)s[.sdb_melt_vars], use.names = FALSE),\n       stringsAsFactors = FALSE\n     )\nrownames(%(sim_df_name)s) <- NULL",
     run_ode_julia = "
 # Run ODE
 %(prob_name)s = ODEProblem(%(ode_func_name)s!, %(model_setup_name)s.%(initial_value_name)s, %(times_name)s, %(model_setup_name)s.%(parameter_name)s)

@@ -9,6 +9,10 @@
       "fill": "toself",
       "legendgroup": "Contact<br />rate",
       "opacity": 0.3,
+      "line": {
+        "color": "rgba(48,163,124,1)",
+        "width": 0
+      },
       "showlegend": false,
       "visible": "legendonly",
       "y": [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
@@ -28,9 +32,6 @@
       "error_x": {
         "color": "rgba(48,163,124,1)"
       },
-      "line": {
-        "color": "rgba(48,163,124,1)"
-      },
       "xaxis": "x",
       "yaxis": "y",
       "frame": null
@@ -44,6 +45,10 @@
       "fill": "toself",
       "legendgroup": "Infection<br />rate",
       "opacity": 0.3,
+      "line": {
+        "color": "rgba(0,160,174,1)",
+        "width": 0
+      },
       "showlegend": false,
       "visible": "legendonly",
       "y": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -63,9 +68,6 @@
       "error_x": {
         "color": "rgba(0,160,174,1)"
       },
-      "line": {
-        "color": "rgba(0,160,174,1)"
-      },
       "xaxis": "x",
       "yaxis": "y",
       "frame": null
@@ -79,6 +81,10 @@
       "fill": "toself",
       "legendgroup": "Recovery<br />rate",
       "opacity": 0.3,
+      "line": {
+        "color": "rgba(126,143,199,1)",
+        "width": 0
+      },
       "showlegend": false,
       "visible": "legendonly",
       "y": [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
@@ -98,9 +104,6 @@
       "error_x": {
         "color": "rgba(126,143,199,1)"
       },
-      "line": {
-        "color": "rgba(126,143,199,1)"
-      },
       "xaxis": "x",
       "yaxis": "y",
       "frame": null
@@ -114,6 +117,10 @@
       "fill": "toself",
       "legendgroup": "Total<br />population",
       "opacity": 0.3,
+      "line": {
+        "color": "rgba(186,123,184,1)",
+        "width": 0
+      },
       "showlegend": false,
       "visible": "legendonly",
       "y": [1542.12, 1542.12, 1542.12, 1542.12, 1542.12, 1542.12, 1542.12, 1542.12, 1542.12, 1542.12, 1542.12, 1542.12, 2124.22, 2124.22, 2124.22, 2124.22, 2124.22, 2124.22, 2124.22, 2124.22, 2124.22, 2124.22, 2124.22],
@@ -133,9 +140,6 @@
       "error_x": {
         "color": "rgba(186,123,184,1)"
       },
-      "line": {
-        "color": "rgba(186,123,184,1)"
-      },
       "xaxis": "x",
       "yaxis": "y",
       "frame": null
@@ -149,6 +153,10 @@
       "fill": "toself",
       "legendgroup": "Infected",
       "opacity": 0.3,
+      "line": {
+        "color": "rgba(200,122,138,1)",
+        "width": 0
+      },
       "showlegend": false,
       "visible": true,
       "y": [147.6, 314.48, 507.72, 623.12, 648.28, 622.85, 578.38, 529.48, 481.72, 437.02, 395.92, 695.79, 769.34, 850.64, 940.48, 1039.64, 1148.71, 1267.21, 1389.57, 1485.2, 1415.19, 907.63],
@@ -168,9 +176,6 @@
       "error_x": {
         "color": "rgba(200,122,138,1)"
       },
-      "line": {
-        "color": "rgba(200,122,138,1)"
-      },
       "xaxis": "x",
       "yaxis": "y",
       "frame": null
@@ -184,6 +189,10 @@
       "fill": "toself",
       "legendgroup": "Recovered",
       "opacity": 0.3,
+      "line": {
+        "color": "rgba(178,137,85,1)",
+        "width": 0
+      },
       "showlegend": false,
       "visible": true,
       "y": [304.45, 417.41, 560.5, 667.26, 760.79, 843.23, 918.88, 987.69, 1050.07, 1100.31, 1142.43, 1428.41, 1366.19, 1310.46, 1248.91, 1181, 1106.23, 1024.41, 936.23, 845.1, 768.18, 713.19],
@@ -203,9 +212,6 @@
       "error_x": {
         "color": "rgba(178,137,85,1)"
       },
-      "line": {
-        "color": "rgba(178,137,85,1)"
-      },
       "xaxis": "x",
       "yaxis": "y",
       "frame": null
@@ -219,6 +225,10 @@
       "fill": "toself",
       "legendgroup": "Susceptible",
       "opacity": 0.3,
+      "line": {
+        "color": "rgba(130,153,76,1)",
+        "width": 0
+      },
       "showlegend": false,
       "visible": true,
       "y": [708.51, 281.47, 64.27, 15.17, 4.06, 1.24, 0.43, 0.16, 0.07, 0.03, 0.02, 0.02, 0.99, 1.71, 3.15, 6.17, 12.91, 28.8, 67.49, 158.32, 334.45, 573.59, 932.75],
@@ -236,9 +246,6 @@
         "color": "rgba(130,153,76,1)"
       },
       "error_x": {
-        "color": "rgba(130,153,76,1)"
-      },
-      "line": {
         "color": "rgba(130,153,76,1)"
       },
       "xaxis": "x",

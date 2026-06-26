@@ -8,7 +8,7 @@
       "hoveron": "points",
       "fill": "toself",
       "legendgroup": "Infected",
-      "opacity": 0.3,
+      "opacity": 0.1,
       "line": {
         "color": "rgba(200,122,138,1)",
         "width": 0
@@ -44,7 +44,7 @@
       "hoveron": "points",
       "fill": "toself",
       "legendgroup": "Recovered",
-      "opacity": 0.3,
+      "opacity": 0.1,
       "line": {
         "color": "rgba(107,157,89,1)",
         "width": 0
@@ -80,7 +80,7 @@
       "hoveron": "points",
       "fill": "toself",
       "legendgroup": "Susceptible",
-      "opacity": 0.3,
+      "opacity": 0.1,
       "line": {
         "color": "rgba(95,150,194,1)",
         "width": 0
@@ -119,6 +119,7 @@
         "color": "rgba(200,122,138,1)",
         "width": 3
       },
+      "opacity": 0.5,
       "visible": true,
       "name": "Infected",
       "marker": {
@@ -151,6 +152,7 @@
         "color": "rgba(107,157,89,1)",
         "width": 3
       },
+      "opacity": 0.5,
       "visible": true,
       "name": "Recovered",
       "marker": {
@@ -183,6 +185,7 @@
         "color": "rgba(95,150,194,1)",
         "width": 3
       },
+      "opacity": 0.5,
       "visible": true,
       "name": "Susceptible",
       "marker": {
@@ -215,10 +218,10 @@
     "legend": {
       "traceorder": "reversed",
       "font": {
-        "size": 17
+        "size": 14
       }
     },
-    "title": "Ensemble of Susceptible-Infected-Recovered (SIR)<span style='font-size:20px;'><br />Mean with [0.025, 0.975] confidence interval of 5 simulations<\/span>",
+    "title": "Ensemble of Susceptible-Infected-Recovered (SIR)<span style='font-size:16px;'><br />Mean with [0.025, 0.975] confidence interval of 5 simulations<\/span>",
     "xaxis": {
       "domain": [0, 1],
       "automargin": true,
@@ -231,7 +234,7 @@
     },
     "font": {
       "family": "Times New Roman",
-      "size": 20
+      "size": 16
     },
     "hovermode": "closest",
     "showlegend": true

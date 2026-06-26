@@ -15,6 +15,7 @@
   font_size = 16,
   wrap_width = 25,
   showlegend = TRUE,
+  format_label = TRUE,
   animation = c("none", "time"),
   webgl = getOption("sdbuildR.webgl", default = TRUE),
   ...
@@ -29,9 +30,15 @@
 
 \item{palette}{Colour palette. Must be one of hcl.pals().}
 
-\item{colors}{Vector of colours. If \code{NULL}, the color palette will be used. If specified, will override palette. The number of colours must be equal to the number of variables in the simulation data frame. Defaults to \code{NULL}.}
+\item{colors}{Colours for the plotted variables. A named vector (names are
+variable names) sets the colours of those variables and the palette fills
+the rest, so you can recolour only a few variables. An unnamed vector
+assigns colours in plot order. \code{NULL} uses \code{palette}. Defaults to \code{NULL}.}
 
-\item{line_width}{Line width of the plotted trajectories. Either a single value applied to all variables, or a vector with one value per variable (like \code{colors}). Defaults to \code{2}.}
+\item{line_width}{Line width of the plotted trajectories. Either a single
+value applied to all variables, a named per-variable vector (names are
+variable names), or an unnamed vector with one value per variable in plot
+order. Defaults to \code{2}.}
 
 \item{font_family}{Font family. Defaults to "Times New Roman".}
 
@@ -40,6 +47,11 @@
 \item{wrap_width}{Width of text wrapping for labels. Must be an integer. Defaults to 25.}
 
 \item{showlegend}{Whether to show legend. Must be \code{TRUE} or \code{FALSE}. Defaults to \code{TRUE}.}
+
+\item{format_label}{If \code{TRUE}, apply default formatting (replacing periods and
+underscores with spaces) to variable labels that are the same as the
+variable name. Applies to the legend and any condition controls. Defaults to
+\code{TRUE}.}
 
 \item{animation}{Animation mode. Use \code{"none"} for a static plot or \code{"time"}
 to cumulatively reveal trajectories over time. Defaults to \code{"none"}.}
@@ -58,6 +70,23 @@ Plotly object
 \description{
 Visualize simulation results of a stock-and-flow model. Plot the evolution of stocks over time, with the option of also showing other model variables.
 }
+\section{Styling variables}{
+
+Names in \code{colors} and \code{line_width} refer to the model variable names, not the
+labels shown in the legend. This is usually the safest way to style a plot,
+because labels may be wrapped, prettified, or customized for display.
+
+Use one value to style every trajectory:
+\code{plot(sim, line_width = 3)}.
+
+Use a named vector to style selected variables and leave the rest at their
+defaults or palette colours:
+\code{plot(sim, colors = c(susceptible = "#377EB8"), line_width = c(infected = 4))}.
+
+Unnamed vectors are still accepted and are applied in plot order, but named
+vectors are easier to read and less sensitive to filtering with \code{vars}.
+}
+
 \examples{
 sfm <- stockflow("sir")
 sim <- simulate(sfm)

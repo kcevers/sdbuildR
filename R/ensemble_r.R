@@ -42,18 +42,21 @@ ensemble_summary_stats <- function(vals, stats, quantiles, q_names) {
 
 #' Summarise a long data frame by groups
 #'
-#' Splits `df` by the columns in `by`, computes summary stats on the `value`
-#' column, and row-binds the results. Uses base R only.
+#' Groups `df` by the columns in `by` and computes summary stats on the `value`
+#' column using data.table. `keyby` returns the rows sorted by the grouping keys
+#' (matching the previous base-R ordering), and `ensemble_summary_stats()`
+#' returns a named list per group that data.table expands into the columns
+#' `c(by, stats, q_names)`, in that order.
 #'
-#' @param df Data frame with a `value` column and the grouping columns.
+#' @param df Data frame (or data.table) with a `value` column and the grouping columns.
 #' @param by Character vector of grouping column names.
 #' @param stats Character vector of summary statistic names, in catalog order.
 #' @param quantiles Numeric vector of quantile probabilities.
 #' @param q_names Character vector of quantile column names.
 #' @returns Data frame of summary statistics.
+#' @importFrom data.table .SD
 #' @noRd
 summarise_by <- function(df, by, stats, quantiles, q_names) {
-  df <- as.data.frame(df)
   if (nrow(df) == 0L) {
     empty <- data.frame(matrix(
       ncol = length(by) + length(stats) + length(q_names),
@@ -62,23 +65,13 @@ summarise_by <- function(df, by, stats, quantiles, q_names) {
     names(empty) <- c(by, stats, q_names)
     return(empty)
   }
-  # Group by the 'by' columns using base R split
-  split_df <- split(df, df[by], drop = TRUE)
-  # Apply summary stats to each group's value column
-  result_list <- lapply(split_df, function(group_df) {
-    stats_list <- ensemble_summary_stats(group_df$value, stats, quantiles, q_names)
-    # Combine grouping keys with stats into a single data frame
-    group_keys_df <- group_df[1L, by, drop = FALSE]
-    stats_df <- as.data.frame(t(unlist(stats_list)), stringsAsFactors = FALSE)
-    cbind(group_keys_df, stats_df)
-  })
-  # Combine results
-  out <- do.call(rbind, c(result_list, list(make.row.names = FALSE)))
-  rownames(out) <- NULL
-  # Restore deterministic ordering by grouping keys
-  out <- out[do.call(order, as.list(out[by])), , drop = FALSE]
-  rownames(out) <- NULL
-  out
+  dt <- data.table::as.data.table(df)
+  # `.SDcols = "value"` keeps `.SD` to the single value column per group, so we
+  # avoid a bare `value` symbol (which would be an R CMD check NOTE).
+  out <- dt[, ensemble_summary_stats(.SD[[1L]], stats, quantiles, q_names),
+    keyby = by, .SDcols = "value"
+  ]
+  as.data.frame(out)
 }
 
 

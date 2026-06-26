@@ -167,7 +167,7 @@ test_that("plot() errors when line_width vector is too short", {
 
   expect_error(
     plot(sim, line_width = rep(2, n - 1)),
-    "Insufficient line widths"
+    "Insufficient"
   )
 })
 
@@ -282,13 +282,14 @@ test_that("plot.simulate_stockflow() with custom colors vector", {
   vars <- unique(df$variable)
   names_df <- as.data.frame(sim[["object"]])
   label_names <- names_df$label[match(vars, names_df$name)]
-  custom_colors <- stats::setNames(rainbow(length(label_names)), label_names)
+  custom_colors <- stats::setNames(rainbow(length(vars)), vars)
+  expected_colors <- stats::setNames(unname(custom_colors), label_names)
 
   pl_colors <- plot(sim, colors = custom_colors, alpha = 1)
   expect_plotly(pl_colors)
   traces <- plotly_traces(pl_colors)
   expect_equal(length(traces[["name"]]), length(label_names))
-  legend_check <- plotly_check_legend_colors(pl_colors, expected = custom_colors)
+  legend_check <- plotly_check_legend_colors(pl_colors, expected = expected_colors)
   expect_true(nrow(legend_check) > 0)
   expect_true(all(legend_check$ok))
   expect_true(all(legend_check$matches_expected))
@@ -299,8 +300,8 @@ test_that("plot.simulate_stockflow() with custom colors vector", {
 
 test_that("plot.simulate_stockflow() maps trace labels to source data and named colors", {
   sim <- sir_sim(only_stocks = FALSE)
-  names_df <- as.data.frame(sim[["object"]])
-  labels <- names_df[["label"]]
+  names_df <- as.data.frame(sim[["object"]], type = c("stock", "flow", "aux"))
+  labels <- names_df[["name"]]
   colors <- stats::setNames(
     grDevices::rainbow(length(labels)),
     labels
@@ -320,7 +321,7 @@ test_that("plot.simulate_stockflow() maps trace labels to source data and named 
     expect_equal(as.numeric(built_traces[[i]][["y"]]), as.numeric(expected_y))
     expect_equal(
       trace_info[["color"]][i],
-      normalize_color_string(colors[[trace_label]])
+      normalize_color_string(colors[[variable]])
     )
   }
 })
@@ -391,7 +392,8 @@ test_that("plot.simulate_stockflow() respects show_constants", {
   pl_with_constants <- plot(sim, show_constants = TRUE)
   expect_plotly(pl_with_constants)
   traces <- plotly_traces(pl_with_constants)
-  expect_true(all(const_label %in% traces[["name"]]))
+  # Default format_label = TRUE prettifies the name-defaulted label (const_val).
+  expect_true(all(format_label_default(const_label) %in% traces[["name"]]))
 
   pl_without_constants <- plot(sim, show_constants = FALSE)
   expect_plotly(pl_without_constants)
@@ -473,8 +475,32 @@ test_that("plot.simulate_stockflow() with vars = constant automatically enables 
   pl <- plot(sim, vars = c("Stock1", "const_val"), show_constants = FALSE)
   expect_plotly(pl)
   traces <- plotly_traces(pl)
-  expect_true(sum("const_val" == traces[["name"]]) == 1)
+  expect_true(sum(format_label_default("const_val") == traces[["name"]]) == 1)
   expect_snapshot_plot("sim-vars-constant-show-constants", pl)
+})
+
+test_that("plot.simulate_stockflow() format_label toggles legend label prettifying", {
+  sfm <- stockflow()
+  sfm <- update(sfm, "Stock1", type = "stock")
+  sfm <- update(sfm, "const_val", type = "constant", eqn = "75")
+  sim <- simulate(sfm)
+
+  # Default (TRUE): the name-defaulted label is prettified in the legend.
+  names_on <- plotly_traces(plot(sim, show_constants = TRUE))[["name"]]
+  expect_true("const val" %in% names_on)
+  expect_false("const_val" %in% names_on)
+
+  # FALSE: the raw variable name is kept.
+  names_off <- plotly_traces(
+    plot(sim, show_constants = TRUE, format_label = FALSE)
+  )[["name"]]
+  expect_true("const_val" %in% names_off)
+  expect_false("const val" %in% names_off)
+})
+
+test_that("plot.simulate_stockflow() rejects a non-logical format_label", {
+  sim <- simulate(stockflow("sir"))
+  expect_error(plot(sim, format_label = "yes"), "format_label")
 })
 
 # ============================================================================

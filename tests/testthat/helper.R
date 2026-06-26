@@ -554,10 +554,21 @@ extract_diagram_nodes <- function(pl) {
   # body may span multiple lines because long (wrapped) labels can contain
   # embedded newlines. Edges ("a" -> "b") have no bracket, and style lines
   # (node [...]/edge [...]) have no quoted name, so both are excluded.
+  # defs <- regmatches(
+  #   diagram,
+  #   gregexpr('"[^"]+"\\s*\\[[^\\]]*\\]', diagram, perl = TRUE)
+  # )[[1]]
+
+  # Remove edges first
+  lines <- strsplit(diagram, "\n", fixed = TRUE)[[1]]
+  node_lines <- lines[!grepl("->", lines, fixed = TRUE)]
+  node_diagram <- paste(node_lines, collapse = "\n")
+
   defs <- regmatches(
-    diagram,
-    gregexpr('"[^"]+"\\s*\\[[^\\]]*\\]', diagram, perl = TRUE)
+    node_diagram,
+    gregexpr('"[^"]+"\\s*\\[[^\\]]*\\]', node_diagram, perl = TRUE)
   )[[1]]
+
   if (length(defs) == 0L) {
     return(data.frame())
   }

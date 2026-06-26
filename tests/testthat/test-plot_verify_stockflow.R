@@ -96,15 +96,16 @@ test_that("plot.verify_stockflow uses explicit custom colors on legend traces", 
   names_df <- as.data.frame(res[["object"]])
   label_names <- names_df$label[match(vars, names_df$name)]
 
-  # Generate as many custom colors as there are labels
-  custom_colors <- stats::setNames(rainbow(length(label_names)), label_names)
+  # Generate as many custom colors as there are variables
+  custom_colors <- stats::setNames(rainbow(length(vars)), vars)
+  expected_colors <- stats::setNames(unname(custom_colors), label_names)
   pl <- plot(res, colors = custom_colors, alpha = 1)
   expect_plotly(pl)
   traces <- plotly_traces(pl)
   expect_equal(nrow(traces), 2L)
 
   # Check that trace names match labels and colors match the custom colors provided
-  legend_check <- plotly_check_legend_colors(pl, expected = custom_colors)
+  legend_check <- plotly_check_legend_colors(pl, expected = expected_colors)
   expect_true(nrow(legend_check) > 0)
   expect_true(all(legend_check$ok))
   expect_true(all(legend_check$matches_expected))
@@ -113,8 +114,8 @@ test_that("plot.verify_stockflow uses explicit custom colors on legend traces", 
 test_that("plot.verify_stockflow maps trace labels to source data and named colors", {
   res <- make_verify_model()
   names_df <- as.data.frame(res[["object"]])
-  labels <- names_df[["label"]]
-  colors <- stats::setNames(grDevices::rainbow(length(labels)), labels)
+  var_names <- names_df[["name"]]
+  colors <- stats::setNames(grDevices::rainbow(length(var_names)), var_names)
   colors <- rev(colors)
 
   pl <- plot(res, colors = colors, webgl = FALSE)
@@ -131,7 +132,7 @@ test_that("plot.verify_stockflow maps trace labels to source data and named colo
     expect_equal(as.numeric(built_traces[[i]][["y"]]), as.numeric(expected_y))
     expect_equal(
       trace_info[["color"]][i],
-      normalize_color_string(colors[[trace_label]])
+      normalize_color_string(colors[[variable]])
     )
   }
 })
@@ -238,11 +239,14 @@ test_that("plot() custom palette changes line colours", {
 
 test_that("plot() custom colors vector overrides palette", {
   res <- make_verify_model()
-  label_names <- as.data.frame(res[["object"]])$label
-  custom_colors <- stats::setNames(rep("steelblue", length(label_names)), label_names)
+  names_df <- as.data.frame(res[["object"]])
+  var_names <- names_df$name
+  label_names <- names_df$label
+  custom_colors <- stats::setNames(rep("steelblue", length(var_names)), var_names)
+  expected_colors <- stats::setNames(unname(custom_colors), label_names)
   pl <- plot(res, colors = custom_colors)
   expect_plotly(pl)
-  legend_check <- plotly_check_legend_colors(pl, expected = custom_colors)
+  legend_check <- plotly_check_legend_colors(pl, expected = expected_colors)
   expect_true(nrow(legend_check) > 0)
   expect_true(all(legend_check$ok))
   expect_true(all(legend_check$matches_expected))

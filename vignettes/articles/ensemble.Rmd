@@ -132,27 +132,54 @@ plot(sims)
 
 ### Choosing which summaries to keep
 
-Storing every simulation is expensive, so by default `ensemble()` keeps only summaries of the runs at each time point: the mean and a 95% interval (the 2.5% and 97.5% quantiles). Two arguments control what is computed. `central` picks the central tendency (`"mean"`, `"median"`, or `"none"`), and `spread` picks one or more measures of spread: `"quantile"`, `"sd"`, `"range"` (the minimum and maximum), or `"none"`. When you ask for quantiles, `quantiles` sets the probabilities.
-
-For example, to summarise each run by its median together with a standard deviation and an 80% interval:
+Storing every simulation is expensive, so by default `ensemble()` keeps only summaries statistics across runs at each time point: the mean and a 95% interval (the 2.5% and 97.5% quantiles). The quantile levels can be changed as follows:
 
 ```{r}
 sims <- ensemble(sfm,
-  n = 100,
-  central = "median",
-  spread = c("quantile", "sd"),
+  n = 100,   
   quantiles = c(0.1, 0.9)
 )
 head(sims)
 ```
 
-The quantiles appear as columns `quant1`, `quant2`, ... in the order you requested them; the probabilities they correspond to are kept in `sims$quantiles`. Requesting fewer statistics keeps the returned object smaller, which matters for large ensembles.
+Here, quantiles appear as columns `quant1`, `quant2` which correspond to `sims$quantiles`.
 
-When plotting, `central` and `spread` work the other way around: they are preferences for what to *show* from whatever was computed. `plot()` walks through your choices in order and uses the first one it can draw, so a sensible default still produces a plot even when a statistic is missing:
+To change which summary statistics are computed, use `central` (defining the central tendency) and `spread` (defining the measure of dispersion). For example, to summarise each run by its median together with a standard deviation:
 
 ```{r}
-plot(sims, central = "median", spread = "sd")
+sims <- ensemble(sfm,
+  n = 100,
+  central = "median",
+  spread = "sd"
+)
+head(sims)
 ```
+
+
+```{r}
+plot(sims)
+```
+
+All available summary statistics can be computed with:
+
+```{r}
+sims <- ensemble(sfm,
+  n = 100,
+  central = c("mean", "median"),
+  spread = c("quantile", "sd", "range")
+)
+head(sims)
+```
+
+Plots can then switch between summary statistics:
+
+```{r}
+plot(sims, central = "median", spread = "quantile")
+plot(sims, central = "median", spread = "range")
+plot(sims, central = "none", spread = "range")
+```
+
+
 
 ### Parallel simulations (R)
 
@@ -172,11 +199,13 @@ if (requireNamespace("future", quietly = TRUE) &&
 }
 ```
 
-On Windows, `multisession` is the recommended backend. On POSIX systems (Linux, macOS), you can also use `multicore` for potentially better performance, though `multisession` will work on those systems as well. The `workers` argument specifies how many parallel processes to use; adjust this based on your system's capabilities.
+The `workers` argument specifies how many parallel processes to use; adjust this based on your system's capabilities. On Windows, `multisession` is the recommended backend. On POSIX systems (Linux, macOS), you can also use `multicore` for potentially better performance, though `multisession` will work on those systems as well. 
 
 #### Ensemble simulations (Julia)
 
-Ensemble simulations can also be run in Julia, which is typically faster than R for large simulations. To use the Julia backend, first activate the Julia environment for sdbuildR:
+Ensemble simulations can also be run in Julia, which is typically faster than R for large simulations. To use the Julia backend, first follow the instructions in the [Julia setup vignette](https://kcevers.github.io/sdbuildR/articles/julia-setup.html) to install and set up the Julia environment for sdbuildR.
+
+Activate the Julia environment for sdbuildR:
 
 ```{r}
 use_julia()

@@ -16,9 +16,9 @@
   shareX = TRUE,
   shareY = TRUE,
   palette = "Dark 2",
-  alpha = 0.3,
+  alpha = list(central = 1, spread = 0.3, sims = 0.3),
   colors = NULL,
-  line_width = 2,
+  line_width = list(central = 3, spread = 0, sims = 1),
   font_family = "Times New Roman",
   font_size = 16,
   wrap_width = 25,
@@ -26,7 +26,7 @@
   label_subplots = TRUE,
   central = c("mean", "median", "none"),
   spread = c("quantile", "sd", "range"),
-  central_line_width = 3,
+  format_label = TRUE,
   condition_display = c("subplots", "slider", "dropdown"),
   control_options = list(),
   animation = c("none", "time"),
@@ -57,11 +57,24 @@
 
 \item{palette}{Colour palette. Must be one of hcl.pals().}
 
-\item{alpha}{Trajectory opacity. Defaults to \code{1}.}
+\item{alpha}{Opacity, with the same grammar as \code{line_width}: a single value, a
+named per-variable vector, or a list keyed by layer (\code{central}/\code{spread}/
+\code{sims}). Defaults to \code{list(central = 1, spread = 0.3, sims = 0.3)}.}
 
-\item{colors}{Vector of colours. If NULL, the color palette will be used. If specified, will override palette. The number of colours must be equal to the number of variables in the simulation data frame. Defaults to NULL.}
+\item{colors}{Colours for the plotted variables. A named vector (names are
+variable names) sets the colours of those variables and the palette fills
+the rest, so you can recolour only a few variables. An unnamed vector
+assigns colours in plot order. \code{NULL} uses \code{palette}. Defaults to \code{NULL}.}
 
-\item{line_width}{Line width of the plotted trajectories. Either a single value applied to all variables, or a vector with one value per variable (like \code{colors}). Defaults to \code{2}.}
+\item{line_width}{Line width(s). The plot draws three layers: the central
+tendency line (\code{central}), the uncertainty band's border (\code{spread}), and the
+individual trajectories (\code{sims}). Supply a single value (used for every
+layer and variable), a named per-variable vector (names are variable names;
+unnamed values fill in plot order), or a list keyed by layer
+(\code{list(central = , spread = , sims = )}) whose elements are themselves a
+single value or per-variable vector. Unspecified layers/variables fall back
+to the defaults. Defaults to \code{list(central = 3, spread = 0, sims = 1)}
+(a \code{spread} width of \code{0} draws no band border).}
 
 \item{font_family}{Font family. Defaults to "Times New Roman".}
 
@@ -84,7 +97,10 @@ line plus/minus one standard deviation), \code{"range"} (between \code{min} and
 \code{max}), or \code{"none"}. The first band the computed statistics can support is
 used; \code{"sd"} also needs a central line. Defaults to \code{c("quantile", "sd", "range")}.}
 
-\item{central_line_width}{Line width of the central tendency line (and marker size for single time points). Either a single value applied to all variables, or a vector with one value per variable (like \code{line_width}). Defaults to 3.}
+\item{format_label}{If \code{TRUE}, apply default formatting (replacing periods and
+underscores with spaces) to variable labels that are the same as the
+variable name. Applies to the legend and any condition controls. Defaults to
+\code{TRUE}.}
 
 \item{condition_display}{How to display multiple conditions. Use \code{"subplots"}
 to show conditions as panels, \code{"slider"} to select one condition with a
@@ -92,10 +108,14 @@ slider, or \code{"dropdown"} to select one condition with a dropdown. Defaults
 to \code{"subplots"}.}
 
 \item{control_options}{Named list fine-tuning the \code{"slider"}/\code{"dropdown"}
-condition control. Currently supports \code{max_labels}: the maximum number of
+condition control. Supports \code{max_labels}: the maximum number of
 slider tick labels to keep visible when many conditions are varied (the
 slider always keeps one step per condition; intermediate labels are thinned
-above this count). Defaults to \code{list(max_labels = 10)}.}
+above this count); and \code{spacing}: the vertical gap (in paper units) between
+stacked controls when several condition parameters are varied. By default
+the spacing and the reserved bottom margin are sized automatically so the
+controls never overlap each other or the x-axis title; pass a number to
+widen or tighten the gap. Defaults to \code{list(max_labels = 10, spacing = NULL)}.}
 
 \item{animation}{Animation mode. Use \code{"none"} for a static plot or \code{"time"}
 to cumulatively reveal trajectories over time. Defaults to \code{"none"}.
@@ -117,6 +137,31 @@ Plotly object
 \description{
 Visualize ensemble simulation results of a stock-and-flow model. Either summary statistics or individual trajectories can be plotted. When multiple conditions j are specified, a grid of subplots is plotted. See \code{\link[=ensemble]{ensemble()}} for examples.
 }
+\section{Styling variables and layers}{
+
+Names in \code{colors}, \code{alpha}, and \code{line_width} refer to the model variable
+names, not the labels shown in the legend. For example, use \code{infected}, not
+\code{Infected}, even when \code{format_label = TRUE} changes the legend text.
+
+A single value applies everywhere:
+\code{plot(sims, line_width = 3, alpha = 0.7)}.
+
+A named vector styles selected variables and leaves the rest at their
+defaults:
+\code{plot(sims, colors = c(infected = "firebrick"), line_width = c(infected = 4))}.
+
+Ensemble plots also have layers. Use a list to style the central tendency
+line, the uncertainty band border, and individual trajectories separately:
+\code{plot(sims, which = "sims", line_width = list(central = 3, sims = 1, spread = 0))}.
+
+List elements can be named vectors too, which is useful when only one layer
+needs variable-specific styling:
+\code{plot(sims, alpha = list(central = 1, sims = c(infected = 0.15), spread = 0.25))}.
+
+The \code{spread} line width controls the border of the uncertainty band. The
+default is \code{0}, so the band is filled but not outlined.
+}
+
 \seealso{
 \code{\link[=ensemble]{ensemble()}}
 }

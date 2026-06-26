@@ -26,6 +26,7 @@
   label_subplots = TRUE,
   alpha = 1,
   margin = 0.05,
+  format_label = TRUE,
   condition_display = c("subplots", "slider", "dropdown"),
   control_options = list(),
   animation = c("none", "time"),
@@ -68,9 +69,13 @@ with a matching status.
 
 \item{palette}{Colour palette (see \code{hcl.pals()}). Defaults to \code{"Dark 2"}.}
 
-\item{colors}{Vector of colours overriding \code{palette}. Defaults to \code{NULL}.}
+\item{colors}{Colours for the plotted variables. A named vector (names are
+variable names) recolours only those variables, the palette fills the rest;
+an unnamed vector assigns colours in plot order. Defaults to \code{NULL}.}
 
-\item{line_width}{Line width of the plotted trajectories. Either a single value applied to all variables, or a vector with one value per variable (like \code{colors}). Defaults to \code{2}.}
+\item{line_width}{Line width of the trajectories. Either a single value, a
+named per-variable vector (names are variable names), or an unnamed vector
+with one value per variable in plot order. Defaults to \code{2}.}
 
 \item{font_family}{Font family. Defaults to \code{"Times New Roman"}.}
 
@@ -82,9 +87,15 @@ with a matching status.
 
 \item{label_subplots}{Whether to plot labels indicating the test number of the subplot.}
 
-\item{alpha}{Trajectory opacity. Defaults to \code{1}.}
+\item{alpha}{Trajectory opacity, between 0 and 1. A single value or a named
+per-variable vector. Defaults to \code{1}.}
 
 \item{margin}{Margin between subplots. Either a single numeric or a vector of length four(left, right, top, bottom). See \code{?plotly::subplot()} for more details. Defaults to 0.05.}
+
+\item{format_label}{If \code{TRUE}, apply default formatting (replacing periods and
+underscores with spaces) to variable labels that are the same as the
+variable name. Applies to the legend and any condition controls. Defaults to
+\code{TRUE}.}
 
 \item{condition_display}{How to display multiple conditions. Use \code{"subplots"}
 to show conditions as panels, \code{"slider"} to select one condition with a
@@ -92,10 +103,14 @@ slider, or \code{"dropdown"} to select one condition with a dropdown. Defaults
 to \code{"subplots"}.}
 
 \item{control_options}{Named list fine-tuning the \code{"slider"}/\code{"dropdown"}
-condition control. Currently supports \code{max_labels}: the maximum number of
+condition control. Supports \code{max_labels}: the maximum number of
 slider tick labels to keep visible when many conditions are varied (the
 slider always keeps one step per condition; intermediate labels are thinned
-above this count). Defaults to \code{list(max_labels = 10)}.}
+above this count); and \code{spacing}: the vertical gap (in paper units) between
+stacked controls when several condition parameters are varied. By default
+the spacing and the reserved bottom margin are sized automatically so the
+controls never overlap each other or the x-axis title; pass a number to
+widen or tighten the gap. Defaults to \code{list(max_labels = 10, spacing = NULL)}.}
 
 \item{animation}{Animation mode. Use \code{"none"} for a static plot or \code{"time"}
 to cumulatively reveal trajectories over time. Defaults to \code{"none"}.}
@@ -116,6 +131,23 @@ Visualize the simulation(s) used during \code{\link[=verify]{verify()}}. Each co
 displayed as a subplot. Simulations are always available since \code{\link[=verify]{verify()}}
 unconditionally retains them.
 }
+\section{Styling variables}{
+
+Names in \code{colors}, \code{line_width}, and \code{alpha} refer to the model variable
+names, not the labels shown in the legend. This keeps the styling stable if
+labels are formatted or wrapped for display.
+
+Use one value to style every trajectory:
+\code{plot(res, line_width = 3, alpha = 0.6)}.
+
+Use named vectors to style selected variables:
+\code{plot(res, colors = c(susceptible = "#377EB8"), alpha = c(infected = 0.4))}.
+
+Unnamed vectors are applied in plot order. Named vectors are usually clearer,
+especially when \code{vars}, \code{test}, \code{label}, or \code{status} filters change what is
+drawn.
+}
+
 \examples{
 sfm <- stockflow("sir") |>
   unit_test(expr = all(susceptible >= 0))

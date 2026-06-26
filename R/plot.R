@@ -295,9 +295,7 @@ plot.stockflow <- function(x,
                            align = NULL,
                            order = NULL,
                            ...) {
-  sfm <- x
-  rm(x)
-  check_stockflow(sfm)
+  check_stockflow(x)
 
   if (!is.logical(show_eqn) || length(show_eqn) != 1 || is.na(show_eqn)) {
     cli::cli_abort(c(
@@ -333,7 +331,7 @@ plot.stockflow <- function(x,
   )
 
   # Get property dataframe
-  df <- as.data.frame(sfm, properties = c("type", "name", "label", "eqn"))
+  df <- as.data.frame(x, properties = c("type", "name", "label", "eqn"))
 
   # All variable names in the model, before any vars filtering (for align/order
   # typo detection: a name absent from this is a typo, a name present but not
@@ -350,8 +348,8 @@ plot.stockflow <- function(x,
   }
 
   # Get dependencies
-  dep <- dependencies(sfm)
-  flow_df <- get_flow_df(sfm)
+  dep <- dependencies(x)
+  flow_df <- get_flow_df(x)
 
   if (!is.null(vars)) {
     vars <- clean_vars(vars)
@@ -380,12 +378,7 @@ plot.stockflow <- function(x,
   }
 
   if (format_label) {
-    formatted_label <- gsub("_", " ", df[["label"]], fixed = TRUE)
-    formatted_label <- gsub(".", " ", formatted_label, fixed = TRUE)
-    formatted_label <- gsub("  ", " ", formatted_label, fixed = TRUE)
-    df[["label"]] <- ifelse(df[["name"]] == df[["label"]],
-      formatted_label, df[["label"]]
-    )
+    df[["label"]] <- format_label_if_default(df[["name"]], df[["label"]])
   }
 
   # Unwrapped, human-readable labels for tooltips (before wrapping/escaping).
@@ -577,8 +570,8 @@ plot.stockflow <- function(x,
     dep_var <- dep_rev[var_names]
 
     # Only keep those in plot_var
-    dep_var <- lapply(dep_var, function(x) {
-      intersect(x, plot_var)
+    dep_var <- lapply(dep_var, function(y) {
+      intersect(y, plot_var)
     })
 
     dep_var <- dep_var[lengths(dep_var) != 0]
@@ -725,7 +718,8 @@ plot.stockflow <- function(x,
     flow_edges_to_destination <- c()
 
     style_flow_edges_from_source <- sprintf(
-      "edge [style = '', arrowhead='none', color='%s', penwidth=1.1, minlen=%s, splines=false, tailport='%s', headport='%s']",
+      # "edge [style = '', arrowhead='none', color='%s', penwidth=1.1, minlen=%s, splines=false, tailport='%s', headport='%s']",
+      "edge [style = '', arrowhead='none', color='%s', penwidth=1.1, minlen=%s, tailport='%s', headport='%s']",
       paste0(
         "black:", flow_col, ":black"
       ),
@@ -734,7 +728,8 @@ plot.stockflow <- function(x,
       flow_ports[["head"]]
     )
     style_flow_edges_to_destination <- sprintf(
-      "edge [style = '', arrowhead='normal', color='%s', arrowsize=1.5, penwidth=1.1, minlen=%s, splines=ortho, tailport='%s', headport='%s']",
+      # "edge [style = '', arrowhead='normal', color='%s', arrowsize=1.5, penwidth=1.1, minlen=%s, splines=ortho, tailport='%s', headport='%s']",
+      "edge [style = '', arrowhead='normal', color='%s', arrowsize=1.5, penwidth=1.1, minlen=%s, tailport='%s', headport='%s']",
       paste0(
         "black:", flow_col, ":black"
       ),
@@ -772,30 +767,65 @@ plot.stockflow <- function(x,
   style_dependency <- dependency_edges <- ""
   if (show_dependencies) {
     style_dependency <- sprintf(
-      "edge [style = '', color='%s', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport = '_', headport='_']",
+      # "edge [style = '', color='%s', arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport = '_', headport='_']",
+      "edge [style = '', color='%s', arrowsize=0.8, penwidth=1, constraint=false, tailport = '_', headport='_']",
       dependency_col
     )
 
     # Only keep dependencies in plot_var
-    dep <- lapply(dep, function(x) {
-      intersect(x, plot_var)
+    dep <- lapply(dep, function(y) {
+      intersect(y, plot_var)
     })
 
     # Only keep entries in plot_var
     dep <- dep[names(dep) %in% plot_var]
 
     if (length(dep) > 0) {
-      dependency_edges <- unlist(lapply(names(dep), function(x) {
-        if (length(dep[[x]]) > 0) {
-          vapply(dep[[x]], function(y) {
+
+      dependency_edges <- unlist(lapply(names(dep), function(y) {
+        if (length(dep[[y]]) > 0) {
+          vapply(dep[[y]], function(z) {
             sprintf(
               "%s -> %s",
-              paste0("'", y, "'"),
-              paste0("'", x, "'")
+              paste0("'", z, "'"),
+              paste0("'", y, "'")
             )
           }, character(1), USE.NAMES = FALSE)
         }
       }))
+
+      # Avoid overlap between flows and dependency edges
+      if (!is.null(dependency_edges) && length(flow_names) > 0) {
+
+        # Find dependency edges that link the same variables as flows do
+        dep_split <- strsplit(dependency_edges, " -> ", fixed = TRUE)
+
+        # Omit NA
+        flow_df_ <- flow_df[!is.na(flow_df[, "from"]) & !is.na(flow_df[, "to"]), , drop = FALSE]
+
+        flow_start <- c(flow_df_[, "from"], flow_df_[, "name"])
+        flow_end <- c(flow_df_[, "name"], flow_df_[, "to"])
+
+        idx <- lapply(dep_split, function(x) {
+          x <- gsub("'", "", x)
+          any(x[1] %in% flow_start & x[2] %in% flow_end)
+        }) |> unlist()
+
+        if (any(idx)) {
+          suff1 <- " [headport = 's', tailport = 's']"
+          suff2 <- " [headport = 'n', tailport = 'n']"
+
+          # Alternative
+          suff <- rep(c(suff1, suff2), length.out = sum(idx))
+
+          # suff <- " [headport = 's']"
+
+          # Add head/tail ports to dependency edges that overlap with flows
+          dependency_edges[idx] <- paste0(dependency_edges[idx], suff)
+        }
+
+      }
+
     }
   }
 
@@ -804,7 +834,7 @@ plot.stockflow <- function(x,
     "
     digraph sfm {
 
-      graph [layout = dot, rankdir = %s, center=true, outputorder='edgesfirst', pad=%s, nodesep=%s]
+      graph [layout = dot, rankdir = %s, center=true, outputorder='edgesfirst', pad=%s, nodesep=%s, splines = true, concentrate = false]
 
       # Shared across all nodes (persists until overridden)
       %s
@@ -893,10 +923,12 @@ plot.stockflow <- function(x,
 #'
 prep_plot <- function(
   object, type_sim, df, constants,
-  show_constants, vars, palette, colors, line_width = NULL, wrap_width
+  show_constants, vars, palette, colors, wrap_width,
+  format_label = TRUE
 ) {
   # Get names of stocks and non-stock variables
   names_df <- get_names(object)
+  style_names <- names_df[["name"]]
 
   # Validate variable parameters
   validate_plot_params(vars = vars)
@@ -961,7 +993,7 @@ prep_plot <- function(
   ]
 
   # Prepare and standardize labels (handle duplicates, wrapping, special characters)
-  names_df <- prepare_labels(names_df, wrap_width = wrap_width, format_label = FALSE)
+  names_df <- prepare_labels(names_df, wrap_width = wrap_width, format_label = format_label)
 
   # Create dictionaries: name -> label (for visible and hidden variables)
   highlight_names <- names_df[match(highlight_these_names, names_df[["name"]]), , drop = FALSE]
@@ -984,20 +1016,13 @@ prep_plot <- function(
     labels = names(nonhighlight_names)
   )
 
-  # Generate colors
-  nr_var <- length(unique(df[["variable"]]))
+  # Generate colors keyed by the display labels used in Plotly traces, while
+  # matching any user-supplied names against model variable names.
+  plot_var_names <- c(unname(highlight_names), unname(nonhighlight_names))
   plot_labels <- c(names(highlight_names), names(nonhighlight_names))
-  preserve_color_names <- !is.null(colors) && !is.null(names(colors)) && all(plot_labels %in% names(colors))
-  if (preserve_color_names) {
-    colors <- colors[plot_labels]
-  }
-  colors <- generate_colors(nr_var, colors = colors, palette = palette)
-  colors <- stats::setNames(colors, plot_labels)
-  attr(colors, "sdbuildR_preserve_names") <- preserve_color_names
-
-  # Resolve line widths, keyed by label like colors (highlight then nonhighlight)
-  line_width <- generate_line_width(nr_var, line_width = line_width)
-  line_width <- stats::setNames(line_width, plot_labels)
+  colors <- resolve_colors(colors, palette, plot_var_names,
+    display_names = plot_labels, valid_names = style_names
+  )
 
   list(
     highlight_names = highlight_names,
@@ -1005,7 +1030,9 @@ prep_plot <- function(
     df_highlight = df_highlight,
     df_nonhighlight = df_nonhighlight,
     colors = colors,
-    line_width = line_width
+    labels = plot_labels,
+    var_names = plot_var_names,
+    style_names = style_names
   )
 }
 
@@ -1018,12 +1045,22 @@ prep_plot <- function(
 #' @param show_constants If `TRUE`, include constants in plot. Defaults to `FALSE`.
 #' @param vars Variables to plot. Defaults to `NULL` to plot all variables.
 #' @param palette Colour palette. Must be one of hcl.pals().
-#' @param colors Vector of colours. If `NULL`, the color palette will be used. If specified, will override palette. The number of colours must be equal to the number of variables in the simulation data frame. Defaults to `NULL`.
-#' @param line_width Line width of the plotted trajectories. Either a single value applied to all variables, or a vector with one value per variable (like `colors`). Defaults to `2`.
+#' @param colors Colours for the plotted variables. A named vector (names are
+#'   variable names) sets the colours of those variables and the palette fills
+#'   the rest, so you can recolour only a few variables. An unnamed vector
+#'   assigns colours in plot order. `NULL` uses `palette`. Defaults to `NULL`.
+#' @param line_width Line width of the plotted trajectories. Either a single
+#'   value applied to all variables, a named per-variable vector (names are
+#'   variable names), or an unnamed vector with one value per variable in plot
+#'   order. Defaults to `2`.
 #' @param font_family Font family. Defaults to "Times New Roman".
 #' @param font_size Font size. Defaults to 16.
 #' @param wrap_width Width of text wrapping for labels. Must be an integer. Defaults to 25.
 #' @param showlegend Whether to show legend. Must be `TRUE` or `FALSE`. Defaults to `TRUE`.
+#' @param format_label If `TRUE`, apply default formatting (replacing periods and
+#'   underscores with spaces) to variable labels that are the same as the
+#'   variable name. Applies to the legend and any condition controls. Defaults to
+#'   `TRUE`.
 #' @param animation Animation mode. Use `"none"` for a static plot or `"time"`
 #'   to cumulatively reveal trajectories over time. Defaults to `"none"`.
 #' @param webgl If `TRUE`, render trajectories with WebGL (plotly `scattergl`) for
@@ -1032,6 +1069,21 @@ prep_plot <- function(
 #'   `options(sdbuildR.webgl = FALSE)` (e.g. in vignettes or dashboards, or when
 #'   a plot renders blank) to disable WebGL globally.
 #' @param ... Optional parameters
+#'
+#' @section Styling variables:
+#' Names in `colors` and `line_width` refer to the model variable names, not the
+#' labels shown in the legend. This is usually the safest way to style a plot,
+#' because labels may be wrapped, prettified, or customized for display.
+#'
+#' Use one value to style every trajectory:
+#' `plot(sim, line_width = 3)`.
+#'
+#' Use a named vector to style selected variables and leave the rest at their
+#' defaults or palette colours:
+#' `plot(sim, colors = c(susceptible = "#377EB8"), line_width = c(infected = 4))`.
+#'
+#' Unnamed vectors are still accepted and are applied in plot order, but named
+#' vectors are easier to read and less sensitive to filtering with `vars`.
 #'
 #' @returns Plotly object
 #' @export
@@ -1063,6 +1115,7 @@ plot.simulate_stockflow <- function(x,
                                     font_size = 16,
                                     wrap_width = 25,
                                     showlegend = TRUE,
+                                    format_label = TRUE,
                                     animation = c("none", "time"),
                                     webgl = getOption("sdbuildR.webgl", default = TRUE),
                                     ...) {
@@ -1093,10 +1146,10 @@ plot.simulate_stockflow <- function(x,
     vars = vars,
     palette = palette,
     colors = colors,
-    line_width = line_width,
     font_family = font_family,
     font_size = font_size,
     wrap_width = wrap_width,
+    format_label = format_label,
     webgl = webgl
   )
 
@@ -1115,14 +1168,21 @@ plot.simulate_stockflow <- function(x,
 
   out <- prep_plot(
     x[["object"]], "sim", x[["df"]], x[["constants"]], show_constants,
-    vars, palette, colors, line_width, wrap_width
+    vars, palette, colors, wrap_width, format_label
   )
   highlight_names <- out[["highlight_names"]]
   nonhighlight_names <- out[["nonhighlight_names"]]
   df_highlight <- out[["df_highlight"]]
   df_nonhighlight <- out[["df_nonhighlight"]]
   colors <- out[["colors"]]
-  line_width <- out[["line_width"]]
+
+  # Resolve per-variable line widths keyed by variable name (a single value, a named
+  # per-variable vector, or a positional vector). Trajectories are the only
+  # layer a simple simulation draws.
+  line_width <- expand_aes(line_width, out[["var_names"]],
+    default = 2, arg = "line_width", validate = "positive",
+    display_names = out[["labels"]], valid_names = out[["style_names"]]
+  )
 
   # For time animation, cumulatively reveal each trajectory frame by frame.
   if (animation == "time") {
@@ -1212,8 +1272,22 @@ plot.simulate_stockflow <- function(x,
 #' @param shareX If `TRUE`, share the x-axis across subplots. Defaults to `TRUE`.
 #' @param shareY If `TRUE`, share the y-axis across subplots. Defaults to `TRUE`.
 #' @param palette Colour palette. Must be one of hcl.pals().
-#' @param colors Vector of colours. If NULL, the color palette will be used. If specified, will override palette. The number of colours must be equal to the number of variables in the simulation data frame. Defaults to NULL.
-#' @param alpha Trajectory opacity. Defaults to `1`.
+#' @param colors Colours for the plotted variables. A named vector (names are
+#'   variable names) sets the colours of those variables and the palette fills
+#'   the rest, so you can recolour only a few variables. An unnamed vector
+#'   assigns colours in plot order. `NULL` uses `palette`. Defaults to `NULL`.
+#' @param line_width Line width(s). The plot draws three layers: the central
+#'   tendency line (`central`), the uncertainty band's border (`spread`), and the
+#'   individual trajectories (`sims`). Supply a single value (used for every
+#'   layer and variable), a named per-variable vector (names are variable names;
+#'   unnamed values fill in plot order), or a list keyed by layer
+#'   (`list(central = , spread = , sims = )`) whose elements are themselves a
+#'   single value or per-variable vector. Unspecified layers/variables fall back
+#'   to the defaults. Defaults to `list(central = 3, spread = 0, sims = 1)`
+#'   (a `spread` width of `0` draws no band border).
+#' @param alpha Opacity, with the same grammar as `line_width`: a single value, a
+#'   named per-variable vector, or a list keyed by layer (`central`/`spread`/
+#'   `sims`). Defaults to `list(central = 1, spread = 0.3, sims = 0.3)`.
 #' @param font_family Font family. Defaults to "Times New Roman".
 #' @param font_size Font size. Defaults to 16.
 #' @param wrap_width Width of text wrapping for labels. Must be an integer. Defaults to 25.
@@ -1230,16 +1304,19 @@ plot.simulate_stockflow <- function(x,
 #'   `max`), or `"none"`. The first band the computed statistics can support is
 #'   used; `"sd"` also needs a central line. Defaults to `c("quantile", "sd",
 #'   "range")`.
-#' @param central_line_width Line width of the central tendency line (and marker size for single time points). Either a single value applied to all variables, or a vector with one value per variable (like `line_width`). Defaults to 3.
 #' @param condition_display How to display multiple conditions. Use `"subplots"`
 #'   to show conditions as panels, `"slider"` to select one condition with a
 #'   slider, or `"dropdown"` to select one condition with a dropdown. Defaults
 #'   to `"subplots"`.
 #' @param control_options Named list fine-tuning the `"slider"`/`"dropdown"`
-#'   condition control. Currently supports `max_labels`: the maximum number of
+#'   condition control. Supports `max_labels`: the maximum number of
 #'   slider tick labels to keep visible when many conditions are varied (the
 #'   slider always keeps one step per condition; intermediate labels are thinned
-#'   above this count). Defaults to `list(max_labels = 10)`.
+#'   above this count); and `spacing`: the vertical gap (in paper units) between
+#'   stacked controls when several condition parameters are varied. By default
+#'   the spacing and the reserved bottom margin are sized automatically so the
+#'   controls never overlap each other or the x-axis title; pass a number to
+#'   widen or tighten the gap. Defaults to `list(max_labels = 10, spacing = NULL)`.
 #' @param animation Animation mode. Use `"none"` for a static plot or `"time"`
 #'   to cumulatively reveal trajectories over time. Defaults to `"none"`.
 #'   Time animation requires `which = "sims"` (confidence ribbons cannot be
@@ -1247,6 +1324,29 @@ plot.simulate_stockflow <- function(x,
 #'   `condition_display` controls or multiple conditions is not supported.
 #' @param ... Optional parameters
 #' @inheritParams plot.simulate_stockflow
+#'
+#' @section Styling variables and layers:
+#' Names in `colors`, `alpha`, and `line_width` refer to the model variable
+#' names, not the labels shown in the legend. For example, use `infected`, not
+#' `Infected`, even when `format_label = TRUE` changes the legend text.
+#'
+#' A single value applies everywhere:
+#' `plot(sims, line_width = 3, alpha = 0.7)`.
+#'
+#' A named vector styles selected variables and leaves the rest at their
+#' defaults:
+#' `plot(sims, colors = c(infected = "firebrick"), line_width = c(infected = 4))`.
+#'
+#' Ensemble plots also have layers. Use a list to style the central tendency
+#' line, the uncertainty band border, and individual trajectories separately:
+#' `plot(sims, which = "sims", line_width = list(central = 3, sims = 1, spread = 0))`.
+#'
+#' List elements can be named vectors too, which is useful when only one layer
+#' needs variable-specific styling:
+#' `plot(sims, alpha = list(central = 1, sims = c(infected = 0.15), spread = 0.25))`.
+#'
+#' The `spread` line width controls the border of the uncertainty band. The
+#' default is `0`, so the band is filled but not outlined.
 #'
 #' @returns Plotly object
 #' @export
@@ -1265,9 +1365,9 @@ plot.ensemble_stockflow <- function(x,
                                     shareX = TRUE,
                                     shareY = TRUE,
                                     palette = "Dark 2",
-                                    alpha = 0.3,
+                                    alpha = list(central = 1, spread = 0.3, sims = 0.3),
                                     colors = NULL,
-                                    line_width = 2,
+                                    line_width = list(central = 3, spread = 0, sims = 1),
                                     font_family = "Times New Roman",
                                     font_size = 16,
                                     wrap_width = 25,
@@ -1275,13 +1375,15 @@ plot.ensemble_stockflow <- function(x,
                                     label_subplots = TRUE,
                                     central = c("mean", "median", "none"),
                                     spread = c("quantile", "sd", "range"),
-                                    central_line_width = 3,
+                                    format_label = TRUE,
                                     condition_display = c("subplots", "slider", "dropdown"),
                                     control_options = list(),
                                     animation = c("none", "time"),
                                     webgl = getOption("sdbuildR.webgl", default = TRUE),
                                     ...) {
   check_ensemble_stockflow(x)
+
+  user_colors <- colors
 
   condition_display <- .clean_condition_display(condition_display)
   control_options <- resolve_control_options(control_options)
@@ -1300,13 +1402,11 @@ plot.ensemble_stockflow <- function(x,
     vars = vars,
     palette = palette,
     colors = colors,
-    line_width = line_width,
-    central_line_width = central_line_width,
-    alpha = alpha,
     font_family = font_family,
     font_size = font_size,
     wrap_width = wrap_width,
     label_subplots = label_subplots,
+    format_label = format_label,
     webgl = webgl
   )
 
@@ -1325,9 +1425,6 @@ plot.ensemble_stockflow <- function(x,
   passed_arg <- names(as.list(match.call())[-1])
 
   dots <- list(...)
-
-  # Internal helpers still use the historical `line_width_central_tendency` name.
-  line_width_central_tendency <- central_line_width
 
   # Resolve the central tendency and spread choices against the statistics that
   # are actually present in the ensemble summary. Both arguments are preference
@@ -1507,19 +1604,38 @@ plot.ensemble_stockflow <- function(x,
   # Prepare for plotting
   out <- prep_plot(x[["object"]], "ensemble", summary_df,
     constants = x[["constants"]][["summary"]], show_constants = show_constants,
-    vars = vars, palette = palette, colors = colors, line_width = line_width,
-    wrap_width = wrap_width
+    vars = vars, palette = palette, colors = colors,
+    wrap_width = wrap_width, format_label = format_label
   )
   summary_df_highlight <- out[["df_highlight"]]
   summary_df_nonhighlight <- out[["df_nonhighlight"]]
   colors <- out[["colors"]]
-  line_width <- out[["line_width"]]
+  labels <- out[["labels"]]
+  var_names <- out[["var_names"]]
+
+  # Resolve the role-keyed line widths and opacities to per-variable vectors for
+  # each layer (central line, spread band, individual trajectories). A scalar or
+  # named vector applies to every role; a list keyed by role styles each layer.
+  lw <- resolve_aes(line_width, aes_roles,
+    defaults = list(central = 3, spread = 0, sims = 1),
+    var_names = var_names, arg = "line_width",
+    validate_by_role = list(central = "positive", spread = "nonneg", sims = "positive"),
+    display_names = labels,
+    valid_names = out[["style_names"]]
+  )
+  al <- resolve_aes(alpha, aes_roles,
+    defaults = list(central = 1, spread = 0.3, sims = 0.3),
+    var_names = var_names, arg = "alpha",
+    validate_by_role = list(central = "unit", spread = "unit", sims = "unit"),
+    display_names = labels,
+    valid_names = out[["style_names"]]
+  )
 
   if (which == "sims") {
     out <- prep_plot(x[["object"]], "ensemble", df,
       constants = x[["constants"]][["df"]], show_constants = show_constants,
-      vars = vars, palette = palette, colors = colors, line_width = line_width,
-      wrap_width = wrap_width
+      vars = vars, palette = palette, colors = user_colors,
+      wrap_width = wrap_width, format_label = format_label
     )
     df_highlight <- out[["df_highlight"]]
     df_nonhighlight <- out[["df_nonhighlight"]]
@@ -1601,19 +1717,18 @@ plot.ensemble_stockflow <- function(x,
         df_highlight = get_cond(hl_by, j_name, df_highlight),
         df_nonhighlight = get_cond(nhl_by, j_name, df_nonhighlight),
         central_tendency = central_tendency,
-        line_width_central_tendency = line_width_central_tendency,
+        lw = lw,
+        al = al,
         q_low = q_low,
         q_high = q_high,
         mode = mode,
         colors = colors,
-        line_width = line_width,
         showlegend = showlegend,
         dots = dots,
         main = main,
         xlab = xlab, ylab = ylab,
         font_family = font_family,
         font_size = font_size,
-        alpha = alpha,
         theme = subplot_theme,
         frame = frame,
         webgl = webgl
@@ -1629,14 +1744,18 @@ plot.ensemble_stockflow <- function(x,
       pl_list,
       condition_ids = condition,
       type = condition_display,
-      labels = ensemble_condition_labels(cond_tbl, x[["object"]], condition),
+      labels = ensemble_condition_labels(
+        cond_tbl, x[["object"]], condition, format_label
+      ),
       theme = control_theme,
       main = main, xlab = xlab, ylab = ylab,
       font_family = font_family, font_size = font_size,
       condition_table = cond_tbl,
       cross = isTRUE(x[["cross"]]),
       object = x[["object"]],
-      max_labels = control_options[["max_labels"]]
+      max_labels = control_options[["max_labels"]],
+      spacing = control_options[["spacing"]],
+      format_label = format_label
     )
   } else if (!create_subplots) {
     j_idx <- 1
@@ -1650,19 +1769,18 @@ plot.ensemble_stockflow <- function(x,
       df_highlight = df_highlight,
       df_nonhighlight = df_nonhighlight,
       central_tendency = central_tendency,
-      line_width_central_tendency = line_width_central_tendency,
+      lw = lw,
+      al = al,
       q_low = q_low,
       q_high = q_high,
       mode = mode,
       colors = colors,
-      line_width = line_width,
       showlegend = showlegend,
       dots = dots,
       main = main,
       xlab = xlab, ylab = ylab,
       font_family = font_family,
       font_size = font_size,
-      alpha = alpha,
       theme = subplot_theme,
       frame = frame,
       webgl = webgl
@@ -1689,12 +1807,12 @@ plot.ensemble_stockflow <- function(x,
         df_highlight = get_cond(hl_by, j_name, df_highlight),
         df_nonhighlight = get_cond(nhl_by, j_name, df_nonhighlight),
         central_tendency = central_tendency,
-        line_width_central_tendency = line_width_central_tendency,
+        lw = lw,
+        al = al,
         q_low = q_low,
         q_high = q_high,
         mode = mode,
         colors = colors,
-        line_width = line_width,
         # Only show legend if it's the last subplot
         showlegend = ifelse(j_idx != length(condition), FALSE, showlegend),
         dots = dots,
@@ -1702,7 +1820,6 @@ plot.ensemble_stockflow <- function(x,
         xlab = xlab, ylab = ylab,
         font_family = font_family,
         font_size = font_size,
-        alpha = alpha,
         theme = subplot_theme,
         frame = frame,
         webgl = webgl
@@ -1888,12 +2005,14 @@ get_cond <- function(lst, key, template) {
 #' @param q_high Column name for the upper bound of the confidence interval (e.g., "q0.975").
 #' @param mode Plotting mode. Either "lines" if there are multiple time points or "markers" for a single time point.
 #' @param colors Vector of colours. If NULL, the color palette will be used. If specified, will override palette. The number of colours must be equal to the number of variables in the simulation data frame. Defaults to NULL.
-#' @param line_width Line width of individual trajectories. Either a single value, a named per-variable vector (keyed by label), or NULL for the default.
+#' @param lw Resolved line widths: a list with `central`/`spread`/`sims`
+#'   elements, each a per-variable numeric vector keyed by plotted label.
+#' @param al Resolved opacities: a list with `central`/`spread`/`sims` elements,
+#'   each a per-variable numeric vector keyed by plotted label.
 #' @param dots List of additional parameters passed to the plotly functions.
 #' @param main Main title of the plot. Defaults to the name of the stock-and-flow model and the number of simulations.
 #' @param xlab Label on x-axis.
 #' @param ylab Label on y-axis.
-#' @param alpha Opacity of the confidence bands or individual trajectories.
 #' @param theme List of styling parameters from plotly_theme(). Invariant
 #'   across conditions, so computed once by the caller and passed in.
 #' @inheritParams plot.ensemble_stockflow
@@ -1907,12 +2026,12 @@ plot_ensemble_helper <- function(subplot_label,
                                  df_highlight,
                                  df_nonhighlight,
                                  central_tendency,
-                                 line_width_central_tendency,
+                                 lw, al,
                                  q_low, q_high,
                                  mode,
-                                 colors, line_width = NULL, showlegend, dots,
+                                 colors, showlegend, dots,
                                  main, xlab, ylab,
-                                 font_family, font_size, alpha, theme,
+                                 font_family, font_size, theme,
                                  frame = NULL, webgl = TRUE) {
   # Local wrapper that injects the animation frame mapping into every trace pair
   # only when animating, leaving non-animated behaviour untouched.
@@ -1933,31 +2052,22 @@ plot_ensemble_helper <- function(subplot_label,
 
   nr_var <- length(colors)
 
-  # Resolve per-variable line widths keyed like colors. line_width may arrive as
-  # a named per-variable vector (from prep_plot), a single value, or NULL.
-  if (is.null(line_width)) {
-    lw <- stats::setNames(generate_line_width(nr_var), names(colors))
-  } else if (!is.null(names(line_width))) {
-    lw <- line_width
-  } else {
-    lw <- stats::setNames(generate_line_width(nr_var, line_width = line_width), names(colors))
-  }
+  # Per-variable styling for each layer, keyed by plotted labels (= names(colors)).
+  # User-supplied names were matched against model variable names before this point.
+  lw_sims <- lw[["sims"]]
+  lw_ct <- lw[["central"]]
+  lw_spread <- lw[["spread"]]
+  al_sims <- al[["sims"]]
+  al_ct <- al[["central"]]
+  al_spread <- al[["spread"]]
 
-  # Resolve per-variable central-tendency line widths the same way. Unlike
-  # line_width, this arrives unkeyed (a single value or a user-ordered vector),
-  # so it is keyed to the same label order as colors here.
-  if (!is.null(line_width_central_tendency) && !is.null(names(line_width_central_tendency))) {
-    lw_ct <- line_width_central_tendency
-  } else {
-    lw_ct <- stats::setNames(
-      generate_line_width(nr_var,
-        line_width = line_width_central_tendency, default = 3,
-        arg = "central_line_width"
-      ),
-      names(colors)
-    )
-  }
-  ct_uniform <- length(unique(unname(lw_ct))) == 1L
+  # A layer can use a single colour-mapped trace (the fast path) only when every
+  # plotted variable shares the same width and opacity; otherwise each variable
+  # needs its own trace to carry its own width/opacity.
+  ct_uniform <- length(unique(unname(lw_ct))) == 1L &&
+    length(unique(unname(al_ct))) == 1L
+  spread_uniform <- length(unique(unname(lw_spread))) == 1L &&
+    length(unique(unname(al_spread))) == 1L
 
   # The uniform fast path maps colours via plotly's `color = ~variable` aesthetic
   # and `colors =` palette. That palette is silently dropped (plotly falls back to
@@ -1972,28 +2082,57 @@ plot_ensemble_helper <- function(subplot_label,
   pl <- plotly::plot_ly()
 
   if (which == "summary") {
-    # q_low/q_high are NULL when no spread band was requested/available.
+    # q_low/q_high are NULL when no spread band was requested/available. The band
+    # width is its border line width (`spread`; 0 = fill only) and its opacity is
+    # the `spread` alpha. No legend entry: the band shares legendgroup = ~variable
+    # with the central tendency trace, which carries the legend and toggles both.
     if (mode == "lines" && !is.null(q_low)) {
-      # Confidence bands: nonhighlight (visible = "legendonly") then highlight (visible = TRUE).
-      # No legend entry: the band shares legendgroup = ~variable with the central
-      # tendency trace, which already carries the legend and toggles both together.
-      pl <- avp(pl, plotly::add_ribbons,
-        data_nonhighlight = summary_df_nonhighlight,
-        data_highlight = summary_df_highlight,
-        plot_nonhighlight = plot_nonhighlight,
-        plot_highlight = plot_highlight,
-        x = ~time,
-        ymin = ~ get(q_low),
-        ymax = ~ get(q_high),
-        color = ~variable,
-        legendgroup = ~variable,
-        fillcolor = ~variable,
-        opacity = alpha,
-        type = "scatter",
-        mode = mode,
-        colors = colors,
-        showlegend = FALSE
-      )
+      if (spread_uniform) {
+        pl <- avp(pl, plotly::add_ribbons,
+          data_nonhighlight = summary_df_nonhighlight,
+          data_highlight = summary_df_highlight,
+          plot_nonhighlight = plot_nonhighlight,
+          plot_highlight = plot_highlight,
+          x = ~time,
+          ymin = ~ get(q_low),
+          ymax = ~ get(q_high),
+          color = ~variable,
+          legendgroup = ~variable,
+          fillcolor = ~variable,
+          opacity = unname(al_spread)[1],
+          line = list(width = unname(lw_spread)[1]),
+          type = "scatter",
+          mode = mode,
+          colors = colors,
+          showlegend = FALSE
+        )
+      } else {
+        # Per-variable bands: each variable carries its own border width and
+        # opacity (alpha baked into the fill colour so it varies per variable).
+        add_band_one <- function(pl, data, visible_val) {
+          if (is.null(data) || nrow(data) == 0) {
+            return(pl)
+          }
+          for (v in levels(droplevels(data[["variable"]]))) {
+            dv <- data[data[["variable"]] == v, , drop = FALSE]
+            if (nrow(dv) == 0) next
+            args <- list(pl,
+              data = dv, x = ~time,
+              ymin = ~ get(q_low), ymax = ~ get(q_high),
+              name = v, legendgroup = v,
+              fillcolor = grDevices::adjustcolor(colors[[v]], alpha.f = al_spread[[v]]),
+              line = list(width = unname(lw_spread[[v]]), color = unname(colors[[v]])),
+              type = "scatter", mode = mode, showlegend = FALSE
+            )
+            if (!is.null(frame)) args[["frame"]] <- frame
+            args[["visible"]] <- visible_val
+            pl <- do.call(plotly::add_ribbons, args)
+          }
+          pl
+        }
+        if (plot_nonhighlight) pl <- add_band_one(pl, summary_df_nonhighlight, "legendonly")
+        if (plot_highlight) pl <- add_band_one(pl, summary_df_highlight, TRUE)
+      }
     }
   } else if (which == "sims") {
     # Alpha is baked directly into each variable's line colour (rgba). Plotly's
@@ -2038,8 +2177,8 @@ plot_ensemble_helper <- function(subplot_label,
           type = trace_type,
           mode = mode,
           line = list(
-            color = grDevices::adjustcolor(colors[[v]], alpha.f = alpha),
-            width = unname(lw[[v]])
+            color = grDevices::adjustcolor(colors[[v]], alpha.f = al_sims[[v]]),
+            width = unname(lw_sims[[v]])
           ),
           showlegend = sim_showlegend,
           visible = visible
@@ -2111,6 +2250,9 @@ plot_ensemble_helper <- function(subplot_label,
         ),
         extra_uniform
       )
+      # Fade the central line/markers when its opacity is below 1 (omitted at
+      # full opacity so the common case stays byte-identical to before).
+      if (unname(al_ct)[1] < 1) args[["opacity"]] <- unname(al_ct)[1]
       # Match the historical key order (extras and frame before visible) so
       # uniform-width plots produce byte-identical output to the previous code.
       if (!is.null(frame)) args[["frame"]] <- frame
@@ -2152,7 +2294,10 @@ plot_ensemble_helper <- function(subplot_label,
       pl <- add_ct_pair(pl,
         extra_uniform = list(line = list(width = unname(lw_ct)[1])), # thicker line for mean
         extra_by_var = function(v, dv) {
-          list(line = list(width = unname(lw_ct[v]), color = unname(colors[v])))
+          list(line = list(
+            width = unname(lw_ct[v]),
+            color = grDevices::adjustcolor(colors[[v]], alpha.f = al_ct[[v]])
+          ))
         }
       )
     } else if (mode == "markers" && which == "summary" && !is.null(q_low)) {
@@ -2169,14 +2314,15 @@ plot_ensemble_helper <- function(subplot_label,
         # Build error bars from the per-variable subset directly (a formula would
         # capture `v` by reference and resolve it after the loop has ended).
         extra_by_var = function(v, dv) {
+          col_v <- grDevices::adjustcolor(colors[[v]], alpha.f = al_ct[[v]])
           list(
             error_y = list(
               symmetric = FALSE,
               arrayminus = dv[[central_tendency]] - dv[[q_low]],
               array = dv[[q_high]] - dv[[central_tendency]],
-              color = unname(colors[v])
+              color = col_v
             ),
-            marker = list(size = unname(lw_ct[v]) * 3, color = unname(colors[v]))
+            marker = list(size = unname(lw_ct[v]) * 3, color = col_v)
           )
         }
       )
@@ -2186,7 +2332,10 @@ plot_ensemble_helper <- function(subplot_label,
       pl <- add_ct_pair(pl,
         extra_uniform = list(marker = list(size = unname(lw_ct)[1] * 3)), # bigger marker for mean
         extra_by_var = function(v, dv) {
-          list(marker = list(size = unname(lw_ct[v]) * 3, color = unname(colors[v])))
+          list(marker = list(
+            size = unname(lw_ct[v]) * 3,
+            color = grDevices::adjustcolor(colors[[v]], alpha.f = al_ct[[v]])
+          ))
         }
       )
     }
@@ -2267,7 +2416,14 @@ plot_ensemble_helper <- function(subplot_label,
 #' @param shareX Share the x-axis across subplots. Defaults to `TRUE`.
 #' @param shareY Share the y-axis across subplots. Defaults to `TRUE`.
 #' @param palette Colour palette (see `hcl.pals()`). Defaults to `"Dark 2"`.
-#' @param colors Vector of colours overriding `palette`. Defaults to `NULL`.
+#' @param colors Colours for the plotted variables. A named vector (names are
+#'   variable names) recolours only those variables, the palette fills the rest;
+#'   an unnamed vector assigns colours in plot order. Defaults to `NULL`.
+#' @param line_width Line width of the trajectories. Either a single value, a
+#'   named per-variable vector (names are variable names), or an unnamed vector
+#'   with one value per variable in plot order. Defaults to `2`.
+#' @param alpha Trajectory opacity, between 0 and 1. A single value or a named
+#'   per-variable vector. Defaults to `1`.
 #' @param font_family Font family. Defaults to `"Times New Roman"`.
 #' @param font_size Font size. Defaults to `16`.
 #' @param wrap_width Label wrap width. Defaults to `25`.
@@ -2277,6 +2433,21 @@ plot_ensemble_helper <- function(subplot_label,
 #' @inheritParams as.data.frame.verify_stockflow
 #' @inheritParams plot.simulate_stockflow
 #' @inheritParams plot.ensemble_stockflow
+#'
+#' @section Styling variables:
+#' Names in `colors`, `line_width`, and `alpha` refer to the model variable
+#' names, not the labels shown in the legend. This keeps the styling stable if
+#' labels are formatted or wrapped for display.
+#'
+#' Use one value to style every trajectory:
+#' `plot(res, line_width = 3, alpha = 0.6)`.
+#'
+#' Use named vectors to style selected variables:
+#' `plot(res, colors = c(susceptible = "#377EB8"), alpha = c(infected = 0.4))`.
+#'
+#' Unnamed vectors are applied in plot order. Named vectors are usually clearer,
+#' especially when `vars`, `test`, `label`, or `status` filters change what is
+#' drawn.
 #'
 #' @returns A plotly object.
 #' @export
@@ -2317,6 +2488,7 @@ plot.verify_stockflow <- function(x,
                                   label_subplots = TRUE,
                                   alpha = 1,
                                   margin = .05,
+                                  format_label = TRUE,
                                   condition_display = c("subplots", "slider", "dropdown"),
                                   control_options = list(),
                                   animation = c("none", "time"),
@@ -2342,12 +2514,11 @@ plot.verify_stockflow <- function(x,
     vars = vars,
     palette = palette,
     colors = colors,
-    line_width = line_width,
-    alpha = alpha,
     font_family = font_family,
     font_size = font_size,
     wrap_width = wrap_width,
     label_subplots = label_subplots,
+    format_label = format_label,
     webgl = webgl
   )
 
@@ -2434,13 +2605,36 @@ plot.verify_stockflow <- function(x,
   # Prepare for plotting
   out <- prep_plot(sfm, "verify", df,
     constants = constants, show_constants = show_constants,
-    vars = vars, palette = palette, colors = colors, line_width = line_width,
-    wrap_width = wrap_width
+    vars = vars, palette = palette, colors = colors,
+    wrap_width = wrap_width, format_label = format_label
   )
   df_highlight <- out[["df_highlight"]]
   df_nonhighlight <- out[["df_nonhighlight"]]
   colors <- out[["colors"]]
-  line_width <- out[["line_width"]]
+  labels <- out[["labels"]]
+  var_names <- out[["var_names"]]
+
+  # verify() only draws individual trajectories (no central line or band), so
+  # `line_width`/`alpha` style the `sims` layer; the other roles are placeholders
+  # that the helper does not draw here.
+  line_width_sims <- expand_aes(line_width, var_names,
+    default = 2, arg = "line_width", validate = "positive",
+    display_names = labels, valid_names = out[["style_names"]]
+  )
+  alpha_sims <- expand_aes(alpha, var_names,
+    default = 1, arg = "alpha", validate = "unit",
+    display_names = labels, valid_names = out[["style_names"]]
+  )
+  lw <- list(
+    central = aes_constant(3, labels),
+    spread = aes_constant(0, labels),
+    sims = line_width_sims
+  )
+  al <- list(
+    central = aes_constant(1, labels),
+    spread = aes_constant(0.3, labels),
+    sims = alpha_sims
+  )
 
   # For time animation, cumulatively reveal trajectories (see ensemble plot).
   if (animation == "time") {
@@ -2460,7 +2654,7 @@ plot.verify_stockflow <- function(x,
   # Plot
   which <- "sims"
   summary_df_highlight <- summary_df_nonhighlight <- data.frame()
-  line_width_central_tendency <- q_low <- q_high <- NULL
+  q_low <- q_high <- NULL
   central_tendency <- "none"
 
   # Per-subplot theme is invariant across conditions; compute once.
@@ -2483,19 +2677,18 @@ plot.verify_stockflow <- function(x,
         df_highlight = get_cond(hl_by, j_name, df_highlight),
         df_nonhighlight = get_cond(nhl_by, j_name, df_nonhighlight),
         central_tendency = central_tendency,
-        line_width_central_tendency = line_width_central_tendency,
+        lw = lw,
+        al = al,
         q_low = q_low,
         q_high = q_high,
         mode = mode,
         colors = colors,
-        line_width = line_width,
         showlegend = showlegend,
         dots = dots,
         main = main,
         xlab = xlab, ylab = ylab,
         font_family = font_family,
         font_size = font_size,
-        alpha = alpha,
         theme = subplot_theme,
         frame = frame,
         webgl = webgl
@@ -2514,7 +2707,9 @@ plot.verify_stockflow <- function(x,
       theme = control_theme,
       main = main, xlab = xlab, ylab = ylab,
       font_family = font_family, font_size = font_size,
-      max_labels = control_options[["max_labels"]]
+      max_labels = control_options[["max_labels"]],
+      spacing = control_options[["spacing"]],
+      format_label = format_label
     )
   } else if (!create_subplots) {
     j_idx <- 1
@@ -2528,19 +2723,18 @@ plot.verify_stockflow <- function(x,
       df_highlight = df_highlight,
       df_nonhighlight = df_nonhighlight,
       central_tendency = central_tendency,
-      line_width_central_tendency = line_width_central_tendency,
+      lw = lw,
+      al = al,
       q_low = q_low,
       q_high = q_high,
       mode = mode,
       colors = colors,
-      line_width = line_width,
       showlegend = showlegend,
       dots = dots,
       main = main,
       xlab = xlab, ylab = ylab,
       font_family = font_family,
       font_size = font_size,
-      alpha = alpha,
       theme = subplot_theme,
       frame = frame,
       webgl = webgl
@@ -2565,12 +2759,12 @@ plot.verify_stockflow <- function(x,
         df_highlight = get_cond(hl_by, j_name, df_highlight),
         df_nonhighlight = get_cond(nhl_by, j_name, df_nonhighlight),
         central_tendency = central_tendency,
-        line_width_central_tendency = line_width_central_tendency,
+        lw = lw,
+        al = al,
         q_low = q_low,
         q_high = q_high,
         mode = mode,
         colors = colors,
-        line_width = line_width,
         # Only show legend if it's the last subplot
         showlegend = ifelse(j_idx != length(condition), FALSE, showlegend),
         dots = dots,
@@ -2578,7 +2772,6 @@ plot.verify_stockflow <- function(x,
         xlab = xlab, ylab = ylab,
         font_family = font_family,
         font_size = font_size,
-        alpha = alpha,
         theme = subplot_theme,
         frame = frame,
         webgl = webgl

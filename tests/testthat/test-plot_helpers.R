@@ -160,6 +160,42 @@ test_that("prepare_labels preserves custom labels when format_label = TRUE", {
   expect_equal(result$label, "Custom Label")
 })
 
+test_that("model_label_lookup prettifies names when no custom label is set", {
+  # A constant created without a label defaults its label to the raw name; the
+  # slider/dropdown lookup should still show a prettified label (matching the
+  # rest of a plot), not the underscored name.
+  sfm <- stockflow() |>
+    stock(energy, eqn = 1) |>
+    flow(recovery, eqn = "recovery_rate * energy", to = energy) |>
+    constant(recovery_rate, eqn = 0.75)
+
+  f <- model_label_lookup(sfm)
+  expect_equal(f("recovery_rate"), "recovery rate")
+  # Vectorised lookup works and leaves single-word names untouched.
+  expect_equal(f(c("recovery_rate", "energy")), c("recovery rate", "energy"))
+})
+
+test_that("model_label_lookup keeps custom labels and falls back without a model", {
+  sfm <- stockflow("sir") # built-in model sets "Contact rate", etc.
+  f <- model_label_lookup(sfm)
+  expect_equal(f("contact_rate"), "Contact rate")
+
+  # No model: prettify the bare name.
+  expect_equal(model_label_lookup(NULL)("recovery_rate"), "recovery rate")
+})
+
+test_that("model_label_lookup format = FALSE keeps the raw name", {
+  sfm <- stockflow() |>
+    stock(energy, eqn = 1) |>
+    flow(recovery, eqn = "recovery_rate * energy", to = energy) |>
+    constant(recovery_rate, eqn = 0.75)
+
+  f <- model_label_lookup(sfm, format = FALSE)
+  expect_equal(f("recovery_rate"), "recovery_rate")
+  # Falls back to the raw name with no model too.
+  expect_equal(model_label_lookup(NULL, format = FALSE)("recovery_rate"), "recovery_rate")
+})
+
 test_that("prepare_labels detects and handles duplicate labels", {
   names_df <- data.frame(
     name = c("var1", "var2"),

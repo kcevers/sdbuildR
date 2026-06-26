@@ -9,7 +9,7 @@
       "mode": "lines",
       "line": {
         "color": "#C87A8A4D",
-        "width": 1
+        "width": 0.5
       },
       "showlegend": false,
       "visible": true,
@@ -39,7 +39,7 @@
       "mode": "lines",
       "line": {
         "color": "#6B9D594D",
-        "width": 1
+        "width": 0.5
       },
       "showlegend": false,
       "visible": true,
@@ -69,7 +69,7 @@
       "mode": "lines",
       "line": {
         "color": "#5F96C24D",
-        "width": 1
+        "width": 0.5
       },
       "showlegend": false,
       "visible": true,
@@ -100,7 +100,7 @@
       "showlegend": true,
       "line": {
         "color": "#C87A8AFF",
-        "width": 3
+        "width": 6
       },
       "visible": true,
       "marker": {

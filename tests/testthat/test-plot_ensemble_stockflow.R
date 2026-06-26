@@ -66,39 +66,211 @@ test_that("plot.ensemble_stockflow() requires save_sims for which = 'sims'", {
 })
 
 
-test_that("plot.ensemble_stockflow() validates central_line_width", {
+# ============================================================================
+# ROLE-KEYED line_width / alpha (central / spread / sims)
+# ============================================================================
+
+# Per built trace: variable name, line width, trace opacity, and the line and
+# fill colours. The spread band is the only layer with a fill colour, so it can
+# be told apart from the central-tendency line traces.
+ens_trace_aes <- function(pl) {
+  b <- plotly::plotly_build(pl)[["x"]][["data"]]
+  do.call(rbind, lapply(b, function(t) data.frame(
+    name = t[["name"]] %||% NA_character_,
+    type = t[["type"]] %||% NA_character_,
+    width = if (is.null(t[["line"]][["width"]])) NA_real_ else as.numeric(t[["line"]][["width"]])[1],
+    opacity = if (is.null(t[["opacity"]])) NA_real_ else as.numeric(t[["opacity"]])[1],
+    line_color = t[["line"]][["color"]] %||% NA_character_,
+    fillcolor = t[["fillcolor"]] %||% NA_character_,
+    stringsAsFactors = FALSE
+  )))
+}
+
+# Alpha channel (0-1) of a plotly colour string: #RRGGBBAA, rgba(), else opaque.
+color_alpha <- function(col) {
+  if (is.null(col) || length(col) == 0L || is.na(col)) return(NA_real_)
+  col <- as.character(col)[1L]
+  if (grepl("^#[0-9A-Fa-f]{8}$", col)) return(strtoi(substr(col, 8, 9), 16L) / 255)
+  if (grepl("^rgba\\(", col)) {
+    nums <- as.numeric(strsplit(gsub("rgba\\(|\\)|\\s", "", col), ",")[[1L]])
+    return(nums[4L])
+  }
+  1
+}
+
+ens_var_labels <- function(sims) {
+  unique(plotly_traces(plot(sims, which = "summary"))[["name"]])
+}
+
+ens_var_names <- function(sims) {
+  unique(sims[["summary"]][["variable"]])
+}
+
+ens_label_for_name <- function(sims, var) {
+  names_df <- as.data.frame(sims[["object"]])
+  names_df[["label"]][match(var, names_df[["name"]])]
+}
+
+# A deterministic ensemble that always has a central line and a spread band.
+make_aes_ens <- function() {
+  make_r_ens(
+    n = 5, save_sims = TRUE,
+    central = c("mean", "median"), spread = c("quantile", "sd", "range")
+  )
+}
+
+test_that("line_width: a scalar styles every layer", {
   withr::local_pdf(NULL)
-  sims <- make_r_ens(n = 2)
-  expect_error(plot(sims, central_line_width = "thick"), "central_line_width")
-  expect_error(plot(sims, central_line_width = -1), "positive")
+  sims <- make_aes_ens()
+  a <- ens_trace_aes(plot(sims, which = "summary", line_width = 4))
+  central <- a[is.na(a$fillcolor), ]
+  spread <- a[!is.na(a$fillcolor), ]
+  expect_true(nrow(central) > 0 && nrow(spread) > 0)
+  expect_true(all(central$width == 4))
+  expect_true(all(spread$width == 4))
 })
 
-test_that("plot.ensemble_stockflow() applies scalar and vector central_line_width", {
+test_that("line_width: a named vector targets specific variables", {
   withr::local_pdf(NULL)
-  sims <- make_r_ens(n = 2)
+  sims <- make_aes_ens()
+  var <- ens_var_names(sims)[1]
+  lbl <- ens_label_for_name(sims, var)
+  a <- ens_trace_aes(plot(sims, which = "summary", line_width = stats::setNames(8, var)))
+  central <- a[is.na(a$fillcolor), ]
+  expect_equal(central$width[central$name == lbl], 8)
+  # Unnamed variables keep the central default (3).
+  expect_true(all(central$width[central$name != lbl] == 3))
+})
 
-  ct_widths <- function(p) {
-    b <- plotly::plotly_build(p)
-    w <- vapply(b[["x"]][["data"]], function(tr) {
-      if (!is.null(tr[["line"]][["width"]])) as.numeric(tr[["line"]][["width"]])[1] else NA_real_
-    }, numeric(1))
-    w[!is.na(w)]
-  }
+test_that("line_width: a role list styles each layer independently", {
+  withr::local_pdf(NULL)
+  sims <- make_aes_ens()
+  a <- ens_trace_aes(plot(sims,
+    which = "summary",
+    line_width = list(central = 5, spread = 0, sims = 1)
+  ))
+  expect_true(all(a[is.na(a$fillcolor), ]$width == 5))
+  expect_true(all(a[!is.na(a$fillcolor), ]$width == 0))
+})
 
-  # Scalar applies to every central tendency line
-  expect_true(all(ct_widths(plot(sims, which = "summary", central_line_width = 7)) == 7))
+test_that("line_width: a role list with a named per-variable vector", {
+  withr::local_pdf(NULL)
+  sims <- make_aes_ens()
+  var <- ens_var_names(sims)[1]
+  lbl <- ens_label_for_name(sims, var)
+  a <- ens_trace_aes(plot(sims,
+    which = "summary",
+    line_width = list(central = stats::setNames(9, var), spread = 0)
+  ))
+  central <- a[is.na(a$fillcolor), ]
+  expect_equal(central$width[central$name == lbl], 9)
+  expect_true(all(central$width[central$name != lbl] == 3))
+  expect_true(all(a[!is.na(a$fillcolor), ]$width == 0))
+})
 
-  # Vector with one value per variable
-  nv <- length(unique(as.data.frame(sims, which = "summary")[["variable"]]))
-  expect_setequal(
-    ct_widths(plot(sims, which = "summary", central_line_width = seq_len(nv))),
-    seq_len(nv)
+test_that("alpha: a scalar fades every layer", {
+  withr::local_pdf(NULL)
+  sims <- make_aes_ens()
+  a <- ens_trace_aes(plot(sims, which = "summary", alpha = 0.5))
+  expect_true(all(a[is.na(a$fillcolor), ]$opacity == 0.5))
+  expect_true(all(a[!is.na(a$fillcolor), ]$opacity == 0.5))
+})
+
+test_that("alpha: a role list fades each layer independently", {
+  withr::local_pdf(NULL)
+  sims <- make_aes_ens()
+  a <- ens_trace_aes(plot(sims,
+    which = "summary",
+    alpha = list(central = 0.5, spread = 0.1, sims = 0.4)
+  ))
+  expect_true(all(a[is.na(a$fillcolor), ]$opacity == 0.5))
+  expect_true(all(a[!is.na(a$fillcolor), ]$opacity == 0.1))
+})
+
+test_that("alpha: a named vector targets specific variables", {
+  withr::local_pdf(NULL)
+  sims <- make_aes_ens()
+  var <- ens_var_names(sims)[1]
+  lbl <- ens_label_for_name(sims, var)
+  # A per-variable alpha is baked into the central line colour (rgba), so the
+  # opacity lives in the colour's alpha channel rather than the trace opacity.
+  a <- ens_trace_aes(plot(sims, which = "summary", alpha = stats::setNames(0.2, var)))
+  central <- a[is.na(a$fillcolor), ]
+  av <- vapply(central$line_color, color_alpha, numeric(1))
+  expect_equal(unname(av[central$name == lbl]), 0.2, tolerance = 0.01)
+  # Unnamed variables keep the central default (opaque).
+  expect_true(all(av[central$name != lbl] == 1))
+})
+
+test_that("alpha: a role list with a named per-variable vector", {
+  withr::local_pdf(NULL)
+  sims <- make_aes_ens()
+  var <- ens_var_names(sims)[1]
+  lbl <- ens_label_for_name(sims, var)
+  a <- ens_trace_aes(plot(sims,
+    which = "sims",
+    alpha = list(sims = stats::setNames(0.1, var))
+  ))
+  # In which = "sims" the trajectory alpha is baked into the line colour. The
+  # trajectories render as WebGL traces (scattergl), distinct from the central
+  # tendency lines (scatter), so filter to those.
+  traj <- a[a$type == "scattergl", ]
+  av <- vapply(traj$line_color, color_alpha, numeric(1))
+  expect_true(abs(av[traj$name == lbl][1] - 0.1) < 0.01)
+  # Other variables keep the sims default opacity (0.3).
+  expect_true(all(abs(av[traj$name != lbl] - 0.3) < 0.01))
+})
+
+test_that("line_width / alpha reject invalid input", {
+  withr::local_pdf(NULL)
+  sims <- make_aes_ens()
+  expect_error(plot(sims, line_width = "thick"), "line_width")
+  expect_error(plot(sims, line_width = -1), "positive")
+  expect_error(plot(sims, line_width = list(foo = 1)), "role")
+  expect_error(plot(sims, alpha = 2), "between 0 and 1")
+  expect_error(plot(sims, alpha = list(spread = -0.1)), "between 0 and 1")
+})
+
+
+# ============================================================================
+# ROLE-KEYED line_width / alpha (visual regression snapshots)
+# ============================================================================
+
+test_that("line_width snapshots: scalar / named / role / role+named", {
+  sims <- make_aes_ens()
+  var <- ens_var_names(sims)[1]
+  expect_snapshot_plot(
+    c(
+      "ens-lw-scalar",
+      "ens-lw-named",
+      "ens-lw-roles",
+      "ens-lw-roles-named"
+    ),
+    list(
+      plot(sims, which = "summary", line_width = 4),
+      plot(sims, which = "summary", line_width = stats::setNames(8, var)),
+      plot(sims, which = "summary", line_width = list(central = 5, spread = 0, sims = 1)),
+      plot(sims, which = "sims", line_width = list(central = stats::setNames(6, var), sims = 0.5))
+    )
   )
+})
 
-  # Too-short vector is rejected with the right argument name
-  expect_error(
-    plot(sims, which = "summary", central_line_width = rep(2, nv - 1)),
-    "central_line_width"
+test_that("alpha snapshots: scalar / named / role / role+named", {
+  sims <- make_aes_ens()
+  var <- ens_var_names(sims)[1]
+  expect_snapshot_plot(
+    c(
+      "ens-alpha-scalar",
+      "ens-alpha-named",
+      "ens-alpha-roles",
+      "ens-alpha-roles-named"
+    ),
+    list(
+      plot(sims, which = "summary", alpha = 0.5),
+      plot(sims, which = "summary", alpha = stats::setNames(0.2, var)),
+      plot(sims, which = "summary", alpha = list(central = 0.5, spread = 0.1, sims = 0.4)),
+      plot(sims, which = "sims", alpha = list(sims = stats::setNames(0.1, var)))
+    )
   )
 })
 
@@ -367,13 +539,14 @@ test_that("plot() custom colors vector", {
   vars <- unique(df$variable)
   names_df <- as.data.frame(sims[["object"]])
   label_names <- names_df$label[match(vars, names_df$name)]
-  custom_colors <- stats::setNames(rainbow(length(label_names)), label_names)
+  custom_colors <- stats::setNames(rainbow(length(vars)), vars)
+  expected_colors <- stats::setNames(unname(custom_colors), label_names)
 
   pl_colors <- plot(sims, colors = custom_colors, alpha = 1)
   expect_plotly(pl_colors)
   traces <- plotly_traces(pl_colors)
   expect_equal(length(unique(traces[["name"]])), length(label_names))
-  legend_check <- plotly_check_legend_colors(pl_colors, expected = custom_colors)
+  legend_check <- plotly_check_legend_colors(pl_colors, expected = expected_colors)
   expect_true(nrow(legend_check) > 0)
   expect_true(all(legend_check$ok))
   expect_true(all(legend_check$matches_expected))
@@ -388,9 +561,9 @@ test_that("plot() custom colors vector", {
 test_that("plot.ensemble_stockflow() maps central traces to source summaries and named colors", {
   sims <- make_r_ens(n = 3)
   names_df <- as.data.frame(sims[["object"]])
-  labels_all <- names_df[["label"]]
+  names_all <- names_df[["name"]]
   labels <- names_df[["label"]][match(unique(sims[["summary"]][["variable"]]), names_df[["name"]])]
-  colors <- stats::setNames(grDevices::rainbow(length(labels_all)), labels_all)
+  colors <- stats::setNames(grDevices::rainbow(length(names_all)), names_all)
   colors <- rev(colors)
 
   pl <- plot(sims, colors = colors, webgl = FALSE)
@@ -410,7 +583,7 @@ test_that("plot.ensemble_stockflow() maps central traces to source summaries and
     expect_length(matching, 1L)
     expect_equal(
       trace_info[["color"]][matching],
-      normalize_color_string(colors[[trace_label]])
+      normalize_color_string(colors[[variable]])
     )
   }
 })
@@ -560,6 +733,47 @@ test_that("plot.ensemble_stockflow() rejects invalid control_options", {
     plot(sims, condition_display = "slider", control_options = list(max_labels = 0)),
     "max_labels"
   )
+  expect_error(
+    plot(sims, condition_display = "slider", control_options = list(spacing = 0)),
+    "spacing"
+  )
+  expect_error(
+    plot(sims, condition_display = "slider", control_options = list(spacing = "a")),
+    "spacing"
+  )
+})
+
+test_that("plot.ensemble_stockflow() control_options$spacing widens the gap", {
+  sims <- make_r_ens(n = 3, conditions = list(
+    "contact_rate" = c(1.5, 2.5),
+    "recovery_rate" = c(0.1, 0.2)
+  ), cross = TRUE)
+
+  auto <- plot(sims, condition_display = "slider")
+  wide <- plot(sims, condition_display = "slider",
+    control_options = list(spacing = 0.4))
+
+  auto_y <- vapply(plotly_layout(auto)$sliders, function(s) s$y, numeric(1))
+  wide_y <- vapply(plotly_layout(wide)$sliders, function(s) s$y, numeric(1))
+
+  # One control per varied parameter, stacked downward (decreasing y).
+  expect_equal(length(auto_y), 2L)
+  expect_true(all(diff(auto_y) < 0))
+  # A larger spacing pushes the second control further from the first.
+  expect_gt(abs(diff(wide_y)), abs(diff(auto_y)))
+})
+
+test_that("plot.ensemble_stockflow() controls reserve more bottom margin per control", {
+  one <- make_r_ens_2cond()
+  two <- make_r_ens(n = 3, conditions = list(
+    "contact_rate" = c(1.5, 2.5),
+    "recovery_rate" = c(0.1, 0.2)
+  ), cross = TRUE)
+
+  m1 <- plotly_layout(plot(one, condition_display = "slider"))$margin$b
+  m2 <- plotly_layout(plot(two, condition_display = "slider"))$margin$b
+  # Two stacked controls must reserve more space than one.
+  expect_gt(m2, m1)
 })
 
 test_that("plot.ensemble_stockflow(condition_display = 'dropdown') builds a dropdown", {

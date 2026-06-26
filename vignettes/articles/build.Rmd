@@ -688,36 +688,36 @@ stock_at <- function(tt) df_stock$value[which.min(abs(df_stock$time - tt))]
 y0 <- stock_at(t0); y1 <- stock_at(t1); y2 <- stock_at(t2); y3 <- stock_at(t3); y4 <- stock_at(t4)
 
 # --- Top panel: stock with a change indicator per phase ----------------------
-fig1 <- plot_ly(df_stock, x = ~time, y = ~value, type = 'scatter',
+fig1 <- plotly::plot_ly(df_stock, x = ~time, y = ~value, type = 'scatter',
 showlegend = FALSE,
                 mode = 'lines', name = 'Stock', line = list(color = stock_col, width = line_width_thick)) 
                 
                 
 # markers at the phase boundaries
 fig1 <- fig1 |>
-  add_trace(x = c(t1), y = c(y1), mode = 'markers', name = 't1', showlegend = FALSE,
+  plotly::add_trace(x = c(t1), y = c(y1), mode = 'markers', name = 't1', showlegend = FALSE,
             marker = list(color = increase_col, size = size_marker)) |>
-  add_trace(x = c(t2), y = c(y2), mode = 'markers', name = 't2', showlegend = FALSE,
+  plotly::add_trace(x = c(t2), y = c(y2), mode = 'markers', name = 't2', showlegend = FALSE,
             marker = list(color = increase_col, size = size_marker)) |>
-  add_trace(x = c(t3), y = c(y3), mode = 'markers', name = 't3', showlegend = FALSE,
+  plotly::add_trace(x = c(t3), y = c(y3), mode = 'markers', name = 't3', showlegend = FALSE,
             marker = list(color = decrease_col, size = size_marker)) |>
-  add_trace(x = c(t4), y = c(y4), mode = 'markers', name = 't4', showlegend = FALSE,
+  plotly::add_trace(x = c(t4), y = c(y4), mode = 'markers', name = 't4', showlegend = FALSE,
             marker = list(color = decrease_col, size = size_marker))
 
 
 # --- Bottom panel: inflow & outflow with the difference shaded ----------------
-fig2 <- plot_ly() 
+fig2 <- plotly::plot_ly() 
 
 # Vertical reference lines at the end-of-phase levels (rise and fall phases)            
 add_vert_lines <- function(fig, y_range = c(-2.5, 2.5)) {
   fig |> 
-    add_trace(x = c(t1, t1), y = y_range, mode = 'lines', name = 't1',
+    plotly::add_trace(x = c(t1, t1), y = y_range, mode = 'lines', name = 't1',
              line = list(width = 2, dash = 'dot', color = increase_col), showlegend = FALSE) |>
-    add_trace(x = c(t2, t2), y = y_range, mode = 'lines', name = 't2',
+    plotly::add_trace(x = c(t2, t2), y = y_range, mode = 'lines', name = 't2',
               line = list(width = 2, dash = 'dot', color = increase_col), showlegend = FALSE) |>
-    add_trace(x = c(t3, t3), y = y_range, mode = 'lines', name = 't3',
+    plotly::add_trace(x = c(t3, t3), y = y_range, mode = 'lines', name = 't3',
               line = list(width = 2, dash = 'dot', color = decrease_col), showlegend = FALSE) |>
-    add_trace(x = c(t4, t4), y = y_range, mode = 'lines', name = 't4',
+    plotly::add_trace(x = c(t4, t4), y = y_range, mode = 'lines', name = 't4',
               line = list(width = 2, dash = 'dot', color = decrease_col), showlegend = FALSE)
 }
 
@@ -726,12 +726,12 @@ fig2 <- add_vert_lines(fig2)
 
 # Net flow
 fig2 <- fig2 |>
-  add_trace(data = df_change, x = ~time, y = ~value, type = 'scatter', mode = 'lines',
+  plotly::add_trace(data = df_change, x = ~time, y = ~value, type = 'scatter', mode = 'lines',
   showlegend = FALSE, fill = 'tozeroy',
   fillcolor = ifelse(df_change$value >= 0, increase_fill, decrease_fill),
             name = 'Net Flow', line = list(width = 0)) |>
 
-  add_trace(data = df_change, x = ~time, y = ~value, type = 'scatter', mode = 'lines',
+  plotly::add_trace(data = df_change, x = ~time, y = ~value, type = 'scatter', mode = 'lines',
   showlegend = FALSE, 
             name = 'Net Flow', line = list(color = flow_col, width = line_width_thick)) 
 
@@ -777,7 +777,8 @@ label_anns <- c(
   lapply(seq_along(bot_text), function(i) phase_label(bot_text[i], centers[i], y = bot_text_y[i], angle = bot_angles[i]))
 )
 
-fig <- fig |> layout(
+fig <- fig |> 
+plotly::layout(
   # unname(): Map() returns a named list, which plotly mis-parses
   annotations = unname(c(
   label_anns)),

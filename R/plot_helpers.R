@@ -54,13 +54,11 @@ resolve_summary_choice <- function(pref, available) {
 #' @param vars Character vector of variable names to plot, or NULL.
 #' @param palette Character, color palette name.
 #' @param colors Character vector of colors, or NULL.
-#' @param line_width Numeric line width (single value or one per variable), or NULL.
-#' @param central_line_width Numeric central-tendency line width (single value or one per variable), or NULL.
-#' @param alpha Numeric, transparency.
 #' @param font_family Character, font family name.
 #' @param font_size Numeric, font size in points.
 #' @param wrap_width Integer, text wrap width for labels.
 #' @param label_subplots Logical, whether to label subplots with condition names.
+#' @param format_label Logical, whether to prettify name-defaulted labels.
 #'
 #' @returns Invisibly returns a list of validation results. Throws cli errors if validation fails.
 #' @noRd
@@ -69,17 +67,17 @@ validate_plot_params <- function(showlegend = NULL,
                                  vars = NULL,
                                  palette = NULL,
                                  colors = NULL,
-                                 line_width = NULL,
-                                 central_line_width = NULL,
-                                 alpha = NULL,
                                  font_family = NULL,
                                  font_size = NULL,
                                  wrap_width = NULL,
                                  label_subplots = NULL,
+                                 format_label = NULL,
                                  webgl = NULL) {
   .assert_plot_type(showlegend, "showlegend", "logical", "Use {.code TRUE} or {.code FALSE}.")
 
   .assert_plot_type(webgl, "webgl", "logical", "Use {.code TRUE} or {.code FALSE}.")
+
+  .assert_plot_type(format_label, "format_label", "logical", "Use {.code TRUE} or {.code FALSE}.")
 
   if (!is.null(vars)) {
     if (!is.character(vars)) {
@@ -101,34 +99,6 @@ validate_plot_params <- function(showlegend = NULL,
   .assert_plot_type(palette, "palette", "character", "Use {.code hcl.pals()} to see available palettes.")
 
   .assert_plot_type(colors, "colors", "character", "Provide a character vector of valid color names or hex codes.")
-
-  .assert_plot_type(line_width, "line_width", "numeric", "Provide a single value or one value per variable.")
-
-  if (!is.null(line_width) && any(line_width <= 0)) {
-    cli::cli_abort(c(
-      "x" = "Invalid {.arg line_width} argument.",
-      ">" = "All {.arg line_width} values must be positive."
-    ))
-  }
-
-  .assert_plot_type(central_line_width, "central_line_width", "numeric", "Provide a single value or one value per variable.")
-
-  if (!is.null(central_line_width) && any(central_line_width <= 0)) {
-    cli::cli_abort(c(
-      "x" = "Invalid {.arg central_line_width} argument.",
-      ">" = "All {.arg central_line_width} values must be positive."
-    ))
-  }
-
-  .assert_plot_type(alpha, "alpha", "numeric", "Provide a numeric value between 0 and 1.")
-
-  if (!is.null(alpha) && (alpha < 0 | alpha > 1)) {
-    cli::cli_abort(c(
-      "x" = "Invalid {.arg alpha} argument.",
-      "i" = "The {.arg alpha} argument must be between 0 and 1.",
-      ">" = "Provide a numeric value between 0 and 1."
-    ))
-  }
 
   .assert_plot_type(font_family, "font_family", "character")
 
@@ -168,11 +138,8 @@ validate_plot_params <- function(showlegend = NULL,
 prepare_labels <- function(names_df, wrap_width, format_label = FALSE, deduplicate = TRUE) {
   # Apply default formatting if requested (remove underscores and periods)
   if (format_label) {
-    formatted_label <- gsub("_", " ", names_df[["label"]], fixed = TRUE)
-    formatted_label <- gsub(".", " ", formatted_label, fixed = TRUE)
-    formatted_label <- gsub("  ", " ", formatted_label, fixed = TRUE)
-    names_df[["label"]] <- ifelse(names_df[["name"]] == names_df[["label"]],
-      formatted_label, names_df[["label"]]
+    names_df[["label"]] <- format_label_if_default(
+      names_df[["name"]], names_df[["label"]]
     )
   }
 
@@ -629,6 +596,234 @@ generate_line_width <- function(n_vars, line_width = NULL, default = 2,
 }
 
 
+#' Aesthetic roles drawn by the (ensemble) timeseries plots
+#'
+#' The three layers a plot can draw, used as the keys of a role-structured
+#' `line_width`/`alpha` argument: `central` (the mean/median line), `spread`
+#' (the uncertainty band), and `sims` (individual trajectories).
+#' @noRd
+aes_roles <- c("central", "spread", "sims")
+
+
+#' Build a constant per-variable aesthetic vector
+#'
+#' @param value Single numeric value.
+#' @param display_names Character vector of plotted variable labels.
+#' @returns Named numeric vector (`value` repeated, named by `display_names`).
+#' @noRd
+aes_constant <- function(value, display_names) {
+  stats::setNames(rep(value, length(display_names)), display_names)
+}
+
+
+#' Validate the numeric range of an aesthetic value
+#'
+#' @param x Numeric vector.
+#' @param arg Argument name for messages.
+#' @param validate One of "positive" (> 0), "nonneg" (>= 0), "unit" (0, 1).
+#' @noRd
+.validate_aes_range <- function(x, arg, validate) {
+  if (validate == "positive" && any(x <= 0)) {
+    cli::cli_abort(c(
+      "x" = "Invalid {.arg {arg}} argument.",
+      ">" = "All {.arg {arg}} values must be positive."
+    ))
+  } else if (validate == "nonneg" && any(x < 0)) {
+    cli::cli_abort(c(
+      "x" = "Invalid {.arg {arg}} argument.",
+      ">" = "All {.arg {arg}} values must be non-negative."
+    ))
+  } else if (validate == "unit" && any(x < 0 | x > 1)) {
+    cli::cli_abort(c(
+      "x" = "Invalid {.arg {arg}} argument.",
+      "i" = "The {.arg {arg}} argument must be between 0 and 1."
+    ))
+  }
+}
+
+
+#' Split a role-structured aesthetic spec into a per-role list of raw specs
+#'
+#' Accepts the `line_width`/`alpha` grammar: a bare scalar or per-variable vector
+#' (applies to every role), or a named list keyed by role (each element is itself
+#' a scalar or per-variable vector). Returns a list over `roles`; a `NULL`
+#' element means "use the default for that role".
+#'
+#' @param x The user argument (scalar, named vector, list, or NULL).
+#' @param roles Character vector of valid role names.
+#' @param arg Argument name for messages.
+#' @returns Named list over `roles` of raw specs (or `NULL` per role).
+#' @noRd
+split_aes_roles <- function(x, roles, arg) {
+  empty <- stats::setNames(vector("list", length(roles)), roles)
+  if (is.null(x)) {
+    return(empty)
+  }
+  if (is.list(x)) {
+    if (is.null(names(x)) || any(!nzchar(names(x)))) {
+      cli::cli_abort(c(
+        "x" = "Invalid {.arg {arg}} list.",
+        ">" = "Name each element with a role ({.val {roles}}), e.g. {.code {arg} = list(central = 3, sims = 1)}."
+      ))
+    }
+    bad <- setdiff(names(x), roles)
+    if (length(bad) > 0) {
+      cli::cli_abort(c(
+        "x" = "Unknown {.arg {arg}} role{?s}: {.val {bad}}.",
+        "i" = "Valid roles are {.val {roles}}."
+      ))
+    }
+    out <- empty
+    for (r in names(x)) out[[r]] <- x[[r]]
+    return(out)
+  }
+  # A bare scalar/vector applies to every role.
+  stats::setNames(rep(list(x), length(roles)), roles)
+}
+
+
+#' Expand a raw aesthetic spec to a full per-variable named vector
+#'
+#' Handles the three leaf forms: a scalar (recycled across variables), a named
+#' vector keyed by variable name (partial; unspecified variables fall back to
+#' `default`, unknown names warn), or an unnamed positional vector (must have at
+#' least one value per variable). Validates type and range first.
+#'
+#' @param raw Leaf spec (scalar, named vector, unnamed vector, or NULL).
+#' @param var_names Character vector of variable names (defines length/order).
+#' @param default Single numeric used for `NULL` and for unspecified labels.
+#' @param arg Argument name for messages.
+#' @param validate One of "positive", "nonneg", "unit".
+#' @param display_names Character vector used to name the returned vector.
+#' @param valid_names Character vector of valid model variable names for warning
+#'   unknown names; defaults to `var_names`.
+#' @returns Numeric vector named by `display_names`.
+#' @noRd
+expand_aes <- function(raw, var_names, default, arg, validate = "positive",
+                       display_names = var_names, valid_names = var_names) {
+  n <- length(var_names)
+  if (is.null(raw)) raw <- default
+
+  if (!is.numeric(raw)) {
+    cli::cli_abort(c(
+      "x" = "Invalid {.arg {arg}} argument.",
+      "i" = "The {.arg {arg}} argument must be {.cls numeric}."
+    ))
+  }
+  .validate_aes_range(raw, arg, validate)
+
+  # Scalar: recycle across all variables.
+  if (length(raw) == 1 && is.null(names(raw))) {
+    return(stats::setNames(rep(unname(raw), n), display_names))
+  }
+
+  # Named by variable name: partial allowed, unspecified -> default.
+  if (!is.null(names(raw))) {
+    out <- stats::setNames(rep(default, n), var_names)
+    hit <- intersect(names(raw), var_names)
+    out[hit] <- raw[hit]
+    unknown <- setdiff(names(raw), valid_names)
+    if (length(unknown) > 0) {
+      cli::cli_warn(c(
+        "!" = "Ignoring {.arg {arg}} name{?s} not matching a model variable: {.val {unknown}}.",
+        "i" = "Plotted variables: {.val {var_names}}."
+      ))
+    }
+    return(stats::setNames(unname(out), display_names))
+  }
+
+  # Unnamed positional vector: one value per variable, in plot order.
+  if (length(raw) < n) {
+    cli::cli_abort(c(
+      "x" = "Insufficient {.arg {arg}} values provided.",
+      "i" = "The {.arg {arg}} vector has length {.val {length(raw)}}, but {.val {n}} variables need values.",
+      ">" = "Provide a single value, {.val {n}} values, a named vector, or omit {.arg {arg}}."
+    ))
+  }
+  stats::setNames(unname(raw[seq_len(n)]), display_names)
+}
+
+
+#' Resolve a role-structured aesthetic to per-role, per-variable vectors
+#'
+#' Combines split_aes_roles() and expand_aes() so a `line_width`/`alpha`
+#' argument becomes a named list over `roles`, each a numeric vector keyed by
+#' plotted variable label.
+#'
+#' @param x The user argument (scalar, named vector, list, or NULL).
+#' @param roles Character vector of role names.
+#' @param defaults Named list of per-role default scalars.
+#' @param var_names Character vector of variable names.
+#' @param arg Argument name for messages.
+#' @param validate_by_role Named list mapping each role to a `.validate_aes_range`
+#'   mode ("positive"/"nonneg"/"unit").
+#' @param display_names Character vector used to name the returned vectors.
+#' @param valid_names Character vector of valid model variable names for warning
+#'   unknown names; defaults to `var_names`.
+#' @returns Named list over `roles` of per-label numeric vectors.
+#' @noRd
+resolve_aes <- function(x, roles, defaults, var_names, arg, validate_by_role,
+                        display_names = var_names, valid_names = var_names) {
+  raw <- split_aes_roles(x, roles, arg)
+  stats::setNames(
+    lapply(roles, function(r) {
+      expand_aes(raw[[r]], var_names, defaults[[r]], arg,
+        validate_by_role[[r]], display_names = display_names,
+        valid_names = valid_names
+      )
+    }),
+    roles
+  )
+}
+
+
+#' Resolve colours into a per-label vector, allowing partial named overrides
+#'
+#' Mirrors the `line_width`/`alpha` grammar for `colors`: a named vector sets the
+#' colours of the named variables and the palette fills the rest (`colors` no
+#' longer has to name every variable). An unnamed vector (or `NULL`) keeps the
+#' historical positional/palette behaviour. The `sdbuildR_preserve_names`
+#' attribute tells add_trace_pair() to map colours by label rather than order.
+#'
+#' @param colors Character vector of colours (named, unnamed) or NULL.
+#' @param palette Palette name passed to generate_colors().
+#' @param var_names Character vector of variable names (defines length/order).
+#' @param display_names Character vector of plotted variable labels.
+#' @param valid_names Character vector of valid model variable names for warning
+#'   unknown names; defaults to `var_names`.
+#' @returns Character vector of colours named by `labels`, with a logical
+#'   `sdbuildR_preserve_names` attribute.
+#' @noRd
+resolve_colors <- function(colors, palette, var_names, display_names = var_names,
+                           valid_names = var_names) {
+  n <- length(var_names)
+
+  if (!is.null(colors) && !is.null(names(colors))) {
+    # Partial named vector: palette fills unspecified variables, named override.
+    out <- stats::setNames(generate_colors(n, colors = NULL, palette = palette), var_names)
+    hit <- intersect(names(colors), var_names)
+    if (length(hit) > 0) {
+      # generate_colors() normalises names/hex to canonical #RRGGBB.
+      out[hit] <- generate_colors(length(hit), colors = unname(colors[hit]))
+    }
+    unknown <- setdiff(names(colors), valid_names)
+    if (length(unknown) > 0) {
+      cli::cli_warn(c(
+        "!" = "Ignoring {.arg colors} name{?s} not matching a model variable: {.val {unknown}}.",
+        "i" = "Plotted variables: {.val {var_names}}."
+      ))
+    }
+    out <- stats::setNames(unname(out), display_names)
+    attr(out, "sdbuildR_preserve_names") <- TRUE
+    return(out)
+  }
+
+  out <- stats::setNames(generate_colors(n, colors = colors, palette = palette), display_names)
+  attr(out, "sdbuildR_preserve_names") <- FALSE
+  out
+}
+
+
 #' Filter variables in simulation data and metadata
 #'
 #' Keep only specified variables in both the names_df and simulation data frame.
@@ -813,7 +1008,7 @@ add_visibility_pair <- function(pl, add_fn,
 #' @param type Character, trace type (default "scatter").
 #' @param opacity Numeric, opacity/transparency (0-1).
 #' @param line_width Numeric line width for "lines" mode. Either a single value
-#'   applied to all variables, or a named vector (keyed by variable label) giving
+#'   applied to all variables, or a named vector (keyed by plotted label) giving
 #'   one width per variable. \code{NULL} uses plotly's default.
 #' @param marker_size Numeric, marker size for "markers" mode.
 #' @param split Optional formula for splitting traces (e.g., \code{~interaction(variable, i)}).
@@ -871,9 +1066,9 @@ add_trace_pair <- function(pl,
     }
   }
 
-  # Resolve per-variable line widths for the variables present in this trace pair.
-  # line_width may be a single value (applied to all variables), a named vector
-  # keyed by variable label, or NULL (use plotly's default width).
+  # Resolve per-variable line widths for the plotted labels present in this
+  # trace pair. User-supplied names are matched against model variable names
+  # before add_trace_pair() is called.
   lw <- NULL
   if (!is.null(line_width) && length(vars_present) > 0) {
     if (length(line_width) == 1 && is.null(names(line_width))) {
@@ -1169,11 +1364,18 @@ condition_param_table <- function(conditions) {
 
 #' Build a name -> human-readable label lookup from a stockflow model
 #'
+#' Mirrors the rest of the package's display convention (see `prepare_labels()`):
+#' when `format` is `TRUE` and a variable has no custom label, its label defaults
+#' to the raw name, so we prettify it by turning underscores/periods into spaces.
+#'
 #' @param object A stockflow model (or `NULL`).
+#' @param format Whether to prettify labels that fall back to the variable name
+#'   (matches the `format_label` plot argument). Defaults to `TRUE`.
 #' @returns A function mapping a character vector of variable names to their
-#'   model labels, falling back to the name when no label is found.
+#'   model labels, falling back to the (formatted) name when no label is found.
 #' @noRd
-model_label_lookup <- function(object) {
+model_label_lookup <- function(object, format = TRUE) {
+  fmt <- if (format) format_label_default else function(x) x
   ld <- NULL
   if (!is.null(object)) {
     ld <- tryCatch(
@@ -1182,12 +1384,43 @@ model_label_lookup <- function(object) {
     )
   }
   if (is.null(ld) || !all(c("name", "label") %in% names(ld))) {
-    return(function(nm) nm)
+    return(function(nm) fmt(nm))
   }
   function(nm) {
     out <- ld[["label"]][match(nm, ld[["name"]])]
-    ifelse(is.na(out), nm, out)
+    raw <- is.na(out) | out == nm
+    out[raw] <- fmt(nm[raw])
+    out
   }
+}
+
+
+#' Prettify a raw variable name for display (underscores/periods -> spaces)
+#'
+#' The single source of the default label formatting, shared by prepare_labels(),
+#' [plot.stockflow()], and the ensemble condition controls so they all agree.
+#'
+#' @param x Character vector of names.
+#' @returns Character vector with separators replaced by single spaces.
+#' @noRd
+format_label_default <- function(x) {
+  out <- gsub("_", " ", x, fixed = TRUE)
+  out <- gsub(".", " ", out, fixed = TRUE)
+  gsub("  ", " ", out, fixed = TRUE)
+}
+
+
+#' Apply default label formatting only to labels still equal to their name
+#'
+#' A variable without a custom label has its label default to the raw name; in
+#' that case (and only that case) we prettify it via format_label_default().
+#' Custom labels are left untouched.
+#'
+#' @param name,label Character vectors of equal length (variable names and labels).
+#' @returns The `label` vector with name-defaulted entries prettified.
+#' @noRd
+format_label_if_default <- function(name, label) {
+  ifelse(name == label, format_label_default(label), label)
 }
 
 
@@ -1200,13 +1433,15 @@ model_label_lookup <- function(object) {
 #' @param param_tbl Parameter table from condition_param_table().
 #' @param object Stockflow model, used to map parameter names to labels.
 #' @param condition_ids Condition indices (rows of `param_tbl`) in display order.
+#' @param format_label Whether to prettify parameter names lacking a custom label.
 #' @returns Character vector of labels, one per `condition_ids`.
 #' @noRd
-ensemble_condition_labels <- function(param_tbl, object, condition_ids) {
+ensemble_condition_labels <- function(param_tbl, object, condition_ids,
+                                      format_label = TRUE) {
   if (is.null(param_tbl) || ncol(param_tbl) == 0L) {
     return(paste0("Condition ", condition_ids))
   }
-  labof <- model_label_lookup(object)
+  labof <- model_label_lookup(object, format_label)
   cvars <- names(param_tbl)
   plabs <- labof(cvars)
   vapply(condition_ids, function(i) {
@@ -1273,7 +1508,8 @@ capture_swapdata <- function(pl_list) {
 #' @returns A list with all supported options filled in.
 #' @noRd
 resolve_control_options <- function(control_options = list()) {
-  defaults <- list(max_labels = 10L)
+  # `spacing = NULL` means "use the type-specific default" (see control_geometry).
+  defaults <- list(max_labels = 10L, spacing = NULL)
 
   if (is.null(control_options)) {
     return(defaults)
@@ -1306,7 +1542,57 @@ resolve_control_options <- function(control_options = list()) {
   }
   out[["max_labels"]] <- as.integer(ml)
 
+  sp <- out[["spacing"]]
+  if (!is.null(sp) &&
+    (!is.numeric(sp) || length(sp) != 1L || is.na(sp) || sp <= 0)) {
+    cli::cli_abort(c(
+      "x" = "{.arg control_options$spacing} must be a single positive number (or NULL).",
+      "i" = "You supplied {.val {sp}}."
+    ))
+  }
+
   out
+}
+
+
+#' Deterministic vertical geometry for stacked condition controls
+#'
+#' Sliders and dropdowns are anchored in the figure's bottom margin using paper
+#' coordinates (a fraction of the plotting-area height), while the margin that
+#' must contain them is in pixels. Deriving the per-control paper offsets and the
+#' reserved bottom margin independently is what let them drift into each other
+#' and the x-axis title. This helper derives both from a single `step`, so they
+#' always stay consistent: every control is the same distance from the next, and
+#' the margin grows by a matching amount per control. The x-axis title is pinned
+#' close to the axis (small `standoff`) so the first control clears it.
+#'
+#' @param n_controls Number of stacked controls (>= 1).
+#' @param type Either "slider" or "dropdown".
+#' @param spacing Optional paper-unit gap between consecutive controls. `NULL`
+#'   uses a type-specific default sized to a control's own height.
+#' @returns List with `y` (paper y-position per control, top-most first),
+#'   `margin_b` (bottom margin in px), and `standoff` (x-axis title standoff px).
+#' @noRd
+control_geometry <- function(n_controls, type, spacing = NULL) {
+  n_controls <- max(1L, as.integer(n_controls))
+  if (identical(type, "slider")) {
+    first <- 0.20 # first control's offset below the axis (clears the x title)
+    step_default <- 0.34 # rail + ticks below + currentvalue title above is tall
+    base_px <- 70
+    px_per <- 90
+  } else {
+    first <- 0.12
+    step_default <- 0.16 # dropdown buttons collapse to a single bar when closed
+    base_px <- 50
+    px_per <- 55
+  }
+  step <- if (is.null(spacing)) step_default else spacing
+  idx <- seq_len(n_controls) - 1L
+  list(
+    y = -(first + step * idx),
+    margin_b = base_px + px_per * n_controls,
+    standoff = 15
+  )
 }
 
 
@@ -1344,16 +1630,22 @@ thin_slider_labels <- function(labels, max_labels = 10L) {
 #' @param type Either "slider" or "dropdown".
 #' @param object Stockflow model, for parameter labels.
 #' @param max_labels Maximum number of slider tick labels to keep visible.
+#' @param spacing Optional paper-unit gap between stacked controls (see
+#'   control_geometry()). NULL uses the type-specific default.
+#' @param format_label Whether to prettify parameter names lacking a custom label.
 #' @returns List with `layout` (named list for [plotly::layout()]), `condVals`
 #'   (per built condition, the parameter values), and `levels` (per parameter,
 #'   its sorted unique values) for the JS handler.
 #' @noRd
 build_param_controls <- function(param_tbl, condition_ids, type, object,
-                                 max_labels = 10L) {
-  labof <- model_label_lookup(object)
+                                 max_labels = 10L, spacing = NULL,
+                                 format_label = TRUE) {
+  labof <- model_label_lookup(object, format_label)
   cvars <- names(param_tbl)
   plabs <- labof(cvars)
   steps_per <- lapply(param_tbl, function(x) sort(unique(x)))
+
+  geo <- control_geometry(length(cvars), type, spacing)
 
   controls <- lapply(seq_along(cvars), function(j) {
     vals <- steps_per[[cvars[j]]]
@@ -1362,7 +1654,7 @@ build_param_controls <- function(param_tbl, condition_ids, type, object,
       tick_labels <- thin_slider_labels(formatC(vals, format = "g"), max_labels)
       list(
         active = 0, name = nm,
-        x = 0, len = 0.9, y = -0.18 - 0.22 * (j - 1),
+        x = 0, len = 0.9, y = geo[["y"]][j],
         pad = list(t = 10, b = 10),
         currentvalue = list(prefix = paste0(plabs[j], " = ")),
         steps = lapply(seq_along(vals), function(k) {
@@ -1373,7 +1665,7 @@ build_param_controls <- function(param_tbl, condition_ids, type, object,
       list(
         type = "dropdown", active = 0, showactive = TRUE, name = nm,
         direction = "up", x = 0, xanchor = "left",
-        y = -0.1 - 0.16 * (j - 1), yanchor = "top",
+        y = geo[["y"]][j], yanchor = "top",
         buttons = lapply(vals, function(v) {
           list(
             label = paste0(plabs[j], " = ", formatC(v, format = "g")),
@@ -1479,6 +1771,9 @@ swap_onrender_js <- function() {
 #' @param cross Whether the ensemble conditions were crossed.
 #' @param object Optional stockflow model, for parameter labels.
 #' @param max_labels Maximum number of slider tick labels to keep visible.
+#' @param spacing Optional paper-unit gap between stacked controls (see
+#'   control_geometry()). NULL uses the type-specific default.
+#' @param format_label Whether to prettify parameter names lacking a custom label.
 #' @returns A combined plotly object with condition controls.
 #' @noRd
 assemble_condition_control_plot <- function(pl_list, condition_ids, type,
@@ -1488,7 +1783,9 @@ assemble_condition_control_plot <- function(pl_list, condition_ids, type,
                                             condition_table = NULL,
                                             cross = FALSE,
                                             object = NULL,
-                                            max_labels = 10L) {
+                                            max_labels = 10L,
+                                            spacing = NULL,
+                                            format_label = TRUE) {
   ydata <- capture_swapdata(pl_list)
   n_traces <- length(ydata[[1]])
 
@@ -1496,20 +1793,25 @@ assemble_condition_control_plot <- function(pl_list, condition_ids, type,
     ncol(condition_table) >= 2L
   n_controls <- if (use_param) ncol(condition_table) else 1L
 
+  # Shared geometry: one source for the control offsets, the bottom margin that
+  # must contain them, and the x-axis title standoff that keeps the title clear.
+  geo <- control_geometry(n_controls, type, spacing)
+
   # Live figure: the first condition's traces, with shared title/axes/theme.
   combined <- plotly::layout(pl_list[[1]],
     title = list(text = main),
-    xaxis = list(title = xlab),
+    xaxis = list(title = list(text = xlab, standoff = geo[["standoff"]])),
     yaxis = list(title = ylab),
     font = list(family = font_family, size = font_size),
     margin = utils::modifyList(theme[["margin"]],
-      list(b = max(theme[["margin"]][["b"]], 40 + 60 * n_controls))),
+      list(b = max(theme[["margin"]][["b"]], geo[["margin_b"]]))),
     legend = theme[["legend"]]
   )
 
   if (use_param) {
     ctrl <- build_param_controls(
-      condition_table, condition_ids, type, object, max_labels
+      condition_table, condition_ids, type, object, max_labels, spacing,
+      format_label
     )
     combined <- do.call(plotly::layout, c(list(combined), ctrl[["layout"]]))
     combined <- htmlwidgets::onRender(combined, swap_onrender_js(),
@@ -1532,7 +1834,7 @@ assemble_condition_control_plot <- function(pl_list, condition_ids, type,
   single_param <- !is.null(condition_table) && ncol(condition_table) == 1L
   if (type == "slider" && single_param) {
     cn <- names(condition_table)[1]
-    slider_prefix <- paste0(model_label_lookup(object)(cn), " = ")
+    slider_prefix <- paste0(model_label_lookup(object, format_label)(cn), " = ")
     step_labels <- formatC(condition_table[condition_ids, cn], format = "g")
   }
   if (type == "slider") {
@@ -1550,7 +1852,7 @@ assemble_condition_control_plot <- function(pl_list, condition_ids, type,
   if (type == "slider") {
     plotly::layout(combined,
       sliders = list(list(
-        active = 0, x = 0, len = 0.9, y = -0.18,
+        active = 0, x = 0, len = 0.9, y = geo[["y"]][1],
         pad = list(t = 10, b = 10),
         currentvalue = list(prefix = slider_prefix),
         steps = steps
@@ -1561,7 +1863,7 @@ assemble_condition_control_plot <- function(pl_list, condition_ids, type,
       updatemenus = list(list(
         type = "dropdown", active = 0, showactive = TRUE,
         direction = "up", x = 0, xanchor = "left",
-        y = -0.1, yanchor = "top",
+        y = geo[["y"]][1], yanchor = "top",
         buttons = steps
       ))
     )
