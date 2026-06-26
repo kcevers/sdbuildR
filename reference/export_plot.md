@@ -68,7 +68,7 @@ Returns `NULL` invisibly, called for side effects.
 # Only if dependencies are installed
 if (requireNamespace("DiagrammeRsvg", quietly = TRUE) &&
   requireNamespace("rsvg", quietly = TRUE)) {
-  sfm <- stockflow("SIR")
+  sfm <- stockflow("sir")
   file <- tempfile(fileext = ".png")
   export_plot(plot(sfm), file)
 

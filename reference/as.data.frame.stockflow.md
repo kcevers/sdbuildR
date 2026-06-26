@@ -12,7 +12,7 @@ as.data.frame(
   x,
   row.names = NULL,
   optional = FALSE,
-  name = NULL,
+  vars = NULL,
   type = NULL,
   properties = NULL,
   ...
@@ -35,7 +35,7 @@ as.data.frame(
 
   Ignored parameter.
 
-- name:
+- vars:
 
   Variable names to retain in the data frame. Defaults to `NULL` to
   include all variables.
@@ -67,7 +67,7 @@ Returns an empty data.frame if no components match the filters.
 ## Examples
 
 ``` r
-as.data.frame(stockflow("SIR"))
+as.data.frame(stockflow("sir"))
 #>       type             name                                     eqn
 #> 1    stock         infected                                       1
 #> 2    stock        recovered                                       0
@@ -90,14 +90,20 @@ as.data.frame(stockflow("SIR"))
 #> 9 Total population      <NA>        <NA>        FALSE NULL NULL
 
 # Only show stocks
-as.data.frame(stockflow("SIR"), type = "stock")
+as.data.frame(stockflow("sir"), type = "stock")
 #>    type        name   eqn       label non_negative xpts ypts
 #> 1 stock    infected     1    Infected        FALSE NULL NULL
 #> 2 stock   recovered     0   Recovered        FALSE NULL NULL
 #> 3 stock susceptible 99999 Susceptible        FALSE NULL NULL
 
+# Only show specific variables
+as.data.frame(stockflow("sir"), vars = c("susceptible", "infected"))
+#>    type        name   eqn       label non_negative xpts ypts
+#> 1 stock    infected     1    Infected        FALSE NULL NULL
+#> 2 stock susceptible 99999 Susceptible        FALSE NULL NULL
+
 # Only show equation and label
-as.data.frame(stockflow("SIR"), properties = c("eqn", "label"))
+as.data.frame(stockflow("sir"), properties = c("eqn", "label"))
 #>       type             name                                     eqn
 #> 1    stock         infected                                       1
 #> 2    stock        recovered                                       0

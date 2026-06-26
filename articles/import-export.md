@@ -3,6 +3,10 @@
 ``` r
 
 library(sdbuildR)
+
+# Disable WebGL: many plotly widgets per HTML page can exceed the browser WebGL
+# context limit and render blank. SVG always renders.
+options(sdbuildR.webgl = FALSE)
 ```
 
 sdbuildR can exchange models with several external tools. This vignette
@@ -49,8 +53,7 @@ After importing, use the model as usual:
 ``` r
 
 summary(sfm)
-sim <- simulate(sfm)
-plot(sim)
+sfm |> simulate() |> plot()
 ```
 
 ### Limitations
@@ -161,9 +164,8 @@ print(sfm)
 
 ``` r
 
-sfm_plot <- sim_settings(sfm, save_at = 5)
-sim <- simulate(sfm_plot)
-plot(sim)
+sfm <- sim_settings(sfm, save_at = 5)
+sfm |> simulate() |> plot()
 ```
 
 The imported model is a full `stockflow` object. You can modify it with
@@ -195,7 +197,7 @@ specifications.
 ``` r
 
 export_model(sfm, format = "sdbuildR")
-#> [1] "sfm <-\tstockflow() |>\n\tsim_settings(method = \"lsoda\", start = \"0.0\", stop = \"100.0\", dt = \"0.1\") |>\n\tmeta(name = \"SIR epidemic\", created = \"2026-06-16 21:37:27.132036\") |>\n\tstock(I, eqn = 10) |>\n\tstock(R, eqn = 0) |>\n\tstock(S, eqn = 990) |>\n\tflow(net_I, eqn = SI - IR, to = I) |>\n\tflow(net_R, eqn = IR, to = R) |>\n\tflow(net_S, eqn = -SI, to = S) |>\n\tconstant(beta, eqn = 0.3) |>\n\tconstant(gamma, eqn = 0.1) |>\n\tconstant(N, eqn = 1000) |>\n\taux(IR, eqn = gamma * I) |>\n\taux(SI, eqn = beta * S * I/N)\n"
+#> [1] "sfm <-\tstockflow() |>\n\tsim_settings(method = \"lsoda\", start = \"0.0\", stop = \"100.0\", dt = \"0.1\", save_at = \"5.0\", save_type = \"save_at\") |>\n\tmeta(name = \"SIR epidemic\", created = \"2026-06-26 11:15:19.014807\") |>\n\tstock(I, eqn = 10) |>\n\tstock(R, eqn = 0) |>\n\tstock(S, eqn = 990) |>\n\tflow(net_I, eqn = SI - IR, to = I) |>\n\tflow(net_R, eqn = IR, to = R) |>\n\tflow(net_S, eqn = -SI, to = S) |>\n\tconstant(beta, eqn = 0.3) |>\n\tconstant(gamma, eqn = 0.1) |>\n\tconstant(N, eqn = 1000) |>\n\taux(IR, eqn = gamma * I) |>\n\taux(SI, eqn = beta * S * I/N)\n"
 ```
 
 ### deSolve script

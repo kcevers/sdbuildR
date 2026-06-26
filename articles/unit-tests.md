@@ -3,6 +3,10 @@
 ``` r
 
 library(sdbuildR)
+
+# Disable WebGL: many plotly widgets per HTML page can exceed the browser WebGL
+# context limit and render blank. SVG always renders.
+options(sdbuildR.webgl = FALSE)
 ```
 
 Stock-and-flow models can easily become complex, producing unexpected
@@ -22,7 +26,7 @@ of infectious diseases.
 
 ``` r
 
-sfm <- stockflow("SIR")
+sfm <- stockflow("sir")
 plot(sfm)
 ```
 

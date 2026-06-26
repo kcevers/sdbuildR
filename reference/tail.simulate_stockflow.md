@@ -36,7 +36,7 @@ A data.frame with the last rows of the simulation results.
 ## Examples
 
 ``` r
-sfm <- stockflow("SIR")
+sfm <- stockflow("sir")
 sim <- simulate(sfm)
 tail(sim)
 #>       time    variable      value

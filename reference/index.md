@@ -67,6 +67,8 @@
 
 ## Ensemble simulations
 
+- [`as.data.frame(`*`<ensemble_stockflow>`*`)`](https://kcevers.github.io/sdbuildR/reference/as.data.frame.ensemble_stockflow.md)
+  : Create data frame of simulation results
 - [`ensemble()`](https://kcevers.github.io/sdbuildR/reference/ensemble.md)
   : Run ensemble simulations
 - [`plot(`*`<ensemble_stockflow>`*`)`](https://kcevers.github.io/sdbuildR/reference/plot.ensemble_stockflow.md)
@@ -151,6 +153,8 @@
   [`mod()`](https://kcevers.github.io/sdbuildR/reference/rem_mod.md)
   [`` `%REM%` ``](https://kcevers.github.io/sdbuildR/reference/rem_mod.md)
   : Remainder and modulus
+- [`ricker()`](https://kcevers.github.io/sdbuildR/reference/ricker.md) :
+  Generalized Ricker function
 - [`round_IM()`](https://kcevers.github.io/sdbuildR/reference/round_IM.md)
   : Round values half-up (as in Insight Maker)
 

@@ -6,13 +6,17 @@ this vignette, we will formalize Job Demands-Resources (JD-R) theory as
 a stock-and-flow model. JD-R theory is a prominent framework for
 understanding burnout and work engagement. Note that this vignette
 serves as online supplemental material B accompanying the paper
-*Formalizing Psychological Theory with stockflow: A Stock-and-Flow
+*Formalizing Psychological Theory with sdbuildR: A Stock-and-Flow
 Modelling Tutorial in R* by Evers et al. (under review). To reproduce
 the figures in the paper, please see the corresponding .Rmd file.
 
 ``` r
 
 library(sdbuildR)
+
+# Disable WebGL: many plotly widgets per HTML page can exceed the browser WebGL
+# context limit and render blank. SVG always renders.
+options(sdbuildR.webgl = FALSE)
 library(kableExtra)
 ```
 
@@ -86,7 +90,238 @@ resources and engagement sustained by the motivational loop. As the
 target phenomenon is articulated on a within-person level, the dynamic
 hypothesis correspondingly describes within-person dynamics.
 
-## Step 3. Formalization
+## Step 3. Formalization (new\*\*)
+
+Please see the paper for Step 3a and 3b; here, we only note that
+exhaustion was reformulated to energy.
+
+## Step 3c. Building Stock-and-Flow Models in R (new\*\*)
+
+``` r
+
+
+sfm <- stockflow() |>
+  sim_settings(
+    stop = round(182.5), time_units = "day",
+    # Simulation timestep
+    dt = 0.01,
+    # Reduce the output size
+    save_at = 1,
+    # Set only_stocks = FALSE to return all variables (not just stocks) in the simulation output
+    language = "julia", save_sims = TRUE,
+    only_stocks = FALSE
+  ) |> meta(name = "Job Demands and Resources (JD-R) Theory") 
+  
+sfm <- stock(sfm, c(energy, demands),
+ eqn = runif(1, .01, 1), 
+# eqn = runif(1),
+label = c("Job Demands", "Energy"))
+
+# runif stored as eqn, not computed
+as.data.frame(sfm, properties = "eqn")
+#>    type    name               eqn
+#> 1 stock demands runif(1, 0.01, 1)
+#> 2 stock  energy runif(1, 0.01, 1)
+
+# to add a computed value
+sfm |> 
+update(energy, eqn = !!runif(1)) |>
+as.data.frame(properties = "eqn")
+#>    type    name                eqn
+#> 1 stock demands  runif(1, 0.01, 1)
+#> 2 stock  energy 0.0807501375675201
+
+# note that we havent saved this to sfm
+
+sfm <- sim_settings(sfm, seed = 123) 
+
+# base
+sfm <- sfm |>
+  flow(effort, eqn = energy * demands, from = energy, label = "Effort")
+  
+
+
+# linear
+sfm1 <- sfm |>
+  constant(recovery_rate, eqn = 0.3, label = "Recovery Rate") |>
+  flow(recovery, eqn = recovery_rate * energy, 
+to = energy, label = "Recovery") 
+
+pl1 = sfm1 |>
+  simulate() |>
+  plot()
+#> ℹ Activating Julia environment for sdbuildR at
+#>   /home/runner/.local/share/R/sdbuildR/julia...
+#> ✔ Julia environment ready.
+
+
+# hill
+sfm2 <- sfm1 |>
+    constant(s_slope, eqn = 5, label = "Steep Slope") |>
+# update(recovery_rate, eqn = 0.3) |>
+  update(recovery,
+    eqn = hill(energy, slope = s_slope, upper = recovery_rate, midpoint = 0.5),
+  )
+
+pl2 = sfm2 |>
+  simulate() |>
+  plot(showlegend = FALSE)
+
+# ricker
+sfm3 <- sfm2 |>
+custom_func(ricker1, eqn = function(x, location, upper) {
+    upper * (x / location * exp(1 - x / location))
+  }
+) |>
+  # update(recovery_rate, eqn = 3) |>
+  update(recovery,
+    # eqn = recovery_rate * energy * exp(-s_slope * energy)
+    eqn = ricker1(energy, 1 / s_slope, recovery_rate / (s_slope * exp(1)))
+    # eqn = recovery_rate * energy * exp(-s_slope * energy)
+  )
+
+pl3 = sfm3 |>
+  simulate() |>
+  plot(showlegend = FALSE)
+
+head(simulate(sfm1), direction = "wide")
+#>   time   demands    energy    effort   recovery
+#> 1    0 0.5260017 0.5909387 0.3108347 0.17728161
+#> 2    1 0.5260017 0.4712812 0.2478947 0.14138435
+#> 3    2 0.5260017 0.3758527 0.1976992 0.11275582
+#> 4    3 0.5260017 0.2997474 0.1576676 0.08992421
+#> 5    4 0.5260017 0.2390523 0.1257419 0.07171570
+#> 6    5 0.5260017 0.1906473 0.1002808 0.05719419
+head(simulate(sfm2), direction = "wide")
+#>   time   demands     energy     effort     recovery
+#> 1    0 0.5260017 0.59093869 0.31083473 2.092563e-01
+#> 2    1 0.5260017 0.48421450 0.25469763 1.379957e-01
+#> 3    2 0.5260017 0.35339268 0.18588514 4.497934e-02
+#> 4    3 0.5260017 0.22267044 0.11712502 5.164667e-03
+#> 5    4 0.5260017 0.13274081 0.06982189 3.951129e-04
+#> 6    5 0.5260017 0.07843514 0.04125701 2.849597e-05
+head(simulate(sfm3), direction = "wide")
+#>   time   demands    energy     effort    recovery
+#> 1    0 0.5260017 0.5909387 0.31083473 0.009235419
+#> 2    1 0.5260017 0.3597256 0.18921625 0.017863165
+#> 3    2 0.5260017 0.2282521 0.12006097 0.021872222
+#> 4    3 0.5260017 0.1517238 0.07980696 0.021316255
+#> 5    4 0.5260017 0.1050948 0.05528003 0.018641979
+#> 6    5 0.5260017 0.0752242 0.03956806 0.015492859
+sfm3$sim_settings
+#> $method
+#> [1] "Euler()"
+#> 
+#> $start
+#> [1] "0.0"
+#> 
+#> $stop
+#> [1] "182.0"
+#> 
+#> $dt
+#> [1] "0.01"
+#> 
+#> $save_at
+#> [1] "1.0"
+#> 
+#> $save_n
+#> NULL
+#> 
+#> $seed
+#> [1] "123"
+#> 
+#> $time_units
+#> [1] "day"
+#> 
+#> $language
+#> [1] "Julia"
+#> 
+#> $only_stocks
+#> [1] FALSE
+#> 
+#> $vars
+#> NULL
+#> 
+#> $keep_nonnegative_stock
+#> [1] FALSE
+#> 
+#> $keep_nonnegative_flow
+#> [1] TRUE
+#> 
+#> $save_sims
+#> [1] TRUE
+#> 
+#> $central
+#> [1] "mean"   "median"
+#> 
+#> $spread
+#> [1] "quantile"
+#> 
+#> $quantiles
+#> [1] 0.025 0.975
+#> 
+#> $save_type
+#> [1] "save_at"
+
+pl = plotly::subplot(pl1, pl2, pl3,
+  nrows = 3,
+  shareX = TRUE,
+  shareY = FALSE,
+  titleY = TRUE,
+  titleX = TRUE,
+  margin = c(0.1, 0.05, 0.05, 0.05)
+) |>
+  plotly::layout(
+    title = ""
+    # yaxis = list(title = "", range = c(0, 1)),
+    # yaxis2 = list(title = "", range = c(0, 1)),
+    # yaxis3 = list(title = "", range = c(0, 1))
+    # font = annot_font
+  )
+
+pl
+```
+
+``` r
+
+n <- 500
+which <- "sims"
+vars <- NULL #c("energy", "demands")
+sims1 <- ensemble(sfm1, n = n, save_at = 1)
+#> Starting ensemble simulation in "Julia" with 500 simulations.
+#> ✔ Ensemble simulation completed in 10.2033 seconds.
+pl1 = plot(sims1, vars = vars, main = "Linear Recovery", showlegend = TRUE, which = which)
+
+sims2 <- ensemble(sfm2, n = n, save_at = 1)
+#> Starting ensemble simulation in "Julia" with 500 simulations.
+#> ✔ Ensemble simulation completed in 4.5057 seconds.
+pl2 = plot(sims2, vars = vars, main = "Hill Recovery", showlegend = FALSE, which = which)
+
+sims3 <- ensemble(sfm3, n = n, save_at = 1)
+#> Starting ensemble simulation in "Julia" with 500 simulations.
+#> ✔ Ensemble simulation completed in 3.2287 seconds.
+pl3 = plot(sims3, vars = vars, main = "Ricker Recovery", showlegend = FALSE, which = which)
+
+pl = plotly::subplot(pl1, pl2, pl3,
+  nrows = 3,
+  shareX = TRUE,
+  shareY = FALSE,
+  titleY = TRUE,
+  titleX = TRUE,
+  margin = c(0.1, 0.05, 0.05, 0.05)
+) |>
+  plotly::layout(
+    title = ""
+    # yaxis = list(title = "", range = c(0, 1)),
+    # yaxis2 = list(title = "", range = c(0, 1)),
+    # yaxis3 = list(title = "", range = c(0, 1))
+    # font = annot_font
+  )
+
+pl
+```
+
+## Step 3. Formalization (old)
 
 Please see the paper for Step 3a and 3b; here, we only note that
 exhaustion was reformulated to energy.
@@ -127,15 +362,23 @@ job resources – and choose arbitrary values for their initial states:
 ``` r
 
 sfm <- sfm |>
-  stock(engagement, eqn = 0.7, label = "Work Engagement") |>
-  stock(resources, eqn = 0.5, label = "Job Resources")
+  stock(engagement, 
+  # eqn = 0.7, 
+   eqn = runif(1, .01, 1), 
+  label = "Work Engagement") |>
+  stock(resources,
+  #  eqn = 0.5,
+   eqn = runif(1, .01, 1), 
+    label = "Job Resources")
 ```
 
 Both stocks should remain static.
 
 ``` r
 
-simulate(sfm) |> plot()
+sfm |>
+  simulate() |>
+  plot()
 ```
 
 With both stocks in place, we next define their inflows. Because
@@ -168,7 +411,9 @@ sfm <- sfm |>
     label = "Proactive behaviour"
   )
 
-simulate(sfm) |> plot()
+sfm |>
+  simulate() |>
+  plot()
 ```
 
 As shown above, this produces exponential growth: as resources and
@@ -214,7 +459,9 @@ sfm <- sfm |>
     from = resources, label = "Decay"
   )
 
-simulate(sfm) |> plot()
+sfm |>
+  simulate() |>
+  plot()
 ```
 
 Resources and engagement still grow exponentially (see above). The decay
@@ -262,7 +509,9 @@ sfm <- sfm |>
   # Update inflow to resources
   update(proactive, eqn = proactive_rate * hill(engagement, m_slope))
 
-simulate(sfm) |> plot()
+sfm |>
+  simulate() |>
+  plot()
 ```
 
 As shown above, resources and engagement now stabilize. Morever, unlike
@@ -276,7 +525,9 @@ without outflows, both stocks still grow without bound:
 
 sfm2 <- discard(sfm, c(engagement_decay, resource_decay))
 
-simulate(sfm) |> plot()
+sfm2 |>
+  simulate() |>
+  plot()
 ```
 
 Stability emerges from the combination of saturating inflows and
@@ -293,11 +544,19 @@ as an auxiliary for job performance.
 ``` r
 
 sfm <- sfm |>
-  stock(demands, eqn = .2, label = "Job Demands") |>
-  stock(energy, eqn = .9, label = "Energy") |>
+  stock(demands,
+  #  eqn = .2,
+    eqn = runif(1, .01, 1), 
+    label = "Job Demands") |>
+  stock(energy,
+  #  eqn = .9, 
+    eqn = runif(1, .01, 1), 
+label = "Energy") |>
   aux(performance, eqn = engagement + energy, label = "Job Performance")
 
-simulate(sfm) |> plot()
+sfm |>
+  simulate() |>
+  plot()
 ```
 
 We next implement the buffer hypothesis, which states that decreases in
@@ -349,7 +608,9 @@ sfm <- sfm |>
   flow(resource_decay, eqn = resource_decay_rate * resources / (1 + energy)) |>
   flow(engagement_decay, eqn = engagement_decay_rate * engagement / (1 + energy))
 
-simulate(sfm) |> plot(vars = vars)
+sfm |>
+  simulate() |>
+  plot(vars = vars)
 ```
 
 JD-R theory only specifies how energy can be depleted, not how it can
@@ -364,15 +625,33 @@ energy (where recovery is not needed).
 
 ``` r
 
+# a=recover_rate=.3
+# b=s_slope=5
+# a=recovery_rate=.3
+# location = 1 / b
+# upper=a/(b*exp(1))
+# upper
+
 sfm <- sfm |>
+custom_func(ricker1, eqn = function(x, location, upper) {
+    upper * (x / location * exp(1 - x / location))
+  }
+) |>
   constant(recovery_rate, eqn = 0.3, label = "Recovery Rate") |>
   constant(s_slope, eqn = 5, label = "Steep Slope") |>
   flow(recovery,
-    eqn = recovery_rate * energy * exp(-s_slope * energy),
+    # eqn = ricker(x = energy, a = recovery_rate, b = s_slope),
+    #' \deqn{f(x) = a \cdot x \cdot e^{-b \cdot x}} 
+    # eqn = ricker(x = energy, location = 1 / s_slope, upper = recovery_rate / (s_slope * exp(1))),
+    eqn = ricker1(energy, 1 / s_slope, recovery_rate / (s_slope * exp(1))),
+
+    # eqn = recovery_rate * energy * exp(-s_slope * energy),
     to = energy, label = "Recovery"
   )
 
-simulate(sfm) |> plot(vars = vars)
+sfm |>
+  simulate() |>
+  plot(vars = vars)
 ```
 
 Job demands are reduced by expending energy. Furthermore, the outflow
@@ -393,7 +672,9 @@ sfm <- sfm |>
     from = demands, label = "Work"
   )
 
-simulate(sfm) |> plot(vars = vars)
+sfm |>
+  simulate() |>
+  plot(vars = vars)
 ```
 
 Job demands are increased by self-undermining behaviour. We similarly
@@ -411,11 +692,15 @@ sfm <- sfm |>
   constant(e_slope, eqn = 10, label = "Extreme Slope") |>
   constant(undermining_rate, eqn = 5, label = "Self-undermining Rate") |>
   flow(undermining,
-    eqn = undermining_rate * energy * exp(-e_slope * energy),
+    # eqn = undermining_rate * energy * exp(-e_slope * energy),
+    # eqn = ricker(x = energy, location = 1 / e_slope, upper = undermining_rate / (e_slope * exp(1))),
+    eqn = ricker1(energy, 1 / e_slope, undermining_rate / (e_slope * exp(1))),
     to = demands, label = "Self-undermining"
   )
 
-simulate(sfm) |> plot(vars = vars)
+sfm |>
+  simulate() |>
+  plot(vars = vars)
 ```
 
 As of now, job resources are only cultivated through proactive
@@ -438,7 +723,9 @@ sfm <- sfm |>
     to = resources, label = "Exogenous support"
   )
 
-simulate(sfm) |> plot(vars = vars)
+sfm |>
+  simulate() |>
+  plot(vars = vars)
 ```
 
 In the absence of more information about the functional form of
@@ -461,7 +748,9 @@ Simulating the model reproduces our target phenomenon:
 
 ``` r
 
-simulate(sfm) |> plot(vars = vars)
+sfm |>
+  simulate() |>
+  plot(vars = vars)
 ```
 
 As shown above, job demands rise to an excessive degree, rapidly
@@ -486,6 +775,7 @@ uniform distribution bounded between .01 and 2:
 sfm <- sfm |>
   update(c(demands, resources, energy, engagement),
     eqn = runif(1, 0.01, 2)
+    # eqn = runif(1)
   )
 
 sim1 <- simulate(sfm, seed = 1)
@@ -528,7 +818,7 @@ which can be loaded using
 
 ``` r
 
-sfm0 <- sfm <- stockflow("jdr")
+# sfm0 <- sfm <- stockflow("jdr")
 ```
 
 ## Step 4. Testing
@@ -615,7 +905,7 @@ test:
 
 ``` r
 
-verify(sfm) |> plot(status = "fail")
+sfm |> verify() |> plot(status = "fail")
 ```
 
 Despite demands being zero throughout the simulation, performance
@@ -624,7 +914,7 @@ reason for this implausible behaviour, namely in performance’s `eqn`:
 
 ``` r
 
-as.data.frame(sfm, name = performance, properties = "eqn")
+as.data.frame(sfm, vars = performance, properties = "eqn")
 #>   type        name                 eqn
 #> 1  aux performance engagement + energy
 ```
@@ -895,7 +1185,7 @@ Plot all tests:
 
 ``` r
 
-verify(sfm) |> plot(nrows = 3)
+sfm |> verify() |> plot(nrows = 3)
 ```
 
 ### Uncertainty
@@ -1096,10 +1386,12 @@ needs to be repeated in each new R session):
 
 ``` r
 
+# install_julia_env()
+```
+
+``` r
+
 use_julia()
-#> ℹ Activating Julia environment for sdbuildR at
-#>   /home/runner/work/_temp/Library/sdbuildR...
-#> ✔ Julia environment ready.
 ```
 
 Parallelization is also supported with Julia:
@@ -1148,7 +1440,7 @@ model for a thousand iterations:
 
 sims <- ensemble(sfm, n = 1000)
 #> Starting ensemble simulation in "Julia" with 1000 simulations.
-#> ✔ Ensemble simulation completed in 14.6905 seconds.
+#> ✔ Ensemble simulation completed in 8.6984 seconds.
 plot(sims, vars = c("engagement", "demands"))
 ```
 
@@ -1178,12 +1470,12 @@ n <- 100
 sims <- ensemble(sfm, n = n, conditions = conditions)
 #> Starting ensemble simulation in "Julia" with 300 simulations in total.
 #> ℹ 3 conditions x 100 simulations per condition.
-#> ✔ Ensemble simulation completed in 3.3762 seconds.
+#> ✔ Ensemble simulation completed in 3.6055 seconds.
 
 # Plot all trajectories
 plot(sims,
   which = "sims", sim = 1:n, alpha = .75,
-  nrows = 3, central_tendency = FALSE,
+  nrows = 3, central = "none",
   vars = c("engagement", "demands")
 )
 ```
@@ -1240,7 +1532,7 @@ Run a single simulation:
 
 ``` r
 
-simulate(sfm) |> plot()
+sfm |> simulate() |> plot()
 ```
 
 Run an ensemble simulation:
@@ -1250,9 +1542,9 @@ Run an ensemble simulation:
 sfm <- sim_settings(sfm, save_sims = TRUE)
 sims <- ensemble(sfm, n = n)
 #> Starting ensemble simulation in "Julia" with 100 simulations.
-#> ✔ Ensemble simulation completed in 2.8254 seconds.
+#> ✔ Ensemble simulation completed in 2.5563 seconds.
 plot(sims,
-  which = "sims", sim = 1:n, alpha = .75, central_tendency = FALSE,
+  which = "sims", sim = 1:n, alpha = .75, central = "none",
   vars = c("engagement", "demands", "motivation_rate")
 )
 ```
@@ -1269,7 +1561,7 @@ sfm <- sim_settings(sfm,
 )
 sims <- ensemble(sfm, n = n)
 #> Starting ensemble simulation in "Julia" with 1000 simulations.
-#> ✔ Ensemble simulation completed in 26.8954 seconds.
+#> ✔ Ensemble simulation completed in 27.9014 seconds.
 df <- as.data.frame(sims, direction = "wide", which = "sims")
 tab <- table(round(df$engagement)) |>
   prop.table() |>
@@ -1289,7 +1581,7 @@ A shorter intervention is not as effective.
 sfm2 <- update(sfm, duration, eqn = 7)
 sims2 <- ensemble(sfm2, n = n)
 #> Starting ensemble simulation in "Julia" with 1000 simulations.
-#> ✔ Ensemble simulation completed in 27.1334 seconds.
+#> ✔ Ensemble simulation completed in 27.685 seconds.
 df2 <- as.data.frame(sims2, direction = "wide", which = "sims")
 tab2 <- table(round(df2$engagement)) |>
   prop.table() |>
@@ -1342,7 +1634,7 @@ use_julia(stop = TRUE)
 ``` r
 
 sessionInfo()
-#> R version 4.6.0 (2026-04-24)
+#> R version 4.6.1 (2026-06-24)
 #> Platform: x86_64-pc-linux-gnu
 #> Running under: Ubuntu 24.04.4 LTS
 #> 
@@ -1363,31 +1655,31 @@ sessionInfo()
 #> [1] stats     graphics  grDevices utils     datasets  methods   base     
 #> 
 #> other attached packages:
-#> [1] lavaan_0.6-21    kableExtra_1.4.0 sdbuildR_2.0.0  
+#> [1] lavaan_0.6-21       kableExtra_1.4.0    sdbuildR_2.0.0.9000
 #> 
 #> loaded via a namespace (and not attached):
 #>  [1] tidyr_1.3.2          plotly_4.12.0        sass_0.4.10         
-#>  [4] generics_0.1.4       xml2_1.5.2           stringi_1.8.7       
+#>  [4] generics_0.1.4       xml2_1.6.0           stringi_1.8.7       
 #>  [7] digest_0.6.39        magrittr_2.0.5       evaluate_1.0.5      
-#> [10] grid_4.6.0           RColorBrewer_1.1-3   fastmap_1.2.0       
+#> [10] grid_4.6.1           RColorBrewer_1.1-3   fastmap_1.2.0       
 #> [13] jsonlite_2.0.0       this.path_2.8.0      deSolve_1.42        
 #> [16] httr_1.4.8           purrr_1.2.2          crosstalk_1.2.2     
 #> [19] viridisLite_0.4.3    scales_1.4.0         pbivnorm_0.6.0      
 #> [22] lazyeval_0.2.3       textshaping_1.0.5    jquerylib_0.1.4     
 #> [25] mnormt_2.1.2         cli_3.6.6            rlang_1.2.0         
-#> [28] withr_3.0.2          cachem_1.1.0         yaml_2.3.12         
-#> [31] otel_0.2.0           parallel_4.6.0       tools_4.6.0         
+#> [28] withr_3.0.3          cachem_1.1.0         yaml_2.3.12         
+#> [31] otel_0.2.0           parallel_4.6.1       tools_4.6.1         
 #> [34] JuliaConnectoR_1.1.5 dplyr_1.2.1          ggplot2_4.0.3       
-#> [37] vctrs_0.7.3          R6_2.6.1             stats4_4.6.0        
+#> [37] vctrs_0.7.3          R6_2.6.1             stats4_4.6.1        
 #> [40] lifecycle_1.0.5      stringr_1.6.0        fs_2.1.0            
 #> [43] htmlwidgets_1.6.4    MASS_7.3-65          ragg_1.5.2          
 #> [46] pkgconfig_2.0.3      desc_1.4.3           pkgdown_2.2.0       
 #> [49] bslib_0.11.0         pillar_1.11.1        gtable_0.3.6        
 #> [52] data.table_1.18.4    glue_1.8.1           systemfonts_1.3.2   
-#> [55] xfun_0.58            tibble_3.3.1         tidyselect_1.2.1    
+#> [55] xfun_0.59            tibble_3.3.1         tidyselect_1.2.1    
 #> [58] rstudioapi_0.19.0    knitr_1.51           farver_2.1.2        
 #> [61] htmltools_0.5.9      igraph_2.3.2         rmarkdown_2.31      
-#> [64] svglite_2.2.2        compiler_4.6.0       quadprog_1.5-8      
+#> [64] svglite_2.2.2        compiler_4.6.1       quadprog_1.5-8      
 #> [67] S7_0.2.2
 ```
 

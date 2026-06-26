@@ -33,7 +33,7 @@ A `data.frame` with columns `variable`, `min`, `mean`, `max`, `final`.
 ## Examples
 
 ``` r
-sfm <- stockflow("SIR")
+sfm <- stockflow("sir")
 sim <- simulate(sfm)
 summary(sim)
 #>      variable        min     mean      max        final

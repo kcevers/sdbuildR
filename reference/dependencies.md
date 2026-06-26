@@ -41,7 +41,7 @@ or if `reverse = TRUE`, which variables depend on it
 ## Examples
 
 ``` r
-sfm <- stockflow("SIR")
+sfm <- stockflow("sir")
 dependencies(sfm)
 #> $infected
 #> character(0)

@@ -14,9 +14,10 @@ install_julia_env(remove = FALSE)
 
 - remove:
 
-  If `TRUE`, remove Julia environment for sdbuildR. This will delete the
-  Manifest.toml file, as well as the SystemDynamicsBuildR.jl package.
-  All other Julia packages remain untouched.
+  If `TRUE`, remove Julia environment for sdbuildR. This will remove the
+  SystemDynamicsBuildR.jl package and delete the environment directory
+  (containing Project.toml and Manifest.toml). All other Julia packages
+  remain untouched.
 
 ## Value
 

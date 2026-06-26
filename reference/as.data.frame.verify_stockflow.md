@@ -17,6 +17,8 @@ as.data.frame(
   ignore_case = TRUE,
   status = c("pass", "fail", "error", "skip"),
   condition = NULL,
+  vars = NULL,
+  type = NULL,
   ...
 )
 ```
@@ -78,6 +80,17 @@ as.data.frame(
   `which = "sims"`, keeps only the matching condition simulations. For
   `which = "tests"`, keeps only tests belonging to those conditions.
 
+- vars:
+
+  Variable names to retain in the data frame. Only applies when
+  `which = "sims"`. Defaults to `NULL` to include all variables.
+
+- type:
+
+  Variable types to retain in the data frame. Must be one or more of
+  'stock', 'flow', 'constant', 'aux', 'gf', or 'func'. Only applies when
+  `which = "sims"`. Defaults to `NULL` to include all types.
+
 - ...:
 
   Additional arguments (unused).
@@ -115,7 +128,7 @@ Use `direction = "wide"` to pivot variables into columns.
 
 ``` r
 # Create model with 2 unit tests
-sfm <- stockflow("SIR") |>
+sfm <- stockflow("sir") |>
   unit_test(expr = all(susceptible >= 0)) |>
   # Add test with conditions
   unit_test(

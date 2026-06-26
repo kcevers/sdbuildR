@@ -3,6 +3,10 @@
 ``` r
 
 library(sdbuildR)
+
+# Disable WebGL: many plotly widgets per HTML page can exceed the browser WebGL
+# context limit and render blank. SVG always renders.
+options(sdbuildR.webgl = FALSE)
 ```
 
 Stock-and-flow models represent systems as states (stocks) that
@@ -12,7 +16,7 @@ models from scratch using sdbuildR. It covers the basics of
 stock-and-flow modelling in the context of psychology with an example of
 burnout. Note that this vignette serves as online supplemental material
 A accompanying the paper *Formalizing Psychological Theory with
-stockflow: A Stock-and-Flow Modelling Tutorial in R* by Evers et
+sdbuildR: A Stock-and-Flow Modelling Tutorial in R* by Evers et
 al. (under review). To reproduce the figures in the paper, please see
 the corresponding .Rmd file.
 
@@ -34,6 +38,431 @@ outflow, the water remains in the bathtub; without an inflow, the
 bathtub stays empty. This structure is the foundation of stock-and-flow
 models, where stocks represent the state of a system, and flows
 represent the processes that alter that state over time.
+
+``` r
+
+
+# # --- Adjustable settings -----------------------------------------------------
+# t0 <- 0   # start (inflow == outflow, stock flat)
+# t1 <- 2   # equal -> rise: inflow > outflow
+# t2 <- 4   
+# t3 <- 6   # rise  -> fall: outflow > inflow
+# t4 <- 8   
+
+
+# sfm <- stockflow() |>
+# stock(Stock, eqn = 1) |>
+# custom_func(func1, eqn = pulse(times, start = !!t1, width = !!t2 - !!t1, height = .5)) |>
+# custom_func(func2, eqn = pulse(times, start = !!t3, width = !!t4 - !!t3, height = .5)) |>
+# # custom_func(func3, eqn = pulse(times, start = 4, 
+# # # Make width large just in case
+# # width = 4, height = .5)) |>
+# flow(Inflow, eqn = 1 + func1(t), to = Stock) |>
+# flow(Outflow, eqn = 1 + func2(t), from = Stock) |>
+# sim_settings(only_stocks=FALSE)
+
+# sim <- simulate(sfm, stop = 10)
+# df_stock <- as.data.frame(sim, vars = "Stock")
+# df_in    <- as.data.frame(sim, vars = "Inflow")
+# df_out   <- as.data.frame(sim, vars = "Outflow")
+
+
+
+# increase_col   <- inflow_col # 'rgba(46, 134, 171, 1)'   # inflow > outflow: arrow + shade
+# rise_fill  <- inflow_fill # 'rgba(46, 134, 171, 0.3)'
+# decrease_col   <- outflow_col # 'rgba(231, 76, 60, 1)'    # outflow > inflow: arrow + shade
+# fall_fill  <- outflow_fill # 'rgba(231, 76, 60, 0.3)'
+# size_marker <- 8
+# line_width  <- 5
+
+# # Stock value at each time point (robust to non-exact time matches)
+# stock_at <- function(tt) df_stock$value[which.min(abs(df_stock$time - tt))]
+# y0 <- stock_at(t0); y1 <- stock_at(t1); y2 <- stock_at(t2); y3 <- stock_at(t3); y4 <- stock_at(t4)
+
+# # Closed polygon spanning the gap between inflow and outflow over [a, b]
+# band <- function(a, b){
+#   ti <- df_in$time  >= a & df_in$time  <= b
+#   to <- df_out$time >= a & df_out$time <= b
+#   list(x = c(df_in$time[ti], rev(df_out$time[to])),
+#        y = c(df_in$value[ti], rev(df_out$value[to])))
+# }
+# band_rise <- band(t1, t2)   # inflow > outflow
+# band_fall <- band(t3, t4)   # outflow > inflow
+
+# # --- Top panel: stock with a change indicator per phase ----------------------
+# fig1 <- plot_ly(df_stock, x = ~time, y = ~value, type = 'scatter',
+# showlegend = FALSE,
+#                 mode = 'lines', name = 'Stock', line = list(color = stock_col, width = line_width)) 
+                
+                
+# # markers at the phase boundaries
+# fig1 <- fig1 |>
+#   add_trace(x = c(t1), y = c(y1), mode = 'markers', name = 't1', showlegend = FALSE,
+#             marker = list(color = increase_col, size = size_marker)) |>
+#   add_trace(x = c(t2), y = c(y2), mode = 'markers', name = 't2', showlegend = FALSE,
+#             marker = list(color = increase_col, size = size_marker)) |>
+#   add_trace(x = c(t3), y = c(y3), mode = 'markers', name = 't3', showlegend = FALSE,
+#             marker = list(color = decrease_col, size = size_marker)) |>
+#   add_trace(x = c(t4), y = c(y4), mode = 'markers', name = 't4', showlegend = FALSE,
+#             marker = list(color = decrease_col, size = size_marker))
+            
+
+# # # Horizontal reference lines at the end-of-phase levels (rise and fall phases)            
+# # fig1 <- fig1 |>
+# #   # horizontal reference line at the end-of-phase level (rise phase)
+# #   add_trace(x = c(t1, t2), y = c(y1, y1), mode = 'lines', name = 'rise',
+# #             line = list(width = line_width,
+# #               # dash = 'dot', 
+# #             color = increase_col), showlegend = FALSE) |>
+# #   # horizontal reference line at the end-of-phase level (fall phase)
+# #   add_trace(x = c(t3, t4), y = c(y3, y3), mode = 'lines', name = 'fall',
+# #             line = list(width = line_width,
+# #               # dash = 'dot', 
+# #             color = decrease_col), showlegend = FALSE)
+
+
+
+
+# # --- Bottom panel: inflow & outflow with the difference shaded ----------------
+# fig2 <- plot_ly() |>
+#   add_trace(x = band_rise$x, y = band_rise$y, type = 'scatter', mode = 'lines',
+#             fill = 'toself', fillcolor = rise_fill, line = list(width = 0),
+#             showlegend = FALSE,
+#             name = 'Inflow > Outflow', hoverinfo = 'skip') |>
+#   add_trace(x = band_fall$x, y = band_fall$y, type = 'scatter', mode = 'lines',
+#             fill = 'toself', fillcolor = fall_fill, line = list(width = 0),
+#             showlegend = FALSE,
+#             name = 'Outflow > Inflow', hoverinfo = 'skip') |>
+#   add_trace(data = df_in, x = ~time, y = ~value, type = 'scatter', mode = 'lines',
+#             name = 'Inflow', line = list(color = increase_col, width = line_width)) |>
+#   add_trace(data = df_out, x = ~time, y = ~value, type = 'scatter', mode = 'lines',
+#             name = 'Outflow', line = list(color = decrease_col, width = line_width, dash = 'dash'))
+
+
+# # Vertical reference lines at the end-of-phase levels (rise and fall phases)            
+# add_vert_lines <- function(fig, y_range = c(0, 2.5)) {
+#   fig |> 
+#     add_trace(x = c(t1, t1), y = y_range, mode = 'lines', name = 't1',
+#              line = list(width = 2, dash = 'dot', color = increase_col), showlegend = FALSE) |>
+#     add_trace(x = c(t2, t2), y = y_range, mode = 'lines', name = 't2',
+#               line = list(width = 2, dash = 'dot', color = increase_col), showlegend = FALSE) |>
+#     add_trace(x = c(t3, t3), y = y_range, mode = 'lines', name = 't3',
+#               line = list(width = 2, dash = 'dot', color = decrease_col), showlegend = FALSE) |>
+#     add_trace(x = c(t4, t4), y = y_range, mode = 'lines', name = 't4',
+#               line = list(width = 2, dash = 'dot', color = decrease_col), showlegend = FALSE)
+# }
+
+# fig1 <- add_vert_lines(fig1)
+# fig2 <- add_vert_lines(fig2)
+
+# # --- Combine panels ----------------------------------------------------------
+# sp_margin <- 0.12                       # vertical gap between the two panels (paper)
+# top_margin <- 100
+# pad_axis <- .2
+# fig <- plotly::subplot(fig1, fig2, nrows = 2, shareX = TRUE, titleY = TRUE,
+#                        margin = sp_margin)
+
+# # --- Phase labels above each panel -------------------------------------------
+# annot_ <- utils::modifyList(annot, list(
+#   font = list(size = font_size_subplot - 2, family = font_family)
+# ))
+# top_y    <- 1.0                         # top labels sit just above the top panel
+# bot_y    <- (0.5 - sp_margin) + 0.01    # bottom labels sit just above bottom panel
+# # bot_y    <- (0.5 - sp_margin) - 0.1
+
+# # phase mid-points on the (shared) data x-axis, used to centre each label
+# centers  <- c((t0 + t1)/2, (t1 + t2)/2, (t2 + t3)/2, (t3 + t4)/2, (t4 + 10)/2)
+# top_text <- paste0("<i>", c("Static", "Increases", "Static", "Decreases", "Static"), "</i>")
+# bot_text <- paste0("<i>", c("Inflow ≡ Outflow", "Inflow > Outflow", "Inflow ≡ Outflow",
+#               "Inflow < Outflow", "Inflow == Outflow"), "</i>")
+
+# phase_label <- function(text, x, y) list(
+#   x = x, y = y, text = text, xref = 'x', yref = 'paper',
+#   xanchor = 'center', yanchor = 'bottom', showarrow = FALSE, font = annot_
+# )
+
+# # arrows live in the combined layout: xref 'x' = shared axis, yref 'y' = top panel
+# arrow_anns <- list(
+#   # vertical arrow: change while inflow > outflow (stock rises)
+#   list(x = t2, y = y2, ax = t2, ay = y1,
+#        xref = 'x', yref = 'y', axref = 'x', ayref = 'y',
+#        showarrow = TRUE, arrowhead = 3, arrowsize = 1.5,
+#        arrowwidth = 2, arrowcolor = increase_col, text = ''),
+#   # vertical arrow: change while outflow > inflow (stock falls)
+#   list(x = t4, y = y4, ax = t4, ay = y3,
+#        xref = 'x', yref = 'y', axref = 'x', ayref = 'y',
+#        showarrow = TRUE, arrowhead = 3, arrowsize = 1.5,
+#        arrowwidth = 2, arrowcolor = decrease_col, text = '')
+# )
+
+# label_anns <- c(
+#   Map(phase_label, top_text, centers, MoreArgs = list(y = bot_y + .22)),
+#   Map(phase_label, bot_text, centers, MoreArgs = list(y = bot_y - .07))
+# )
+
+# fig <- fig |> layout(
+#   # unname(): Map() returns a named list, which plotly mis-parses
+#   annotations = unname(c(
+#     # arrow_anns, 
+#   label_anns)),
+#   margin = list(t = top_margin)                 # headroom for the top labels
+# ) |>
+#   plotly::layout(
+#     xaxis = list(title = ""),
+#     yaxis = list(title = "Units", range = c(1 - pad_axis, 2 + pad_axis),
+#      tickvals = c(1, 2), ticktext = c("1", "2")),
+#     yaxis2 = list(title = "Units / Time", range = c(1 - pad_axis, 1.5 + pad_axis), 
+#                   tickvals = c(1, 1.5), ticktext = c("1", "1.5")),
+#     font = annot_font,
+#     annotations = list(
+#       utils::modifyList(annot_xlab, list(text = "<i>Timeseries of Stock</i>", x = 0.5, y = top_y + .15)),
+#       utils::modifyList(annot_xlab, list(text = "<i>Timeseries of Flows</i>", x = 0.5, y = bot_y + .15)),
+#       phase_label("<i>Area = Increase\nin stock</i>", x = centers[2], y = bot_y - .25),
+#       phase_label("<i>Area = Decrease\nin stock</i>", x = centers[4], y = bot_y - .25),
+#       utils::modifyList(annot_xlab, list(text = "Time", x = 0.5, y = -0.05))
+#     ),
+#     legend = utils::modifyList(annot_legend, list(
+#       itemwidth = 50,
+#       traceorder = "normal", 
+#       # y = -0.15
+#       y = bot_y+.09
+#       ))
+#   )
+
+
+
+# # # --- Vertical lines spanning BOTH panels -------------------------------------
+# # # x positions and colors for the vertical lines
+# # x_lines  <- c(t1, t2, t3, t4)
+# # col_lines <- c(increase_col, increase_col, decrease_col, decrease_col)
+
+# # # build a list of shape objects: xref 'x' = shared data axis,
+# # # yref 'paper' with y0=0/y1=1 spans the whole figure height (across the gap)
+# # shapes_list <- lapply(seq_along(x_lines), function(i) {
+# #   list(
+# #     type = "line",
+# #     x0 = x_lines[i], x1 = x_lines[i],
+# #     y0 = 0, y1 = 1,       # span entire figure vertically
+# #     xref = "x",
+# #     yref = "paper",
+# #     line = list(
+# #       color = col_lines[i],
+# #       width = 2,
+# #       dash  = "dot"
+# #     )
+# #   )
+# # })
+
+# # # NOTE: `fig |> layout(shapes = shapes_list)` silently DROPS a list of shapes
+# # # when `fig` is a subplot, and attaching them before subplot() rescales
+# # # yref="paper" to a single panel. Assigning x$layout$shapes directly is the only
+# # # route that keeps every shape AND spans the full figure height.
+# # fig$x$layout$shapes <- shapes_list
+
+
+# if (recreate_figs) {
+#   export_plot(fig, file.path(filepath_figs, "build_stock_flow_phases2.pdf"),
+#     width = 6.2, height = 4.75
+#   )
+# }
+
+
+# fig
+```
+
+``` r
+
+
+# Time points for the four phases of stock change (rise and fall)
+t0 <- 0   # start (inflow == outflow, stock flat)
+t1 <- 2   # equal -> rise: inflow > outflow
+t2 <- 4   
+t3 <- 6   # rise  -> fall: outflow > inflow
+t4 <- 8   
+
+
+sfm <- stockflow() |>
+stock(Stock, eqn = 1) |>
+custom_func(func1, eqn = pulse(times, start = !!t1, width = !!t2 - !!t1, height = .5)) |>
+custom_func(func2, eqn = pulse(times, start = !!t3, width = !!t4 - !!t3, height = .5)) |>
+# custom_func(func3, eqn = pulse(times, start = 4, 
+# # Make width large just in case
+# width = 4, height = .5)) |>
+flow(Inflow, eqn = 1 + func1(t), to = Stock) |>
+flow(Outflow, eqn = 1 + func2(t), from = Stock) |>
+sim_settings(only_stocks=FALSE)
+
+sim <- simulate(sfm, stop = 10)
+df_stock <- as.data.frame(sim, vars = "Stock")
+df_in    <- as.data.frame(sim, vars = "Inflow")
+df_out   <- as.data.frame(sim, vars = "Outflow")
+df_change <- df_in
+df_change$value <- df_change$value - df_out$value
+
+
+size_marker <- 8
+line_width_thick  <- 5
+
+# Stock value at each time point (robust to non-exact time matches)
+stock_at <- function(tt) df_stock$value[which.min(abs(df_stock$time - tt))]
+y0 <- stock_at(t0); y1 <- stock_at(t1); y2 <- stock_at(t2); y3 <- stock_at(t3); y4 <- stock_at(t4)
+
+# --- Top panel: stock with a change indicator per phase ----------------------
+fig1 <- plotly::plot_ly(df_stock, x = ~time, y = ~value, type = 'scatter',
+showlegend = FALSE,
+                mode = 'lines', name = 'Stock', line = list(color = stock_col, width = line_width_thick)) 
+                
+                
+# markers at the phase boundaries
+fig1 <- fig1 |>
+  plotly::add_trace(x = c(t1), y = c(y1), mode = 'markers', name = 't1', showlegend = FALSE,
+            marker = list(color = increase_col, size = size_marker)) |>
+  plotly::add_trace(x = c(t2), y = c(y2), mode = 'markers', name = 't2', showlegend = FALSE,
+            marker = list(color = increase_col, size = size_marker)) |>
+  plotly::add_trace(x = c(t3), y = c(y3), mode = 'markers', name = 't3', showlegend = FALSE,
+            marker = list(color = decrease_col, size = size_marker)) |>
+  plotly::add_trace(x = c(t4), y = c(y4), mode = 'markers', name = 't4', showlegend = FALSE,
+            marker = list(color = decrease_col, size = size_marker))
+
+
+# --- Bottom panel: inflow & outflow with the difference shaded ----------------
+fig2 <- plotly::plot_ly() 
+
+# Vertical reference lines at the end-of-phase levels (rise and fall phases)            
+add_vert_lines <- function(fig, y_range = c(-2.5, 2.5)) {
+  fig |> 
+    plotly::add_trace(x = c(t1, t1), y = y_range, mode = 'lines', name = 't1',
+             line = list(width = 2, dash = 'dot', color = increase_col), showlegend = FALSE) |>
+    plotly::add_trace(x = c(t2, t2), y = y_range, mode = 'lines', name = 't2',
+              line = list(width = 2, dash = 'dot', color = increase_col), showlegend = FALSE) |>
+    plotly::add_trace(x = c(t3, t3), y = y_range, mode = 'lines', name = 't3',
+              line = list(width = 2, dash = 'dot', color = decrease_col), showlegend = FALSE) |>
+    plotly::add_trace(x = c(t4, t4), y = y_range, mode = 'lines', name = 't4',
+              line = list(width = 2, dash = 'dot', color = decrease_col), showlegend = FALSE)
+}
+
+fig1 <- add_vert_lines(fig1)
+fig2 <- add_vert_lines(fig2)
+
+# Net flow
+fig2 <- fig2 |>
+  plotly::add_trace(data = df_change, x = ~time, y = ~value, type = 'scatter', mode = 'lines',
+  showlegend = FALSE, fill = 'tozeroy',
+  fillcolor = ifelse(df_change$value >= 0, increase_fill, decrease_fill),
+            name = 'Net Flow', line = list(width = 0)) |>
+
+  plotly::add_trace(data = df_change, x = ~time, y = ~value, type = 'scatter', mode = 'lines',
+  showlegend = FALSE, 
+            name = 'Net Flow', line = list(color = flow_col, width = line_width_thick)) 
+
+
+# --- Combine panels ----------------------------------------------------------
+sp_margin <- 0.12                       # vertical gap between the two panels (paper)
+top_margin <- 80 #40
+pad_axis <- .1
+pad_axis2 <- .25
+fig <- plotly::subplot(fig1, fig2, nrows = 2, shareX = FALSE, titleY = TRUE,
+heights = c(.5, .5),
+                       margin = sp_margin)
+#> A line object has been specified, but lines is not in the mode
+#> Adding lines to the mode...
+#> A line object has been specified, but lines is not in the mode
+#> Adding lines to the mode...
+#> A line object has been specified, but lines is not in the mode
+#> Adding lines to the mode...
+#> A line object has been specified, but lines is not in the mode
+#> Adding lines to the mode...
+#> No trace type specified:
+#>   Based on info supplied, a 'scatter' trace seems appropriate.
+#>   Read more about this trace type -> https://plotly.com/r/reference/#scatter
+#> No trace type specified:
+#>   Based on info supplied, a 'scatter' trace seems appropriate.
+#>   Read more about this trace type -> https://plotly.com/r/reference/#scatter
+#> No trace type specified:
+#>   Based on info supplied, a 'scatter' trace seems appropriate.
+#>   Read more about this trace type -> https://plotly.com/r/reference/#scatter
+#> No trace type specified:
+#>   Based on info supplied, a 'scatter' trace seems appropriate.
+#>   Read more about this trace type -> https://plotly.com/r/reference/#scatter
+
+# --- Phase labels above each panel -------------------------------------------
+annot_ <- utils::modifyList(annot, list(
+  font = list(size = font_size_subplot - 2, family = font_family)
+))
+top_y    <- 1.0                         # top labels sit just above the top panel
+bot_y    <- (0.5 - sp_margin) + 0.01    # bottom labels sit just above bottom panel
+top_text_y <- c(bot_y + c(.265, .35, .58, .35, .265))
+bot_text_y <- c(bot_y - c(.195, .065, .195, .39, .195))
+top_angles <- c(0, -43, 0, 43, 0)
+bot_angles <- c(0, 0, 0, 0, 0)
+# bot_y    <- (0.5 - sp_margin) - 0.1
+
+# phase mid-points on the (shared) data x-axis, used to centre each label
+centers  <- c((t0 + t1)/2, (t1 + t2)/2, (t2 + t3)/2, (t3 + t4)/2, (t4 + 10)/2)
+centers_top <- centers
+centers_top[c(2, 4)] <- centers_top[c(2, 4)] + c(-.17, .17)   # shift the bottom labels for the rise/fall phases
+top_text <- paste0("<i>", c("Static", "Increases", "Static", "Decreases", "Static"), "</i>")
+bot_text <- paste0("<i>", c("Inflow ≡ Outflow", "Inflow > Outflow", "Inflow ≡ Outflow",
+              "Inflow < Outflow", "Inflow ≡ Outflow"), "</i>")
+
+phase_label <- function(text, x, y, angle = 0) list(
+  x = x, y = y, text = text, xref = 'x', yref = 'paper',
+  textangle = angle,
+  xanchor = 'center', yanchor = 'bottom', showarrow = FALSE, font = annot_
+)
+
+
+label_anns <- c(
+  lapply(seq_along(top_text), function(i) phase_label(top_text[i], centers_top[i], y = top_text_y[i], angle = top_angles[i])),
+  lapply(seq_along(bot_text), function(i) phase_label(bot_text[i], centers[i], y = bot_text_y[i], angle = bot_angles[i]))
+)
+
+fig <- fig |> 
+plotly::layout(
+  # unname(): Map() returns a named list, which plotly mis-parses
+  annotations = unname(c(
+  label_anns)),
+  margin = list(t = top_margin)                 # headroom for the top labels
+) |>
+  plotly::layout(
+    xaxis = list(title = "", showline = TRUE, zerolinewidth = 0, showgrid = FALSE),
+    xaxis2 = list(title = "", showline = TRUE, showgrid = FALSE,
+                              zerolinecolor = '#ffff',
+ zerolinewidth = 0),
+    yaxis = list(title = "Units", showgrid = FALSE,
+    # showline = TRUE,
+     range = c(1 - pad_axis, 2 + pad_axis),
+     tickvals = c(1, 2), ticktext = c("1", "2")),
+    yaxis2 = list(title = "Units / Time", 
+    zerolinewidth = 0, showgrid = FALSE,
+    showline = TRUE, 
+    range = c(-.5 - pad_axis2, .5 + pad_axis2), 
+                  tickvals = c(-.5, .5), ticktext = c("-0.5", "0.5")),
+    font = annot_font,
+    annotations = list(
+      utils::modifyList(annot_xlab, list(text = "<i>A. Stock-and-Flow Diagram</i>", x = 0.5, y = top_y + .22)),
+      utils::modifyList(annot_xlab, list(text = "<i>B. Timeseries of Stock</i>", x = 0.5, y = top_y + .13)),
+      utils::modifyList(annot_xlab, list(text = "<i>C. Timeseries of Change in Stock</i>", x = 0.5, 
+      y = bot_y + .11)),
+      phase_label("<i>Area = Increase\nin stock</i>", x = centers[2], 
+      
+      y = bot_y - .2
+      ),
+      phase_label("<i>Area = Decrease\nin stock</i>", x = centers[4], y = bot_y - .325),
+      utils::modifyList(annot_xlab, list(text = "Time", x = 0.5, y = -0.06))
+    )
+  )
+
+
+if (recreate_figs) {
+  export_plot(fig, file.path(filepath_figs, "build_stock_flow_phases.pdf"),
+    width = 6, height = 4.2
+  )
+}
+
+
+fig
+```
 
 Stock-and-flow models provide an intuitive way to formalize
 psychological theories as many are fundamentally concerned with change
@@ -76,7 +505,9 @@ in the simulation output, not just the stocks:
 
 ``` r
 
-sfm <- sim_settings(sfm, stop = 16, time_units = "weeks", only_stocks = FALSE)
+sfm <- sim_settings(sfm, stop = 16, time_units = "weeks",
+ only_stocks = FALSE
+ )
 ```
 
 A model name can be supplied with
@@ -116,7 +547,9 @@ the resulting timeseries:
 
 ``` r
 
-simulate(sfm) |> plot()
+sfm |>
+  simulate() |>
+  plot()
 ```
 
 Above, we use the pipe operator `|>` for better legibility. It simply
@@ -164,7 +597,9 @@ from work:
 
 ``` r
 
-simulate(sfm) |> plot()
+sfm |>
+  simulate() |>
+  plot()
 ```
 
 As shown in the plot, energy decreases with a constant rate at each time
@@ -186,7 +621,9 @@ modify the outflow using
 
 sfm <- update(sfm, work, eqn = work_rate * energy)
 
-simulate(sfm) |> plot()
+sfm |>
+  simulate() |>
+  plot()
 ```
 
 Energy now follows an exponential decay pattern, where work now depletes
@@ -205,7 +642,9 @@ simple constant rate:
 sfm <- constant(sfm, recovery_rate, eqn = .3, label = "Recovery Rate") |>
   flow(recovery, eqn = recovery_rate, to = energy, label = "Recovery")
 
-simulate(sfm) |> plot()
+sfm |>
+  simulate() |>
+  plot()
 ```
 
 Flows can differ in their rates, meaning some processes are slower or
@@ -232,7 +671,9 @@ sfm <- flow(sfm, erosion,
   eqn = recovery_rate * work,
   from = recovery_rate, label = "Recovery Erosion"
 )
-simulate(sfm) |> plot()
+sfm |>
+  simulate() |>
+  plot()
 ```
 
 The plot shows how the erosion of the ability to recover produces a
@@ -246,18 +687,19 @@ can be used in flow equations or to monitor other dynamic quantities:
 
 ``` r
 
-# Add auxiliary to keep track of net change in energy (inflow - outflow)
-sfm <- aux(sfm, net_change, eqn = recovery - work, label = "Net change in energy")
-simulate(sfm) |> plot()
+# Add auxiliary to keep track of net flow to energy (inflow - outflow)
+sfm <- aux(sfm, net_flow, eqn = recovery - work, label = "Net flow to energy")
+sfm |>
+  simulate() |>
+  plot()
 ```
 
-The net change in energy is initially positive, as recovery exceeds
-energy depletion from work. As erosion progressively reduces the
-recovery rate, this inflow weakens, eventually falling below the outflow
-from work. The net change in energy is negative, and energy begins to
-decline, leading to the observed collapse. This complex behaviour is
-produced by a simple stock-and-flow model consisting of two stocks and
-three flows:
+The net flow to energy is initially positive, as recovery exceeds energy
+depletion from work. As erosion progressively reduces the recovery rate,
+this inflow weakens, eventually falling below the outflow from work. The
+net flow to energy is negative, and energy begins to decline, leading to
+the observed collapse. This complex behaviour is produced by a simple
+stock-and-flow model consisting of two stocks and three flows:
 
 ``` r
 
@@ -515,7 +957,7 @@ To remove a variable from the model, use
 
 ``` r
 
-sfm <- discard(sfm, net_change)
+sfm <- discard(sfm, net_flow)
 ```
 
 Note that this cannot be undone!

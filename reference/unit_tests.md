@@ -44,7 +44,7 @@ An object of class `unit_tests_stockflow`, printed automatically.
 ## Examples
 
 ``` r
-sfm <- stockflow("SIR") |>
+sfm <- stockflow("sir") |>
   unit_test(expr = all(susceptible >= 0)) |>
   unit_test(
     label = "recovered increases over time",

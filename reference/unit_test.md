@@ -100,7 +100,7 @@ another test.
 ## Examples
 
 ``` r
-sfm <- stockflow("SIR") |>
+sfm <- stockflow("sir") |>
   unit_test(expr = all(susceptible >= 0))
 
 # Run unit tests

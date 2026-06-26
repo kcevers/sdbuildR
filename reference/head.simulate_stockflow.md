@@ -36,7 +36,7 @@ A data.frame with the first rows of the simulation results.
 ## Examples
 
 ``` r
-sfm <- stockflow("SIR")
+sfm <- stockflow("sir")
 sim <- simulate(sfm)
 head(sim)
 #>   time variable    value

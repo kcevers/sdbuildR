@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">sdbuildR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -39,7 +39,7 @@
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Plot timeseries of ensemble simulation</h1>
-      <small class="dont-index">Source: <a href="https://github.com/KCEvers/sdbuildR/blob/v2.0.0/R/plot.R" class="external-link"><code>R/plot.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/KCEvers/sdbuildR/blob/stockflow/R/plot.R" class="external-link"><code>R/plot.R</code></a></small>
       <div class="d-none name"><code>plot.ensemble_stockflow.Rd</code></div>
     </div>
 
@@ -62,15 +62,21 @@
 <span>  shareX <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  shareY <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  palette <span class="op">=</span> <span class="st">"Dark 2"</span>,</span>
-<span>  alpha <span class="op">=</span> <span class="fl">0.3</span>,</span>
+<span>  alpha <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>central <span class="op">=</span> <span class="fl">1</span>, spread <span class="op">=</span> <span class="fl">0.3</span>, sims <span class="op">=</span> <span class="fl">0.3</span><span class="op">)</span>,</span>
 <span>  colors <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  line_width <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>central <span class="op">=</span> <span class="fl">3</span>, spread <span class="op">=</span> <span class="fl">0</span>, sims <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span>
 <span>  font_family <span class="op">=</span> <span class="st">"Times New Roman"</span>,</span>
 <span>  font_size <span class="op">=</span> <span class="fl">16</span>,</span>
 <span>  wrap_width <span class="op">=</span> <span class="fl">25</span>,</span>
 <span>  showlegend <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  label_subplots <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  central_tendency <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"mean"</span>, <span class="st">"median"</span>, <span class="cn">FALSE</span><span class="op">)</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>,</span>
-<span>  central_tendency_width <span class="op">=</span> <span class="fl">3</span>,</span>
+<span>  central <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"mean"</span>, <span class="st">"median"</span>, <span class="st">"none"</span><span class="op">)</span>,</span>
+<span>  spread <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"quantile"</span>, <span class="st">"sd"</span>, <span class="st">"range"</span><span class="op">)</span>,</span>
+<span>  format_label <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  condition_display <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"subplots"</span>, <span class="st">"slider"</span>, <span class="st">"dropdown"</span><span class="op">)</span>,</span>
+<span>  control_options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  animation <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"none"</span>, <span class="st">"time"</span><span class="op">)</span>,</span>
+<span>  webgl <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"sdbuildR.webgl"</span>, default <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -92,15 +98,15 @@
 
 
 <dt id="arg-condition">condition<a class="anchor" aria-label="anchor" href="#arg-condition"></a></dt>
-<dd><p>Indices of the condition to plot. Defaults to 1:9. If only one condition is specified, the plot will not be a grid of subplots.</p></dd>
+<dd><p>Indices of the condition(s) to plot. Defaults to 1:9.</p></dd>
 
 
 <dt id="arg-vars">vars<a class="anchor" aria-label="anchor" href="#arg-vars"></a></dt>
-<dd><p>Variables to plot. Defaults to NULL to plot all variables.</p></dd>
+<dd><p>Variables to plot. Defaults to <code>NULL</code> to plot all variables.</p></dd>
 
 
 <dt id="arg-show-constants">show_constants<a class="anchor" aria-label="anchor" href="#arg-show-constants"></a></dt>
-<dd><p>If TRUE, include constants in plot. Defaults to FALSE.</p></dd>
+<dd><p>If <code>TRUE</code>, include constants in plot. Defaults to <code>FALSE</code>.</p></dd>
 
 
 <dt id="arg-nrows">nrows<a class="anchor" aria-label="anchor" href="#arg-nrows"></a></dt>
@@ -124,11 +130,28 @@
 
 
 <dt id="arg-alpha">alpha<a class="anchor" aria-label="anchor" href="#arg-alpha"></a></dt>
-<dd><p>Trajectory opacity. Defaults to <code>1</code>.</p></dd>
+<dd><p>Opacity, with the same grammar as <code>line_width</code>: a single value, a
+named per-variable vector, or a list keyed by layer (<code>central</code>/<code>spread</code>/
+<code>sims</code>). Defaults to <code>list(central = 1, spread = 0.3, sims = 0.3)</code>.</p></dd>
 
 
 <dt id="arg-colors">colors<a class="anchor" aria-label="anchor" href="#arg-colors"></a></dt>
-<dd><p>Vector of colours. If NULL, the color palette will be used. If specified, will override palette. The number of colours must be equal to the number of variables in the simulation data frame. Defaults to NULL.</p></dd>
+<dd><p>Colours for the plotted variables. A named vector (names are
+variable names) sets the colours of those variables and the palette fills
+the rest, so you can recolour only a few variables. An unnamed vector
+assigns colours in plot order. <code>NULL</code> uses <code>palette</code>. Defaults to <code>NULL</code>.</p></dd>
+
+
+<dt id="arg-line-width">line_width<a class="anchor" aria-label="anchor" href="#arg-line-width"></a></dt>
+<dd><p>Line width(s). The plot draws three layers: the central
+tendency line (<code>central</code>), the uncertainty band's border (<code>spread</code>), and the
+individual trajectories (<code>sims</code>). Supply a single value (used for every
+layer and variable), a named per-variable vector (names are variable names;
+unnamed values fill in plot order), or a list keyed by layer
+(<code>list(central = , spread = , sims = )</code>) whose elements are themselves a
+single value or per-variable vector. Unspecified layers/variables fall back
+to the defaults. Defaults to <code>list(central = 3, spread = 0, sims = 1)</code>
+(a <code>spread</code> width of <code>0</code> draws no band border).</p></dd>
 
 
 <dt id="arg-font-family">font_family<a class="anchor" aria-label="anchor" href="#arg-font-family"></a></dt>
@@ -151,12 +174,61 @@
 <dd><p>Whether to plot labels indicating the condition of the subplot.</p></dd>
 
 
-<dt id="arg-central-tendency">central_tendency<a class="anchor" aria-label="anchor" href="#arg-central-tendency"></a></dt>
-<dd><p>Central tendency to use for the mean line. Either "mean", "median", or FALSE to not plot the central tendency. Defaults to "mean".</p></dd>
+<dt id="arg-central">central<a class="anchor" aria-label="anchor" href="#arg-central"></a></dt>
+<dd><p>Which central-tendency line to draw, given as preferences in
+order: the first one that <code><a href="ensemble.html">ensemble()</a></code> computed is used. For example,
+<code>c("mean", "median")</code> draws the mean if it is available, otherwise the
+median, and <code>"none"</code> draws no line. Defaults to <code>c("mean", "median", "none")</code>.</p></dd>
 
 
-<dt id="arg-central-tendency-width">central_tendency_width<a class="anchor" aria-label="anchor" href="#arg-central-tendency-width"></a></dt>
-<dd><p>Line width of central tendency. Defaults to 3.</p></dd>
+<dt id="arg-spread">spread<a class="anchor" aria-label="anchor" href="#arg-spread"></a></dt>
+<dd><p>Which uncertainty band to draw, again as ordered preferences:
+<code>"quantile"</code> (between the lowest and highest quantile), <code>"sd"</code> (the central
+line plus/minus one standard deviation), <code>"range"</code> (between <code>min</code> and
+<code>max</code>), or <code>"none"</code>. The first band the computed statistics can support is
+used; <code>"sd"</code> also needs a central line. Defaults to <code>c("quantile", "sd", "range")</code>.</p></dd>
+
+
+<dt id="arg-format-label">format_label<a class="anchor" aria-label="anchor" href="#arg-format-label"></a></dt>
+<dd><p>If <code>TRUE</code>, apply default formatting (replacing periods and
+underscores with spaces) to variable labels that are the same as the
+variable name. Applies to the legend and any condition controls. Defaults to
+<code>TRUE</code>.</p></dd>
+
+
+<dt id="arg-condition-display">condition_display<a class="anchor" aria-label="anchor" href="#arg-condition-display"></a></dt>
+<dd><p>How to display multiple conditions. Use <code>"subplots"</code>
+to show conditions as panels, <code>"slider"</code> to select one condition with a
+slider, or <code>"dropdown"</code> to select one condition with a dropdown. Defaults
+to <code>"subplots"</code>.</p></dd>
+
+
+<dt id="arg-control-options">control_options<a class="anchor" aria-label="anchor" href="#arg-control-options"></a></dt>
+<dd><p>Named list fine-tuning the <code>"slider"</code>/<code>"dropdown"</code>
+condition control. Supports <code>max_labels</code>: the maximum number of
+slider tick labels to keep visible when many conditions are varied (the
+slider always keeps one step per condition; intermediate labels are thinned
+above this count); and <code>spacing</code>: the vertical gap (in paper units) between
+stacked controls when several condition parameters are varied. By default
+the spacing and the reserved bottom margin are sized automatically so the
+controls never overlap each other or the x-axis title; pass a number to
+widen or tighten the gap. Defaults to <code>list(max_labels = 10, spacing = NULL)</code>.</p></dd>
+
+
+<dt id="arg-animation">animation<a class="anchor" aria-label="anchor" href="#arg-animation"></a></dt>
+<dd><p>Animation mode. Use <code>"none"</code> for a static plot or <code>"time"</code>
+to cumulatively reveal trajectories over time. Defaults to <code>"none"</code>.
+Time animation requires <code>which = "sims"</code> (confidence ribbons cannot be
+animated) and a single condition (one panel); combining it with
+<code>condition_display</code> controls or multiple conditions is not supported.</p></dd>
+
+
+<dt id="arg-webgl">webgl<a class="anchor" aria-label="anchor" href="#arg-webgl"></a></dt>
+<dd><p>If <code>TRUE</code>, render trajectories with WebGL (plotly <code>scattergl</code>) for
+performance with many lines; if <code>FALSE</code>, use SVG (<code>scatter</code>). Defaults to
+<code>getOption("sdbuildR.webgl", default = TRUE)</code>. Set
+<code>options(sdbuildR.webgl = FALSE)</code> (e.g. in vignettes or dashboards, or when
+a plot renders blank) to disable WebGL globally.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
@@ -166,6 +238,27 @@
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>Plotly object</p>
+    </div>
+    <div class="section level2">
+    <h2 id="styling-variables-and-layers">Styling variables and layers<a class="anchor" aria-label="anchor" href="#styling-variables-and-layers"></a></h2>
+
+
+<p>Names in <code>colors</code>, <code>alpha</code>, and <code>line_width</code> refer to the model variable
+names, not the labels shown in the legend. For example, use <code>infected</code>, not
+<code>Infected</code>, even when <code>format_label = TRUE</code> changes the legend text.</p>
+<p>A single value applies everywhere:
+<code>plot(sims, line_width = 3, alpha = 0.7)</code>.</p>
+<p>A named vector styles selected variables and leaves the rest at their
+defaults:
+<code>plot(sims, colors = c(infected = "firebrick"), line_width = c(infected = 4))</code>.</p>
+<p>Ensemble plots also have layers. Use a list to style the central tendency
+line, the uncertainty band border, and individual trajectories separately:
+<code>plot(sims, which = "sims", line_width = list(central = 3, sims = 1, spread = 0))</code>.</p>
+<p>List elements can be named vectors too, which is useful when only one layer
+needs variable-specific styling:
+<code>plot(sims, alpha = list(central = 1, sims = c(infected = 0.15), spread = 0.25))</code>.</p>
+<p>The <code>spread</code> line width controls the border of the uncertainty band. The
+default is <code>0</code>, so the band is filled but not outlined.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

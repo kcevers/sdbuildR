@@ -42,7 +42,7 @@ The model object with the specified test(s) removed.
 ## Examples
 
 ``` r
-sfm <- stockflow("SIR") |>
+sfm <- stockflow("sir") |>
   unit_test(label = "susceptible is non-negative", expr = all(susceptible >= 0)) |>
   unit_test(label = "recovered increases", expr = all(diff(recovered) >= 0))
 

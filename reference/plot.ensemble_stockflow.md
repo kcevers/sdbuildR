@@ -22,15 +22,21 @@ plot(
   shareX = TRUE,
   shareY = TRUE,
   palette = "Dark 2",
-  alpha = 0.3,
+  alpha = list(central = 1, spread = 0.3, sims = 0.3),
   colors = NULL,
+  line_width = list(central = 3, spread = 0, sims = 1),
   font_family = "Times New Roman",
   font_size = 16,
   wrap_width = 25,
   showlegend = TRUE,
   label_subplots = TRUE,
-  central_tendency = c("mean", "median", FALSE)[1],
-  central_tendency_width = 3,
+  central = c("mean", "median", "none"),
+  spread = c("quantile", "sd", "range"),
+  format_label = TRUE,
+  condition_display = c("subplots", "slider", "dropdown"),
+  control_options = list(),
+  animation = c("none", "time"),
+  webgl = getOption("sdbuildR.webgl", default = TRUE),
   ...
 )
 ```
@@ -57,16 +63,15 @@ plot(
 
 - condition:
 
-  Indices of the condition to plot. Defaults to 1:9. If only one
-  condition is specified, the plot will not be a grid of subplots.
+  Indices of the condition(s) to plot. Defaults to 1:9.
 
 - vars:
 
-  Variables to plot. Defaults to NULL to plot all variables.
+  Variables to plot. Defaults to `NULL` to plot all variables.
 
 - show_constants:
 
-  If TRUE, include constants in plot. Defaults to FALSE.
+  If `TRUE`, include constants in plot. Defaults to `FALSE`.
 
 - nrows:
 
@@ -93,14 +98,31 @@ plot(
 
 - alpha:
 
-  Trajectory opacity. Defaults to `1`.
+  Opacity, with the same grammar as `line_width`: a single value, a
+  named per-variable vector, or a list keyed by layer
+  (`central`/`spread`/ `sims`). Defaults to
+  `list(central = 1, spread = 0.3, sims = 0.3)`.
 
 - colors:
 
-  Vector of colours. If NULL, the color palette will be used. If
-  specified, will override palette. The number of colours must be equal
-  to the number of variables in the simulation data frame. Defaults to
-  NULL.
+  Colours for the plotted variables. A named vector (names are variable
+  names) sets the colours of those variables and the palette fills the
+  rest, so you can recolour only a few variables. An unnamed vector
+  assigns colours in plot order. `NULL` uses `palette`. Defaults to
+  `NULL`.
+
+- line_width:
+
+  Line width(s). The plot draws three layers: the central tendency line
+  (`central`), the uncertainty band's border (`spread`), and the
+  individual trajectories (`sims`). Supply a single value (used for
+  every layer and variable), a named per-variable vector (names are
+  variable names; unnamed values fill in plot order), or a list keyed by
+  layer (`list(central = , spread = , sims = )`) whose elements are
+  themselves a single value or per-variable vector. Unspecified
+  layers/variables fall back to the defaults. Defaults to
+  `list(central = 3, spread = 0, sims = 1)` (a `spread` width of `0`
+  draws no band border).
 
 - font_family:
 
@@ -122,14 +144,66 @@ plot(
 
   Whether to plot labels indicating the condition of the subplot.
 
-- central_tendency:
+- central:
 
-  Central tendency to use for the mean line. Either "mean", "median", or
-  FALSE to not plot the central tendency. Defaults to "mean".
+  Which central-tendency line to draw, given as preferences in order:
+  the first one that
+  [`ensemble()`](https://kcevers.github.io/sdbuildR/reference/ensemble.md)
+  computed is used. For example, `c("mean", "median")` draws the mean if
+  it is available, otherwise the median, and `"none"` draws no line.
+  Defaults to `c("mean", "median", "none")`.
 
-- central_tendency_width:
+- spread:
 
-  Line width of central tendency. Defaults to 3.
+  Which uncertainty band to draw, again as ordered preferences:
+  `"quantile"` (between the lowest and highest quantile), `"sd"` (the
+  central line plus/minus one standard deviation), `"range"` (between
+  `min` and `max`), or `"none"`. The first band the computed statistics
+  can support is used; `"sd"` also needs a central line. Defaults to
+  `c("quantile", "sd", "range")`.
+
+- format_label:
+
+  If `TRUE`, apply default formatting (replacing periods and underscores
+  with spaces) to variable labels that are the same as the variable
+  name. Applies to the legend and any condition controls. Defaults to
+  `TRUE`.
+
+- condition_display:
+
+  How to display multiple conditions. Use `"subplots"` to show
+  conditions as panels, `"slider"` to select one condition with a
+  slider, or `"dropdown"` to select one condition with a dropdown.
+  Defaults to `"subplots"`.
+
+- control_options:
+
+  Named list fine-tuning the `"slider"`/`"dropdown"` condition control.
+  Supports `max_labels`: the maximum number of slider tick labels to
+  keep visible when many conditions are varied (the slider always keeps
+  one step per condition; intermediate labels are thinned above this
+  count); and `spacing`: the vertical gap (in paper units) between
+  stacked controls when several condition parameters are varied. By
+  default the spacing and the reserved bottom margin are sized
+  automatically so the controls never overlap each other or the x-axis
+  title; pass a number to widen or tighten the gap. Defaults to
+  `list(max_labels = 10, spacing = NULL)`.
+
+- animation:
+
+  Animation mode. Use `"none"` for a static plot or `"time"` to
+  cumulatively reveal trajectories over time. Defaults to `"none"`. Time
+  animation requires `which = "sims"` (confidence ribbons cannot be
+  animated) and a single condition (one panel); combining it with
+  `condition_display` controls or multiple conditions is not supported.
+
+- webgl:
+
+  If `TRUE`, render trajectories with WebGL (plotly `scattergl`) for
+  performance with many lines; if `FALSE`, use SVG (`scatter`). Defaults
+  to `getOption("sdbuildR.webgl", default = TRUE)`. Set
+  `options(sdbuildR.webgl = FALSE)` (e.g. in vignettes or dashboards, or
+  when a plot renders blank) to disable WebGL globally.
 
 - ...:
 
@@ -138,6 +212,31 @@ plot(
 ## Value
 
 Plotly object
+
+## Styling variables and layers
+
+Names in `colors`, `alpha`, and `line_width` refer to the model variable
+names, not the labels shown in the legend. For example, use `infected`,
+not `Infected`, even when `format_label = TRUE` changes the legend text.
+
+A single value applies everywhere:
+`plot(sims, line_width = 3, alpha = 0.7)`.
+
+A named vector styles selected variables and leaves the rest at their
+defaults:
+`plot(sims, colors = c(infected = "firebrick"), line_width = c(infected = 4))`.
+
+Ensemble plots also have layers. Use a list to style the central
+tendency line, the uncertainty band border, and individual trajectories
+separately:
+`plot(sims, which = "sims", line_width = list(central = 3, sims = 1, spread = 0))`.
+
+List elements can be named vectors too, which is useful when only one
+layer needs variable-specific styling:
+`plot(sims, alpha = list(central = 1, sims = c(infected = 0.15), spread = 0.25))`.
+
+The `spread` line width controls the border of the uncertainty band. The
+default is `0`, so the band is filled but not outlined.
 
 ## See also
 

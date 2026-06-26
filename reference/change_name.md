@@ -43,7 +43,7 @@ with the name changed throughout the model.
 ## Examples
 
 ``` r
-sfm <- stockflow("SIR")
+sfm <- stockflow("sir")
 sfm <- change_name(sfm, c(susceptible, infected, recovered),
   new_name = c(S, I, R)
 )

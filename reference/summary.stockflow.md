@@ -52,7 +52,7 @@ The following potential problems are detected:
 
 ``` r
 # No issues
-sfm <- stockflow("SIR")
+sfm <- stockflow("sir")
 summary(sfm)
 #> 
 #> ── Stock-and-Flow Model Diagnostics ────────────────────────────────────────────

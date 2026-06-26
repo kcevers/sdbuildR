@@ -36,7 +36,7 @@ Invisibly returns `x`
 ## Examples
 
 ``` r
-sfm <- stockflow("SIR")
+sfm <- stockflow("sir")
 sim <- simulate(sfm)
 print(sim)
 #> 

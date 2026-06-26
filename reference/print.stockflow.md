@@ -35,7 +35,7 @@ Invisibly returns `x`
 ## Examples
 
 ``` r
-sfm <- stockflow("SIR")
+sfm <- stockflow("sir")
 print(sfm)
 #> 
 #> ── Stock-and-Flow Model: Susceptible-Infected-Recovered (SIR) ──────────────────

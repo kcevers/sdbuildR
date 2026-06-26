@@ -21,7 +21,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">sdbuildR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -66,7 +66,7 @@
       <h1>Setting up Julia</h1>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/KCEvers/sdbuildR/blob/v2.0.0/vignettes/articles/julia-setup.Rmd" class="external-link"><code>vignettes/articles/julia-setup.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/KCEvers/sdbuildR/blob/stockflow/vignettes/articles/julia-setup.Rmd" class="external-link"><code>vignettes/articles/julia-setup.Rmd</code></a></small>
       <div class="d-none name"><code>julia-setup.Rmd</code></div>
     </div>
 
@@ -74,6 +74,10 @@
     
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://kcevers.github.io/sdbuildR/">sdbuildR</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Disable WebGL: many plotly widgets per HTML page can exceed the browser WebGL</span></span>
+<span><span class="co"># context limit and render blank. SVG always renders.</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span>sdbuildR.webgl <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">JuliaConnectoR</span><span class="op">)</span></span></code></pre></div>
 <p>sdbuildR supports simulating stock-and-flow models with Julia as the
 backend. Julia is a modern, open-source programming language that
@@ -124,7 +128,7 @@ sdbuildR:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/use_julia.html">use_julia</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Activating Julia environment for <span style="color: #0000BB;">sdbuildR</span> at</span></span>
-<span><span class="co">#&gt;   <span style="color: #0000BB;">/home/runner/work/_temp/Library/sdbuildR</span>...</span></span>
+<span><span class="co">#&gt;   <span style="color: #0000BB;">/home/runner/.local/share/R/sdbuildR/julia</span>...</span></span>
 <span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Julia environment ready.</span></span></code></pre></div>
 <p>This needs to be done in <em>each</em> new R session.</p>
 <p>To close the Julia session:</p>

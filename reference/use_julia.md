@@ -54,20 +54,20 @@ which can take around 30-60 seconds.
 # Start a Julia session and activate the Julia environment for sdbuildR
 use_julia()
 #> ℹ Activating Julia environment for sdbuildR at
-#>   /home/runner/work/_temp/Library/sdbuildR...
+#>   /home/runner/.local/share/R/sdbuildR/julia...
 #> ✔ Julia environment ready.
 
 # Start Julia with 2 threads (only works if threading is supported)
 use_julia(nthreads = 2)
 #> ℹ Activating Julia environment for sdbuildR at
-#>   /home/runner/work/_temp/Library/sdbuildR...
+#>   /home/runner/.local/share/R/sdbuildR/julia...
 #> ✔ Julia environment ready with 2 threads.
 
 # Restart Julia session (in case of issues)
 use_julia(restart = TRUE)
 #> ✔ Closed Julia session.
 #> ℹ Activating Julia environment for sdbuildR at
-#>   /home/runner/work/_temp/Library/sdbuildR...
+#>   /home/runner/.local/share/R/sdbuildR/julia...
 #> ✔ Julia environment ready.
 
 # Stop Julia session

@@ -3,6 +3,10 @@
 ``` r
 
 library(sdbuildR)
+
+# Disable WebGL: many plotly widgets per HTML page can exceed the browser WebGL
+# context limit and render blank. SVG always renders.
+options(sdbuildR.webgl = FALSE)
 ```
 
 After having built a stock-and-flow model, you may want to explore how
@@ -58,8 +62,7 @@ how the model behaves:
 
 ``` r
 
-sim <- simulate(sfm)
-plot(sim)
+sfm |> simulate() |> plot()
 ```
 
 As the model has random initial conditions, another run will be
@@ -67,8 +70,7 @@ different:
 
 ``` r
 
-sim <- simulate(sfm)
-plot(sim)
+sfm |> simulate() |> plot()
 ```
 
 To explore this more systematically, we can run an ensemble simulation
@@ -110,7 +112,7 @@ function:
 
 sims <- ensemble(sfm, n = 100)
 #> Starting ensemble simulation in "R" with 100 simulations.
-#> ✔ Ensemble simulation completed in 23.2314 seconds.
+#> ✔ Ensemble simulation completed in 22.9845 seconds.
 ```
 
 ``` r
@@ -126,7 +128,7 @@ which we first have to rerun the simulation with `save_sims = TRUE`:
 
 sims <- ensemble(sfm, n = 30, save_sims = TRUE)
 #> Starting ensemble simulation in "R" with 30 simulations.
-#> ✔ Ensemble simulation completed in 6.957 seconds.
+#> ✔ Ensemble simulation completed in 6.936 seconds.
 ```
 
 ``` r
@@ -150,12 +152,122 @@ By default, only the stocks are saved. To save all variables, set
 
 sims <- ensemble(sfm, n = 100, only_stocks = FALSE)
 #> Starting ensemble simulation in "R" with 100 simulations.
-#> ✔ Ensemble simulation completed in 78.8119 seconds.
+#> ✔ Ensemble simulation completed in 79.9799 seconds.
 ```
 
 ``` r
 
 plot(sims)
+```
+
+### Choosing which summaries to keep
+
+Storing every simulation is expensive, so by default
+[`ensemble()`](https://kcevers.github.io/sdbuildR/reference/ensemble.md)
+keeps only summaries statistics across runs at each time point: the mean
+and a 95% interval (the 2.5% and 97.5% quantiles). The quantile levels
+can be changed as follows:
+
+``` r
+
+sims <- ensemble(sfm,
+  n = 100,   
+  quantiles = c(0.1, 0.9)
+)
+#> Starting ensemble simulation in "R" with 100 simulations.
+#> ✔ Ensemble simulation completed in 22.9887 seconds.
+head(sims)
+#>   condition               variable time      mean    median missing_count
+#> 1         1 Compensatory_behaviour    0 0.4750875 0.4036320             0
+#> 2         1 Compensatory_behaviour    1 0.5978226 0.5469748             0
+#> 3         1 Compensatory_behaviour    2 0.6594824 0.6397814             0
+#> 4         1 Compensatory_behaviour    3 0.6868372 0.6901910             0
+#> 5         1 Compensatory_behaviour    4 0.6906507 0.7017107             0
+#> 6         1 Compensatory_behaviour    5 0.6775006 0.6806661             0
+#>       quant1    quant2
+#> 1 0.09538729 0.8620636
+#> 2 0.38936237 0.8665326
+#> 3 0.49574861 0.8745699
+#> 4 0.52067662 0.8726997
+#> 5 0.52001627 0.8472388
+#> 6 0.51999692 0.8454621
+```
+
+Here, quantiles appear as columns `quant1`, `quant2` which correspond to
+`sims$quantiles`.
+
+To change which summary statistics are computed, use `central` (defining
+the central tendency) and `spread` (defining the measure of dispersion).
+For example, to summarise each run by its median together with a
+standard deviation:
+
+``` r
+
+sims <- ensemble(sfm,
+  n = 100,
+  central = "median",
+  spread = "sd"
+)
+#> Starting ensemble simulation in "R" with 100 simulations.
+#> ✔ Ensemble simulation completed in 23.0713 seconds.
+head(sims)
+#>   condition               variable time    median        sd missing_count
+#> 1         1 Compensatory_behaviour    0 0.4036320 0.2949805             0
+#> 2         1 Compensatory_behaviour    1 0.5469748 0.1882976             0
+#> 3         1 Compensatory_behaviour    2 0.6397814 0.1430877             0
+#> 4         1 Compensatory_behaviour    3 0.6901910 0.1245730             0
+#> 5         1 Compensatory_behaviour    4 0.7017107 0.1174524             0
+#> 6         1 Compensatory_behaviour    5 0.6806661 0.1143088             0
+```
+
+``` r
+
+plot(sims)
+```
+
+All available summary statistics can be computed with:
+
+``` r
+
+sims <- ensemble(sfm,
+  n = 100,
+  central = c("mean", "median"),
+  spread = c("quantile", "sd", "range")
+)
+#> Starting ensemble simulation in "R" with 100 simulations.
+#> ✔ Ensemble simulation completed in 22.9867 seconds.
+head(sims)
+#>   condition               variable time      mean    median        sd
+#> 1         1 Compensatory_behaviour    0 0.4750875 0.4036320 0.2949805
+#> 2         1 Compensatory_behaviour    1 0.5978226 0.5469748 0.1882976
+#> 3         1 Compensatory_behaviour    2 0.6594824 0.6397814 0.1430877
+#> 4         1 Compensatory_behaviour    3 0.6868372 0.6901910 0.1245730
+#> 5         1 Compensatory_behaviour    4 0.6906507 0.7017107 0.1174524
+#> 6         1 Compensatory_behaviour    5 0.6775006 0.6806661 0.1143088
+#>           min       max missing_count     quant1    quant2
+#> 1 0.008115848 0.9553296             0 0.01931528 0.9259952
+#> 2 0.309331064 0.9657745             0 0.34270610 0.9190606
+#> 3 0.364860898 0.9694763             0 0.41868692 0.9192805
+#> 4 0.383161078 0.9670575             0 0.46006368 0.9187255
+#> 5 0.391525379 0.9581517             0 0.47481319 0.9183256
+#> 6 0.395668622 0.9403187             0 0.45766539 0.9043367
+```
+
+Plots can then switch between summary statistics:
+
+``` r
+
+plot(sims, central = "median", spread = "quantile")
+```
+
+``` r
+
+plot(sims, central = "median", spread = "range")
+```
+
+``` r
+
+plot(sims, central = "none", spread = "range")
 ```
 
 ### Parallel simulations (R)
@@ -180,23 +292,27 @@ if (requireNamespace("future", quietly = TRUE) &&
 }
 ```
 
-On Windows, `multisession` is the recommended backend. On POSIX systems
-(Linux, macOS), you can also use `multicore` for potentially better
-performance, though `multisession` will work on those systems as well.
 The `workers` argument specifies how many parallel processes to use;
-adjust this based on your system’s capabilities.
+adjust this based on your system’s capabilities. On Windows,
+`multisession` is the recommended backend. On POSIX systems (Linux,
+macOS), you can also use `multicore` for potentially better performance,
+though `multisession` will work on those systems as well.
 
 #### Ensemble simulations (Julia)
 
 Ensemble simulations can also be run in Julia, which is typically faster
-than R for large simulations. To use the Julia backend, first activate
-the Julia environment for sdbuildR:
+than R for large simulations. To use the Julia backend, first follow the
+instructions in the [Julia setup
+vignette](https://kcevers.github.io/sdbuildR/articles/julia-setup.html)
+to install and set up the Julia environment for sdbuildR.
+
+Activate the Julia environment for sdbuildR:
 
 ``` r
 
 use_julia()
 #> ℹ Activating Julia environment for sdbuildR at
-#>   /home/runner/work/_temp/Library/sdbuildR...
+#>   /home/runner/.local/share/R/sdbuildR/julia...
 #> ✔ Julia environment ready.
 ```
 
@@ -239,7 +355,7 @@ sims <- ensemble(sfm,
 )
 #> Starting ensemble simulation in "Julia" with 400 simulations in total.
 #> ℹ 4 conditions x 100 simulations per condition.
-#> ✔ Ensemble simulation completed in 10.1585 seconds.
+#> ✔ Ensemble simulation completed in 11.4236 seconds.
 ```
 
 ``` r
@@ -264,7 +380,7 @@ sims <- ensemble(sfm,
 )
 #> Starting ensemble simulation in "Julia" with 400 simulations in total.
 #> ℹ 4 conditions x 100 simulations per condition.
-#> ✔ Ensemble simulation completed in 2.4496 seconds.
+#> ✔ Ensemble simulation completed in 2.6059 seconds.
 ```
 
 ``` r
@@ -301,7 +417,7 @@ sims <- ensemble(sfm,
 )
 #> Starting ensemble simulation in "Julia" with 300 simulations in total.
 #> ℹ 3 conditions x 100 simulations per condition.
-#> ✔ Ensemble simulation completed in 2.7433 seconds.
+#> ✔ Ensemble simulation completed in 2.9685 seconds.
 ```
 
 ``` r
@@ -332,36 +448,36 @@ such as the mean and confidence intervals, using:
 ``` r
 
 head(sims)
-#>   condition time               variable      mean    median   variance
-#> 1         1    0 Compensatory_behaviour 0.4783079 0.4449562 0.08892955
-#> 2         1    0            Food_intake 0.4766333 0.4552623 0.07613286
-#> 3         1    0                 Hunger 0.4784890 0.4548582 0.10593726
-#> 4         1    1 Compensatory_behaviour 0.6064398 0.5782980 0.03768898
-#> 5         1    1            Food_intake 0.3499367 0.2950685 0.06815139
-#> 6         1    1                 Hunger 0.4860790 0.4168530 0.07462279
-#>   missing_count        q025      q975
-#> 1             0 0.023064509 0.9746829
-#> 2             0 0.016268546 0.9624419
-#> 3             0 0.014191360 0.9650377
-#> 4             0 0.323508122 0.9706544
-#> 5             0 0.008076535 0.9006591
-#> 6             0 0.122635157 0.9467490
+#>   condition time               variable      mean    median missing_count
+#> 1         1    0 Compensatory_behaviour 0.4783079 0.4449562             0
+#> 2         1    0            Food_intake 0.4766333 0.4552623             0
+#> 3         1    0                 Hunger 0.4784890 0.4548582             0
+#> 4         1    1 Compensatory_behaviour 0.6064398 0.5782980             0
+#> 5         1    1            Food_intake 0.3499367 0.2950685             0
+#> 6         1    1                 Hunger 0.4860790 0.4168530             0
+#>        quant1    quant2
+#> 1 0.023064509 0.9746829
+#> 2 0.016268546 0.9624419
+#> 3 0.014191360 0.9650377
+#> 4 0.323508122 0.9706544
+#> 5 0.008076535 0.9006591
+#> 6 0.122635157 0.9467490
 # or
-head(as.data.frame(sims))
-#>   condition time               variable      mean    median   variance
-#> 1         1    0 Compensatory_behaviour 0.4783079 0.4449562 0.08892955
-#> 2         1    0            Food_intake 0.4766333 0.4552623 0.07613286
-#> 3         1    0                 Hunger 0.4784890 0.4548582 0.10593726
-#> 4         1    1 Compensatory_behaviour 0.6064398 0.5782980 0.03768898
-#> 5         1    1            Food_intake 0.3499367 0.2950685 0.06815139
-#> 6         1    1                 Hunger 0.4860790 0.4168530 0.07462279
-#>   missing_count        q025      q975
-#> 1             0 0.023064509 0.9746829
-#> 2             0 0.016268546 0.9624419
-#> 3             0 0.014191360 0.9650377
-#> 4             0 0.323508122 0.9706544
-#> 5             0 0.008076535 0.9006591
-#> 6             0 0.122635157 0.9467490
+sims |> as.data.frame() |> head()
+#>   condition time               variable      mean    median missing_count
+#> 1         1    0 Compensatory_behaviour 0.4783079 0.4449562             0
+#> 2         1    0            Food_intake 0.4766333 0.4552623             0
+#> 3         1    0                 Hunger 0.4784890 0.4548582             0
+#> 4         1    1 Compensatory_behaviour 0.6064398 0.5782980             0
+#> 5         1    1            Food_intake 0.3499367 0.2950685             0
+#> 6         1    1                 Hunger 0.4860790 0.4168530             0
+#>        quant1    quant2
+#> 1 0.023064509 0.9746829
+#> 2 0.016268546 0.9624419
+#> 3 0.014191360 0.9650377
+#> 4 0.323508122 0.9706544
+#> 5 0.008076535 0.9006591
+#> 6 0.122635157 0.9467490
 ```
 
 By default, simulations are returned in long format, but can also be
@@ -377,41 +493,34 @@ head(sims, direction = "wide")
 #> 4         1    3                   0.6878700                     0.7044476
 #> 5         1    4                   0.6870671                     0.7128944
 #> 6         1    5                   0.6699829                     0.6943745
-#>   variance.Compensatory_behaviour missing_count.Compensatory_behaviour
-#> 1                      0.08892955                                    0
-#> 2                      0.03768898                                    0
-#> 3                      0.02426997                                    0
-#> 4                      0.02030700                                    0
-#> 5                      0.01884024                                    0
-#> 6                      0.01758314                                    0
-#>   q025.Compensatory_behaviour q975.Compensatory_behaviour mean.Food_intake
-#> 1                  0.02306451                   0.9746829       0.47663330
-#> 2                  0.32350812                   0.9706544       0.34993669
-#> 3                  0.41107518                   0.9594017       0.22519740
-#> 4                  0.44038959                   0.9406263       0.13572832
-#> 5                  0.45185705                   0.9242090       0.08344722
-#> 6                  0.44313084                   0.9038378       0.05127490
-#>   median.Food_intake variance.Food_intake missing_count.Food_intake
-#> 1        0.455262347           0.07613286                         0
-#> 2        0.295068492           0.06815139                         0
-#> 3        0.165096699           0.05124440                         0
-#> 4        0.064093203           0.03508451                         0
-#> 5        0.024972732           0.02343164                         0
-#> 6        0.009849555           0.01085386                         0
-#>   q025.Food_intake q975.Food_intake mean.Hunger median.Hunger variance.Hunger
-#> 1     1.626855e-02        0.9624419   0.4784890     0.4548582      0.10593726
-#> 2     8.076535e-03        0.9006591   0.4860790     0.4168530      0.07462279
-#> 3     3.105759e-03        0.8200163   0.5270163     0.4672373      0.05153272
-#> 4     7.936879e-04        0.7273670   0.5865395     0.5536180      0.03599362
-#> 5     2.082555e-04        0.6395364   0.6498461     0.6280648      0.02551272
-#> 6     6.398903e-05        0.4426647   0.7079553     0.6899168      0.01823153
-#>   missing_count.Hunger q025.Hunger q975.Hunger
-#> 1                    0  0.01419136   0.9650377
-#> 2                    0  0.12263516   0.9467490
-#> 3                    0  0.21685901   0.9447705
-#> 4                    0  0.28533754   0.9440976
-#> 5                    0  0.39115944   0.9538292
-#> 6                    0  0.44863920   0.9608182
+#>   missing_count.Compensatory_behaviour quant1.Compensatory_behaviour
+#> 1                                    0                    0.02306451
+#> 2                                    0                    0.32350812
+#> 3                                    0                    0.41107518
+#> 4                                    0                    0.44038959
+#> 5                                    0                    0.45185705
+#> 6                                    0                    0.44313084
+#>   quant2.Compensatory_behaviour mean.Food_intake median.Food_intake
+#> 1                     0.9746829       0.47663330        0.455262347
+#> 2                     0.9706544       0.34993669        0.295068492
+#> 3                     0.9594017       0.22519740        0.165096699
+#> 4                     0.9406263       0.13572832        0.064093203
+#> 5                     0.9242090       0.08344722        0.024972732
+#> 6                     0.9038378       0.05127490        0.009849555
+#>   missing_count.Food_intake quant1.Food_intake quant2.Food_intake mean.Hunger
+#> 1                         0       1.626855e-02          0.9624419   0.4784890
+#> 2                         0       8.076535e-03          0.9006591   0.4860790
+#> 3                         0       3.105759e-03          0.8200163   0.5270163
+#> 4                         0       7.936879e-04          0.7273670   0.5865395
+#> 5                         0       2.082555e-04          0.6395364   0.6498461
+#> 6                         0       6.398903e-05          0.4426647   0.7079553
+#>   median.Hunger missing_count.Hunger quant1.Hunger quant2.Hunger
+#> 1     0.4548582                    0    0.01419136     0.9650377
+#> 2     0.4168530                    0    0.12263516     0.9467490
+#> 3     0.4672373                    0    0.21685901     0.9447705
+#> 4     0.5536180                    0    0.28533754     0.9440976
+#> 5     0.6280648                    0    0.39115944     0.9538292
+#> 6     0.6899168                    0    0.44863920     0.9608182
 ```
 
 If you have set `save_sims = TRUE`, you can access the individual
@@ -436,13 +545,8 @@ per condition, run:
 ``` r
 
 head(sims, which = "sims", type = "constant")
-#>   condition sim time               variable      value
-#> 1         1   1    0 Compensatory_behaviour 0.09211427
-#> 2         1   1    0            Food_intake 0.69842600
-#> 3         1   1    0                 Hunger 0.49628470
-#> 4         1   1    1 Compensatory_behaviour 0.40993234
-#> 5         1   1    1            Food_intake 0.63479705
-#> 6         1   1    1                 Hunger 0.34165639
+#> [1] condition sim       time      variable  value    
+#> <0 rows> (or 0-length row.names)
 ```
 
 To view their summary statistics, run:
@@ -450,23 +554,12 @@ To view their summary statistics, run:
 ``` r
 
 head(sims, which = "summary", type = "constant")
-#>   condition time               variable      mean    median   variance
-#> 1         1    0 Compensatory_behaviour 0.4783079 0.4449562 0.08892955
-#> 2         1    0            Food_intake 0.4766333 0.4552623 0.07613286
-#> 3         1    0                 Hunger 0.4784890 0.4548582 0.10593726
-#> 4         1    1 Compensatory_behaviour 0.6064398 0.5782980 0.03768898
-#> 5         1    1            Food_intake 0.3499367 0.2950685 0.06815139
-#> 6         1    1                 Hunger 0.4860790 0.4168530 0.07462279
-#>   missing_count        q025      q975
-#> 1             0 0.023064509 0.9746829
-#> 2             0 0.016268546 0.9624419
-#> 3             0 0.014191360 0.9650377
-#> 4             0 0.323508122 0.9706544
-#> 5             0 0.008076535 0.9006591
-#> 6             0 0.122635157 0.9467490
+#> [1] condition     time          variable      mean          median       
+#> [6] missing_count quant1        quant2       
+#> <0 rows> (or 0-length row.names)
 ```
 
-### Close Julia session
+## Close Julia session
 
 ``` r
 

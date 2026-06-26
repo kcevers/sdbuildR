@@ -33,7 +33,7 @@ A `data.frame`.
 ## Examples
 
 ``` r
-sfm <- stockflow("SIR") |>
+sfm <- stockflow("sir") |>
   unit_test(expr = all(susceptible >= 0))
 res <- verify(sfm)
 tail(res)

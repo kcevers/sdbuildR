@@ -61,7 +61,7 @@ An object of class `compare_stockflow` (a list) containing:
 ## Examples
 
 ``` r
-sfm1 <- stockflow("SIR")
+sfm1 <- stockflow("sir")
 sfm2 <- stock(sfm1, "susceptible", eqn = 0.5)
 compare_models(sfm1, sfm2)
 #> 
@@ -77,7 +77,6 @@ compare_models(sfm1, sfm2)
 #> 
 #> ── Model Properties ──
 #> 
-#> sfm1 sfm2
 #> ----------------------------------------
 #> Stocks 3 3
 #> Flows 2 2

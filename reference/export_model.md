@@ -196,13 +196,13 @@ writes a `.json` file and returns the path invisibly. If `file` has no
 ## Examples
 
 ``` r
-sfm <- stockflow("SIR")
+sfm <- stockflow("sir")
 
 # Get sdbuildR reconstruction code
 cat(export_model(sfm, format = "sdbuildR"))
 #> sfm <-    stockflow() |>
 #>  sim_settings(start = "0.0", stop = "20.0", dt = "0.01", time_units = "weeks") |>
-#>  meta(name = "Susceptible-Infected-Recovered (SIR)", created = "2026-06-16 21:33:43.234367") |>
+#>  meta(name = "Susceptible-Infected-Recovered (SIR)", created = "2026-06-26 11:10:14.326936") |>
 #>  stock(infected, eqn = 1, label = "Infected") |>
 #>  stock(recovered, eqn = 0, label = "Recovered") |>
 #>  stock(susceptible, eqn = 99999, label = "Susceptible") |>

@@ -3,6 +3,10 @@
 ``` r
 
 library(sdbuildR)
+
+# Disable WebGL: many plotly widgets per HTML page can exceed the browser WebGL
+# context limit and render blank. SVG always renders.
+options(sdbuildR.webgl = FALSE)
 library(JuliaConnectoR)
 ```
 
@@ -63,7 +67,7 @@ Start a Julia session and activate the Julia environment for sdbuildR:
 
 use_julia()
 #> ℹ Activating Julia environment for sdbuildR at
-#>   /home/runner/work/_temp/Library/sdbuildR...
+#>   /home/runner/.local/share/R/sdbuildR/julia...
 #> ✔ Julia environment ready.
 ```
 

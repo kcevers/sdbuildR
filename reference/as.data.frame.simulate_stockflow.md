@@ -6,7 +6,15 @@ Convert simulation results to a data.frame.
 
 ``` r
 # S3 method for class 'simulate_stockflow'
-as.data.frame(x, row.names = NULL, optional = FALSE, direction = "long", ...)
+as.data.frame(
+  x,
+  row.names = NULL,
+  optional = FALSE,
+  direction = "long",
+  vars = NULL,
+  type = NULL,
+  ...
+)
 ```
 
 ## Arguments
@@ -29,6 +37,17 @@ as.data.frame(x, row.names = NULL, optional = FALSE, direction = "long", ...)
 
   Format of data frame, either "long" (default) or "wide".
 
+- vars:
+
+  Variable names to retain in the data frame. Defaults to `NULL` to
+  include all variables.
+
+- type:
+
+  Variable types to retain in the data frame. Must be one or more of
+  'stock', 'flow', 'constant', 'aux', 'gf', or 'func'. Defaults to
+  `NULL` to include all types.
+
 - ...:
 
   Optional parameters
@@ -48,7 +67,7 @@ followed by one column per variable.
 ## Examples
 
 ``` r
-sfm <- stockflow("SIR")
+sfm <- stockflow("sir")
 sim <- simulate(sfm)
 df <- as.data.frame(sim)
 head(df)
