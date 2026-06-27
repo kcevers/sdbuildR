@@ -1433,7 +1433,7 @@ plot.ensemble_stockflow <- function(x,
 
   if (isFALSE(central)) central <- "none"
   # Lenient matching: accept e.g. "medians" or "Mean" for "median"/"mean".
-  central <- normalize_synonyms(central, central_synonyms)
+  central <- normalize_synonyms(central, central_synonyms())
   invalid_central <- setdiff(central, c("mean", "median", "none"))
   if (length(invalid_central) > 0) {
     cli::cli_abort(c(
@@ -1442,7 +1442,7 @@ plot.ensemble_stockflow <- function(x,
     ))
   }
   # Lenient matching: accept e.g. "quantiles" or "SDs" for "quantile"/"sd".
-  spread <- normalize_synonyms(spread, spread_synonyms)
+  spread <- normalize_synonyms(spread, spread_synonyms())
   invalid_spread <- setdiff(spread, c("quantile", "sd", "range", "none"))
   if (length(invalid_spread) > 0) {
     cli::cli_abort(c(
@@ -1616,6 +1616,7 @@ plot.ensemble_stockflow <- function(x,
   # Resolve the role-keyed line widths and opacities to per-variable vectors for
   # each layer (central line, spread band, individual trajectories). A scalar or
   # named vector applies to every role; a list keyed by role styles each layer.
+  aes_roles <- c("central", "spread", "sims")
   lw <- resolve_aes(line_width, aes_roles,
     defaults = list(central = 3, spread = 0, sims = 1),
     var_names = var_names, arg = "line_width",
@@ -2072,11 +2073,15 @@ plot_ensemble_helper <- function(subplot_label,
   # The uniform fast path maps colours via plotly's `color = ~variable` aesthetic
   # and `colors =` palette. That palette is silently dropped (plotly falls back to
   # its default colourway) when the figure already contains traces with an
-  # explicit `line$color` and no colour aesthetic -- which is exactly the case in
-  # `which = "sims"`, where individual trajectories are drawn with explicit rgba
-  # colours. When such traces are present we must therefore colour the central
-  # tendency traces explicitly too, so the legend matches the trajectories.
-  explicit_color_traces <- which == "sims"
+  # explicit `line$color` and no colour aesthetic. Two layers add such explicit
+  # traces *before* the central tendency: the `which = "sims"` trajectories (drawn
+  # with explicit rgba), and a non-uniform spread band (per-variable width/opacity
+  # is drawn one explicit-colour ribbon per variable). Whenever either precedes
+  # the central line, we must colour the central tendency explicitly too, so it
+  # matches the band/trajectories instead of plotly's default colourway.
+  nonuniform_band <- which == "summary" && mode == "lines" &&
+    !is.null(q_low) && !spread_uniform
+  explicit_color_traces <- which == "sims" || nonuniform_band
 
   # Initialize plotly object
   pl <- plotly::plot_ly()

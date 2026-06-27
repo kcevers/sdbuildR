@@ -21,7 +21,7 @@ ensemble_julia <- function(object, n, save_sims, conditions, cross,
   start_t <- Sys.time()
 
   # Order requested stats by catalog order for consistency with the R backend.
-  summary_stats <- intersect(names(ensemble_stat_funs), summary_stats)
+  summary_stats <- intersect(names(ensemble_stat_funs()), summary_stats)
 
   # Create ensemble parameters
   ensemble_pars <- list(

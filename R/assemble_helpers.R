@@ -758,7 +758,7 @@ pre_assemble_components <- function(object) {
 #' @returns The model, with components pre-assembled unless deferral is enabled.
 #' @noRd
 maybe_pre_assemble <- function(object) {
-  if (identical(tolower(Sys.getenv("SDBUILDR_DEFER_CODEGEN", unset = "")), "true")) {
+  if (identical(tolower(Sys.getenv("SDBUILDR_DEFER_CODEGEN", unset = "false")), "true")) {
     return(object)
   }
   pre_assemble_components(object)

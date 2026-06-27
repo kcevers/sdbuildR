@@ -596,14 +596,6 @@ generate_line_width <- function(n_vars, line_width = NULL, default = 2,
 }
 
 
-#' Aesthetic roles drawn by the (ensemble) timeseries plots
-#'
-#' The three layers a plot can draw, used as the keys of a role-structured
-#' `line_width`/`alpha` argument: `central` (the mean/median line), `spread`
-#' (the uncertainty band), and `sims` (individual trajectories).
-#' @noRd
-aes_roles <- c("central", "spread", "sims")
-
 
 #' Build a constant per-variable aesthetic vector
 #'
@@ -781,9 +773,9 @@ resolve_aes <- function(x, roles, defaults, var_names, arg, validate_by_role,
 #'
 #' Mirrors the `line_width`/`alpha` grammar for `colors`: a named vector sets the
 #' colours of the named variables and the palette fills the rest (`colors` no
-#' longer has to name every variable). An unnamed vector (or `NULL`) keeps the
-#' historical positional/palette behaviour. The `sdbuildR_preserve_names`
-#' attribute tells add_trace_pair() to map colours by label rather than order.
+#' longer has to name every variable). An unnamed vector (or `NULL`) falls back to
+#' the palette. In every case the result is named by the display label, so
+#' add_trace_pair() maps colours to traces by label rather than by order.
 #'
 #' @param colors Character vector of colours (named, unnamed) or NULL.
 #' @param palette Palette name passed to generate_colors().
@@ -791,8 +783,7 @@ resolve_aes <- function(x, roles, defaults, var_names, arg, validate_by_role,
 #' @param display_names Character vector of plotted variable labels.
 #' @param valid_names Character vector of valid model variable names for warning
 #'   unknown names; defaults to `var_names`.
-#' @returns Character vector of colours named by `labels`, with a logical
-#'   `sdbuildR_preserve_names` attribute.
+#' @returns Character vector of colours named by `display_names`.
 #' @noRd
 resolve_colors <- function(colors, palette, var_names, display_names = var_names,
                            valid_names = var_names) {
@@ -813,14 +804,10 @@ resolve_colors <- function(colors, palette, var_names, display_names = var_names
         "i" = "Plotted variables: {.val {var_names}}."
       ))
     }
-    out <- stats::setNames(unname(out), display_names)
-    attr(out, "sdbuildR_preserve_names") <- TRUE
-    return(out)
+    return(stats::setNames(unname(out), display_names))
   }
 
-  out <- stats::setNames(generate_colors(n, colors = colors, palette = palette), display_names)
-  attr(out, "sdbuildR_preserve_names") <- FALSE
-  out
+  stats::setNames(generate_colors(n, colors = colors, palette = palette), display_names)
 }
 
 
@@ -1058,7 +1045,12 @@ add_trace_pair <- function(pl,
         "i" = "Need {.val {length(vars_present)}} colors for plotted variables but got {.val {length(colors)}}."
       ))
     }
-    if (isTRUE(attr(colors, "sdbuildR_preserve_names")) && all(vars_present %in% names(colors))) {
+    # resolve_colors() always names colours by display label and labels are
+    # deduplicated, so map by name. Positional assignment is only a fallback for
+    # the (now unreachable) case where the names don't cover the present
+    # variables -- mapping positionally otherwise scrambles colours, because the
+    # colour vector is built highlight-first while vars_present is nonhighlight-first.
+    if (!is.null(names(colors)) && all(vars_present %in% names(colors))) {
       colors <- colors[vars_present]
     } else {
       colors <- unname(colors[seq_along(vars_present)])
@@ -1307,8 +1299,9 @@ add_time_animation_controls <- function(pl,
   }
 
   # Place the controls below where the x-axis title used to sit (paper y < 0 is
-  # the bottom margin).
+  # the bottom margin). The slider leaves a right-side lane for the play button.
   control_y <- -0.18
+  slider_len <- if (show_button) 0.88 else 1
 
   if (show_slider) {
     pl <- plotly::animation_slider(
@@ -1321,7 +1314,7 @@ add_time_animation_controls <- function(pl,
       ),
       x = 0,
       xanchor = "left",
-      len = 1,
+      len = slider_len,
       y = control_y,
       yanchor = "top",
       pad = list(t = 0, b = 0),
@@ -1332,10 +1325,10 @@ add_time_animation_controls <- function(pl,
   if (show_button) {
     pl <- plotly::animation_button(
       pl,
-      x = 1,
-      xanchor = "right",
-      y = control_y,
-      yanchor = "top"
+      x = 0.94,
+      xanchor = "center",
+      y = control_y + abs(control_y/1.25),
+      yanchor = "center"
     )
   }
 

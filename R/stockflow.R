@@ -23,6 +23,7 @@
 #'   \item \strong{vanderpol}: Van der Pol oscillator
 #'   \item \strong{duffing}: Forced Duffing oscillator
 #'   \item \strong{chua}: Chua's circuit (chaotic)
+#'   \item \strong{burnout}: Toy model of burnout as used in Evers et al. (under review)
 #'   \item \strong{jdr}: Job Demands-Resources Theory as formalized in Evers et al. (under review)
 #' }
 #'

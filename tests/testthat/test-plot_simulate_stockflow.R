@@ -264,7 +264,7 @@ test_that("plot.simulate_stockflow() with custom palette", {
   sim <- sir_sim()
   sfm <- sim[["object"]]
   stock_labels <- as.data.frame(sfm, properties = c("label", "type"))$label
-  pl <- plot(sim, palette = "Set 2")
+  pl <- plot(sim, palette = "Blues")
   expect_plotly(pl)
   traces <- plotly_traces(pl)
   expect_true(nrow(traces) > 0)
@@ -322,6 +322,42 @@ test_that("plot.simulate_stockflow() maps trace labels to source data and named 
     expect_equal(
       trace_info[["color"]][i],
       normalize_color_string(colors[[variable]])
+    )
+  }
+})
+
+test_that("plot.simulate_stockflow() maps default palette colors to the correct labels", {
+  # Regression test: with both stocks (highlight) and non-stocks (nonhighlight)
+  # present and the default palette (colors = NULL), colours were assigned
+  # positionally in highlight-first order while traces are emitted
+  # nonhighlight-first, scrambling the label -> colour mapping. Each trace must
+  # carry the colour resolve_colors() assigns to its label.
+  sim <- sir_sim(only_stocks = FALSE)
+
+  # Intended label -> colour mapping (the source of truth the plot must honour).
+  prep <- prep_plot(
+    sim[["object"]], "sim", sim[["df"]], sim[["constants"]],
+    show_constants = FALSE, vars = NULL, palette = "Dark 2", colors = NULL,
+    wrap_width = 25, format_label = TRUE
+  )
+  expected <- prep[["colors"]] # named by display label
+
+  # Guard the regression: both highlight (stocks) and nonhighlight variables must
+  # be present, otherwise the two orderings coincide and the bug cannot surface.
+  expect_true(length(prep[["highlight_names"]]) > 0)
+  expect_true(length(prep[["nonhighlight_names"]]) > 0)
+
+  pl <- plot(sim, webgl = FALSE)
+  traces <- plotly_traces(pl)
+
+  # Every plotted label appears, and each label gets its intended colour.
+  expect_setequal(traces[["name"]], names(expected))
+  for (i in seq_len(nrow(traces))) {
+    label <- traces[["name"]][i]
+    expect_equal(
+      traces[["color"]][i],
+      normalize_color_string(expected[[label]]),
+      info = paste0("colour mismatch for label '", label, "'")
     )
   }
 })
@@ -527,6 +563,11 @@ test_that("plot.simulate_stockflow() supports cumulative time animation", {
   sim <- sir_sim()
   pl <- plot(sim, animation = "time")
   expect_plotly(pl)
+
+  layout <- plotly_layout(pl)
+  expect_equal(layout$sliders[[1]]$x, 0)
+  expect_equal(layout$sliders[[1]]$len, 0.88)
+  expect_gt(layout$updatemenus[[1]]$x, layout$sliders[[1]]$x + layout$sliders[[1]]$len)
 
   frames <- plotly_frames(pl)
   expect_true(length(frames) > 0)

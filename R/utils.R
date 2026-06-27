@@ -75,19 +75,23 @@ normalize_synonyms <- function(x, synonyms) {
 #' Each entry maps a canonical keyword to accepted alternative spellings
 #' (typically plurals and common abbreviations). Used by normalize_synonyms().
 #' @noRd
-central_synonyms <- list(
+central_synonyms <- function() {
+  list(
   mean = c("means", "average", "averages", "avg"),
   median = c("medians", "med", "meds"),
   none = c("no", "off", "false")
 )
+}
 
 #' @noRd
-spread_synonyms <- list(
-  quantile = c("quantiles", "quant", "quants", "ci"),
-  sd = c("sds", "std", "stds", "stdev", "stdevs"),
-  range = c("ranges", "minmax", "min_max", "min-max"),
-  none = c("no", "off", "false")
-)
+spread_synonyms <- function() {
+  list(
+    quantile = c("quantiles", "quant", "quants", "ci"),
+    sd = c("sds", "std", "stds", "stdev", "stdevs"),
+    range = c("ranges", "minmax", "min_max", "min-max"),
+    none = c("no", "off", "false")
+  )
+}
 
 #' @noRd
 .clean_which <- function(which) {

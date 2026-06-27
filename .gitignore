@@ -16,3 +16,4 @@ inst/Manifest.toml
 /tests/testthat/testdata/psychomodels/
 ^cran-comments\.md$
 /.claude/
+/.quarto/

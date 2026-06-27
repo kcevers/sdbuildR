@@ -10,24 +10,24 @@
       "showlegend": true,
       "visible": true,
       "line": {
-        "color": "rgba(237,144,164,1)",
+        "color": "rgba(39,56,113,1)",
         "width": 2
       },
       "name": "Infected",
       "marker": {
-        "color": "rgba(237,144,164,1)",
+        "color": "rgba(39,56,113,1)",
         "line": {
-          "color": "rgba(237,144,164,1)"
+          "color": "rgba(39,56,113,1)"
         }
       },
       "textfont": {
-        "color": "rgba(237,144,164,1)"
+        "color": "rgba(39,56,113,1)"
       },
       "error_y": {
-        "color": "rgba(237,144,164,1)"
+        "color": "rgba(39,56,113,1)"
       },
       "error_x": {
-        "color": "rgba(237,144,164,1)"
+        "color": "rgba(39,56,113,1)"
       },
       "xaxis": "x",
       "yaxis": "y",
@@ -43,24 +43,24 @@
       "showlegend": true,
       "visible": true,
       "line": {
-        "color": "rgba(126,186,104,1)",
+        "color": "rgba(127,171,211,1)",
         "width": 2
       },
       "name": "Recovered",
       "marker": {
-        "color": "rgba(126,186,104,1)",
+        "color": "rgba(127,171,211,1)",
         "line": {
-          "color": "rgba(126,186,104,1)"
+          "color": "rgba(127,171,211,1)"
         }
       },
       "textfont": {
-        "color": "rgba(126,186,104,1)"
+        "color": "rgba(127,171,211,1)"
       },
       "error_y": {
-        "color": "rgba(126,186,104,1)"
+        "color": "rgba(127,171,211,1)"
       },
       "error_x": {
-        "color": "rgba(126,186,104,1)"
+        "color": "rgba(127,171,211,1)"
       },
       "xaxis": "x",
       "yaxis": "y",
@@ -76,24 +76,24 @@
       "showlegend": true,
       "visible": true,
       "line": {
-        "color": "rgba(111,177,231,1)",
+        "color": "rgba(244,250,254,1)",
         "width": 2
       },
       "name": "Susceptible",
       "marker": {
-        "color": "rgba(111,177,231,1)",
+        "color": "rgba(244,250,254,1)",
         "line": {
-          "color": "rgba(111,177,231,1)"
+          "color": "rgba(244,250,254,1)"
         }
       },
       "textfont": {
-        "color": "rgba(111,177,231,1)"
+        "color": "rgba(244,250,254,1)"
       },
       "error_y": {
-        "color": "rgba(111,177,231,1)"
+        "color": "rgba(244,250,254,1)"
       },
       "error_x": {
-        "color": "rgba(111,177,231,1)"
+        "color": "rgba(244,250,254,1)"
       },
       "xaxis": "x",
       "yaxis": "y",

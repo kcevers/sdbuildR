@@ -499,7 +499,7 @@ sim_settings <- function(object,
       "i" = "Choose one or more of {.val mean}, {.val median}, or {.val none}."
     ))
   }
-  central <- normalize_synonyms(central, central_synonyms)
+  central <- normalize_synonyms(central, central_synonyms())
   invalid <- setdiff(central, c("mean", "median", "none"))
   if (length(invalid) > 0) {
     cli::cli_abort(c(
@@ -527,7 +527,7 @@ sim_settings <- function(object,
       "i" = "Choose one or more of {.val quantile}, {.val sd}, {.val range}, or {.val none}."
     ))
   }
-  spread <- normalize_synonyms(spread, spread_synonyms)
+  spread <- normalize_synonyms(spread, spread_synonyms())
   invalid <- setdiff(spread, c("quantile", "sd", "range", "none"))
   if (length(invalid) > 0) {
     cli::cli_abort(c(

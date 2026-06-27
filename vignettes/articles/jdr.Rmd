@@ -12,16 +12,32 @@ editor_options:
 
 
 ```{r setup, include=FALSE}
+# knitr::opts_chunk$set(
+#   collapse = TRUE,
+#   include = TRUE,
+#   eval = TRUE,
+#   comment = "#>",
+#   fig.width = 12, # 1
+#   fig.height = 4, # 3
+#   fig.align = "center", # Center all figures
+#   out.width = "80%" # Display figures at 80% of container width
+# )
+
+
 knitr::opts_chunk$set(
   collapse = TRUE,
   include = TRUE,
   eval = TRUE,
   comment = "#>",
-  fig.width = 12, # 1
-  fig.height = 4, # 3
-  fig.align = "center", # Center all figures
-  out.width = "80%" # Display figures at 80% of container width
+  fig.width = 12,
+  fig.height = 4,
+  fig.align = "center",
+  out.width = "80%",
+  cache = TRUE,                         # enable caching
+  cache.path = "jdr_cache/",            # keep cache dir next to the .Rmd
+  autodep = TRUE                        # auto-detect cross-chunk dependencies
 )
+
 ```
 
 Stock-and-flow models present an intuitive way to formalize psychological systems as dynamic processes that unfold over time. In this vignette, we will formalize Job Demands-Resources (JD-R) theory as a stock-and-flow model. JD-R theory is a prominent framework for understanding burnout and work engagement. Note that this vignette serves as online supplemental material B accompanying the paper *Formalizing Psychological Theory with sdbuildR: A Stock-and-Flow Modelling Tutorial in R* by Evers et al. (under review). To reproduce the figures in the paper, please see the corresponding .Rmd file.
@@ -87,7 +103,7 @@ font_size_subplot <- font_size # round(font_size * 1.5)
 xlab <- "Time (days)"
 
 # Finer-grained simulation
-save_at_fine <- .1 # .01
+save_at_fine <- 1 # ** .01
 save_at_coarse <- 1
 
 # Annotation template
@@ -179,11 +195,11 @@ kableExtra::kbl(sd_modelling_table,
 
 ## Step 1. Problem Articulation
 
-We select as our **target phenomenon** the development of burnout, which we characterize by the co-occurrence of gradually decreasing work engagement, increasing exhaustion, and decreasing job performance. 
+We select as our *target phenomenon* the development of burnout, which we characterize by the co-occurrence of gradually decreasing work engagement, increasing exhaustion, and decreasing job performance. 
 
-The **key variables** in JD-R theory are job demands, job resources, work engagement, exhaustion, proactive behaviour, self-undermining behaviour, and job performance. As working definitions, we follow those provided in @bakker_job_2023, as included below. 
+The *key variables* in JD-R theory are job demands, job resources, work engagement, exhaustion, proactive behaviour, self-undermining behaviour, and job performance. As working definitions, we follow those provided in @bakker_job_2023, as included below. 
 
-JD-R theory primarily explains how burnout develops rather than its maintenance or recovery, suggesting a time horizon of months rather than years. We adopt six months as the **time horizon** for reproducing our core phenomenon. The shortest timescale JD-R theory seems to address is a day, as job demands and resources are thought to fluctuate daily [@Bakker2024JobQuestions; @bakker_job_2023].
+JD-R theory primarily explains how burnout develops rather than its maintenance or recovery, suggesting a time horizon of months rather than years. We adopt six months as the *time horizon* for reproducing our core phenomenon. The shortest timescale JD-R theory seems to address is a day, as job demands and resources are thought to fluctuate daily [@Bakker2024JobQuestions; @bakker_job_2023].
 
 
 ```{r, echo=FALSE}
@@ -234,79 +250,74 @@ sfm <- stockflow() |>
     # Reduce the output size
     save_at = 1,
     # Set only_stocks = FALSE to return all variables (not just stocks) in the simulation output
-    language = "julia", save_sims = TRUE,
-    only_stocks = FALSE
+    only_stocks = FALSE,
+    language = "julia", save_sims = TRUE
   ) |> meta(name = "Job Demands and Resources (JD-R) Theory") 
   
 sfm <- stock(sfm, c(energy, demands),
- eqn = runif(1, .01, 1), 
-# eqn = runif(1),
-label = c("Job Demands", "Energy"))
+ eqn = runif(1, 0, 1), 
+label = c("Energy", "Job Demands"))
 
-# runif stored as eqn, not computed
+# Check that runif() is stored as an expression, not a computed value
 as.data.frame(sfm, properties = "eqn")
 
-# to add a computed value
+# To instead use a computed value, we can use the !! (bang-bang) operator to evaluate the expression and store the resulting value in the model:
 sfm |> 
-update(energy, eqn = !!runif(1)) |>
-as.data.frame(properties = "eqn")
+  update(energy, eqn = !!runif(1, 0, 2)) |>
+  as.data.frame(properties = "eqn")
 
-# note that we havent saved this to sfm
+# Note that we haven't saved the above statement to the model, so the model still contains the unevaluated expression.
 
-sfm <- sim_settings(sfm, seed = 123) 
+# To produce the same initial condition in each simulation, set a seed:
+sfm <- sim_settings(sfm, seed = 12) 
 
-# base
+# Add stock-dependent outflow
 sfm <- sfm |>
   flow(effort, eqn = energy * demands, from = energy, label = "Effort")
   
 
-
-# linear
-sfm1 <- sfm |>
-  constant(recovery_rate, eqn = 0.3, label = "Recovery Rate") |>
+# First functional form: linear recovery rate
+sfm_linear <- sfm |>
+  constant(recovery_rate, eqn = 1, label = "Recovery Rate") |>
   flow(recovery, eqn = recovery_rate * energy, 
-to = energy, label = "Recovery") 
+  to = energy, label = "Recovery") 
 
-pl1 = sfm1 |>
+pl_linear <- sfm_linear |>
   simulate() |>
   plot()
 
 
-# hill
-sfm2 <- sfm1 |>
+# Second functional form: Hill function
+sfm_hill <- sfm_linear |>
     constant(s_slope, eqn = 5, label = "Steep Slope") |>
 # update(recovery_rate, eqn = 0.3) |>
   update(recovery,
     eqn = hill(energy, slope = s_slope, upper = recovery_rate, midpoint = 0.5),
   )
 
-pl2 = sfm2 |>
+pl_hill <- sfm_hill |>
   simulate() |>
   plot(showlegend = FALSE)
 
-# ricker
-sfm3 <- sfm2 |>
-custom_func(ricker1, eqn = function(x, location, upper) {
-    upper * (x / location * exp(1 - x / location))
-  }
-) |>
-  # update(recovery_rate, eqn = 3) |>
+# Third functional form: Ricker function
+sfm_ricker <- sfm_hill |>
+  constant(location, eqn = 0.2) |>
+  # update(recovery_rate, eqn = 0.2) |>
   update(recovery,
     # eqn = recovery_rate * energy * exp(-s_slope * energy)
-    eqn = ricker1(energy, 1 / s_slope, recovery_rate / (s_slope * exp(1)))
-    # eqn = recovery_rate * energy * exp(-s_slope * energy)
+    # eqn = ricker(energy, location = 1 / s_slope, upper = recovery_rate / (s_slope * exp(1)))
+    eqn = ricker(energy, location = location, upper = recovery_rate)
   )
 
-pl3 = sfm3 |>
+pl_ricker <- sfm_ricker |>
   simulate() |>
   plot(showlegend = FALSE)
 
-head(simulate(sfm1), direction = "wide")
-head(simulate(sfm2), direction = "wide")
-head(simulate(sfm3), direction = "wide")
-sfm3$sim_settings
+head(simulate(sfm_linear), direction = "wide")
+head(simulate(sfm_hill), direction = "wide")
+head(simulate(sfm_ricker), direction = "wide")
 
-pl = plotly::subplot(pl1, pl2, pl3,
+pl <- plotly::subplot(pl_linear, pl_hill, pl_ricker,
   nrows = 3,
   shareX = TRUE,
   shareY = FALSE,
@@ -316,10 +327,6 @@ pl = plotly::subplot(pl1, pl2, pl3,
 ) |>
   plotly::layout(
     title = ""
-    # yaxis = list(title = "", range = c(0, 1)),
-    # yaxis2 = list(title = "", range = c(0, 1)),
-    # yaxis3 = list(title = "", range = c(0, 1))
-    # font = annot_font
   )
 
 pl
@@ -330,17 +337,18 @@ pl
 ```{r}
 n <- 500
 which <- "sims"
+central <- "none"
 vars <- NULL #c("energy", "demands")
-sims1 <- ensemble(sfm1, n = n, save_at = 1)
-pl1 = plot(sims1, vars = vars, main = "Linear Recovery", showlegend = TRUE, which = which)
+sims_linear <- ensemble(sfm_linear, n = n, save_at = 1)
+pl_linear = plot(sims_linear, vars = vars, main = "Linear Recovery", showlegend = TRUE, which = which, central = central)
 
-sims2 <- ensemble(sfm2, n = n, save_at = 1)
-pl2 = plot(sims2, vars = vars, main = "Hill Recovery", showlegend = FALSE, which = which)
+sims_hill <- ensemble(sfm_hill, n = n, save_at = 1)
+pl_hill = plot(sims_hill, vars = vars, main = "Hill Recovery", showlegend = FALSE, which = which, central = central)
 
-sims3 <- ensemble(sfm3, n = n, save_at = 1)
-pl3 = plot(sims3, vars = vars, main = "Ricker Recovery", showlegend = FALSE, which = which)
+sims_ricker <- ensemble(sfm_ricker, n = n, save_at = 1)
+pl_ricker = plot(sims_ricker, vars = vars, main = "Ricker Recovery", showlegend = FALSE, which = which, central = central)
 
-pl = plotly::subplot(pl1, pl2, pl3,
+pl = plotly::subplot(pl_linear, pl_hill, pl_ricker,
   nrows = 3,
   shareX = TRUE,
   shareY = FALSE,
@@ -360,8 +368,331 @@ pl
 
 ```
 
+```{r}
+n = 100
+sims_ricker <- ensemble(sfm_ricker, n = n, 
+conditions = list(
+    # demands = c(0.2, 0.5, 0.8)
+    demands = c(0.5),
+    location = 0.1,
+
+  # location = c(0.1, 0.3, 0.5, 0.7, 0.9)
+  recovery_rate = c(0.1, 0.3, 0.5, 0.7, 0.9)
+),
+save_at = 1)
+
+plot(sims_ricker, main = "Ricker Recovery", which = which, central = central, sim = 1:n, nrows=3)
+
+plot(sims_ricker, main = "Ricker Recovery", which = which, central = central, sim = 1:50,
+condition_display = "slider")
+
+```
+
+```{r}
+# sfm <- stockflow()
+sfm <- stockflow("burnout")
+
+sfm <- sfm |>
+change_name(work_rate, new_name = "demands") |>
+change_type(demands, new_type = "stock") |>
+update(demands, eqn = 0.1, label = "Job Demands")
+
+# sfm <- sfm |>
+#   sim_settings(
+#     # stop = round(182.5), time_units = "day",
+#     # # Simulation timestep
+#     # dt = 0.01,
+#     # Reduce the output size
+#     save_at = 1,
+#     # Set only_stocks = FALSE to return all variables (not just stocks) in the simulation output
+#     only_stocks = FALSE,
+#     language = "julia", save_sims = TRUE
+#   ) |> meta(name = "Job Demands and Resources (JD-R) Theory") 
+  
+# sfm <- stock(sfm, c(energy, demands),
+#  eqn = runif(1, 0, 1), 
+# label = c("Energy", "Job Demands"))
+
+# # Check that runif() is stored as an expression, not a computed value
+# as.data.frame(sfm, properties = "eqn")
+
+# # To instead use a computed value, we can use the !! (bang-bang) operator to evaluate the expression and store the resulting value in the model:
+# sfm |> 
+#   update(energy, eqn = !!runif(1, 0, 2)) |>
+#   as.data.frame(properties = "eqn")
+
+# Note that we haven't saved the above statement to the model, so the model still contains the unevaluated expression.
+
+# To produce the same initial condition in each simulation, set a seed:
+# sfm <- sim_settings(sfm, seed = 12) 
 
 
+sfm1 <- sfm |>
+  constant(undermining_rate, eqn = 0.1, label = "Self-undermining Rate") |>
+flow(undermining, eqn = undermining_rate * exp(-5 * energy),
+    to = demands, label = "Self-undermining")
+
+# sfm1 |> 
+#   simulate() |>
+#   plot()
+
+
+sfm2 <- sfm1 |>
+# update(recovery_rate, eqn = 0.1) |>
+  constant(location, eqn = 0.2, label = "Location") |>
+  update(undermining,
+    eqn = ricker(energy, location = location, 
+    upper = undermining_rate, shape = 2)
+  )
+
+
+# sfm2 |> 
+#   simulate() |>
+#   plot()
+
+
+sfm1 <- sfm1 |>
+update(energy, eqn = runif(1)) 
+
+sfm2 <- sfm2 |>
+update(energy, eqn = runif(1)) 
+
+# sims1 <- ensemble(sfm1, n = 100, save_n = 50, save_sims = TRUE)
+# sims2 <- ensemble(sfm2, n = 100, save_n = 50, save_sims = TRUE)
+
+# pl1 <- plot(sims1, main = "Self-undermining (exponential)", which = which, central = central, sim = 1:100)
+# pl2 <- plot(sims2, main = "Self-undermining (Ricker)", which = which, central = central, sim = 1:100)
+
+# pl <- plotly::subplot(pl1, pl2,
+#   nrows = 2,
+#   shareX = TRUE,
+#   shareY = FALSE,
+#   titleY = TRUE,
+#   titleX = TRUE,
+#   margin = c(0.1, 0.05, 0.05, 0.05)
+# ) 
+
+# pl
+
+```
+
+
+
+```{r}
+## rest of model
+sfm <- sfm2
+
+as.data.frame(sfm, properties = "eqn")
+
+sfm <-  sfm |>
+discard(net_flow) |>
+discard(erosion) |>
+change_type(recovery_rate, new_type = "constant") |>
+sim_settings(seed = 123) |>
+        # sim_settings(start = "0.0", stop = "182.0", dt = "0.01", save_at = "1.0", time_units = "day", only_stocks = FALSE, save_type = "save_at") |>
+        # meta(name = "Job Demands and Resources (JD-R) Theory", created = "2026-06-27 10:00:03.339021") |>
+        # stock(demands, eqn = runif(1, 0, 1), label = "Job Demands") |>
+        # stock(energy, eqn = runif(1, 0, 1), label = "Energy") |>
+        stock(engagement, eqn = runif(1, 0, 1), label = "Work Engagement") |>
+        stock(resources, eqn = runif(1, 0, 1), label = "Job Resources") |>
+        
+        update(recovery_rate, eqn = 0.1) |>
+        flow(recovery, 
+        eqn = ricker(energy, 
+        # location = location,
+        location = 0.5,
+         upper = recovery_rate, shape = 2), 
+        to = energy, label = "Recovery") |>
+
+        flow(effort, 
+        # eqn = effort_rate / (1 + engagement) * energy * demands / (1 + resources), 
+        eqn = effort_rate * energy * (1 + demands) / (1 + resources), 
+        
+        from = energy, label = "Effort") |>
+        
+        flow(engagement_decay, eqn = engagement_decay_rate * engagement / (1 + energy), from = engagement, label = "Decay") |>
+        flow(exo_demands, eqn = exo_demand_rate * exp(-s_slope * demands), to = demands, label = "Exogenous tasks") |>
+        flow(exo_resources, eqn = exo_resource_rate * exp(-s_slope * resources), to = resources, label = "Exogenous support") |>
+        flow(motivation, eqn = motivation_rate * energy * hill(resources, m_slope) * demands, to = engagement, label = "Motivation") |>
+        flow(proactive, eqn = proactive_rate * hill(engagement, m_slope), to = resources, label = "Proactive behaviour") |>
+        flow(resource_decay, eqn = resource_decay_rate * resources / (1 + energy), from = resources, label = "Decay") |>
+        # flow(undermining, eqn = ricker(energy, location = location, upper = undermining_rate), to = demands, label = "Self-undermining") |>
+        flow(work, eqn = work_rate * energy * demands * (1 + engagement), from = demands, label = "Work") |>
+
+        constant(effort_rate, eqn = 0.5, label = "Effort Rate") |>
+        constant(engagement_decay_rate, eqn = 0.2, label = "Engagement Decay Rate") |>
+        constant(exo_demand_rate, 
+        # eqn = 0.1,
+        eqn = 0.3,
+         label = "New task rate") |>
+        constant(exo_resource_rate, eqn = 0.1, label = "New resource rate") |>
+        # constant(location, eqn = 0.2, label = "Location of Ricker Peak") |>
+        constant(m_slope, eqn = 3, label = "Medium Slope") |>
+        constant(motivation_rate, eqn = 0.3, label = "Motivation Rate") |>
+        constant(proactive_rate, eqn = 0.2, label = "Proactive Behaviour Rate") |>
+        # constant(recovery_rate, eqn = 0.025, label = "Recovery Rate") |>
+        constant(resource_decay_rate, eqn = 0.1, label = "Resource Decay Rate") |>
+        constant(s_slope, eqn = 5, label = "Steep Slope") |>
+        # constant(undermining_rate, eqn = 0.2, label = "Self-undermining Rate") |>
+        constant(work_rate,
+        #  eqn = 0.5, 
+         eqn = 1,
+         label = "Demand Reduction Rate") |>
+        aux(performance, eqn = engagement + energy, label = "Job Performance")
+
+sfm |> 
+  simulate() |>
+  plot()
+
+```
+
+```{r}
+
+
+sfm0 = sfm 
+sfm = sim_settings(sfm, language = "julia")
+
+# this test should fail
+conditions <- list(demands = 0, exo_demand_rate = 0, undermining_rate = 0)
+sfm1 <- unit_test(sfm,
+  # expr = tail(performance, 1) < 0.1,
+  expr = sum(performance) < 0.1,
+  conditions = conditions
+)
+
+result = verify(sfm1)
+result
+result |> plot()
+
+sfm1 <- update(sfm1, performance, eqn = demands * (engagement + energy))
+
+# now it should work
+verify(sfm1)
+
+sfm0 <- sfm <- update(sfm0, performance, eqn = demands * (engagement + energy))
+
+
+
+## noise
+
+sfm <- sfm0 |>
+  constant(demand_mean, eqn = 1) |>
+  constant(demand_sigma, eqn = 10) |>
+  constant(exo_demand_rate, eqn = .1) |>
+  aux(D_deterministic, eqn = exo_demand_rate * (demand_mean - demands)) |>
+  aux(D_stochastic, eqn = demand_sigma * sqrt(demands) * rnorm(1) * sqrt(dt)) |>
+  update(exo_demands, eqn = D_deterministic + D_stochastic)
+
+sim <- simulate(sfm, seed = 1)
+plot(sim)
+
+
+## remove
+
+sim1 <- simulate(sfm0)
+pl1 <- plot(sim1)
+
+sfm2 <- discard(sfm0, undermining)
+sim2 <- simulate(sfm2)
+pl2 <- plot(sim2, showlegend = FALSE)
+
+pl <- plotly::subplot(pl1, pl2, nrows = 2, shareY = TRUE)
+pl
+
+
+## model boundary
+# Make performance feedback to the system
+sfm2 <- constant(sfm0, performance_effect,
+  eqn = .25,
+  # eqn = .05,
+  label = "Effect Job Performance on Work Engagement"
+) |>
+  flow(pride,
+    # eqn = performance_effect * performance,
+    eqn = performance * hill(engagement, upper = performance_effect),
+    to = engagement
+  )
+
+sim1 <- simulate(sfm0, stop = 500)
+pl1 <- plot(sim1)
+
+sim2 <- simulate(sfm2, stop = 500)
+pl2 <- plot(sim2, showlegend = FALSE)
+
+pl <- plotly::subplot(pl1, pl2, nrows = 2, shareY = TRUE) |>
+  plotly::layout(title = "Model Boundary")
+pl
+
+
+##ensemble
+
+sfm <- sfm0 <- sim_settings(sfm0, save_n = 100)
+sfm <- sfm0 <- sim_settings(sfm0, language = "Julia")
+
+sims <- ensemble(sfm, n = 1000)
+plot(sims, vars = c("engagement", "demands"))
+
+## parameters
+# Define values to vary
+conditions <- list(motivation_rate = c(0.2, 0.7, 4))
+
+# Retain individual simulations
+sfm <- sim_settings(sfm, save_sims = TRUE)
+
+# Generate ensemble
+n <- 100
+sims <- ensemble(sfm, n = n, conditions = conditions)
+
+# Plot all trajectories
+plot(sims,
+  which = "sims", sim = 1:n, alpha = .75,
+  nrows = 3, central = "none",
+  vars = c("engagement", "demands")
+)
+
+
+
+## what if
+sfm <- change_type(sfm0, motivation_rate, new_type = "stock")
+
+sfm <- sfm |>
+  constant(start, eqn = 21) |>
+  constant(duration, eqn = 14) |>
+  constant(intervention, eqn = pulse(times, start, width = duration)) |>
+  flow(intervention_effect,
+    eqn = 0.1 * intervention(t),
+    to = motivation_rate, label = "Intervention Effect"
+  )
+
+  sfm |> simulate() |> plot()
+
+### effectiveness
+n <- 1000
+sfm <- sim_settings(sfm,
+  # Only save engagement at the last time point
+  vars = "engagement", stop = 1000, save_at = 1000
+)
+sims <- ensemble(sfm, n = n)
+df <- as.data.frame(sims, direction = "wide", which = "sims")
+tab <- table(round(df$engagement)) |>
+  prop.table() |>
+  as.data.frame()
+colnames(tab) <- c("Engagement", "Proportion")
+print(tab)
+
+# shorter
+sfm2 <- update(sfm, duration, eqn = 7)
+sims2 <- ensemble(sfm2, n = n)
+df2 <- as.data.frame(sims2, direction = "wide", which = "sims")
+tab2 <- table(round(df2$engagement)) |>
+  prop.table() |>
+  as.data.frame()
+colnames(tab2) <- c("Engagement", "Proportion")
+print(tab2)
+
+
+
+```
 
 ## Step 3. Formalization (old)
 
@@ -396,11 +727,11 @@ In the positive feedback loop between work engagement and job resources, resourc
 sfm <- sfm |>
   stock(engagement, 
   # eqn = 0.7, 
-   eqn = runif(1, .01, 1), 
+   eqn = runif(1, 0, 1), 
   label = "Work Engagement") |>
   stock(resources,
   #  eqn = 0.5,
-   eqn = runif(1, .01, 1), 
+   eqn = runif(1, 0, 1), 
     label = "Job Resources")
 ```
 
@@ -412,10 +743,11 @@ sfm |>
   plot()
 ```
 
-With both stocks in place, we next define their inflows. Because resources and engagement mutually affect each other's inflows, each inflow requires a **functional form** specifying how one stock influences the other's rate of change. Verbal theories rarely constrain this choice. JD-R theory, for instance, postulates that resources motivate engagement but not the magnitude or shape of that effect.
+With both stocks in place, we next define their inflows. Because resources and engagement mutually affect each other's inflows, each inflow requires a *functional form* specifying how one stock influences the other's rate of change. Verbal theories rarely constrain this choice. JD-R theory, for instance, postulates that resources motivate engagement but not the magnitude or shape of that effect.
 
 
 ```{r include=FALSE}
+{
 # Functional forms
 linear_ff <- function(x, a) {
   a * x
@@ -507,6 +839,7 @@ pl_func_form <- plotly::subplot(pl_linear, pl_hill,
       )
     )
   )
+  }
 ```
 
 ```{r, include = FALSE}
@@ -1082,11 +1415,11 @@ We now present the remaining implementation of JD-R theory that is omitted from 
 sfm <- sfm |>
   stock(demands,
   #  eqn = .2,
-    eqn = runif(1, .01, 1), 
+    eqn = runif(1, 0, 1), 
     label = "Job Demands") |>
   stock(energy,
   #  eqn = .9, 
-    eqn = runif(1, .01, 1), 
+    eqn = runif(1, 0, 1), 
 label = "Energy") |>
   aux(performance, eqn = engagement + energy, label = "Job Performance")
 
@@ -1146,17 +1479,18 @@ JD-R theory only specifies how energy can be depleted, not how it can recover. T
 # upper
 
 sfm <- sfm |>
-custom_func(ricker1, eqn = function(x, location, upper) {
-    upper * (x / location * exp(1 - x / location))
-  }
-) |>
-  constant(recovery_rate, eqn = 0.3, label = "Recovery Rate") |>
-  constant(s_slope, eqn = 5, label = "Steep Slope") |>
+  # constant(recovery_rate, eqn = 0.3, label = "Recovery Rate") |>
+  constant(recovery_rate, 
+  eqn = 0.025, 
+  # eqn = 0.05,
+  label = "Recovery Rate") |>
+  constant(location, eqn = 0.2, label = "Location of Ricker Peak") |>
   flow(recovery,
     # eqn = ricker(x = energy, a = recovery_rate, b = s_slope),
     #' \deqn{f(x) = a \cdot x \cdot e^{-b \cdot x}} 
     # eqn = ricker(x = energy, location = 1 / s_slope, upper = recovery_rate / (s_slope * exp(1))),
-    eqn = ricker1(energy, 1 / s_slope, recovery_rate / (s_slope * exp(1))),
+    # eqn = ricker(energy, location = 1 / s_slope, upper = recovery_rate / (s_slope * exp(1))),
+    eqn = ricker(energy, location = location, upper = recovery_rate),
 
     # eqn = recovery_rate * energy * exp(-s_slope * energy),
     to = energy, label = "Recovery"
@@ -1187,12 +1521,14 @@ Job demands are increased by self-undermining behaviour. We similarly implement 
 
 ```{r}
 sfm <- sfm |>
-  constant(e_slope, eqn = 10, label = "Extreme Slope") |>
-  constant(undermining_rate, eqn = 5, label = "Self-undermining Rate") |>
+  # constant(e_slope, eqn = 10, label = "Extreme Slope") |>
+  # constant(undermining_rate, eqn = 5, label = "Self-undermining Rate") |>
+  constant(undermining_rate, eqn = 0.2, label = "Self-undermining Rate") |>
   flow(undermining,
     # eqn = undermining_rate * energy * exp(-e_slope * energy),
     # eqn = ricker(x = energy, location = 1 / e_slope, upper = undermining_rate / (e_slope * exp(1))),
-    eqn = ricker1(energy, 1 / e_slope, undermining_rate / (e_slope * exp(1))),
+    # eqn = ricker(energy, location = 1 / e_slope, upper = undermining_rate / (e_slope * exp(1))),
+    eqn = ricker(energy, location = location, upper = undermining_rate),
     to = demands, label = "Self-undermining"
   )
 
@@ -1206,6 +1542,7 @@ As of now, job resources are only cultivated through proactive behaviour, and jo
 ```{r }
 sfm <- sfm |>
   constant(exo_resource_rate, eqn = .1, label = "New resource rate") |>
+  constant(s_slope, eqn = 5, label = "Steep Slope") |>
   flow(exo_resources,
     eqn = exo_resource_rate * exp(-s_slope * resources),
     to = resources, label = "Exogenous support"
@@ -1223,7 +1560,9 @@ In the absence of more information about the functional form of exogenous demand
 sfm <- sfm |>
   constant(exo_demand_rate, eqn = .1, label = "New task rate") |>
   flow(exo_demands,
-    eqn = exo_demand_rate * exp(-s_slope * demands), to = demands,
+    # eqn = exo_demand_rate * exp(-s_slope * demands), 
+    eqn = exo_demand_rate * exp(-10 * demands), 
+    to = demands,
     label = "Exogenous tasks"
   )
 ```
@@ -1256,115 +1595,6 @@ if (recreate_figs) {
   #  engagement -> performance -> energy -> resources -> demands [style=invis]
   {
     viz_str <- '
-    digraph sfm {
-
-      graph [layout = dot, rankdir = LR, center=true, outputorder="edgesfirst", pad=0.1, nodesep= 0.3, overlap = false]
-
-      # Shared across all nodes (persists until overridden)
-      node [fontsize=20,fontname="Times New Roman"]
-
-      # Define stock nodes
-      node [shape=box,style=filled,fillcolor="#09B0ACBF"]
-      "demands" [id="demands",label="Job Demands",tooltip = "eqn = 0.2"]
-        "energy" [id="energy",label="Energy",tooltip = "eqn = 0.9"]
-        "engagement" [id="engagement",label="Work Engagement",tooltip = "eqn = 0.7"]
-        "resources" [id="resources",label="Job Resources",tooltip = "eqn = 0.5"]
-
-        "invisnode1" [id="invisnode1",label="Invisible Node",shape=box,style=invis, width=.01, height=.01, fixedsize=true]
-      "invisnode2" [id="invisnode2",label="Invisible Node",shape=box,style=invis, width=.01, height=.01, fixedsize=true]
-
-      # Define flow nodes (intermediate nodes for flows)
-      node [style = "",shape=plaintext, fontsize=18, width=0.6, height=0.3]
-      "effort" [id="effort",label="Effort", tooltip = "eqn = effort_rate / (1 + engagement) * energy * demands / (1 + resources)"]
-        "engagement_decay" [id="engagement_decay",label="Decay", tooltip = "eqn = engagement_decay_rate * engagement / (1 + energy)"]
-        "exo_demands" [id="exo_demands",label="Exogenous tasks", tooltip = "eqn = exo_demand_rate * exp(-s_slope * demands)"]
-        "exo_resources" [id="exo_resources",label="Exogenous support", tooltip = "eqn = exo_resource_rate * exp(-s_slope * resources)"]
-        "motivation" [id="motivation",label="Motivation", tooltip = "eqn = motivation_rate * energy * hill(resources, m_slope) * demands"]
-        "proactive" [id="proactive",label="Proactive behaviour", tooltip = "eqn = proactive_rate * hill(engagement, m_slope)"]
-        "recovery" [id="recovery",label="Recovery", tooltip = "eqn = recovery_rate * energy * exp(-s_slope * energy)"]
-        "resource_decay" [id="resource_decay",label="Decay", tooltip = "eqn = resource_decay_rate * resources / (1 + energy)"]
-        "undermining" [id="undermining",label="Self-undermining", tooltip = "eqn = undermining_rate * energy * exp(-e_slope * energy)"]
-        "work" [id="work",label="Work", tooltip = "eqn = work_rate * energy * demands * (1 + engagement)"]
-
-      # Define external cloud nodes
-      node [shape=doublecircle, fixedsize=true, width = .25, height = .25, orientation=15]
-      "Cloud1" [label="", tooltip = "Unspecified source"]
-        "Cloud2" [label="", tooltip = "Unspecified source"]
-        "Cloud3" [label="", tooltip = "Unspecified source"]
-        "Cloud4" [label="", tooltip = "Unspecified source"]
-        "Cloud5" [label="", tooltip = "Unspecified sink"]
-        "Cloud6" [label="", tooltip = "Unspecified sink"]
-        "Cloud7" [label="", tooltip = "Unspecified sink"]
-        "Cloud8" [label="", tooltip = "Unspecified sink"]
-        "Cloud9" [label="", tooltip = "Unspecified sink"]
-        "Cloud10" [label="", tooltip = "Unspecified sink"]
-
-      # Define auxiliary nodes
-      node [shape=circle,fontsize=18, width=0.15, height=0.15, fixedsize=true, style=filled, fillcolor="grey90"]
-      "performance" [id="performance",xlabel="Job Performance",label="",tooltip = "eqn = engagement + energy"]
-
-      # Define constant nodes
-
-       # Rank groupings
-       {rank=same; engagement; invisnode1; performance; invisnode2; energy; resources; demands}
-
-       # Enforce top-to-bottom order
-       engagement -> invisnode1 -> performance -> invisnode2 -> energy -> resources -> demands [style=invis]
-
-
-
-      # Define flow edges (stock -> flow_node)
-      edge [style = "", arrowhead="none", color="black:#CCC568:black", penwidth=1.1, minlen=1.5, splines=false, tailport="e", headport="w"]
-      "energy" -> "effort"
-        "engagement" -> "engagement_decay"
-        "Cloud5" -> "exo_demands"
-        "Cloud6" -> "exo_resources"
-        "Cloud7" -> "motivation"
-        "Cloud8" -> "proactive"
-        "Cloud9" -> "recovery"
-        "resources" -> "resource_decay"
-        "Cloud10" -> "undermining"
-        "demands" -> "work"
-
-      # Define flow edges (flow_node -> stock)
-      edge [style = "", arrowhead="normal", color="black:#CCC568:black", arrowsize=1.5, penwidth=1.1, minlen=1.5, splines=ortho, tailport="e", headport="w"]
-      "effort" -> "Cloud1"
-        "engagement_decay" -> "Cloud2"
-        "exo_demands" -> "demands"
-        "exo_resources" -> "resources"
-        "motivation" -> "engagement"
-        "proactive" -> "resources"
-        "recovery" -> "energy"
-        "resource_decay" -> "Cloud3"
-        "undermining" -> "demands"
-        "work" -> "Cloud4"
-
-      # Define dependency edges
-      edge [style = "", color="#999999", arrowsize=0.8, penwidth=1, splines=true, constraint=false, tailport = "_", headport="_"]
-      "engagement" -> "effort"
-        "energy" -> "effort"
-        "demands" -> "effort"
-        "resources" -> "effort"
-        "engagement" -> "engagement_decay"
-        "energy" -> "engagement_decay"
-        "demands" -> "exo_demands"
-        "resources" -> "exo_resources"
-        "energy" -> "motivation"
-        "resources" -> "motivation"
-        "demands" -> "motivation"
-        "engagement" -> "proactive"
-        "energy" -> "recovery"
-        "resources" -> "resource_decay"
-        "energy" -> "resource_decay"
-        "energy" -> "undermining"
-        "energy" -> "work"
-        "demands" -> "work"
-        "engagement" -> "work"
-        "engagement" -> "performance"
-        "energy" -> "performance"
-
-
-    }
     '
   }
 
@@ -1481,11 +1711,11 @@ if (recreate_figs) {
 The target phenomenon should not depend on a single, carefully chosen initial condition. Individuals may have very different starting levels of demands, resources, engagement, and energy, yet still experience burnout. Initial conditions are typically chosen with some degree of arbitrariness and should not be of substantial consequence to the theory when varied within reasonable ranges. This is not to say they are inconsequential. Initializing all stocks at zero, for instance, can prevent any dynamics from occurring, and different initial conditions can reveal that the system is capable of qualitatively different behaviour. As a first assessment of our model's dependence on initial conditions, we set the initial state of all stocks to be drawn from a uniform distribution bounded between .01 and 2:
 
 ```{r}
-sfm <- sfm |>
-  update(c(demands, resources, energy, engagement),
-    eqn = runif(1, 0.01, 2)
-    # eqn = runif(1)
-  )
+# sfm <- sfm |>
+#   update(c(demands, resources, energy, engagement),
+#     eqn = runif(1, 0, 2)
+#     # eqn = runif(1)
+#   )
 
 sim1 <- simulate(sfm, seed = 1)
 pl1 <- plot(sim1, vars = vars)
@@ -1496,7 +1726,7 @@ pl2 <- plot(sim2, vars = vars, showlegend = FALSE)
 sim3 <- simulate(sfm, seed = 6)
 pl3 <- plot(sim3, vars = vars, showlegend = FALSE)
 
-pl <- plotly::subplot(pl1, pl2, pl3, nrows = 1)
+pl <- plotly::subplot(pl1, pl2, pl3, nrows = 3)
 pl
 ```
 
@@ -1685,32 +1915,21 @@ We add this modification to our saved model as well:
 sfm0 <- update(sfm0, performance, eqn = demands * (engagement + energy))
 ```
 
+We include some additional verification tests checks that are omitted from the paper for brevity. For more options and details on unit testing, see the [unit tests vignette](https://kcevers.github.io/sdbuildR/articles/unit-tests.html). 
 
-We include some additional verification tests checks that are omitted from the paper for brevity. 
-
-
-```{r}
-# Job demands and energy should negatively correlate
-sfm <- unit_test(sfm, expr = cor(demands, energy) < -.2)
-verify(sfm)
-
-# Job resources and energy should positive correlate
-sfm <- unit_test(sfm, expr = cor(resources, energy) > .2)
-verify(sfm)
-
-# Job performance and work engagement should positively correlate
-sfm <- unit_test(sfm, expr = cor(engagement, performance) > .2)
-verify(sfm)
-
-# Job performance and energy should positively correlate
-sfm <- unit_test(sfm, expr = cor(performance, energy) > .2)
-verify(sfm)
-```
-
-In general, behaviours should always be positive:
 
 ```{r}
-sfm <- unit_test(sfm, expr = all(proactive >= 0)) |>
+sfm <- sfm |>
+  # Job demands and energy should negatively correlate
+  unit_test(expr = cor(demands, energy) < -.2) |>
+  # Job resources and energy should positive correlate
+  unit_test(expr = cor(resources, energy) > .2) |>
+  # Job performance and work engagement should positively correlate
+  unit_test(expr = cor(engagement, performance) > .2) |>
+  # Job performance and energy should positively correlate
+  unit_test(expr = cor(performance, energy) > .2) |>
+  # Behaviours (e.g., the flows proactive and work) should always be positive
+  unit_test(expr = all(proactive >= 0)) |>
   unit_test(expr = all(work >= 0))
 
 verify(sfm)
@@ -1722,18 +1941,6 @@ When motivation is zero, motivation should be zero at all time points:
 sfm <- unit_test(sfm,
   expr = all(motivation == 0),
   conditions = list(motivation_rate = 0)
-)
-
-verify(sfm)
-```
-
-
-We would expect that when resources are initialized at zero and its inflow rate is zero, engagement decays to zero:
-
-```{r}
-sfm <- unit_test(sfm,
-  expr = tail(engagement, 1) < 0.01,
-  conditions = list(resources = 0, exo_resource_rate = 0)
 )
 
 verify(sfm)
@@ -1751,10 +1958,6 @@ result <- verify(sfm)
 print(result)
 ```
 
-```{r}
-plot(result, test = 11)
-```
-
 As another robustness check, we initialize all stocks at high values, which the model is able to handle.
 
 ```{r}
@@ -1768,10 +1971,6 @@ print(result)
 ```
 
 
-```{r}
-plot(result, test = 12)
-```
-
 Show all unit tests:
 
 ```{r}
@@ -1780,7 +1979,7 @@ unit_tests(sfm)
 
 Plot all tests:
 
-```{r, fig.height=8}
+```{r, fig.height=10}
 sfm |> verify() |> plot(nrows = 3)
 ```
 
@@ -1878,6 +2077,7 @@ Job performance has no effect on any part of the system. In other words, it is m
 # Make performance feedback to the system
 sfm2 <- constant(sfm0, performance_effect,
   eqn = .1,
+  # eqn = .05,
   label = "Effect Job Performance on Work Engagement"
 ) |>
   flow(pride,
@@ -2102,7 +2302,7 @@ Next, we create a pulse function that is 1 for a period of two weeks and 0 other
 
 ```{r intervention-pulse-model}
 sfm <- sfm |>
-  constant(start, eqn = 14) |>
+  constant(start, eqn = 21) |>
   constant(duration, eqn = 14) |>
   constant(intervention, eqn = pulse(times, start, width = duration)) |>
   flow(intervention_effect,
@@ -2302,7 +2502,7 @@ if (recreate_figs) {
 
 ### Informing Experimental and Statistical Design
 
-Finally, formal models are powerful tools for guiding experimental and statistical design. The derivation chain from theory to empirical test involves a multitude of decisions that the theory itself does not constrain. Though meta-analyses may quantify the impact of such decisions, they do not resolve whether discrepant findings reflect mere design artefacts or genuine challenges to the theory [@meehl_why_1990]. By contrast, a formally specified theory predicts what discrepancies are **implied by the theory itself**. As an illustration, we use our JD-R model to predict the results of a cross-lagged panel model, a widely used analysis in the JD-R literature [@upadyaya_job_2016; @hakanen_job_2008; @sorjonen_questionable_2024]. We assess the cross-lagged relationship between job demands and work engagement with **lavaan** [@rosseel_lavaan_2012] on an ensemble dataset (*n = 10,000*), sampled at day 20 (wave 1) and three months later at day 110 (wave 2). 
+Finally, formal models are powerful tools for guiding experimental and statistical design. The derivation chain from theory to empirical test involves a multitude of decisions that the theory itself does not constrain. Though meta-analyses may quantify the impact of such decisions, they do not resolve whether discrepant findings reflect mere design artefacts or genuine challenges to the theory [@meehl_why_1990]. By contrast, a formally specified theory predicts what discrepancies are *implied by the theory itself*. As an illustration, we use our JD-R model to predict the results of a cross-lagged panel model, a widely used analysis in the JD-R literature [@upadyaya_job_2016; @hakanen_job_2008; @sorjonen_questionable_2024]. We assess the cross-lagged relationship between job demands and work engagement with **lavaan** [@rosseel_lavaan_2012] on an ensemble dataset (*n = 10,000*), sampled at day 20 (wave 1) and three months later at day 110 (wave 2). 
 
 
 
@@ -2318,11 +2518,11 @@ library(lavaan)
 ```{r include = FALSE}
 # Next, we add random variability not only to the initial conditions of the stocks, but also to the model's constants. To avoid manually updating each constant, we can extract all constants into a dataframe, modify their equations, and then update the model with the modified dataframe.
 
-# Random initial conditions
-sfm <- update(sfm0, c(demands, resources, engagement, energy),
- eqn = runif(1, 0.01, 2)
-#  eqn = runif(1)
- )
+# # Random initial conditions
+# sfm <- update(sfm0, c(demands, resources, engagement, energy),
+#  eqn = runif(1, 0, 2)
+# #  eqn = runif(1)
+#  )
 
 # View constant values
 df <- as.data.frame(sfm0, type = "constant", properties = "eqn")
@@ -2343,7 +2543,7 @@ df[["eqn"]] <- sapply(df$eqn, function(x) {
 })
 
 # Update model with modified constants
-sfm <- update(sfm, df = df)
+sfm <- update(sfm0, df = df)
 ```
 
 
@@ -2358,7 +2558,7 @@ sfm <- sim_settings(sfm,
   # Modify stop to a round value so the last value is included
   stop = round(365 / 2), vars = vars, save_sims = TRUE
 )
-n <- ifelse(interactive(), 10000, 1000)
+n <- ifelse(interactive(), 100, 100) # **
 
 sims <- ensemble(sfm, n = n, save_sims = TRUE)
 plot(sims, vars = vars, which = "summary")
@@ -2545,7 +2745,8 @@ pl <- plotly::plot_ly(results_df,
 
 ```{r, echo=FALSE}
 plotly::layout(pl,
-  legend = utils::modifyList(annot_legend, list(x = 0.5, y = -0.2))
+  margin = list(t = 100),
+  legend = utils::modifyList(annot_legend, list(x = 0.5, y = -0.25))
 )
 ```
 

@@ -14,6 +14,7 @@ templates <- function(template) {
     "crielaard2022",
     "coffee_cup", "bank_account",
     "lorenz", "rossler", "vanderpol", "duffing", "chua",
+    "burnout",
     "jdr"
     # "spruce_budworm"
   )
@@ -290,6 +291,29 @@ templates <- function(template) {
       update("beta", "constant", eqn = "28", label = "Parameter beta") |>
       update("m0", "constant", eqn = "-1.143", label = "Nonlinear slope m0") |>
       update("m1", "constant", eqn = "-0.714", label = "Nonlinear slope m1")
+  } else if (template == "burnout") {
+    # object <- stockflow() |>
+    #     sim_settings(start = "0.0", stop = "16.0", dt = "0.01", time_units = "weeks", only_stocks = FALSE) |>
+    #     meta(name = "Burnout") |>
+    #     stock(energy, eqn = 0.3, label = "Energy") |>
+    #     stock(recovery_rate, eqn = 1, label = "Recovery Rate") |>
+    #     flow(erosion, eqn = recovery_rate * work, from = recovery_rate, label = "Recovery Erosion") |>
+    #     flow(recovery, eqn = recovery_rate, to = energy, label = "Recovery") |>
+    #     flow(work, eqn = work_rate * energy, from = energy, label = "Depletion from work") |>
+    #     constant(work_rate, eqn = 0.5, label = "Work Rate") |>
+    #     aux(net_flow, eqn = recovery - work, label = "Net flow to energy")
+
+    object <- stockflow() |>
+        sim_settings(start = "0.0", stop = "183.0", dt = "0.01", time_units = "days", only_stocks = FALSE) |>
+        meta(name = "Burnout", created = "2026-06-27 09:21:08.605607") |>
+        stock(energy, eqn = 0.3, label = "Energy") |>
+        stock(recovery_rate, eqn = 0.3, label = "Recovery Rate") |>
+        flow(erosion, eqn = recovery_rate * work, from = recovery_rate, label = "Recovery Erosion") |>
+        flow(recovery, eqn = recovery_rate, to = energy, label = "Recovery") |>
+        flow(work, eqn = work_rate * energy, from = energy, label = "Depletion") |>
+        constant(work_rate, eqn = 0.05, label = "Work Rate") |>
+        aux(net_flow, eqn = recovery - work, label = "Net flow to energy")
+
   } else if (template == "jdr") {
     object <- stockflow() |>
       sim_settings(start = "0.0", stop = round(182.5), dt = "0.01", seed = "123", time_units = "day", only_stocks = FALSE, save_at = 1) |>

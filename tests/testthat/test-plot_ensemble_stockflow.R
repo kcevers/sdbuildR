@@ -633,6 +633,19 @@ test_that("plot.ensemble_stockflow() with show_constants = TRUE", {
   expect_snapshot_plot("ens-show-constants", pl)
 })
 
+test_that("plot.ensemble_stockflow() with which = 'sims' and with show_constants = TRUE", {
+  sims <- make_r_ens(save_sims = TRUE)
+  constants <- as.data.frame(sims[["object"]], type = "constants", properties = "label")
+  pl <- plot(sims, show_constants = TRUE, which = "sims")
+
+  expect_plotly(pl)
+  traces <- plotly_traces(pl)
+  expect_true(all(constants[["label"]] %in% traces[["name"]]))
+
+  # Snapshot last
+  expect_snapshot_plot("ens-show-constants-sims", pl)
+})
+
 # ============================================================================
 # CONDITION DISPLAY AND TIME ANIMATION
 # ============================================================================

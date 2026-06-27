@@ -8,7 +8,8 @@
 #' a `var` statistic, which the R side no longer requests.
 #'
 #' @noRd
-ensemble_stat_funs <- list(
+ensemble_stat_funs <- function() {
+  list(
   mean          = function(v) mean(v, na.rm = TRUE),
   median        = function(v) stats::median(v, na.rm = TRUE),
   sd            = function(v) stats::sd(v, na.rm = TRUE),
@@ -16,20 +17,21 @@ ensemble_stat_funs <- list(
   max           = function(v) max(v, na.rm = TRUE),
   missing_count = function(v) sum(is.na(v))
 )
+}
 
 
 #' Compute summary stats for a numeric vector
 #'
 #' @param vals Numeric vector.
 #' @param stats Character vector of summary statistic names (subset of
-#'   `names(ensemble_stat_funs)`), in catalog order.
+#'   `names(ensemble_stat_funs())`), in catalog order.
 #' @param quantiles Numeric vector of quantile probabilities.
 #' @param q_names Character vector of quantile column names.
 #' @returns Named list of summary statistics.
 #' @noRd
 ensemble_summary_stats <- function(vals, stats, quantiles, q_names) {
   c(
-    lapply(ensemble_stat_funs[stats], function(f) f(vals)),
+    lapply(ensemble_stat_funs()[stats], function(f) f(vals)),
     stats::setNames(
       lapply(quantiles, function(q) {
         stats::quantile(vals, probs = q, na.rm = TRUE, names = FALSE)
@@ -364,7 +366,7 @@ assemble_ensemble_results_r <- function(good_results, n, n_conditions,
   # of `quantiles`; the probabilities are recovered from the object's
   # `quantiles` field. Order requested stats by catalog order for consistency
   # with the Julia backend.
-  summary_stats <- intersect(names(ensemble_stat_funs), summary_stats)
+  summary_stats <- intersect(names(ensemble_stat_funs()), summary_stats)
   # Guard against length-0 quantiles: paste0("quant", integer(0)) returns
   # "quant" (length 1), not character(0), which would desync q_names from the
   # (empty) quantile list.

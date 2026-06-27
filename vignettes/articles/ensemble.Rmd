@@ -191,7 +191,7 @@ if (requireNamespace("future", quietly = TRUE) &&
   # Set up parallel execution with 4 workers
   future::plan(future::multisession, workers = 4)
 
-  # Run ensemble simulations (now in parallel)
+  # Run 1000 simulations in parallel
   sims <- ensemble(sfm, n = 100)
 
   # Restore sequential execution

@@ -1,4 +1,4 @@
-#' Run ensemble simulations
+#' Run ensemble simulation
 #'
 #' Run large-scale (i.e., ensemble) simulations of stock-and-flow models, varying initial
 #' conditions and/or constants specified in `conditions`.
@@ -297,7 +297,7 @@ resolve_ensemble_stats <- function(central, spread) {
 
   stats <- unique(c(central, spread_stats, "missing_count"))
   # Order by catalog for consistency between the R and Julia backends.
-  stats <- intersect(names(ensemble_stat_funs), stats)
+  stats <- intersect(names(ensemble_stat_funs()), stats)
 
   list(
     summary_stats = stats,

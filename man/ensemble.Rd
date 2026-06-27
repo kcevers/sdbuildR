@@ -2,7 +2,7 @@
 % Please edit documentation in R/ensemble.R
 \name{ensemble}
 \alias{ensemble}
-\title{Run ensemble simulations}
+\title{Run ensemble simulation}
 \usage{
 ensemble(
   object,

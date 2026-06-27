@@ -12,7 +12,7 @@ vers <- sprintf("R package version %s", version)
 bibentry(
   bibtype = "Manual",
   key = "sdbuildR",
-  title = "{sdbuildR}: Easily Build, Simulate, and Explore Stock-and-Flow Models",
+  title = "{sdbuildR}: An Accessible Interface for Stock-and-Flow Modelling in R",
   author = person(
     given = "Kyra Caitlin", family = "Evers",
     email = "kyra.c.evers@gmail.com",
@@ -24,7 +24,7 @@ bibentry(
   doi = "10.32614/CRAN.package.sdbuildR",
   textVersion = paste0(
     "Evers, K. (", year, "). ",
-    "sdbuildR: Easily Build, Simulate, and Explore Stock-and-Flow Models. ",
+    "sdbuildR: An Accessible Interface for Stock-and-Flow Modelling in R. ",
     vers, ". https://doi.org/10.32614/CRAN.package.sdbuildR"
   )
 )

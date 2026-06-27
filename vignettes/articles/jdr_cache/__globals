@@ -1,0 +1,105 @@
+libraries	
+unnamed-chunk-1	
+unnamed-chunk-2	recreate_figs
+unnamed-chunk-3	
+unnamed-chunk-4	
+unnamed-chunk-5	
+unnamed-chunk-6	sfm1	sfm2	sfm3
+unnamed-chunk-7	
+unnamed-chunk-8	
+unnamed-chunk-9	
+unnamed-chunk-10	sfm
+unnamed-chunk-11	annot_font	annot_legend	annot_xlab	font_size_legend	rm_grid
+unnamed-chunk-12	pl_func_form
+unnamed-chunk-13	annot_font	annot_legend	filepath_figs	font_size_legend	font_size_subplot	font_size_xlab	recreate_figs	rm_grid	save_at_fine
+unnamed-chunk-14	
+unnamed-chunk-15	
+unnamed-chunk-16	recreate_figs	sfm
+unnamed-chunk-17	
+unnamed-chunk-18	
+unnamed-chunk-19	recreate_figs	sfm
+unnamed-chunk-20	
+unnamed-chunk-21	
+unnamed-chunk-22	recreate_figs	sfm
+unnamed-chunk-23	sfm
+unnamed-chunk-24	recreate_figs	sfm2
+unnamed-chunk-25	annot_font	annot_legend	annot_xlab	COLORS	filepath_figs	font_family	font_size	font_size_legend	font_size_subplot	font_size_xlab	pl_hill	pl_linear	recreate_figs	rm_grid	save_at_fine	VARS
+unnamed-chunk-26	filepath_figs	flow_col	font_family	recreate_figs	sfm	stock_col
+unnamed-chunk-27	
+unnamed-chunk-28	
+unnamed-chunk-29	
+unnamed-chunk-30	vars
+unnamed-chunk-31	vars
+unnamed-chunk-32	vars
+unnamed-chunk-33	vars
+unnamed-chunk-34	vars
+unnamed-chunk-35	
+unnamed-chunk-36	sfm	vars
+unnamed-chunk-37	filepath_figs	recreate_figs
+unnamed-chunk-38	recreate_figs	sfm
+unnamed-chunk-39	sfm	vars
+unnamed-chunk-40	
+unnamed-chunk-41	sfm
+unnamed-chunk-42	sfm
+unnamed-chunk-43	sfm
+unnamed-chunk-44	
+unnamed-chunk-45	recreate_figs	sfm
+unnamed-chunk-46	annot_font	annot_legend	annot_xlab	COLORS	filepath_figs	recreate_figs	rm_grid	save_at_fine	vars	VARS
+unnamed-chunk-47	
+unnamed-chunk-48	sfm
+unnamed-chunk-49	
+unnamed-chunk-50	sfm
+unnamed-chunk-51	sfm
+unnamed-chunk-52	
+unnamed-chunk-53	
+unnamed-chunk-54	
+unnamed-chunk-55	
+unnamed-chunk-56	
+unnamed-chunk-57	
+unnamed-chunk-58	
+unnamed-chunk-59	result
+unnamed-chunk-60	
+unnamed-chunk-61	result
+unnamed-chunk-62	sfm
+unnamed-chunk-63	sfm
+unnamed-chunk-64	sfm0	vars
+unnamed-chunk-65	annot_legend	annot_xlab	COLORS	filepath_figs	recreate_figs	rm_grid	save_at_fine	sfm	VARS
+unnamed-chunk-66	sfm0
+unnamed-chunk-67	sfm0
+unnamed-chunk-68	sfm0
+unnamed-chunk-69	sfm0
+unnamed-chunk-70	sfm0	sfm2	vars
+unnamed-chunk-71	annot_font	annot_legend	annot_xlab	COLORS	filepath_figs	font_size_legend	recreate_figs	rm_grid	save_at_fine	sfm0	sfm2	VARS
+unnamed-chunk-72	
+unnamed-chunk-73	
+unnamed-chunk-74	
+unnamed-chunk-75	
+julia-start	
+unnamed-chunk-76	
+julia-set-language	
+unnamed-chunk-77	
+unnamed-chunk-78	
+ensemble-initial-conditions-julia	sfm
+unnamed-chunk-79	sfm
+ensemble-parameter-variation-julia	
+unnamed-chunk-80	n	recreate_figs	sfm
+intervention-change-motivation-rate	sfm0
+intervention-pulse-model	
+intervention-single-simulation	sfm
+intervention-ensemble-julia	n
+unnamed-chunk-81	recreate_figs	sfm
+intervention-effectiveness-long-julia	
+intervention-shorter-duration-long-julia	n	sfm
+learning-figure-ensembles	annot	annot_font	annot_legend	annot_xlab	COLORS	conditions	filepath_figs	font_family	font_size_subplot	recreate_figs	rm_grid	save_at_coarse	save_at_fine	VARS
+unnamed-chunk-82	
+unnamed-chunk-83	sfm0
+sem-simulation-study	
+unnamed-chunk-84	sfm
+unnamed-chunk-85	build_wave_data	dfD	dfX	model	wave1	x1	x2
+unnamed-chunk-86	build_wave_data	dfD	dfX	lags	model	wave1	x1	x2
+unnamed-chunk-87	chosen_lag	results_df
+unnamed-chunk-88	annot_font	annot_legend	COLORS	font_size	rm_grid	VARS	x1	x2
+unnamed-chunk-89	annot_legend	pl
+unnamed-chunk-90	filepath_figs	pl	recreate_figs
+unnamed-chunk-91	
+unnamed-chunk-92	

@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# sdbuildR: Easily Build, Simulate, and Explore Stock-and-Flow Models in R
+# sdbuildR: An Accessible Interface for Stock-and-Flow Modelling in R
 
 <!-- badges: start -->
 
@@ -127,14 +127,14 @@ To cite sdbuildR, please use:
 citation("sdbuildR")
 #> To cite package 'sdbuildR' in publications use:
 #> 
-#>   Evers, K. (2026). sdbuildR: Easily Build, Simulate, and Explore
-#>   Stock-and-Flow Models. R package version 2.0.0.
+#>   Evers, K. (2026). sdbuildR: An Accessible Interface for
+#>   Stock-and-Flow Modelling in R. R package version 2.0.0.
 #>   https://doi.org/10.32614/CRAN.package.sdbuildR
 #> 
 #> A BibTeX entry for LaTeX users is
 #> 
 #>   @Manual{sdbuildR,
-#>     title = {{sdbuildR}: Easily Build, Simulate, and Explore Stock-and-Flow Models},
+#>     title = {{sdbuildR}: An Accessible Interface for Stock-and-Flow Modelling in R},
 #>     author = {Kyra Caitlin Evers},
 #>     year = {2026},
 #>     note = {R package version 2.0.0},
