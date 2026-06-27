@@ -332,8 +332,8 @@ sfm_exp |>
 sims_exp <- ensemble(sfm_exp, n = 100, save_n = 50, save_sims = TRUE)
 sims_ricker <- ensemble(sfm_ricker, n = 100, save_n = 50, save_sims = TRUE)
 
-pl_exp <- plot(sims_exp, main = "Self-undermining (exponential)", which = which, central = central, sim = 1:100)
-pl_ricker <- plot(sims_ricker, main = "Self-undermining (Ricker)", which = which, central = central, sim = 1:100)
+pl_exp <- plot(sims_exp, main = "Self-undermining (exponential)", which = which, central = central)
+pl_ricker <- plot(sims_ricker, main = "Self-undermining (Ricker)", which = which, central = central, showlegend = FALSE)
 
 pl <- plotly::subplot(pl_exp, pl_ricker,
   nrows = 2,
@@ -347,6 +347,56 @@ pl <- plotly::subplot(pl_exp, pl_ricker,
 pl
 
 ```
+
+
+
+
+```{r , include=FALSE, eval = has_internet(), error = TRUE}
+if (recreate_figs) {
+
+
+  show_vars <- c("demands","energy") 
+  vars_ <- VARS[VARS %in% show_vars]
+  colors_ <- COLORS[VARS %in% show_vars]
+  ylim1 <- c(0, 5)
+  ylim2 <- c(0, 2.5)
+
+
+sims_exp <- ensemble(sfm_exp, n = 100, save_at = save_at_fine, save_sims = TRUE)
+sims_ricker <- ensemble(sfm_ricker, n = 100, save_at = save_at_fine, save_sims = TRUE)
+
+pl_exp <- plot(sims_exp, main = "Self-undermining (exponential)", which = which, central = central, ylim = ylim1, vars = vars_, colors = colors_, xlab = "") |> rm_grid()
+pl_ricker <- plot(sims_ricker, main = "Self-undermining (Ricker)", which = which, central = central, showlegend = FALSE, ylim = ylim2, vars = vars_, colors = colors_, xlab = "") |> rm_grid()
+
+  pl <- plotly::subplot(pl_exp, pl_ricker,
+    nrows = 2,
+    shareX = TRUE,
+    shareY = FALSE,
+    titleY = TRUE,
+    titleX = TRUE,
+    margin = c(0.1, 0.05, 0.05, 0.05)
+  ) |>
+    plotly::layout(
+      title = list(text = ""),
+      font = annot_font,
+      legend = utils::modifyList(annot_legend, list(y = -0.14,
+      traceorder = "normal"
+      ))
+    ) |>
+    plotly::layout(
+      annotations = list(
+        utils::modifyList(annot_xlab, list(y = -0.07))
+      )
+    )
+
+  export_plot(pl |> plotly::toWebGL(),
+    file.path(filepath_figs, "jdr_functional_forms.pdf"),
+    width = 5.5, height = 4.5
+  )
+
+}
+```
+
 
 
 
@@ -365,6 +415,7 @@ sim_settings(seed = 123) |>
         # meta(name = "Job Demands and Resources (JD-R) Theory", created = "2026-06-27 10:00:03.339021") |>
         # stock(demands, eqn = runif(1, 0, 1), label = "Job Demands") |>
         # stock(energy, eqn = runif(1, 0, 1), label = "Energy") |>
+        update(demands, eqn = runif(1, 0, 1)) |>
         stock(engagement, eqn = runif(1, 0, 1), label = "Work Engagement") |>
         stock(resources, eqn = runif(1, 0, 1), label = "Job Resources") |>
         
@@ -436,6 +487,58 @@ sfm |>
   simulate() |>
   plot()
 
+```
+
+
+
+```{r}
+sims <- ensemble(sfm, n = 100, save_sims = TRUE, save_n = 50)
+
+plot(sims, vars = c("engagement", "demands", "resources", "energy", "performance"))
+
+# plot(sims, vars = c("engagement", "demands", "resources", "energy", "performance"), which = "sims")
+
+```
+
+
+
+```{r , include=FALSE, eval = has_internet(), error = TRUE}
+if (recreate_figs) {
+
+  show_vars <- c("engagement", "demands", "resources", "energy", "performance") 
+  vars_ <- VARS[VARS %in% show_vars]
+  colors_ <- COLORS[VARS %in% show_vars]
+  ylim <- c(0, 1)
+
+  # Ensemble (plain)
+  sims_ens <- ensemble(sfm, n = 100, save_at = save_at_fine, save_sims = FALSE)
+
+  pl <- plot(sims_ens,
+    vars = vars_, colors = colors_, #which = "sims",
+    main = "", sub = "", ylim = ylim,
+     xlab = ""
+  ) |> rm_grid()
+
+  pl <- pl |>
+    plotly::layout(
+      title = list(text = ""),
+      font = annot_font,
+      legend = utils::modifyList(annot_legend, list(y = -0.14,
+      traceorder = "normal"
+      ))
+    ) |>
+    plotly::layout(
+      annotations = list(
+        utils::modifyList(annot_xlab, list(y = -0.07))
+      )
+    )
+
+  export_plot(pl |> plotly::toWebGL(),
+    file.path(filepath_figs, "jdr_sim_full.pdf"),
+    width = 5.5, height = 4.5
+  )
+
+}
 ```
 
 
