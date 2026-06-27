@@ -238,164 +238,20 @@ Please see the paper for Step 3a and 3b; here, we only note that exhaustion was 
 ## Step 3c. Building Stock-and-Flow Models in R (new**)
 
 
-
-
-```{r}  
-
-sfm <- stockflow() |>
-  sim_settings(
-    stop = round(182.5), time_units = "day",
-    # Simulation timestep
-    dt = 0.01,
-    # Reduce the output size
-    save_at = 1,
-    # Set only_stocks = FALSE to return all variables (not just stocks) in the simulation output
-    only_stocks = FALSE,
-    language = "julia", save_sims = TRUE
-  ) |> meta(name = "Job Demands and Resources (JD-R) Theory") 
-  
-sfm <- stock(sfm, c(energy, demands),
- eqn = runif(1, 0, 1), 
-label = c("Energy", "Job Demands"))
-
-# Check that runif() is stored as an expression, not a computed value
-as.data.frame(sfm, properties = "eqn")
-
-# To instead use a computed value, we can use the !! (bang-bang) operator to evaluate the expression and store the resulting value in the model:
-sfm |> 
-  update(energy, eqn = !!runif(1, 0, 2)) |>
-  as.data.frame(properties = "eqn")
-
-# Note that we haven't saved the above statement to the model, so the model still contains the unevaluated expression.
-
-# To produce the same initial condition in each simulation, set a seed:
-sfm <- sim_settings(sfm, seed = 12) 
-
-# Add stock-dependent outflow
-sfm <- sfm |>
-  flow(effort, eqn = energy * demands, from = energy, label = "Effort")
-  
-
-# First functional form: linear recovery rate
-sfm_linear <- sfm |>
-  constant(recovery_rate, eqn = 1, label = "Recovery Rate") |>
-  flow(recovery, eqn = recovery_rate * energy, 
-  to = energy, label = "Recovery") 
-
-pl_linear <- sfm_linear |>
-  simulate() |>
-  plot()
-
-
-# Second functional form: Hill function
-sfm_hill <- sfm_linear |>
-    constant(s_slope, eqn = 5, label = "Steep Slope") |>
-# update(recovery_rate, eqn = 0.3) |>
-  update(recovery,
-    eqn = hill(energy, slope = s_slope, upper = recovery_rate, midpoint = 0.5),
-  )
-
-pl_hill <- sfm_hill |>
-  simulate() |>
-  plot(showlegend = FALSE)
-
-# Third functional form: Ricker function
-sfm_ricker <- sfm_hill |>
-  constant(location, eqn = 0.2) |>
-  # update(recovery_rate, eqn = 0.2) |>
-  update(recovery,
-    # eqn = recovery_rate * energy * exp(-s_slope * energy)
-    # eqn = ricker(energy, location = 1 / s_slope, upper = recovery_rate / (s_slope * exp(1)))
-    eqn = ricker(energy, location = location, upper = recovery_rate)
-  )
-
-pl_ricker <- sfm_ricker |>
-  simulate() |>
-  plot(showlegend = FALSE)
-
-head(simulate(sfm_linear), direction = "wide")
-head(simulate(sfm_hill), direction = "wide")
-head(simulate(sfm_ricker), direction = "wide")
-
-pl <- plotly::subplot(pl_linear, pl_hill, pl_ricker,
-  nrows = 3,
-  shareX = TRUE,
-  shareY = FALSE,
-  titleY = TRUE,
-  titleX = TRUE,
-  margin = c(0.1, 0.05, 0.05, 0.05)
-) |>
-  plotly::layout(
-    title = ""
-  )
-
-pl
-
-```
-
-
 ```{r}
-n <- 500
-which <- "sims"
-central <- "none"
-vars <- NULL #c("energy", "demands")
-sims_linear <- ensemble(sfm_linear, n = n, save_at = 1)
-pl_linear = plot(sims_linear, vars = vars, main = "Linear Recovery", showlegend = TRUE, which = which, central = central)
-
-sims_hill <- ensemble(sfm_hill, n = n, save_at = 1)
-pl_hill = plot(sims_hill, vars = vars, main = "Hill Recovery", showlegend = FALSE, which = which, central = central)
-
-sims_ricker <- ensemble(sfm_ricker, n = n, save_at = 1)
-pl_ricker = plot(sims_ricker, vars = vars, main = "Ricker Recovery", showlegend = FALSE, which = which, central = central)
-
-pl = plotly::subplot(pl_linear, pl_hill, pl_ricker,
-  nrows = 3,
-  shareX = TRUE,
-  shareY = FALSE,
-  titleY = TRUE,
-  titleX = TRUE,
-  margin = c(0.1, 0.05, 0.05, 0.05)
-) |>
-  plotly::layout(
-    title = ""
-    # yaxis = list(title = "", range = c(0, 1)),
-    # yaxis2 = list(title = "", range = c(0, 1)),
-    # yaxis3 = list(title = "", range = c(0, 1))
-    # font = annot_font
-  )
-
-pl
-
-```
-
-```{r}
-n = 100
-sims_ricker <- ensemble(sfm_ricker, n = n, 
-conditions = list(
-    # demands = c(0.2, 0.5, 0.8)
-    demands = c(0.5),
-    location = 0.1,
-
-  # location = c(0.1, 0.3, 0.5, 0.7, 0.9)
-  recovery_rate = c(0.1, 0.3, 0.5, 0.7, 0.9)
-),
-save_at = 1)
-
-plot(sims_ricker, main = "Ricker Recovery", which = which, central = central, sim = 1:n, nrows=3)
-
-plot(sims_ricker, main = "Ricker Recovery", which = which, central = central, sim = 1:50,
-condition_display = "slider")
-
-```
-
-```{r}
-# sfm <- stockflow()
 sfm <- stockflow("burnout")
 
 sfm <- sfm |>
 change_name(work_rate, new_name = "demands") |>
 change_type(demands, new_type = "stock") |>
-update(demands, eqn = 0.1, label = "Job Demands")
+update(demands, 
+# eqn = 0.1, 
+label = "Job Demands")
+
+print(sfm)
+
+
+sfm <- sim_settings(sfm, language = "julia")
 
 # sfm <- sfm |>
 #   sim_settings(
@@ -407,72 +263,88 @@ update(demands, eqn = 0.1, label = "Job Demands")
 #     # Set only_stocks = FALSE to return all variables (not just stocks) in the simulation output
 #     only_stocks = FALSE,
 #     language = "julia", save_sims = TRUE
-#   ) |> meta(name = "Job Demands and Resources (JD-R) Theory") 
+#   ) |> 
+
+sfm <- meta(sfm, name = "Job Demands and Resources (JD-R) Theory") 
   
-# sfm <- stock(sfm, c(energy, demands),
-#  eqn = runif(1, 0, 1), 
-# label = c("Energy", "Job Demands"))
 
-# # Check that runif() is stored as an expression, not a computed value
-# as.data.frame(sfm, properties = "eqn")
-
-# # To instead use a computed value, we can use the !! (bang-bang) operator to evaluate the expression and store the resulting value in the model:
-# sfm |> 
-#   update(energy, eqn = !!runif(1, 0, 2)) |>
-#   as.data.frame(properties = "eqn")
-
-# Note that we haven't saved the above statement to the model, so the model still contains the unevaluated expression.
 
 # To produce the same initial condition in each simulation, set a seed:
 # sfm <- sim_settings(sfm, seed = 12) 
 
+curve(exp(-5 * x), main = "Exponential Decay Function", 
+xlab = "Energy", ylab = "Self-undermining")
+curve(exp(-3 * x), add = TRUE, col = "red", lty = 2)
+curve(exp(-1 * x), add = TRUE, col = "blue", lty = 3)
 
-sfm1 <- sfm |>
+sfm_exp <- sfm |>
+  constant(s_slope, eqn = 5, label = "Steep Slope") |>
   constant(undermining_rate, eqn = 0.1, label = "Self-undermining Rate") |>
-flow(undermining, eqn = undermining_rate * exp(-5 * energy),
-    to = demands, label = "Self-undermining")
+  flow(undermining, eqn = undermining_rate * exp(-s_slope * energy),
+      to = demands, label = "Self-undermining")
 
-# sfm1 |> 
-#   simulate() |>
-#   plot()
+sfm_exp |> 
+  simulate() |>
+  plot()
+
+curve(ricker(x, location = 0.1, shape = 1), main = "Ricker Function", 
+xlab = "Energy", ylab = "Self-undermining")
+curve(ricker(x, location = 0.1, shape = 2), add = TRUE, col = "red", lty = 2)
+curve(ricker(x, location = 0.1, shape = 3), add = TRUE, col = "blue", lty = 3)
 
 
-sfm2 <- sfm1 |>
-# update(recovery_rate, eqn = 0.1) |>
-  constant(location, eqn = 0.2, label = "Location") |>
+sfm_ricker <- sfm_exp |>
+  constant(location, 
+  # eqn = 0.2, 
+  eqn = 0.1,
+  label = "Location") |>
+  constant(shape,
+  #  eqn = 2,
+   eqn = 3,
+    label = "Shape") |>
   update(undermining,
-    eqn = ricker(energy, location = location, 
-    upper = undermining_rate, shape = 2)
+    eqn = undermining_rate * ricker(energy, location = location, shape = shape)
   )
 
 
-# sfm2 |> 
-#   simulate() |>
-#   plot()
+sfm_ricker |> 
+  simulate() |>
+  plot()
 
 
-sfm1 <- sfm1 |>
+sfm_exp <- sfm_exp |>
 update(energy, eqn = runif(1)) 
 
-sfm2 <- sfm2 |>
+sfm_ricker <- sfm_ricker |>
 update(energy, eqn = runif(1)) 
 
-# sims1 <- ensemble(sfm1, n = 100, save_n = 50, save_sims = TRUE)
-# sims2 <- ensemble(sfm2, n = 100, save_n = 50, save_sims = TRUE)
+# Check that runif() is stored as an expression, not a computed value
+as.data.frame(sfm_exp, vars = "energy", properties = "eqn")
 
-# pl1 <- plot(sims1, main = "Self-undermining (exponential)", which = which, central = central, sim = 1:100)
-# pl2 <- plot(sims2, main = "Self-undermining (Ricker)", which = which, central = central, sim = 1:100)
+# To instead use a computed value, we can use the !! (bang-bang) operator to evaluate the expression and store the resulting value in the model:
+sfm_exp |> 
+  update(energy, eqn = !!runif(1, 0, 2)) |>
+  as.data.frame(properties = "eqn")
 
-# pl <- plotly::subplot(pl1, pl2,
-#   nrows = 2,
-#   shareX = TRUE,
-#   shareY = FALSE,
-#   titleY = TRUE,
-#   titleX = TRUE,
-#   margin = c(0.1, 0.05, 0.05, 0.05)
-# ) 
+# Note that we haven't saved the above statement to the model, so the model still contains the unevaluated expression.
 
-# pl
+
+sims_exp <- ensemble(sfm_exp, n = 100, save_n = 50, save_sims = TRUE)
+sims_ricker <- ensemble(sfm_ricker, n = 100, save_n = 50, save_sims = TRUE)
+
+pl_exp <- plot(sims_exp, main = "Self-undermining (exponential)", which = which, central = central, sim = 1:100)
+pl_ricker <- plot(sims_ricker, main = "Self-undermining (Ricker)", which = which, central = central, sim = 1:100)
+
+pl <- plotly::subplot(pl_exp, pl_ricker,
+  nrows = 2,
+  shareX = TRUE,
+  shareY = FALSE,
+  titleY = TRUE,
+  titleX = TRUE,
+  margin = c(0.1, 0.05, 0.05, 0.05)
+) 
+
+pl
 
 ```
 
@@ -480,7 +352,7 @@ update(energy, eqn = runif(1))
 
 ```{r}
 ## rest of model
-sfm <- sfm2
+sfm <- sfm_ricker
 
 as.data.frame(sfm, properties = "eqn")
 
@@ -498,10 +370,9 @@ sim_settings(seed = 123) |>
         
         update(recovery_rate, eqn = 0.1) |>
         flow(recovery, 
-        eqn = ricker(energy, 
+        eqn = recovery_rate * ricker(energy, 
         # location = location,
-        location = 0.5,
-         upper = recovery_rate, shape = 2), 
+        location = 0.5, shape = shape), 
         to = energy, label = "Recovery") |>
 
         flow(effort, 
@@ -532,7 +403,6 @@ sim_settings(seed = 123) |>
         constant(proactive_rate, eqn = 0.2, label = "Proactive Behaviour Rate") |>
         # constant(recovery_rate, eqn = 0.025, label = "Recovery Rate") |>
         constant(resource_decay_rate, eqn = 0.1, label = "Resource Decay Rate") |>
-        constant(s_slope, eqn = 5, label = "Steep Slope") |>
         # constant(undermining_rate, eqn = 0.2, label = "Self-undermining Rate") |>
         constant(work_rate,
         #  eqn = 0.5, 
@@ -544,13 +414,36 @@ sfm |>
   simulate() |>
   plot()
 
+sfm0 = sfm 
+
 ```
 
 ```{r}
 
+sfm = sfm0 |> 
+# update(location, eqn = 0.1) |>
+        update(recovery_rate, eqn = 0.15)  |>
+        update(proactive_rate, eqn = 0.1)  |>
+        update(exo_demand_rate, eqn = 0.05) |>
+        update(exo_demand_rate, eqn = 0.05) |>
+        update(motivation_rate, eqn = 0.4)
+        # update(resource_decay_rate, eqn = 0.2) #|>
+        # update(c(energy, demands, engagement, resources), 
+        # eqn = c(0.2, 0.1, 0.5, 0.2))
 
-sfm0 = sfm 
-sfm = sim_settings(sfm, language = "julia")
+
+sfm |> 
+  simulate() |>
+  plot()
+
+```
+
+
+
+```{r}
+
+
+sfm = sim_settings(sfm, language = "julia", save_n = 50)
 
 # this test should fail
 conditions <- list(demands = 0, exo_demand_rate = 0, undermining_rate = 0)
@@ -603,14 +496,15 @@ pl
 ## model boundary
 # Make performance feedback to the system
 sfm2 <- constant(sfm0, performance_effect,
-  eqn = .25,
-  # eqn = .05,
+  eqn = .1,
+  # eqn = .075,
   label = "Effect Job Performance on Work Engagement"
 ) |>
   flow(pride,
     # eqn = performance_effect * performance,
-    eqn = performance * hill(engagement, upper = performance_effect),
+    eqn = hill(performance, slope = m_slope, midpoint = 0.2, upper = performance_effect),
     to = engagement
+    # to = energy
   )
 
 sim1 <- simulate(sfm0, stop = 500)
@@ -626,7 +520,7 @@ pl
 
 ##ensemble
 
-sfm <- sfm0 <- sim_settings(sfm0, save_n = 100)
+sfm <- sfm0 <- sim_settings(sfm0, save_n = 50)
 sfm <- sfm0 <- sim_settings(sfm0, language = "Julia")
 
 sims <- ensemble(sfm, n = 1000)
@@ -1490,7 +1384,7 @@ sfm <- sfm |>
     #' \deqn{f(x) = a \cdot x \cdot e^{-b \cdot x}} 
     # eqn = ricker(x = energy, location = 1 / s_slope, upper = recovery_rate / (s_slope * exp(1))),
     # eqn = ricker(energy, location = 1 / s_slope, upper = recovery_rate / (s_slope * exp(1))),
-    eqn = ricker(energy, location = location, upper = recovery_rate),
+    eqn = recovery_rate * ricker(energy, location = location),
 
     # eqn = recovery_rate * energy * exp(-s_slope * energy),
     to = energy, label = "Recovery"
@@ -1528,7 +1422,7 @@ sfm <- sfm |>
     # eqn = undermining_rate * energy * exp(-e_slope * energy),
     # eqn = ricker(x = energy, location = 1 / e_slope, upper = undermining_rate / (e_slope * exp(1))),
     # eqn = ricker(energy, location = 1 / e_slope, upper = undermining_rate / (e_slope * exp(1))),
-    eqn = ricker(energy, location = location, upper = undermining_rate),
+    eqn = undermining_rate * ricker(energy, location = location),
     to = demands, label = "Self-undermining"
   )
 
@@ -2167,7 +2061,7 @@ Large-scale simulations are also called **ensemble** simulations, which can be c
 sfm <- sfm0 <- sim_settings(sfm0, save_n = 100)
 ```
 
-Alternatively, `save_at` can be passed to `sim_settings` to save at specific time points (e.g., `save_at = c(1, 100)`) or at a fixed interval (e.g., `save_at = 10` to save every ten time units). To further support computationally intensive ensemble simulations, **stockflow** enables parallelization supported by the **future** package [@bengtsson_unifying_2021]. The parallization backend needs to be configured prior to running ensemble simulations:
+Alternatively, `save_at` can be passed to `sim_settings` to save at specific time points (e.g., `save_at = c(1, 100)`) or at a fixed interval (e.g., `save_at = 10` to save every ten time units). To further support computationally intensive ensemble simulations, **stockflow** enables parallelization supported by the **future** package [@bengtsson_unifying_2021]. The parallelization backend needs to be configured prior to running ensemble simulations:
 
 ```{r, eval = FALSE}
 if (!requireNamespace("future")) {
