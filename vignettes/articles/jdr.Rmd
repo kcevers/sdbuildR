@@ -239,10 +239,10 @@ Please see the paper for Step 3a and 3b; here, we only note that exhaustion was 
 
 
 ```{r}
-sfm <- stockflow("burnout")
+sfm <- stockflow("burnout", version = 2)
 
 sfm <- sfm |>
-change_name(work_rate, new_name = "demands") |>
+change_name(depletion_rate, new_name = "demands") |>
 change_type(demands, new_type = "stock") |>
 update(demands, 
 # eqn = 0.1, 
@@ -390,10 +390,145 @@ pl_ricker <- plot(sims_ricker, main = "Self-undermining (Ricker)", which = which
     )
 
   export_plot(pl |> plotly::toWebGL(),
-    file.path(filepath_figs, "jdr_functional_forms.pdf"),
+    file.path(filepath_figs, "jdr_functional_forms_sim.pdf"),
     width = 5.5, height = 4.5
   )
 
+}
+```
+
+
+
+
+
+```{r include=FALSE, eval = has_internet(), error = TRUE}
+if (recreate_figs) {
+  # Create subplot figure
+  pl_list <- list()
+  max_letter <- max(names(func_form_list))
+  VARS_example <- c("engagement", "resources")
+  COLORS_example <- COLORS[match(VARS_example, VARS)]
+
+  titles <- paste0(
+    "<i>",
+    paste0(LETTERS[1:6], ". ", c(
+      "Linear Functional Form",
+      "Linear Feedback Loop",
+      "Linear Feedback Loop with Outflows",
+      "Hill Functional Form",
+      "Hill Feedback Loop",
+      "Hill Feedback Loop with Outflows"
+    )), "</i>"
+  )
+
+  # Functional form
+  pl_func_form <- plotly::subplot(pl_linear, pl_hill,
+    nrows = 2,
+    shareX = TRUE,
+    shareY = TRUE,
+    titleY = TRUE,
+    titleX = TRUE,
+    margin = c(0.1, 0.05, 0.05, 0.05)
+  ) |>
+    plotly::layout(
+      title = "",
+      yaxis = list(title = "", range = c(0, 1)),
+      yaxis2 = list(title = "", range = c(0, 1)),
+      font = annot_font
+    )
+
+  # Timeseries
+  for (letter in names(func_form_list)) {
+    sim <- simulate(func_form_list[[letter]],
+      save_at = save_at_fine, only_stocks = FALSE
+    )
+
+    vars_in_sim <- unique(sim$df$variable)
+    vars_ <- VARS_example[VARS_example %in% vars_in_sim]
+    colors_ <- COLORS_example[VARS_example %in% vars_in_sim]
+
+    pl_list[[letter]] <- plot(sim,
+      vars = vars_,
+      colors = colors_,
+      main = "", wrap_width = 10,
+      showlegend = (letter == max_letter)
+    ) |> plotly::layout(xaxis = list(
+      nticks = 3
+    ))
+  }
+
+  # Route simulation traces to legend2 and fix margins/automargin for equal widths
+  pl_list <- lapply(pl_list, function(p) {
+    plotly::style(p, legend = "legend2") |>
+      plotly::layout(
+        margin = list(t = 0, b = 0, l = 0, r = 0),
+        yaxis = list(automargin = FALSE)
+      ) |>
+      rm_grid()
+  })
+
+  x1 <- 0.18
+  x2 <- 0.82
+  y1 <- 1.04
+  y2 <- 0.75
+  y3 <- 0.49
+  y4 <- 0.25
+
+  annot_ <- list(size = font_size_subplot - 4, xanchor = "center", yanchor = "middle", showarrow = FALSE, xref = "paper", yref = "paper")
+
+  inner_pl <- plotly::subplot(pl_list,
+    nrows = 4,
+    shareX = TRUE,
+    shareY = FALSE,
+    titleY = FALSE,
+    titleX = FALSE,
+    margin = 0.05,
+    heights = c(1 / 4, 1 / 4, 1 / 4, 1 / 4)
+  )
+
+  pl <- plotly::subplot(
+    pl_func_form,
+    inner_pl,
+    nrows = 1, titleY = FALSE, titleX = FALSE,
+    widths = c(5 / 10, 5 / 10),
+    margin = 0.14
+  ) |>
+    plotly::layout(
+      margin = 0,
+      font = list(family = font_family, size = font_size),
+      legend = utils::modifyList(annot_legend, list(
+        # y = -0.16, x = 0.1, orientation = "v",
+        y = 0.7, x = 0.45, orientation = "v",
+        traceorder = "normal",
+        # tracegroupgap = 0,
+        # itemwidth = 15,
+        title = list(
+          text = "Slope", side = "top",
+          font = list(size = font_size_legend)
+        )
+      ), ),
+      legend2 = utils::modifyList(annot_legend, list(
+        y = 0.625, x = 1.15, orientation = "v", itemwidth = 10
+        # y = -0.14, x = x2, orientation = "h"
+      ))
+    ) |>
+    plotly::layout(annotations = list(
+      utils::modifyList(annot_xlab, list(y = -0.05, x = x1, text = "Input")),
+      utils::modifyList(annot_xlab, list(y = -0.05, x = x2)),
+      utils::modifyList(annot_xlab, list(y = 0.6, x = -0.075, textangle = -90, text = "Output")),
+      utils::modifyList(annot_, list(x = x1, y = y1 + .075, text = "<i>Functional Forms</i>", font = list(size = font_size_xlab))),
+      utils::modifyList(annot_, list(x = x2, y = y1 + .075, text = "<i>Timeseries</i>", font = list(size = font_size_xlab))),
+      utils::modifyList(annot_, list(x = x1, y = y1, text = titles[[1]])),
+      utils::modifyList(annot_, list(x = x2, y = y1, text = titles[[2]])),
+      utils::modifyList(annot_, list(x = x2, y = y2, text = titles[[3]])),
+      utils::modifyList(annot_, list(x = x1, y = y3, text = titles[[4]])),
+      utils::modifyList(annot_, list(x = x2, y = y3, text = titles[[5]])),
+      utils::modifyList(annot_, list(x = x2, y = y4, text = titles[[6]]))
+    ))
+
+  export_plot(pl, file.path(filepath_figs, "jdr_functional_forms_exp_ricker.pdf"),
+    width = 6.5, height = 5
+  )
 }
 ```
 
@@ -1384,7 +1519,7 @@ if (recreate_figs) {
       utils::modifyList(annot_, list(x = x2, y = y4, text = titles[[6]]))
     ))
 
-  export_plot(pl, file.path(filepath_figs, "JDR_functional_forms.pdf"),
+  export_plot(pl, file.path(filepath_figs, "jdr_functional_forms.pdf"),
     width = 6.5, height = 5
   )
 }
@@ -1748,14 +1883,14 @@ sfm0 <- sfm
 
 
 ```{r, include=FALSE, eval=FALSE}
-compare_models(stockflow("jdr"), sfm)
+compare_models(stockflow("jdr", version = 1), sfm)
 ```
 
 
 Note that this is identical to the version stored in the model library, which can be loaded using `stockflow()`:
 
 ```{r}
-# sfm0 <- sfm <- stockflow("jdr")
+# sfm0 <- sfm <- stockflow("jdr", version = 1)
 ```
 
 ```{r include=FALSE}

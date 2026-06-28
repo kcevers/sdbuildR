@@ -7,7 +7,7 @@
 \method{plot}{ensemble_stockflow}(
   x,
   which = c("summary", "sims")[1],
-  sim = seq(1, min(c(x[["n"]], 10))),
+  sim = seq(1, min(c(x[["n"]], 100))),
   condition = seq(1, min(c(x[["n_conditions"]], 9))),
   vars = NULL,
   show_constants = FALSE,

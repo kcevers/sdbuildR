@@ -4,27 +4,36 @@
 \alias{stockflow}
 \title{Create a new stock-and-flow model}
 \usage{
-stockflow(template = NULL)
+stockflow(template = NULL, version = NULL)
 }
 \arguments{
-\item{template}{Name of the template to load. If \code{NULL}, an empty stock-and-flow
-model will be created with default simulation parameters and a default meta.
-If specified, \code{template} should be one of the available templates (case-insensitive):
+\item{template}{Name of the template to load (case-insensitive). If \code{NULL},
+an empty stock-and-flow model is created with default simulation parameters
+and a default meta. If specified, \code{template} should be one of:
 \itemize{
-\item \strong{logistic_model}: Population growth with carrying capacity
-\item \strong{sir}: Epidemic model (Susceptible-Infected-Recovered)
-\item \strong{predator_prey}: Lotka-Volterra dynamics
-\item \strong{cusp}: Cusp catastrophe model
-\item \strong{crielaard2022}: Eating behavior (doi: 10.1037/met0000484)
-\item \strong{coffee_cup}: Temperature equilibration (Meadows)
-\item \strong{bank_account}: Compound interest (Meadows)
-\item \strong{lorenz}: Lorenz attractor (chaotic)
-\item \strong{rossler}: Rossler attractor (chaotic)
-\item \strong{vanderpol}: Van der Pol oscillator
-\item \strong{duffing}: Forced Duffing oscillator
-\item \strong{chua}: Chua's circuit (chaotic)
-\item \strong{jdr}: Job Demands-Resources Theory as formalized in Evers et al. (under review)
+\item \strong{logistic_model}: Population growth with carrying capacity (v1.0.0)
+\item \strong{sir}: Epidemic model (Susceptible-Infected-Recovered) (v1.0.0)
+\item \strong{predator_prey}: Lotka-Volterra dynamics (v1.0.0)
+\item \strong{cusp}: Cusp catastrophe model (v1.0.0)
+\item \strong{crielaard2022}: Eating behavior (doi: 10.1037/met0000484) (v1.0.0)
+\item \strong{coffee_cup}: Temperature equilibration (Meadows) (v1.0.0)
+\item \strong{bank_account}: Compound interest (Meadows) (v1.0.0)
+\item \strong{lorenz}: Lorenz attractor (chaotic) (v1.0.0)
+\item \strong{rossler}: Rossler attractor (chaotic) (v1.0.0)
+\item \strong{vanderpol}: Van der Pol oscillator (v1.0.0)
+\item \strong{duffing}: Forced Duffing oscillator (v1.0.0)
+\item \strong{chua}: Chua's circuit (chaotic) (v1.0.0)
+\item \strong{burnout}: Toy model of burnout as used in Evers et al. (under review) (v1.0.0)
+\item \strong{burnout}: Toy model of burnout as used in Evers et al. (under review) (v2.0.0)
+\item \strong{jdr}: Job Demands-Resources Theory as formalized in Evers et al. (under review) (v1.0.0)
 }}
+
+\item{version}{Optional semantic version of the template to load. Flexible in
+what it accepts: a number (\code{1}), a string (\code{"1.2.1"}), an optional \code{"v"} prefix
+(\code{"v1"}), a \code{\link[=package_version]{package_version()}} value (injected with \verb{!!}), or a bare symbol
+(\code{v1.0.0}). Matching is prefix-based: \code{version = 1} returns the highest \verb{1.x.y},
+\code{version = "1.2"} the highest \verb{1.2.y}, and \code{version = "1.2.1"} is exact.
+Defaults to the latest available version.}
 }
 \value{
 A stock-and-flow model object of class \code{\link{stockflow}}. Its structure is based

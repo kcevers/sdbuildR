@@ -10,7 +10,7 @@ meta(
   caption = "My Model Description",
   created = Sys.time(),
   author = "Me",
-  version = "1.0",
+  version = "0.0.0.9000",
   URL = "",
   doi = "",
   ...
@@ -27,7 +27,7 @@ meta(
 
 \item{author}{Creator of the model. Defaults to "Me".}
 
-\item{version}{Model version. Defaults to "1.0".}
+\item{version}{Model version. Defaults to "0.0.0.9000", a development version.}
 
 \item{URL}{URL associated with model. Defaults to "".}
 

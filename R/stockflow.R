@@ -7,25 +7,13 @@
 #' Do not edit the object manually; this will likely lead to errors downstream.
 #' Rather, use [meta()], [sim_settings()], [update()], and [custom_func()] for safe manipulation.
 #'
-#' @param template Name of the template to load. If `NULL`, an empty stock-and-flow
-#' model will be created with default simulation parameters and a default meta.
-#' If specified, `template` should be one of the available templates (case-insensitive):
-#' \itemize{
-#'   \item \strong{logistic_model}: Population growth with carrying capacity
-#'   \item \strong{sir}: Epidemic model (Susceptible-Infected-Recovered)
-#'   \item \strong{predator_prey}: Lotka-Volterra dynamics
-#'   \item \strong{cusp}: Cusp catastrophe model
-#'   \item \strong{crielaard2022}: Eating behavior (doi: 10.1037/met0000484)
-#'   \item \strong{coffee_cup}: Temperature equilibration (Meadows)
-#'   \item \strong{bank_account}: Compound interest (Meadows)
-#'   \item \strong{lorenz}: Lorenz attractor (chaotic)
-#'   \item \strong{rossler}: Rossler attractor (chaotic)
-#'   \item \strong{vanderpol}: Van der Pol oscillator
-#'   \item \strong{duffing}: Forced Duffing oscillator
-#'   \item \strong{chua}: Chua's circuit (chaotic)
-#'   \item \strong{burnout}: Toy model of burnout as used in Evers et al. (under review)
-#'   \item \strong{jdr}: Job Demands-Resources Theory as formalized in Evers et al. (under review)
-#' }
+#' @eval template_param_doc()
+#' @param version Optional semantic version of the template to load. Flexible in
+#' what it accepts: a number (`1`), a string (`"1.2.1"`), an optional `"v"` prefix
+#' (`"v1"`), a [package_version()] value (injected with `!!`), or a bare symbol
+#' (`v1.0.0`). Matching is prefix-based: `version = 1` returns the highest `1.x.y`,
+#' `version = "1.2"` the highest `1.2.y`, and `version = "1.2.1"` is exact.
+#' Defaults to the latest available version.
 #'
 #' @returns A stock-and-flow model object of class [`stockflow`][stockflow]. Its structure is based
 #'  on [XML Interchange Language for System Dynamics (XMILE)](https://docs.oasis-open.org/xmile/xmile/v1.0/os/xmile-v1.0-os.html). It is a nested list, containing:
@@ -52,9 +40,13 @@
 #' sfm <- stockflow("lorenz")
 #' sim <- simulate(sfm)
 #' plot(sim)
-stockflow <- function(template = NULL) {
+stockflow <- function(template = NULL, version = NULL) {
+  # NSE: resolve `version` from a bare symbol (v1.0.0), number, string, or
+  # `!!`-injected value, reusing the same helper as update().
+  version <- .expr_to_char(rlang::enexpr(version))
+
   if (!is.null(template)) {
-    return(templates(template))
+    return(templates(template, version = version))
   }
 
   sfm <- new_stockflow()
@@ -667,7 +659,7 @@ sanitize_stockflow <- function(object) {
 #' @param caption Model description. Defaults to "My Model Description".
 #' @param created Date the model was created. Defaults to Sys.time().
 #' @param author Creator of the model. Defaults to "Me".
-#' @param version Model version. Defaults to "1.0".
+#' @param version Model version. Defaults to "0.0.0.9000", a development version.
 #' @param URL URL associated with model. Defaults to "".
 #' @param doi DOI associated with the model. Defaults to "".
 #' @param ... Optional other entries to add to the meta.
@@ -685,7 +677,7 @@ sanitize_stockflow <- function(object) {
 #'     version = "1.1"
 #'   )
 meta <- function(object, name = "My Model", caption = "My Model Description",
-                 created = Sys.time(), author = "Me", version = "1.0", URL = "", doi = "", ...) {
+                 created = Sys.time(), author = "Me", version = "0.0.0.9000", URL = "", doi = "", ...) {
   # Basic check
   if (missing(object)) {
     missing_arg("object")
