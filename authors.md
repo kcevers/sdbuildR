@@ -10,15 +10,15 @@
 Source:
 [`inst/CITATION`](https://github.com/KCEvers/sdbuildR/blob/stockflow/inst/CITATION)
 
-Evers, K. (2026). sdbuildR: Easily Build, Simulate, and Explore
-Stock-and-Flow Models. R package version 2.0.0.
+Evers, K. (2026). sdbuildR: An Accessible Interface for Stock-and-Flow
+Modelling in R. R package version 2.1.0.
 https://doi.org/10.32614/CRAN.package.sdbuildR
 
     @Manual{sdbuildR,
-      title = {{sdbuildR}: Easily Build, Simulate, and Explore Stock-and-Flow Models},
+      title = {{sdbuildR}: An Accessible Interface for Stock-and-Flow Modelling in R},
       author = {Kyra Caitlin Evers},
       year = {2026},
-      note = {R package version 2.0.0},
+      note = {R package version 2.1.0},
       url = {https://kcevers.github.io/sdbuildR/},
       doi = {10.32614/CRAN.package.sdbuildR},
     }

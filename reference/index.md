@@ -70,7 +70,7 @@
 - [`as.data.frame(`*`<ensemble_stockflow>`*`)`](https://kcevers.github.io/sdbuildR/reference/as.data.frame.ensemble_stockflow.md)
   : Create data frame of simulation results
 - [`ensemble()`](https://kcevers.github.io/sdbuildR/reference/ensemble.md)
-  : Run ensemble simulations
+  : Run ensemble simulation
 - [`plot(`*`<ensemble_stockflow>`*`)`](https://kcevers.github.io/sdbuildR/reference/plot.ensemble_stockflow.md)
   : Plot timeseries of ensemble simulation
 

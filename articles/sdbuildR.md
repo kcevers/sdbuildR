@@ -3,10 +3,6 @@
 ``` r
 
 library(sdbuildR)
-
-# Disable WebGL: many plotly widgets per HTML page can exceed the browser WebGL
-# context limit and render blank. SVG always renders.
-options(sdbuildR.webgl = FALSE)
 ```
 
 sdbuildR is an R package for building, simulating, and testing
@@ -42,6 +38,7 @@ print(sfm)
 #> ── Simulation Settings ──
 #> 
 #> Time: 0.0 to 20.0 weeks (dt = 0.01) • euler • R
+#> Simulation output: stocks only
 ```
 
 Plot the stock-and-flow diagram for a structural overview:
@@ -154,7 +151,7 @@ sfm_ens <- sfm |>
 
 sims <- ensemble(sfm_ens, n = 100)
 #> Starting ensemble simulation in "R" with 100 simulations.
-#> ✔ Ensemble simulation completed in 6.682 seconds.
+#> ✔ Ensemble simulation completed in 6.4031 seconds.
 plot(sims)
 ```
 

@@ -55,4 +55,5 @@ print(sfm)
 #> ── Simulation Settings ──
 #> 
 #> Time: 0.0 to 20.0 weeks (dt = 0.01) • euler • R
+#> Simulation output: stocks only
 ```

@@ -65,6 +65,7 @@ print(sfm)
 #> ── Simulation Settings ──
 #> 
 #> Time: 0 to 100 seconds (dt = 0.01) • euler • R
+#> Simulation output: stocks only
 
 # Remove stock
 sfm <- discard(sfm, x)
@@ -76,4 +77,5 @@ print(sfm)
 #> ── Simulation Settings ──
 #> 
 #> Time: 0 to 100 seconds (dt = 0.01) • euler • R
+#> Simulation output: stocks only
 ```

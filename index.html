@@ -5,13 +5,13 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Easily Build, Simulate, and Explore Stock-and-Flow Models • sdbuildR</title>
+<title>An Accessible Interface for Stock-and-Flow Modelling • sdbuildR</title>
 <!-- katex math --><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script><script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous" onload="renderMathInElement(document.body);"></script><script src="katex-auto.js"></script><script src="deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
 <script src="deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Easily Build, Simulate, and Explore Stock-and-Flow Models">
+<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="An Accessible Interface for Stock-and-Flow Modelling">
 <meta name="description" content="Stock-and-flow models are a computational method from the field of system dynamics. They represent how systems change over time and are mathematically equivalent to ordinary differential equations. sdbuildR (system dynamics builder) provides an intuitive interface for constructing stock-and-flow models without requiring extensive domain knowledge. Models can quickly be simulated and revised, supporting iterative development. sdbuildR simulates models in R and Julia, and supports computationally intensive ensemble simulations. Additionally, sdbuildR can import models created in Insight Maker (&lt;https://insightmaker.com/&gt;).">
 <meta property="og:description" content="Stock-and-flow models are a computational method from the field of system dynamics. They represent how systems change over time and are mathematically equivalent to ordinary differential equations. sdbuildR (system dynamics builder) provides an intuitive interface for constructing stock-and-flow models without requiring extensive domain knowledge. Models can quickly be simulated and revised, supporting iterative development. sdbuildR simulates models in R and Julia, and supports computationally intensive ensemble simulations. Additionally, sdbuildR can import models created in Insight Maker (&lt;https://insightmaker.com/&gt;).">
 </head>
@@ -23,7 +23,7 @@
 
     <a class="navbar-brand me-2" href="index.html">sdbuildR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -40,7 +40,6 @@
 <li><a class="dropdown-item" href="articles/build.html">Building stock-and-flow models</a></li>
     <li><a class="dropdown-item" href="articles/ensemble.html">Ensemble simulations</a></li>
     <li><a class="dropdown-item" href="articles/unit-tests.html">Unit Testing Stock-and-Flow Models</a></li>
-    <li><a class="dropdown-item" href="articles/jdr.html">Formalizing Job Demands-Resources Theory</a></li>
     <li><a class="dropdown-item" href="articles/julia-setup.html">Setting up Julia</a></li>
     <li><a class="dropdown-item" href="articles/import-export.html">Importing and Exporting Models</a></li>
   </ul>
@@ -60,7 +59,7 @@
 </nav><div class="container template-home">
 <div class="row">
   <main id="main" class="col-md-9"><div class="section level1">
-<div class="page-header"><h1 id="sdbuildr-easily-build-simulate-and-explore-stock-and-flow-models-in-r">sdbuildR: Easily Build, Simulate, and Explore Stock-and-Flow Models in R<a class="anchor" aria-label="anchor" href="#sdbuildr-easily-build-simulate-and-explore-stock-and-flow-models-in-r"></a>
+<div class="page-header"><h1 id="sdbuildr-an-accessible-interface-for-stock-and-flow-modelling-in-r">sdbuildR: An Accessible Interface for Stock-and-Flow Modelling in R<a class="anchor" aria-label="anchor" href="#sdbuildr-an-accessible-interface-for-stock-and-flow-modelling-in-r"></a>
 </h1></div>
 <!-- badges: start -->
 
@@ -82,7 +81,7 @@
 <code class="sourceCode R"><span><span class="co"># Simulate and visualise the dynamics over time</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/stats/simulate.html" class="external-link">simulate</a></span><span class="op">(</span><span class="va">sfm</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <p><img src="reference/figures/README-sir-sim.png"></p>
-<p><code><a href="https://rdrr.io/r/stats/simulate.html" class="external-link">simulate()</a></code> produces an interactive timeseries plot. See it run — and build the same model from scratch — in the <a href="https://kcevers.github.io/sdbuildR/articles/sdbuildR.html"><strong>Get started guide</strong></a>.</p>
+<p>The <a href="https://kcevers.github.io/sdbuildR/articles/sdbuildR.html"><strong>Get started guide</strong></a> provides a step-by-step tutorial on building and simulating stock-and-flow models using interactive plots.</p>
 </div>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
@@ -134,17 +133,17 @@
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/citation.html" class="external-link">citation</a></span><span class="op">(</span><span class="st">"sdbuildR"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; To cite package 'sdbuildR' in publications use:</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;   Evers, K. (2026). sdbuildR: Easily Build, Simulate, and Explore</span></span>
-<span><span class="co">#&gt;   Stock-and-Flow Models. R package version 2.0.0.</span></span>
+<span><span class="co">#&gt;   Evers, K. (2026). sdbuildR: An Accessible Interface for</span></span>
+<span><span class="co">#&gt;   Stock-and-Flow Modelling in R. R package version 2.1.0.</span></span>
 <span><span class="co">#&gt;   https://doi.org/10.32614/CRAN.package.sdbuildR</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; A BibTeX entry for LaTeX users is</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;   @Manual{sdbuildR,</span></span>
-<span><span class="co">#&gt;     title = {{sdbuildR}: Easily Build, Simulate, and Explore Stock-and-Flow Models},</span></span>
+<span><span class="co">#&gt;     title = {{sdbuildR}: An Accessible Interface for Stock-and-Flow Modelling in R},</span></span>
 <span><span class="co">#&gt;     author = {Kyra Caitlin Evers},</span></span>
 <span><span class="co">#&gt;     year = {2026},</span></span>
-<span><span class="co">#&gt;     note = {R package version 2.0.0},</span></span>
+<span><span class="co">#&gt;     note = {R package version 2.1.0},</span></span>
 <span><span class="co">#&gt;     url = {https://kcevers.github.io/sdbuildR/},</span></span>
 <span><span class="co">#&gt;     doi = {10.32614/CRAN.package.sdbuildR},</span></span>
 <span><span class="co">#&gt;   }</span></span></code></pre></div>

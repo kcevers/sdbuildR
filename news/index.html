@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">sdbuildR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -22,7 +22,6 @@
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/build.html">Building stock-and-flow models</a></li>
     <li><a class="dropdown-item" href="../articles/ensemble.html">Ensemble simulations</a></li>
     <li><a class="dropdown-item" href="../articles/unit-tests.html">Unit Testing Stock-and-Flow Models</a></li>
-    <li><a class="dropdown-item" href="../articles/jdr.html">Formalizing Job Demands-Resources Theory</a></li>
     <li><a class="dropdown-item" href="../articles/julia-setup.html">Setting up Julia</a></li>
     <li><a class="dropdown-item" href="../articles/import-export.html">Importing and Exporting Models</a></li>
   </ul></li>
@@ -43,7 +42,7 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="development version" id="sdbuildr-development-version">sdbuildR (development version)<a class="anchor" aria-label="anchor" href="#sdbuildr-development-version"></a></h2>
+<h2 class="pkg-version" data-toc-text="2.1.0" id="sdbuildr-210">sdbuildR 2.1.0<a class="anchor" aria-label="anchor" href="#sdbuildr-210"></a></h2>
 <ul><li><p>The plotting <code>line_width</code> and <code>alpha</code> arguments now accept a richer grammar. In <code><a href="../reference/plot.ensemble_stockflow.html">plot.ensemble_stockflow()</a></code> they style three layers independently: the central-tendency line (<code>central</code>), the uncertainty band (<code>spread</code>), and the individual trajectories (<code>sims</code>). Pass a single value (applied everywhere), a named per-variable vector (names are variable labels, like <code>colors</code>), or a list keyed by layer (e.g. <code>line_width = list(central = 3, spread = 0, sims = 1)</code>), optionally with per-variable vectors inside each layer. <code>colors</code> likewise accepts a <em>partial</em> named vector now: name only the variables you want to recolour and the palette fills the rest. <em>Breaking:</em> the <code>central_line_width</code> argument is removed; use <code>line_width = list(central = ...)</code> instead. The ensemble defaults changed to <code>line_width = list(central = 3, spread = 0, sims = 1)</code> and <code>alpha = list(central = 1, spread = 0.3, sims = 0.3)</code> (the trajectory width is thinner and the band is drawn without a border by default).</p></li>
 <li><p><code><a href="../reference/plot.ensemble_stockflow.html">plot.ensemble_stockflow()</a></code> and <code><a href="../reference/plot.verify_stockflow.html">plot.verify_stockflow()</a></code> place condition sliders/dropdowns (<code>condition_display = "slider"</code>/<code>"dropdown"</code>) more robustly: the per-control spacing, the reserved bottom margin, and the x-axis title are now sized from a single geometry so the controls no longer overlap each other or the axis title when several condition parameters are varied. The gap can be tuned via <code>control_options = list(spacing = ...)</code> (paper units; <code>NULL</code> keeps the automatic default).</p></li>
 <li><p><code><a href="../reference/ensemble.html">ensemble()</a></code> chooses which summary statistics to compute via <code>central</code> and <code>spread</code>, mirroring the vocabulary of <code><a href="../reference/plot.ensemble_stockflow.html">plot.ensemble_stockflow()</a></code>. <code>central</code> is one or more of <code>"mean"</code>, <code>"median"</code>, or <code>"none"</code>; <code>spread</code> is one or more of <code>"quantile"</code> (quantile columns at the probabilities given by <code>quantiles</code>), <code>"sd"</code>, <code>"range"</code> (returned as <code>min</code>/<code>max</code> columns), or <code>"none"</code>. Unlike in <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code>, here they are the <em>set</em> of statistics to compute (each becomes a column), not a preference order. A <code>missing_count</code> column is now always returned. <code>central</code>, <code>spread</code>, and <code>quantiles</code> can also be set on the model via <code><a href="../reference/sim_settings.html">sim_settings()</a></code>; passing them to <code><a href="../reference/ensemble.html">ensemble()</a></code> overrides the model’s settings for that call. <em>Breaking:</em> this replaces the short-lived <code>summary_stats</code> argument; quantile columns are named <code>quant1</code>, <code>quant2</code>, … (in the order of <code>quantiles</code>; the probabilities are stored in the object’s <code>quantiles</code> field). Both accept lenient spellings (e.g. <code>"Medians"</code>, <code>"SDs"</code>, <code>"min-max"</code>).</p></li>
@@ -68,7 +67,7 @@
 <ol start="3" style="list-style-type: lower-alpha"><li>for a crossed ensemble (<code>cross = TRUE</code>) with two or more parameters, show one control per parameter instead of a single condition selector. The interactive controls are self-contained and require no running R session, so they work in static HTML (e.g. pkgdown articles and Quarto slides).</li>
 </ol></li>
 </ul><div class="section level3">
-<h3 id="bug-fixes-development-version">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-development-version"></a></h3>
+<h3 id="bug-fixes-2-1-0">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-2-1-0"></a></h3>
 <ul><li>Fixed <code>citation("sdbuildR")</code> to report the package’s release year and version number without the developmental suffix.</li>
 </ul></div>
 </div>

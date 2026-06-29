@@ -3,10 +3,6 @@
 ``` r
 
 library(sdbuildR)
-
-# Disable WebGL: many plotly widgets per HTML page can exceed the browser WebGL
-# context limit and render blank. SVG always renders.
-options(sdbuildR.webgl = FALSE)
 ```
 
 After having built a stock-and-flow model, you may want to explore how
@@ -48,6 +44,7 @@ print(sfm)
 #> ── Simulation Settings ──
 #> 
 #> Time: 0.0 to 100.0 days (dt = 0.01) • euler • R
+#> Simulation output: stocks only
 ```
 
 Simulations run in R by default. If you want to use Julia for faster
@@ -112,7 +109,7 @@ function:
 
 sims <- ensemble(sfm, n = 100)
 #> Starting ensemble simulation in "R" with 100 simulations.
-#> ✔ Ensemble simulation completed in 22.9845 seconds.
+#> ✔ Ensemble simulation completed in 21.3516 seconds.
 ```
 
 ``` r
@@ -128,7 +125,7 @@ which we first have to rerun the simulation with `save_sims = TRUE`:
 
 sims <- ensemble(sfm, n = 30, save_sims = TRUE)
 #> Starting ensemble simulation in "R" with 30 simulations.
-#> ✔ Ensemble simulation completed in 6.936 seconds.
+#> ✔ Ensemble simulation completed in 6.4223 seconds.
 ```
 
 ``` r
@@ -145,14 +142,15 @@ simulations we plot by specifying the `i` argument:
 plot(sims, which = "sims", sim = 15:30)
 ```
 
-By default, only the stocks are saved. To save all variables, set
-`only_stocks = FALSE`:
+By default, only the stocks are saved. If you need one or two flows or
+auxiliaries, prefer selecting them with `vars`; to save every model
+variable for exploratory diagnostics, set `only_stocks = FALSE`:
 
 ``` r
 
 sims <- ensemble(sfm, n = 100, only_stocks = FALSE)
 #> Starting ensemble simulation in "R" with 100 simulations.
-#> ✔ Ensemble simulation completed in 79.9799 seconds.
+#> ✔ Ensemble simulation completed in 70.5986 seconds.
 ```
 
 ``` r
@@ -175,7 +173,7 @@ sims <- ensemble(sfm,
   quantiles = c(0.1, 0.9)
 )
 #> Starting ensemble simulation in "R" with 100 simulations.
-#> ✔ Ensemble simulation completed in 22.9887 seconds.
+#> ✔ Ensemble simulation completed in 21.1161 seconds.
 head(sims)
 #>   condition               variable time      mean    median missing_count
 #> 1         1 Compensatory_behaviour    0 0.4750875 0.4036320             0
@@ -209,7 +207,7 @@ sims <- ensemble(sfm,
   spread = "sd"
 )
 #> Starting ensemble simulation in "R" with 100 simulations.
-#> ✔ Ensemble simulation completed in 23.0713 seconds.
+#> ✔ Ensemble simulation completed in 21.165 seconds.
 head(sims)
 #>   condition               variable time    median        sd missing_count
 #> 1         1 Compensatory_behaviour    0 0.4036320 0.2949805             0
@@ -235,7 +233,7 @@ sims <- ensemble(sfm,
   spread = c("quantile", "sd", "range")
 )
 #> Starting ensemble simulation in "R" with 100 simulations.
-#> ✔ Ensemble simulation completed in 22.9867 seconds.
+#> ✔ Ensemble simulation completed in 21.1053 seconds.
 head(sims)
 #>   condition               variable time      mean    median        sd
 #> 1         1 Compensatory_behaviour    0 0.4750875 0.4036320 0.2949805
@@ -284,7 +282,7 @@ if (requireNamespace("future", quietly = TRUE) &&
   # Set up parallel execution with 4 workers
   future::plan(future::multisession, workers = 4)
 
-  # Run ensemble simulations (now in parallel)
+  # Run 1000 simulations in parallel
   sims <- ensemble(sfm, n = 100)
 
   # Restore sequential execution
@@ -355,7 +353,7 @@ sims <- ensemble(sfm,
 )
 #> Starting ensemble simulation in "Julia" with 400 simulations in total.
 #> ℹ 4 conditions x 100 simulations per condition.
-#> ✔ Ensemble simulation completed in 11.4236 seconds.
+#> ✔ Ensemble simulation completed in 10.2825 seconds.
 ```
 
 ``` r
@@ -380,7 +378,7 @@ sims <- ensemble(sfm,
 )
 #> Starting ensemble simulation in "Julia" with 400 simulations in total.
 #> ℹ 4 conditions x 100 simulations per condition.
-#> ✔ Ensemble simulation completed in 2.6059 seconds.
+#> ✔ Ensemble simulation completed in 2.5803 seconds.
 ```
 
 ``` r
@@ -417,7 +415,7 @@ sims <- ensemble(sfm,
 )
 #> Starting ensemble simulation in "Julia" with 300 simulations in total.
 #> ℹ 3 conditions x 100 simulations per condition.
-#> ✔ Ensemble simulation completed in 2.9685 seconds.
+#> ✔ Ensemble simulation completed in 2.8682 seconds.
 ```
 
 ``` r

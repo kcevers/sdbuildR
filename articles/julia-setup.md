@@ -3,10 +3,6 @@
 ``` r
 
 library(sdbuildR)
-
-# Disable WebGL: many plotly widgets per HTML page can exceed the browser WebGL
-# context limit and render blank. SVG always renders.
-options(sdbuildR.webgl = FALSE)
 library(JuliaConnectoR)
 ```
 

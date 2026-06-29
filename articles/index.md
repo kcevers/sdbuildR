@@ -8,8 +8,6 @@
   simulations](https://kcevers.github.io/sdbuildR/articles/ensemble.md):
 - [Unit Testing Stock-and-Flow
   Models](https://kcevers.github.io/sdbuildR/articles/unit-tests.md):
-- [Formalizing Job Demands-Resources
-  Theory](https://kcevers.github.io/sdbuildR/articles/jdr.md):
 - [Setting up
   Julia](https://kcevers.github.io/sdbuildR/articles/julia-setup.md):
 - [Importing and Exporting

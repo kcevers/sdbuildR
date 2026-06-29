@@ -13,7 +13,7 @@ meta(
   caption = "My Model Description",
   created = Sys.time(),
   author = "Me",
-  version = "1.0",
+  version = "0.0.0.9000",
   URL = "",
   doi = "",
   ...
@@ -45,7 +45,7 @@ meta(
 
 - version:
 
-  Model version. Defaults to "1.0".
+  Model version. Defaults to "0.0.0.9000", a development version.
 
 - URL:
 
