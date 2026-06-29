@@ -72,7 +72,7 @@ export_plot(
 
 ![](man/figures/README-sir-sim.png)
 
-`simulate()` produces an interactive timeseries plot. See it run — and build the same model from scratch — in the [**Get started guide**](https://kcevers.github.io/sdbuildR/articles/sdbuildR.html).
+The [**Get started guide**](https://kcevers.github.io/sdbuildR/articles/sdbuildR.html) provides a step-by-step tutorial on building and simulating stock-and-flow models using interactive plots.
 
 
 ## Installation

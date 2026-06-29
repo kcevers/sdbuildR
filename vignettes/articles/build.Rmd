@@ -15,7 +15,7 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
   fig.width = 6, # Set default figure width to 6 inches
-  fig.height = 4, # Set default figure height to 4 inches
+  fig.height = 3, # Set default figure height to 3 inches
   fig.align = "center", # Center all figures
   out.width = "80%" # Display figures at 80% of container width
   # fig.retina = 2,         # Optimize for retina displays
@@ -152,7 +152,7 @@ Stock-and-flow models represent systems as states (stocks) that accumulate over 
 Stock-and-flow models conceptualize systems in terms of quantities that accumulate (i.e., stocks) and the processes (i.e., flows) that change them over time. Stocks are like the amount of water in a bathtub: they store the effects of past and present flows. Stocks must be able to increase and decrease, and should be measurable at a single moment in time. Inflows -- water from the tap -- raise the stock, while outflows -- water through the drain -- lower it. As such, flows represent the rates at which stocks change, measured in units per time (e.g., litre per minute). The net rate of change in the water level is determined by the difference between the inflows and outflows. In this way, a stock functions as a memory of past activity: it increases when inflows exceed outflows and decreases when outflows outpace inflows. Without an outflow, the water remains in the bathtub; without an inflow, the bathtub stays empty. This structure is the foundation of stock-and-flow models, where stocks represent the state of a system, and flows represent the processes that alter that state over time.
 
 
-```{r, echo=FALSE, message=FALSE, warning=FALSE}
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.height = 5}
 
 # Time points for the four phases of stock change (rise and fall)
 t0 <- 0   # start (inflow == outflow, stock flat)
@@ -299,7 +299,13 @@ plotly::layout(
     showline = TRUE, 
     range = c(-.5 - pad_axis2, .5 + pad_axis2), 
                   tickvals = c(-.5, .5), ticktext = c("-0.5", "0.5")),
-    font = annot_font,
+    font = annot_font) 
+
+
+if (recreate_figs) {
+
+  fig1 <- fig |>
+    plotly::layout(
     annotations = list(
       utils::modifyList(annot_xlab, list(text = "<i>A. Stock-and-Flow Diagram</i>", x = 0.5, y = top_y + .22)),
       utils::modifyList(annot_xlab, list(text = "<i>B. Timeseries of Stock</i>", x = 0.5, y = top_y + .13)),
@@ -314,15 +320,28 @@ plotly::layout(
     )
   )
 
-
-if (recreate_figs) {
-  export_plot(fig, file.path(filepath_figs, "build_stock_flow_phases.pdf"),
+  export_plot(fig1, file.path(filepath_figs, "build_stock_flow_phases.pdf"),
     width = 6, height = 4.2
   )
 }
 
 
-fig
+fig2 <- fig |>
+    plotly::layout(
+    annotations = list(
+      utils::modifyList(annot_xlab, list(text = "<i>Timeseries of Stock</i>", x = 0.5, y = top_y + .13)),
+      utils::modifyList(annot_xlab, list(text = "<i>Timeseries of Change in Stock</i>", x = 0.5, 
+      y = bot_y + .11)),
+      phase_label("<i>Area = Increase\nin stock</i>", x = centers[2], 
+      
+      y = bot_y - .2
+      ),
+      phase_label("<i>Area = Decrease\nin stock</i>", x = centers[4], y = bot_y - .325),
+      utils::modifyList(annot_xlab, list(text = "Time", x = 0.5, y = -0.06))
+    )
+  )
+
+  fig2
 ```
 
 
@@ -362,8 +381,10 @@ We now build this same model from scratch in iterative steps. The table below pr
 ```{r echo = FALSE}
 eqn_interpretation_table <- data.frame(
   Panel = LETTERS[1:5],
-  `Recovery eqn (inflow)` = c("", "", "", "`0.3`", "`recovery_rate`"),
-  `Depletion eqn (outflow)` = c("", "`0.05`", "`0.05 * energy`", "`0.05 * energy`", "`0.05 * energy`"),
+  `Stocks` = c("energy", "energy", "energy", "energy", "energy, recovery_rate"),
+  `Constants` = c("", "`depletion_rate`", "`depletion_rate`", "`depletion_rate`, `recovery_rate`", "`depletion_rate`"),
+  `Recovery eqn (inflow)` = c("", "", "", "`recovery_rate`", "`recovery_rate`"),
+  `Depletion eqn (outflow)` = c("", "`depletion_rate`", "`depletion_rate * energy`", "`depletion_rate * energy`", "`depletion_rate * energy`"),
   Interpretation = c(
     "No process of change",
     "Energy decreases at a constant rate",

@@ -1,4 +1,4 @@
-# sdbuildR (development version)
+# sdbuildR 2.1.0
 
 * The plotting `line_width` and `alpha` arguments now accept a richer grammar.
   In `plot.ensemble_stockflow()` they style three layers independently: the

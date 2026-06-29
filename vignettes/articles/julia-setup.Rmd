@@ -18,6 +18,7 @@ knitr::opts_chunk$set(
 
 ```{r, echo=TRUE, message=FALSE}
 library(sdbuildR)
+library(JuliaConnectoR)
 ```
 
 
