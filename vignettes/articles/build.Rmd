@@ -1347,13 +1347,13 @@ This will ensure that all references to `recovery_rate` are changed to `recovery
 When creating variables or changing variable names, a warning may be issued that the name was modified to be syntactically valid and unique. For example:
 
 ```{r error = TRUE, warning = TRUE}
-sfm <- change_name(sfm, recovery_rate, new_name = t)
+sfm <- change_name(sfm, recovery_store, new_name = t)
 ```
 
 The name `t` is not usable, as this already refers to the current time step. Similarly, names cannot contain spaces or special characters:
 
 ```{r error = TRUE}
-sfm <- change_name(sfm, recovery_rate, new_name = recovery - rate)
+sfm <- change_name(sfm, t_1, new_name = recovery - rate)
 ```
 
 Names also cannot be duplicated:

@@ -85,9 +85,7 @@ are described in the vignettes:
   - [Unit
     tests](https://kcevers.github.io/sdbuildR/articles/unit-tests.html):
     Verify models behave as intended with unit tests.
-  - [Job Demands-Resources
-    Theory](https://kcevers.github.io/sdbuildR/articles/jdr.html): An
-    example of formalizing psychological theory with sdbuildR.
+    <!-- * [Job Demands-Resources Theory](https://kcevers.github.io/sdbuildR/articles/jdr.html): An example of formalizing psychological theory with sdbuildR. -->
   - [Julia
     setup](https://kcevers.github.io/sdbuildR/articles/julia-setup.html):
     Set up Julia for faster

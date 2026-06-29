@@ -98,7 +98,7 @@ sdbuildR is designed to support the iterative process of building, simulating, a
 * [Build](https://kcevers.github.io/sdbuildR/articles/build.html): Build, modify, and simulate stock-and-flow models.
 * [Ensemble simulations](https://kcevers.github.io/sdbuildR/articles/ensemble.html): Explore a model's behaviour across parameter ranges and initial conditions.
 * [Unit tests](https://kcevers.github.io/sdbuildR/articles/unit-tests.html): Verify models behave as intended with unit tests.
-* [Job Demands-Resources Theory](https://kcevers.github.io/sdbuildR/articles/jdr.html): An example of formalizing psychological theory with sdbuildR.
+<!-- * [Job Demands-Resources Theory](https://kcevers.github.io/sdbuildR/articles/jdr.html): An example of formalizing psychological theory with sdbuildR. -->
 * [Julia setup](https://kcevers.github.io/sdbuildR/articles/julia-setup.html): Set up Julia for faster simulations.
 * [Import/Export](https://kcevers.github.io/sdbuildR/articles/import-export.html): Import models from deSolve or Insight Maker, and export to other formats.
 
