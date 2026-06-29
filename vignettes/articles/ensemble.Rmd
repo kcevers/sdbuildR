@@ -27,11 +27,15 @@ knitr::opts_chunk$set(
 
 ```{r, echo=TRUE, message=FALSE}
 library(sdbuildR)
+```
 
+
+```{r, echo = FALSE}
 # Disable WebGL: many plotly widgets per HTML page can exceed the browser WebGL
 # context limit and render blank. SVG always renders.
 options(sdbuildR.webgl = FALSE)
 ```
+
 
 ```{r, echo = FALSE, eval = interactive()}
 # Check if the Julia environment is set up, and if not, install it (for local pkgdown::build_site())

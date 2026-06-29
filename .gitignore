@@ -17,4 +17,3 @@ inst/Manifest.toml
 ^cran-comments\.md$
 /.claude/
 /.quarto/
-/vignettes/articles/on_hold$
