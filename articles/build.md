@@ -559,10 +559,9 @@ For example:
 
 ``` r
 
-sfm <- change_name(sfm, recovery_rate, new_name = t)
-#> Error in `check_var_existence()`:
-#> ! Variable not found in model.
-#> ✖ `recovery_rate` does not exist.
+sfm <- change_name(sfm, recovery_store, new_name = t)
+#> Warning: A name was changed for syntactic validity or uniqueness.
+#> ℹ "t" → `t_1`
 ```
 
 The name `t` is not usable, as this already refers to the current time
@@ -570,10 +569,9 @@ step. Similarly, names cannot contain spaces or special characters:
 
 ``` r
 
-sfm <- change_name(sfm, recovery_rate, new_name = recovery - rate)
-#> Error in `check_var_existence()`:
-#> ! Variable not found in model.
-#> ✖ `recovery_rate` does not exist.
+sfm <- change_name(sfm, t_1, new_name = recovery - rate)
+#> Warning: A name was changed for syntactic validity or uniqueness.
+#> ℹ "recovery - rate" → `recovery___rate`
 ```
 
 Names also cannot be duplicated:

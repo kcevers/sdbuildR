@@ -89,7 +89,7 @@ followed by one column per variable.
 sfm <- stockflow("sir")
 sims <- ensemble(sfm, n = 10)
 #> Starting ensemble simulation in "R" with 10 simulations.
-#> ✔ Ensemble simulation completed in 0.5345 seconds.
+#> ✔ Ensemble simulation completed in 0.4903 seconds.
 df <- as.data.frame(sims)
 head(df)
 #>   condition variable time     mean   median missing_count   quant1   quant2

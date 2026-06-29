@@ -151,7 +151,7 @@ sfm_ens <- sfm |>
 
 sims <- ensemble(sfm_ens, n = 100)
 #> Starting ensemble simulation in "R" with 100 simulations.
-#> ✔ Ensemble simulation completed in 6.4031 seconds.
+#> ✔ Ensemble simulation completed in 6.5694 seconds.
 plot(sims)
 ```
 
@@ -204,9 +204,6 @@ extracting test results, and debugging failed tests.
 - [Unit
   tests](https://kcevers.github.io/sdbuildR/articles/unit-tests.html):
   Verify models behave as intended with unit tests.
-- [Job Demands-Resources
-  Theory](https://kcevers.github.io/sdbuildR/articles/jdr.html): An
-  example of formalizing psychological theory with sdbuildR.
 - [Julia
   setup](https://kcevers.github.io/sdbuildR/articles/julia-setup.html):
   Speed up simulations with Julia.
