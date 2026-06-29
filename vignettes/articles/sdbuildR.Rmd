@@ -18,89 +18,144 @@ knitr::opts_chunk$set(
 library(sdbuildR)
 ```
 
-### Get started with a template
 
-Stock-and-flow models can be created in three ways in sdbuildR. Firstly, dozens of example models can be loaded using `xmile()`. Plot the stock-and-flow diagram to get an overview of the model:
+```{r, echo = FALSE}
+# Disable WebGL: many plotly widgets per HTML page can exceed the browser WebGL
+# context limit and render blank. SVG always renders.
+options(sdbuildR.webgl = FALSE)
+```
+
+
+sdbuildR is an R package for building, simulating, and testing stock-and-flow models. This page gives a quick overview of its main features.
+
+### Load models from the model library
+
+Dozens of example models can be loaded using `stockflow()`. Here we load the SIR (Susceptible-Infected-Recovered) model, a classic model in epidemiology:
+
+```{r SIR_print}
+sfm <- stockflow("sir")
+print(sfm)
+```
+
+Plot the stock-and-flow diagram for a structural overview:
 
 ```{r SIR_diagram, fig.width=8, fig.height=2}
-sfm <- xmile("SIR")
 plot(sfm)
 ```
 
-The model can be simulated using `simulate()`:
+Simulate and plot the model's behaviour over time:
 
 ```{r SIR_plot, fig.width=8, fig.height=4}
 sim <- simulate(sfm)
 plot(sim)
 ```
 
-### Import models from Insight Maker
-
-Secondly, an [Insight Maker](https://insightmaker.com/) model can be imported to R using its URL: 
-
-```{r message=FALSE, warning=FALSE}
-URL <- "https://insightmaker.com/insight/5LxQr0waZGgBcPJcNTC029/Crielaard-2022"
-sfm <- insightmaker_to_sfm(URL = URL)
-```
-
-```{r}
-sim <- simulate(sfm)
-```
-
-```{r Crielaard2022_plot, fig.height=4, fig.width=8, message=FALSE, warning=FALSE}
-plot(sim)
-```
-
 ### Build a model from scratch
 
-Lastly, a stock-and-flow model can be created from scratch. We first initialize an empty stock and flow model with `xmile()`, and then use `build()` to create a logistic model of population growth. The simulation specifications, such as the start time, stop time, simulation time step (`dt`), and time units, are set with `sim_specs()`. Below, we make use of the convenient pipe operator `|>`, which simply passes the result of an expression to the next expression as a first argument. 
+The equivalent stock-and-flow model can also be built from scratch. We initialise an empty model with `stockflow()` and add three stocks. 
+
+```{r scratch_build}
+sfm <- stockflow() |>
+  stock(Susceptible, eqn = 99999) |>
+  stock(Infected, eqn = 1) |>
+  stock(Recovered, eqn = 0)
+```
+
+Above, we use the pipe operator `|>` for better legibility. It simply passes the result of an expression to the next expression as its first argument. 
 
 ```{r}
-sfm <- xmile() |>
-  header(name = "Population growth") |>
-  build("X", "stock", eqn = "100", label = "Population size") |>
-  build("change", "flow",
-        eqn = "r * (1 - X/K)", to = "X",
-        label = "Births and Deaths"
+plot(sfm)
+```
+
+Next, we add two flows that move population from one stock to another:
+
+```{r scratch_build3}
+sfm <- sfm |>
+  flow(New_infections,
+    eqn = "Infection_rate * Susceptible * Infected",
+    from = "Susceptible", to = "Infected"
   ) |>
-  build("r", "constant", eqn = "5", label = "Growth rate") |>
-  build("K", "constant", eqn = "10000", label = "Carrying capacity") |>
-  sim_specs(stop = 10000, time_units = "days")
+  flow(New_recoveries,
+    eqn = "Recovery_rate * Infected",
+    from = "Infected", to = "Recovered"
+  )
+
+plot(sfm)
 ```
+
+The flows refer to four constants, which still need to be defined:
+
+```{r scratch_build2}
+sfm <- sfm |>
+  constant(Total_population,
+    eqn = "Susceptible + Infected + Recovered"
+  ) |>
+  constant(Contact_rate, eqn = 2) |>
+  constant(Recovery_rate, eqn = 0.1) |>
+  constant(Infection_rate,
+    eqn = "Contact_rate / Total_population"
+  )
+```
+
+
+Simulation settings such as the time range and time step (`dt`) are configured with `sim_settings()`.
 
 ```{r}
-sim <- simulate(sfm)
+sfm <- sfm |>
+  sim_settings(start = 0, stop = 20, time_units = "weeks") |>
+  # Add model name
+  meta(name = "Susceptible-Infected-Recovered (SIR)")
 ```
 
-```{r logistic_plot, fig.width=8, fig.height=4}
+```{r scratch_sim, fig.width=8, fig.height=4}
+sim <- simulate(sfm)
 plot(sim)
 ```
 
-An overview of the model components and simulation specifications can be accessed with `summary()`:
+See the [Build](https://kcevers.github.io/sdbuildR/articles/build.html) vignette for a full guide on constructing and modifying models.
 
-```{r summary}
-summary(sfm)
+### Ensemble simulations
+
+Running multiple simulations (i.e., an ensemble) provides insight into a model's behavioural variability. Here, we initialize all stocks to a random value:
+
+```{r ensemble_setup}
+sfm_ens <- sfm |>
+  update(c(Susceptible, Infected, Recovered), eqn = runif(1, 1, 1000)) |>
+  # Save fewer values for computational efficiency
+  sim_settings(stop = 50, save_at = 1)
 ```
 
-To quickly view all model variable properties, use `as.data.frame()`:
-
-```{r as.data.frame}
-as.data.frame(sfm)
+```{r ensemble_plot, fig.width=8, fig.height=4}
+sims <- ensemble(sfm_ens, n = 100)
+plot(sims)
 ```
 
-## Start building your own models!
+Ensemble simulations can be run in parallel in R for speed, or in Julia for even faster performance.
 
-See the vignettes to learn more about all features of sdbuildR:
+See the [Ensemble](https://kcevers.github.io/sdbuildR/articles/ensemble.html) vignette for more, including varying multiple parameters, parallel execution, and accessing simulation data.
 
-* [Build](https://kcevers.github.io/sdbuildR/articles/build.html): Learn how to build, modify, and debug stock-and-flow models.
-* [Julia setup](https://kcevers.github.io/sdbuildR/articles/julia-setup.html): Install and set up the Julia environment for running ensemble simulations and using units.
-* [Ensemble](https://kcevers.github.io/sdbuildR/articles/ensemble.html): Learn how to assess a model's sensitivity, uncertainty and robustness with ensemble simulations.
-* [Units](https://kcevers.github.io/sdbuildR/articles/units.html): Learn why and how to use (custom) units.
+### Unit tests
 
-## Citation
+Stock-and-flow models can easily become complex, producing unexpected behaviours as the model is developed. Unit tests assert that a model behaves as expected. An expression that evaluates to `TRUE` means the test passes. Here we check that the susceptible population never becomes negative, and that the total population is conserved:
 
-To cite sdbuildR, please use:
+```{r unit_tests}
+sfm <- sfm |>
+  unit_test(expr = all(Susceptible >= 0)) |>
+  unit_test(
+    expr = all(abs(Susceptible + Infected + Recovered - Total_population) < 1e-8),
+    label = "Population is conserved"
+  )
 
-```{r include=TRUE}
-citation("sdbuildR")
+verify(sfm)
 ```
+
+See the [Unit tests](https://kcevers.github.io/sdbuildR/articles/unit-tests.html) vignette for more, including conditional tests, visualizing and extracting test results, and debugging failed tests.
+
+## Learn more
+
+* [Build](https://kcevers.github.io/sdbuildR/articles/build.html): Build, modify, and simulate stock-and-flow models.
+* [Ensemble simulations](https://kcevers.github.io/sdbuildR/articles/ensemble.html): Explore a model's behaviour across parameter ranges and initial conditions.
+* [Unit tests](https://kcevers.github.io/sdbuildR/articles/unit-tests.html): Verify models behave as intended with unit tests.
+<!-- * [Job Demands-Resources Theory](https://kcevers.github.io/sdbuildR/articles/jdr.html): An example of formalizing psychological theory with sdbuildR. -->
+* [Julia setup](https://kcevers.github.io/sdbuildR/articles/julia-setup.html): Speed up simulations with Julia.
+* [Import/Export](https://kcevers.github.io/sdbuildR/articles/import-export.html): Import models from deSolve or Insight Maker, and export to other formats.

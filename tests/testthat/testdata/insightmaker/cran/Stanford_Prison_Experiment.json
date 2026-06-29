@@ -1,0 +1,825 @@
+{
+	"engine": "SIMULATION_PACKAGE",
+	"name": "Clone of Stanford Prison Experiment",
+	"description": "<p class=\"MsoNormal\"><span>Personal versus Situational Dynamics: Implications of Barry Richmond’s Models of Classic Experiments in Social Psychology James K. Doyle, Khalid Saeed, Jeanine Skorinko Department of Social Science and Policy Studies Worcester Polytechnic Institute 2008. For background on the infamous 1971 study that pitted students v students in the roles of prisoners &amp; guards see http://www.prisonexp.org&nbsp;</span></p>",
+	"simulation": {
+		"algorithm": "RK1",
+		"time_start": 0,
+		"time_length": 7,
+		"time_step": 0.0625,
+		"time_units": "DAYS"
+	},
+	"elements": [
+		{
+			"type": "STOCK",
+			"name": "Prisoner Fear",
+			"display": {
+				"coordinates": [
+					250,
+					310
+				],
+				"size": [
+					100,
+					40
+				]
+			},
+			"behavior": {
+				"initial_value": 0
+			}
+		},
+		{
+			"type": "FLOW",
+			"name": "change in fear",
+			"from": null,
+			"to": "Prisoner Fear",
+			"display": {
+				"from_coordinates": [
+					500,
+					380
+				]
+			},
+			"behavior": {
+				"value": "([Indicated fear from repression]-[Prisoner Fear])/0.5"
+			}
+		},
+		{
+			"type": "STOCK",
+			"name": "Repression by guards",
+			"display": {
+				"coordinates": [
+					440,
+					520
+				],
+				"size": [
+					100,
+					40
+				]
+			},
+			"behavior": {
+				"initial_value": 0
+			}
+		},
+		{
+			"type": "FLOW",
+			"name": "change in repression",
+			"from": null,
+			"to": "Repression by guards",
+			"display": {
+				"from_coordinates": [
+					690,
+					630
+				]
+			},
+			"behavior": {
+				"value": "IfThenElse([Remove John Wayne switch]=0, ([Indicated repression by guards]-[Repression by guards])/0.5,(([Indicated repression by guards]*0.7)-[Repression by guards])/0.5)"
+			}
+		},
+		{
+			"type": "CONVERTER",
+			"name": "Indicated fear from repression",
+			"display": {
+				"coordinates": [
+					400,
+					420
+				],
+				"size": [
+					120,
+					50
+				]
+			},
+			"behavior": {
+				"input": "ELEMENT",
+				"interpolation": "LINEAR",
+				"data": [
+					[
+						0,
+						0.02
+					],
+					[
+						0.1,
+						0.03
+					],
+					[
+						0.2,
+						0.045
+					],
+					[
+						0.3,
+						0.055
+					],
+					[
+						0.4,
+						0.08
+					],
+					[
+						0.5,
+						0.225
+					],
+					[
+						0.6,
+						0.45
+					],
+					[
+						0.7,
+						0.645
+					],
+					[
+						0.8,
+						0.77
+					],
+					[
+						0.9,
+						0.9
+					],
+					[
+						1,
+						0.97
+					]
+				],
+				"input_element": "Repression by guards"
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "Repression by guards",
+			"to": "Indicated fear from repression"
+		},
+		{
+			"type": "LINK",
+			"from": "Indicated fear from repression",
+			"to": "change in fear"
+		},
+		{
+			"type": "LINK",
+			"from": "Prisoner Fear",
+			"to": "change in fear"
+		},
+		{
+			"type": "STOCK",
+			"name": "Resistance Perceived by Guards",
+			"display": {
+				"coordinates": [
+					840,
+					200
+				],
+				"size": [
+					100,
+					60
+				]
+			},
+			"behavior": {
+				"initial_value": "[Prisoner Resistance]"
+			}
+		},
+		{
+			"type": "FLOW",
+			"name": "change in perception",
+			"from": null,
+			"to": "Resistance Perceived by Guards",
+			"display": {
+				"from_coordinates": [
+					880,
+					80
+				]
+			},
+			"behavior": {
+				"value": "([Prisoner resistance]-[Resistance Perceived by Guards])/[Perception Time]"
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "Prisoner resistance",
+			"to": "Resistance Perceived by Guards"
+		},
+		{
+			"type": "STOCK",
+			"name": "Prisoner resistance",
+			"display": {
+				"coordinates": [
+					570,
+					70
+				],
+				"size": [
+					100,
+					40
+				]
+			},
+			"behavior": {
+				"initial_value": 0
+			}
+		},
+		{
+			"type": "FLOW",
+			"name": "increase resistance",
+			"from": null,
+			"to": "Prisoner resistance",
+			"display": {
+				"from_coordinates": [
+					460,
+					20
+				]
+			},
+			"behavior": {
+				"value": "[Prisoner resistance]*[fractional increase in resistance]+Pulse([Start of experiment], 0.1, 1)",
+				"non_negative": true
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "Resistance Perceived by Guards",
+			"to": "change in perception"
+		},
+		{
+			"type": "LINK",
+			"from": "Prisoner resistance",
+			"to": "change in perception"
+		},
+		{
+			"type": "LINK",
+			"from": "Perception Time",
+			"to": "change in perception"
+		},
+		{
+			"type": "VARIABLE",
+			"name": "Influences on perception time",
+			"display": {
+				"coordinates": [
+					1060,
+					20
+				],
+				"size": [
+					120,
+					50
+				]
+			},
+			"behavior": {
+				"value": "[Prisoner resistance]/([Resistance Perceived by Guards]+0.001)"
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "Prisoner resistance",
+			"to": "Influences on perception time"
+		},
+		{
+			"type": "CONVERTER",
+			"name": "Perception Time",
+			"display": {
+				"coordinates": [
+					920,
+					70
+				],
+				"size": [
+					120,
+					50
+				]
+			},
+			"behavior": {
+				"input": "ELEMENT",
+				"interpolation": "LINEAR",
+				"data": [
+					[
+						0.9,
+						30
+					],
+					[
+						0.92,
+						30
+					],
+					[
+						0.94,
+						30
+					],
+					[
+						0.96,
+						22.1
+					],
+					[
+						0.98,
+						10.7
+					],
+					[
+						1.02,
+						0.25
+					],
+					[
+						1.04,
+						0.025
+					],
+					[
+						1.06,
+						0.25
+					],
+					[
+						1.08,
+						0.25
+					],
+					[
+						1.1,
+						0.25
+					]
+				],
+				"input_element": "Influences on perception time"
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "Influences on perception time",
+			"to": "Perception Time"
+		},
+		{
+			"type": "VARIABLE",
+			"name": "Remove John Wayne switch",
+			"display": {
+				"interactive": true,
+				"interactive_min": 0,
+				"interactive_max": 1,
+				"coordinates": [
+					340,
+					590
+				],
+				"size": [
+					120,
+					50
+				]
+			},
+			"behavior": {
+				"value": 1
+			}
+		},
+		{
+			"type": "CONVERTER",
+			"name": "Indicated repression by guards",
+			"display": {
+				"coordinates": [
+					690,
+					410
+				],
+				"size": [
+					120,
+					50
+				]
+			},
+			"behavior": {
+				"input": "ELEMENT",
+				"interpolation": "LINEAR",
+				"data": [
+					[
+						0,
+						0
+					],
+					[
+						0.1,
+						0.27
+					],
+					[
+						0.2,
+						0.485
+					],
+					[
+						0.3,
+						0.63
+					],
+					[
+						0.4,
+						0.74
+					],
+					[
+						0.5,
+						0.85
+					],
+					[
+						0.6,
+						0.925
+					],
+					[
+						0.7,
+						0.95
+					],
+					[
+						0.8,
+						0.975
+					],
+					[
+						0.9,
+						0.985
+					],
+					[
+						1,
+						1
+					]
+				],
+				"input_element": "Resistance Perceived by Guards"
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "Resistance Perceived by Guards",
+			"to": "Indicated repression by guards"
+		},
+		{
+			"type": "LINK",
+			"from": "Indicated repression by guards",
+			"to": "change in repression"
+		},
+		{
+			"type": "LINK",
+			"from": "Repression by guards",
+			"to": "change in repression"
+		},
+		{
+			"type": "LINK",
+			"from": "Remove John Wayne switch",
+			"to": "change in repression"
+		},
+		{
+			"type": "FLOW",
+			"name": "decrease resistance",
+			"from": "Prisoner resistance",
+			"to": null,
+			"display": {
+				"to_coordinates": [
+					700,
+					190
+				]
+			},
+			"behavior": {
+				"value": "[Prisoner resistance]*[fractional decrease in resistance]",
+				"non_negative": true
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "Prisoner resistance",
+			"to": "decrease resistance"
+		},
+		{
+			"type": "VARIABLE",
+			"name": "fractional decrease in resistance",
+			"display": {
+				"coordinates": [
+					570,
+					220
+				],
+				"size": [
+					120,
+					60
+				]
+			},
+			"behavior": {
+				"value": "[fractional decrease from fear]+[fractional decrease from repression]"
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "fractional decrease in resistance",
+			"to": "decrease resistance"
+		},
+		{
+			"type": "CONVERTER",
+			"name": "fractional decrease from fear",
+			"display": {
+				"coordinates": [
+					420,
+					260
+				],
+				"size": [
+					120,
+					50
+				]
+			},
+			"behavior": {
+				"input": "ELEMENT",
+				"interpolation": "LINEAR",
+				"data": [
+					[
+						0,
+						0
+					],
+					[
+						0.1,
+						0.02
+					],
+					[
+						0.2,
+						0.065
+					],
+					[
+						0.3,
+						0.23
+					],
+					[
+						0.4,
+						0.445
+					],
+					[
+						0.5,
+						1
+					],
+					[
+						0.6,
+						1.33
+					],
+					[
+						0.7,
+						1.5
+					],
+					[
+						1,
+						1.5
+					]
+				],
+				"input_element": "Prisoner Fear"
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "Prisoner Fear",
+			"to": "fractional decrease from fear"
+		},
+		{
+			"type": "LINK",
+			"from": "fractional decrease from fear",
+			"to": "fractional decrease in resistance"
+		},
+		{
+			"type": "CONVERTER",
+			"name": "fractional decrease from repression",
+			"display": {
+				"coordinates": [
+					520,
+					320
+				],
+				"size": [
+					120,
+					60
+				]
+			},
+			"behavior": {
+				"input": "ELEMENT",
+				"interpolation": "LINEAR",
+				"data": [
+					[
+						0,
+						0
+					],
+					[
+						0.1,
+						0.01
+					],
+					[
+						0.2,
+						0.01
+					],
+					[
+						0.3,
+						0.02
+					],
+					[
+						0.4,
+						0.03
+					],
+					[
+						0.5,
+						0.08
+					],
+					[
+						0.6,
+						0.24
+					],
+					[
+						0.7,
+						2.84
+					],
+					[
+						0.8,
+						3
+					],
+					[
+						1,
+						3
+					]
+				],
+				"input_element": "Repression by guards"
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "Repression by guards",
+			"to": "fractional decrease from repression"
+		},
+		{
+			"type": "LINK",
+			"from": "fractional decrease from repression",
+			"to": "fractional decrease in resistance"
+		},
+		{
+			"type": "CONVERTER",
+			"name": "Impact of fear on resistance",
+			"display": {
+				"coordinates": [
+					280,
+					230
+				],
+				"size": [
+					130,
+					50
+				]
+			},
+			"behavior": {
+				"input": "ELEMENT",
+				"interpolation": "LINEAR",
+				"data": [
+					[
+						0,
+						1
+					],
+					[
+						0.1,
+						1
+					],
+					[
+						0.2,
+						0.99
+					],
+					[
+						0.3,
+						0.98
+					],
+					[
+						0.4,
+						0.915
+					],
+					[
+						0.5,
+						0.765
+					],
+					[
+						0.6,
+						0.65
+					],
+					[
+						0.7,
+						0.445
+					],
+					[
+						0.8,
+						0.275
+					],
+					[
+						0.9,
+						0.16
+					],
+					[
+						1,
+						0
+					]
+				],
+				"input_element": "Prisoner Fear"
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "Prisoner Fear",
+			"to": "Impact of fear on resistance"
+		},
+		{
+			"type": "LINK",
+			"from": "Impact of fear on resistance",
+			"to": "fractional increase in resistance"
+		},
+		{
+			"type": "LINK",
+			"from": "Prisoner resistance",
+			"to": "increase resistance"
+		},
+		{
+			"type": "VARIABLE",
+			"name": "Start of experiment",
+			"display": {
+				"coordinates": [
+					330,
+					10
+				],
+				"size": [
+					120,
+					50
+				]
+			},
+			"behavior": {
+				"value": 1
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "Start of experiment",
+			"to": "increase resistance"
+		},
+		{
+			"type": "CONVERTER",
+			"name": "fractional increase from repression",
+			"display": {
+				"coordinates": [
+					100,
+					300
+				],
+				"size": [
+					120,
+					60
+				]
+			},
+			"behavior": {
+				"input": "ELEMENT",
+				"interpolation": "LINEAR",
+				"data": [
+					[
+						0,
+						0
+					],
+					[
+						0.1,
+						0.285
+					],
+					[
+						0.2,
+						0.605
+					],
+					[
+						0.3,
+						0.82
+					],
+					[
+						0.4,
+						0.92
+					],
+					[
+						0.5,
+						0.97
+					],
+					[
+						0.6,
+						0.985
+					],
+					[
+						0.7,
+						1
+					],
+					[
+						1,
+						1
+					]
+				],
+				"input_element": "Repression by guards"
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "Repression by guards",
+			"to": "fractional increase from repression"
+		},
+		{
+			"type": "LINK",
+			"from": "fractional increase from repression",
+			"to": "fractional increase in resistance"
+		},
+		{
+			"type": "VARIABLE",
+			"name": "fractional increase in resistance",
+			"display": {
+				"coordinates": [
+					350,
+					100
+				],
+				"size": [
+					120,
+					60
+				]
+			},
+			"behavior": {
+				"value": "[fractional increase from repression]*[Impact of fear on resistance]"
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "fractional increase in resistance",
+			"to": "increase resistance"
+		},
+		{
+			"type": "LINK",
+			"from": "Resistance Perceived by Guards",
+			"to": "Influences on perception time"
+		}
+	],
+	"visualizations": [
+		{
+			"name": "Data Display",
+			"type": "TIME_SERIES",
+			"elements": [
+				"Prisoner Fear",
+				"Repression by guards",
+				"Resistance Perceived by Guards",
+				"Prisoner resistance"
+			]
+		}
+	]
+}

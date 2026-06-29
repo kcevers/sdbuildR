@@ -1,28 +1,197 @@
 test_that("use_julia() works", {
-  status <- expect_no_error(julia_status())
-  expect_named(status,
-    c(
-      "julia_found", "julia_version", "env_exists",
-      "env_instantiated", "status"
-    ),
-    ignore.order = TRUE
-  )
+  skip_if_julia_not_ready()
 
-  testthat::skip_on_cran()
-  testthat::skip_if_not(julia_status()$status == "ready")
+  # Stop Julia
+  expect_no_error(expect_no_warning(JuliaConnectoR::stopJulia()))
 
-  # Test installation
-  expect_no_error(install_julia_env())
-  expect_no_error(install_julia_env(remove = TRUE))
-  expect_no_error(install_julia_env())
+  # This starts Julia
+  expect_true(is_julia_working())
+  expect_true(is_julia_version_ok())
 
-  expect_no_error(expect_no_warning(use_julia(stop = TRUE)))
-  expect_false(julia_setup_ok())
+  # Check if environment was initialized; now this should be false
+  expect_false(is_julia_init())
 
+  # Set up environment
   expect_no_error(expect_no_warning(expect_message(use_julia())))
 
-  expect_true(julia_setup_ok())
-  expect_true(julia_init_ok())
+  # But the environment should be installed after calling use_julia()
+  expect_true(is_julia_env_setup())
+  expect_true(is_julia_init())
 
+  # Close Julia again
+  expect_no_error(expect_no_warning(use_julia(stop = TRUE)))
+
+  # Start Julia again
+  expect_no_error(expect_no_warning(expect_message(use_julia())))
+  expect_true(is_julia_working())
+  expect_true(is_julia_env_setup())
+  expect_true(is_julia_init())
+
+  # Restart Julia
+  expect_no_error(expect_no_warning(expect_message(use_julia(restart = TRUE))))
+  expect_true(is_julia_working())
+  expect_true(is_julia_env_setup())
+  expect_true(is_julia_init())
+})
+
+test_that("julia_eval() works", {
+  skip_if_julia_not_ready()
+
+  # Stop Julia
+  expect_no_error(expect_no_warning(expect_message(use_julia(stop = TRUE))))
+
+  # Calling julia_eval should start new Julia session quietly
+  expect_no_message(expect_no_warning(expect_no_error(julia_eval("1 + 1"))))
+
+  # Clean up
+  JuliaConnectoR::stopJulia()
+})
+
+
+test_that("use_julia() with threads works", {
+  skip_if_julia_not_ready()
+  old_threads <- Sys.getenv("JULIA_NUM_THREADS")
+  get_threads <- function() as.integer(julia_eval("string(Threads.nthreads())"))
+
+  # Set to 2 threads
+  nthreads <- 2
+  expect_no_error(use_julia(nthreads = nthreads))
+
+  # Should not change global environment variable
+  expect_equal(Sys.getenv("JULIA_NUM_THREADS"), old_threads)
+  actual_threads <- get_threads()
+  expect_equal(actual_threads, nthreads)
+  expect_true(.sdbuildR_env[["jl"]][["use_threads"]])
+
+  # If Julia was already running, it should restart and change the number of threads
+  nthreads <- 4
+  expect_no_error(use_julia(nthreads = nthreads))
+  expect_equal(Sys.getenv("JULIA_NUM_THREADS"), old_threads)
+  actual_threads <- get_threads()
+  expect_equal(actual_threads, nthreads)
+  expect_true(.sdbuildR_env[["jl"]][["use_threads"]])
+
+  # Stopping Julia should reset the number of threads
   expect_no_error(use_julia(stop = TRUE))
+  expect_equal(Sys.getenv("JULIA_NUM_THREADS"), old_threads)
+  expect_false(.sdbuildR_env[["jl"]][["use_threads"]])
+
+  # This will start Julia again, but should not use threads
+  actual_threads <- get_threads()
+  if (is.na(old_threads) || old_threads == "") {
+    expect_equal(actual_threads, 1)
+  } else {
+    expect_equal(actual_threads, as.numeric(old_threads))
+  }
+})
+
+
+test_that("find_manifest_julia_version() parses the julia_version field", {
+  # v2.0 Manifest.toml records the Julia version that resolved the environment
+  manifest <- tempfile()
+  on.exit(unlink(manifest))
+  writeLines(c('julia_version = "1.10.4"', 'manifest_format = "2.0"'), manifest)
+  expect_equal(find_manifest_julia_version(manifest), "1.10.4")
+
+  # Older manifests without the field should return NULL (check is skipped)
+  no_field <- tempfile()
+  on.exit(unlink(no_field), add = TRUE)
+  writeLines('manifest_format = "1.0"', no_field)
+  expect_null(find_manifest_julia_version(no_field))
+
+  # Missing file should return NULL
+  expect_null(find_manifest_julia_version(tempfile()))
+})
+
+
+test_that("julia_version_compatible() compares major and minor versions", {
+  # Same major and minor is compatible, regardless of patch
+  expect_true(julia_version_compatible("1.10.4", "1.10.9"))
+  expect_true(julia_version_compatible("1.10.0", "1.10.0"))
+
+  # Differing minor or major is incompatible
+  expect_false(julia_version_compatible("1.10.4", "1.11.0"))
+  expect_false(julia_version_compatible("1.10.4", "2.10.4"))
+
+  # Unparseable versions should not block the user
+  expect_true(julia_version_compatible("not-a-version", "1.10.4"))
+})
+
+
+test_that("julia_env_dir() honours the in-package toggle", {
+  # Default: persistent user directory via tools::R_user_dir()
+  withr::local_options(sdbuildR.julia_env_in_package = FALSE)
+  expect_false(julia_env_in_package())
+  expect_match(julia_env_dir(), "julia$")
+
+  # Toggled: inside the installed package directory (pre-2.x behaviour)
+  withr::local_options(sdbuildR.julia_env_in_package = TRUE)
+  expect_true(julia_env_in_package())
+  expect_identical(
+    julia_env_dir(),
+    dirname(system.file("Project.toml", package = "sdbuildR"))
+  )
+})
+
+
+test_that("Project.toml hash drift is detected", {
+  # The shipped Project.toml should produce a stable, non-NA hash
+  h <- project_toml_hash()
+  expect_false(is.na(h))
+  expect_identical(h, project_toml_hash())
+
+  # Missing marker should not block (other version checks still apply)
+  tmp <- tempfile()
+  expect_true(is_julia_env_marker_current(tmp, h))
+
+  # Matching hash is current; differing hash is stale
+  writeLines(c("sdbuildR_version: 9.9.9", paste0("project_toml_md5: ", h)), tmp)
+  on.exit(unlink(tmp))
+  expect_true(is_julia_env_marker_current(tmp, h))
+  expect_false(is_julia_env_marker_current(tmp, "deadbeef"))
+})
+
+
+test_that("install_julia_env() works", {
+  skip_if_julia_not_ready()
+  skip_if(interactive())
+  skip_if_no_internet()
+
+  manifest_exists <- function() {
+    file.exists(file.path(julia_env_dir(), "Manifest.toml"))
+  }
+  marker_exists <- function() {
+    file.exists(julia_env_marker_file())
+  }
+  # Any sdbuildR-created file left behind in the environment directory
+  env_files_exist <- function() {
+    d <- julia_env_dir()
+    file.exists(file.path(d, "Manifest.toml")) ||
+      file.exists(file.path(d, "Project.toml")) ||
+      file.exists(julia_env_marker_file())
+  }
+
+  # Test installation: environment, manifest, and provenance marker all created
+  expect_no_error(install_julia_env())
+  expect_true(manifest_exists())
+  expect_true(marker_exists())
+
+  # Removal cleans up *all* created files (no leftovers in R_user_dir)
+  expect_no_error(install_julia_env(remove = TRUE))
+  expect_false(manifest_exists())
+  expect_false(marker_exists())
+  expect_false(env_files_exist())
+  expect_false(dir.exists(julia_env_dir()))
+  expect_false(is_julia_env_setup(error = FALSE))
+  expect_false(is_julia_env_setup(error = FALSE, force = TRUE))
+
+  # Removing again should not cause an error
+  expect_message(expect_no_error(install_julia_env(remove = TRUE)), "no need to remove")
+
+  # Install again and check that environment is ready
+  expect_no_error(install_julia_env())
+  expect_true(manifest_exists())
+  expect_true(marker_exists())
+  expect_true(is_julia_env_setup())
+  expect_true(is_julia_env_setup(force = TRUE))
 })

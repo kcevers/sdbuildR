@@ -1,0 +1,43 @@
+<InsightMakerModel>
+  <root>
+    <mxCell id="0" />
+    <mxCell id="1" parent="0" />
+    <Setting Note="" Version="38" TimeLength="20" TimeStart="0" TimeStep="0.2" TimeUnits="Years" Units="" SolutionAlgorithm="RK4" BackgroundColor="white" Throttle="1" Macros="" SensitivityPrimitives="" SensitivityRuns="50" SensitivityBounds="50, 80, 95, 100" SensitivityShowRuns="false" StyleSheet="{}" version="39" id="2">
+      <mxCell parent="1" vertex="1" visible="0">
+        <mxGeometry x="20" y="20" width="80" height="40" as="geometry" />
+      </mxCell>
+    </Setting>
+    <Stock name="Population" Note="" InitialValue="1" StockMode="Store" Delay="10" Volume="100" NonNegative="true" Units="Unitless" MaxConstraintUsed="false" MinConstraintUsed="false" MaxConstraint="100" MinConstraint="0" ShowSlider="false" SliderMax="100" SliderMin="0" SliderStep="" Image="None" FlipHorizontal="false" FlipVertical="false" LabelPosition="Middle" oldId="114" id="114">
+      <mxCell style="stock;image=None;" vertex="1" parent="1">
+        <mxGeometry x="130" y="210" width="100" height="40" as="geometry" />
+      </mxCell>
+    </Stock>
+    <Converter name="Growth Rate" Note="" Source="114" Data="0,2;1500,1.07;3990,0.429;6780,0.125;10000,0" Interpolation="Linear" Units="Unitless" MaxConstraintUsed="false" MinConstraintUsed="false" MaxConstraint="100" MinConstraint="0" ShowSlider="false" SliderMax="100" SliderMin="0" SliderStep="" Image="None" FlipHorizontal="false" FlipVertical="false" LabelPosition="Middle" oldId="115" id="115">
+      <mxCell style="converter;image=None;" vertex="1" parent="1">
+        <mxGeometry x="260" y="90" width="120" height="50" as="geometry" />
+      </mxCell>
+    </Converter>
+    <Flow name="Flow" Note="" FlowRate="[Population] * [Growth Rate]" OnlyPositive="true" TimeIndependent="false" Units="Unitless" MaxConstraintUsed="false" MinConstraintUsed="false" MaxConstraint="100" MinConstraint="0" ShowSlider="false" SliderMax="100" SliderMin="0" SliderStep="" oldId="117" id="117">
+      <mxCell style="flow" edge="1" parent="1" target="114">
+        <mxGeometry relative="1" as="geometry">
+          <mxPoint x="180" y="60" as="sourcePoint" />
+        </mxGeometry>
+      </mxCell>
+    </Flow>
+    <Link name="Link" Note="" BiDirectional="false" oldId="118" id="118">
+      <mxCell style="link" edge="1" parent="1" source="115" target="117">
+        <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+    </Link>
+    <Link name="Link" Note="" BiDirectional="false" oldId="119" id="119">
+      <mxCell style="link" edge="1" parent="1" source="114" target="115">
+        <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+    </Link>
+    <Display name="Default Display" Note="" Type="Time Series" xAxis="Time (%u)" yAxis="" yAxis2="" showMarkers="false" showLines="true" showArea="false" Primitives="114" Primitives2="" AutoAddPrimitives="false" ScatterplotOrder="X Primitive, Y Primitive" Image="Display" FlipHorizontal="false" FlipVertical="false" LabelPosition="Bottom" oldId="120" id="120">
+      <mxCell style="display" vertex="1" parent="1" visible="0">
+        <mxGeometry x="10" y="10" width="64" height="64" as="geometry" />
+      </mxCell>
+    </Display>
+  </root>
+</InsightMakerModel>

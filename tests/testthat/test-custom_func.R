@@ -1,479 +1,214 @@
-test_that("round_IM works", {
-  expect_equal(round_IM(0.5), 1)
-  expect_equal(round_IM(-0.5), 0)
-  expect_equal(round_IM(-2.2), -2)
-  expect_equal(round_IM(-2.2, 2), -2.20)
+# Test custom_func() function for creating and modifying func-type variables
+
+test_that("custom_func() creates custom functions", {
+  sfm <- stockflow()
+
+  sfm1 <- custom_func(sfm, "parameter1", eqn = "5")
+  df <- as.data.frame(sfm1, type = "func", properties = c("name", "eqn"))
+  expect_equal(nrow(df), 1)
+  expect_equal(df[["name"]], "parameter1")
+  expect_equal(df[["eqn"]], "5")
 })
 
-test_that("logit works", {
-  expect_equal(logit(.5), 0)
+test_that("custom_func() adds multiple funcs", {
+  sfm <- stockflow()
+
+  sfm1 <- custom_func(sfm, "param1", eqn = "5")
+  sfm2 <- custom_func(sfm1, "param2", eqn = "10")
+  sfm3 <- custom_func(sfm2, "param3", eqn = "param1 + param2")
+
+  df <- as.data.frame(sfm3, type = "func")
+  expect_equal(nrow(df), 3)
+  expect_true("param1" %in% df[["name"]])
+  expect_true("param2" %in% df[["name"]])
+  expect_true("param3" %in% df[["name"]])
 })
 
-test_that("expit works", {
-  expect_equal(expit(0), 0.5)
+test_that("custom_func() modifies existing func equations", {
+  sfm <- stockflow()
+
+  sfm1 <- custom_func(sfm, "param1", eqn = "5")
+  sfm2 <- custom_func(sfm1, "param1", eqn = "10")
+
+  df <- as.data.frame(sfm2, type = "func", properties = c("name", "eqn"))
+  expect_equal(df[["eqn"]], "10")
 })
 
-test_that("rbool works", {
-  expect_equal(rbool(0), FALSE)
-  expect_equal(rbool(1), TRUE)
-})
+test_that("custom_func() validates function definitions (defaults at end)", {
+  sfm <- stockflow()
 
-test_that("length_IM works", {
-  expect_equal(length_IM(c("a", "b", "c")), 3)
-  expect_equal(length_IM("abcdef"), 6)
-  expect_equal(length_IM(c("abcdef")), 6)
-})
-
-
-test_that("contains_IM works", {
-  expect_false(contains_IM(c("a", "b", "c"), "d"))
-  expect_true(contains_IM(c("abcdef"), "bc"))
-})
-
-test_that("indexof works", {
-  expect_equal(indexof(c("a", "b", "c"), "b"), 2)
-  expect_equal(indexof("haystack", "hay"), 1)
-  expect_equal(indexof("haystack", "haym"), 0)
-})
-
-
-test_that("nonnegative works", {
-  expect_equal(nonnegative(-10), 0)
-  expect_equal(nonnegative(10), 10)
-  expect_equal(nonnegative(0), 0)
-})
-
-
-test_that("rem works", {
-  a <- 7
-  b <- 3
-  expect_equal(rem(a, b), mod(a, b))
-  a <- -7
-  b <- 3
-  expect_equal(rem(a, b), -1)
-  expect_equal(mod(a, b), 2)
-  a <- 7
-  b <- -3
-  expect_equal(rem(a, b), 1)
-  expect_equal(mod(a, b), -2)
-  a <- -7
-  b <- -3
-  expect_equal(rem(a, b), mod(a, b))
-  expect_equal(a %REM% b, rem(a, b))
-})
-
-
-test_that("saveat_func works", {
-  time_vec <- seq(0, 10, by = .1)
-  df <- data.frame(time = time_vec, y = sin(time_vec))
-  new_times <- 1:10
-  result <- saveat_func(df, "time", new_times)
-  expect_equal(result[["time"]], new_times)
-  expect_equal(result[["y"]], df[match(new_times, df[["time"]]), "y"])
-})
-
-
-test_that("convert_u works", {
-  expect_equal(convert_u(1, u("s")), 1)
-})
-
-
-test_that("logistic works", {
-  expect_equal(logistic(0), 0.5)
-  expect_equal(logistic(0.9, midpoint = .9), 0.5)
-  expect_equal(logistic(-1.59, midpoint = -1.59), 0.5)
-  expect_equal(logistic(1, slope = 50), 1)
-  expect_equal(logistic(1, slope = -50), 0)
-  expect_equal(logistic(1, slope = 50, upper = 10), 10)
-
-  sfm0 <- xmile() |>
-    sim_specs(start = 0, stop = 1, dt = .1) |>
-    build("a", "stock") |>
-    build("b", "flow",
-      eqn = "logistic(t, slope = -9, midpoint = 0.5, upper = 10)", to = "a"
-    )
-  sim <- expect_no_error(simulate(sfm0))
-  df <- as.data.frame(sim)
-  x <- df[df$variable == "b", "time"]
-  expect_equal(
-    df[df$variable == "b", "value"],
-    logistic(x, slope = -9, midpoint = 0.5, upper = 10)
+  # Invalid: default arg not at end
+  expect_error(
+    custom_func(sfm, "bad_func", eqn = "function(x = 1, y) x + y"),
+    "defaults have to be placed at the end"
   )
 
-  sfm2 <- xmile() |>
-    build("a", "stock") |>
-    build("b", "flow", eqn = "logistic(t, 9, upper = 10, midpoint = 0.5)", to = "a")
-  sim <- expect_no_error(simulate(sfm2))
-  df <- as.data.frame(sim)
-  x <- df[df$variable == "b", "time"]
-  expect_equal(
-    df[df$variable == "b", "value"],
-    logistic(x, slope = 9, midpoint = 0.5, upper = 10)
+  # Valid: default arg at end
+  sfm1 <- custom_func(sfm, "good_func", eqn = "function(x, y = 1) x + y")
+  df <- as.data.frame(sfm1, type = "func")
+  expect_equal(nrow(df), 1)
+})
+
+
+test_that("custom_func() sets documentation", {
+  sfm <- stockflow()
+
+  sfm1 <- custom_func(sfm, "birth_rate",
+    eqn = "0.02",
+    doc = "Annual birth rate per individual"
   )
+  df <- as.data.frame(sfm1, type = "func", properties = c("name", "doc"))
+  expect_equal(df[["doc"]], "Annual birth rate per individual")
+})
 
-  testthat::skip_on_cran()
-  testthat::skip_if_not(julia_status()$status == "ready")
+test_that("discard() removes funcs", {
+  sfm <- stockflow()
 
-  sim <- expect_no_error(simulate(sfm0 |> sim_specs(language = "Julia")))
-  df <- as.data.frame(sim)
-  x <- df[df$variable == "b", "time"]
-  expect_equal(
-    df[df$variable == "b", "value"],
-    logistic(x, slope = -9, midpoint = 0.5, upper = 10)
-  )
+  sfm1 <- custom_func(sfm, "param1", eqn = "5")
+  sfm2 <- custom_func(sfm1, "param2", eqn = "10")
 
-  sim <- expect_no_error(simulate(sfm2 |> sim_specs(language = "Julia")))
-  df <- as.data.frame(sim)
-  x <- df[df$variable == "b", "time"]
-  expect_equal(
-    df[df$variable == "b", "value"],
-    logistic(x, slope = 9, midpoint = 0.5, upper = 10)
+  # Remove one func
+  sfm3 <- discard(sfm2, "param1")
+  df <- as.data.frame(sfm3, type = "func")
+  expect_equal(nrow(df), 1)
+  expect_equal(df[["name"]], "param2")
+})
+
+test_that("discard() removes multiple funcs", {
+  sfm <- stockflow()
+
+  sfm1 <- custom_func(sfm, "p1", eqn = "1")
+  sfm2 <- custom_func(sfm1, "p2", eqn = "2")
+  sfm3 <- custom_func(sfm2, "p3", eqn = "3")
+
+  # Remove multiple
+  sfm4 <- discard(sfm3, c("p1", "p3"))
+  df <- as.data.frame(sfm4, type = "func")
+  expect_equal(nrow(df), 1)
+  expect_equal(df[["name"]], "p2")
+})
+
+test_that("discard() validates func existence", {
+  sfm <- stockflow()
+
+  sfm1 <- custom_func(sfm, "param1", eqn = "5")
+
+  expect_error(
+    discard(sfm1, "nonexistent"),
+    "not exist"
   )
 })
 
+test_that("change_name() renames funcs", {
+  sfm <- stockflow()
 
-test_that("alias sigmoid for logistic works", {
-  expect_equal(sigmoid(0), 0.5)
-  expect_equal(sigmoid(0.9, midpoint = .9), 0.5)
-  expect_equal(sigmoid(-1.59, midpoint = -1.59), 0.5)
-  expect_equal(sigmoid(1, slope = 50), 1)
-  expect_equal(sigmoid(1, slope = -50), 0)
-  expect_equal(sigmoid(1, slope = 50, upper = 10), 10)
+  sfm1 <- custom_func(sfm, "old_name", eqn = "5")
+  sfm2 <- change_name(sfm1, "old_name", new_name = "new_name")
+
+  df <- as.data.frame(sfm2, type = "func", properties = "name")
+  expect_equal(df[["name"]], "new_name")
+  expect_false("old_name" %in% df[["name"]])
 })
 
+test_that("custom_func() preserves variables", {
+  sfm <- stockflow()
 
-test_that("step works", {
-  times <- seq(0, 10, by = .1)
+  sfm1 <- update(sfm, "Stock1", type = "stock")
+  sfm2 <- custom_func(sfm1, "param1", eqn = "5")
 
-  expect_error(step(), "argument \"start\" is missing, with no default")
-  expect_error(step(times), "argument \"start\" is missing, with no default")
-  expect_warning(step(times, -10), "Start of step before beginning of simulation time")
-  expect_warning(step(times, 11), "Start of step after end of simulation time")
+  # Check both exist
+  var_df <- as.data.frame(sfm2, type = "stock")
+  func_df <- as.data.frame(sfm2, type = "func")
 
-  # Set-up basic sfm
-  sfm0 <- xmile() |>
-    sim_specs(stop = 10, dt = .1) |>
-    build("a", "stock") |>
-    build("b", "flow", eqn = "input(t)", to = "a")
-
-  expect_no_error(sfm0 |> build("input", "constant", eqn = "step(times, 5)"))
-  sfm <- sfm0 |> build("input", "constant", eqn = "step(times, 5)")
-  sim <- expect_no_error(simulate(sfm))
-  df <- as.data.frame(sim)
-  a <- df[df$variable == "a", "value"]
-  expect_equal(a[which(df$time < 5)[1]], 0)
-  expect_equal(a[which(dplyr::near(df$time, 5))[1]], 0)
-  expect_equal(a[which(df$time > 5)[1]], 0.1 * 1) # dt * height step
-
-  # Also works with keyword arguments
-  expect_no_error(sfm0 |> build("input", "constant", eqn = "step(times, start=5)"))
-  sfm <- sfm0 |> build("input", "constant", eqn = "step(times, start=5)")
-  expect_no_error(simulate(sfm))
-
-  expect_no_error(sfm0 |> build("input", "constant", eqn = "step(times, start = 5, 8)"))
-  sfm <- sfm0 |> build("input", "constant", eqn = "step(times, start = 5, 8)")
-  expect_no_error(simulate(sfm))
-
-  expect_no_error(sfm0 |> build("input", "constant", eqn = "step(times, 5, height = 8)"))
-  sfm <- sfm0 |> build("input", "constant", eqn = "step(times, 5, height = 8)")
-  expect_no_error(simulate(sfm))
-
-  expect_no_error(sfm0 |> build("input", "constant", eqn = "step(times, height = 8, 5)"))
-  sfm <- sfm0 |> build("input", "constant", eqn = "step(times, height = 8, 5)")
-  expect_no_error(simulate(sfm))
-
-  expect_no_error(sfm0 |> build("input", "constant", eqn = "step(times, start = 5, height = 8)"))
-  sfm <- sfm0 |> build("input", "constant", eqn = "step(times, start = 5, height = 8)")
-  sim <- expect_no_error(simulate(sfm))
-
-  # Ensure plotting works with add_constants as these are functions
-  sim <- expect_no_error(simulate(sfm))
-  expect_no_error(plot(sim, add_constants = TRUE))
+  expect_equal(nrow(var_df), 1)
+  expect_equal(var_df[["name"]], "Stock1")
+  expect_equal(nrow(func_df), 1)
+  expect_equal(func_df[["name"]], "param1")
 })
 
+test_that("custom_func() can be used in variable equations", {
+  sfm <- stockflow()
 
-test_that("step works (Julia)", {
-  testthat::skip_on_cran()
-  testthat::skip_if_not(julia_status()$status == "ready")
-
-  # Set-up basic sfm
-  sfm0 <- xmile() |>
-    sim_specs(stop = 10, dt = .1) |>
-    build("a", "stock") |>
-    build("b", "flow", eqn = "input(t)", to = "a")
-
-  expect_no_error(sfm0 |> build("input", "constant", eqn = "step(times, 5)"))
-  sfm <- sfm0 |> build("input", "constant", eqn = "step(times, 5)")
-  sim <- expect_no_error(simulate(sfm |> sim_specs(language = "Julia")))
-  df <- as.data.frame(sim)
-  a <- df[df$variable == "a", "value"]
-  expect_equal(a[which(df$time < 5)[1]], 0)
-  expect_equal(a[which(dplyr::near(df$time, 5))[1]], 0)
-  expect_equal(a[which(df$time > 5)[1]], 0.1 * 1) # dt * height step
-
-  # Also works with keyword arguments
-  expect_no_error(sfm0 |> build("input", "constant", eqn = "step(times, start=5)"))
-  sfm <- sfm0 |> build("input", "constant", eqn = "step(times, start=5)")
-  expect_no_error(simulate(sfm |> sim_specs(language = "Julia")))
-
-  expect_no_error(sfm0 |> build("input", "constant", eqn = "step(times, start = 5, 8)"))
-  sfm <- sfm0 |> build("input", "constant", eqn = "step(times, start = 5, 8)")
-  expect_no_error(simulate(sfm |> sim_specs(language = "Julia")))
-
-  expect_no_error(sfm0 |> build("input", "constant", eqn = "step(times, 5, height = 8)"))
-  sfm <- sfm0 |> build("input", "constant", eqn = "step(times, 5, height = 8)")
-  expect_no_error(simulate(sfm |> sim_specs(language = "Julia")))
-
-  expect_no_error(sfm0 |> build("input", "constant", eqn = "step(times, height = 8, 5)"))
-  sfm <- sfm0 |> build("input", "constant", eqn = "step(times, height = 8, 5)")
-  expect_no_error(simulate(sfm |> sim_specs(language = "Julia")))
-
-  expect_no_error(sfm0 |> build("input", "constant", eqn = "step(times, start = 5, height = 8)"))
-  sfm <- sfm0 |> build("input", "constant", eqn = "step(times, start = 5, height = 8)")
-  sim <- expect_no_error(simulate(sfm |> sim_specs(language = "Julia")))
-
-  # Ensure plotting works with add_constants as these are functions
-  sim <- expect_no_error(simulate(sfm |> sim_specs(language = "Julia")))
-  expect_no_error(plot(sim, add_constants = TRUE))
-
-  # Also works with units
-  expect_no_error(sfm0 |> build("input", "constant", eqn = "step(times, start = u('5seconds'))"))
-  sfm <- sfm0 |>
-    build("input", "constant", eqn = "step(times, start = u('5seconds'))") |>
-    sim_specs(language = "Julia", time_units = "seconds")
-  sim <- expect_no_error(simulate(sfm))
-  df <- as.data.frame(sim)
-  a <- df[df$variable == "a", "value"]
-  expect_equal(a[which(df$time < 5)[1]], 0)
-  expect_equal(a[which(dplyr::near(df$time, 5))[1]], 0)
-  expect_equal(a[which(df$time > 5)[1]], 0.1 * 1) # dt * height step
-})
-
-
-test_that("pulse works", {
-  times <- seq(0, 10, by = .1)
-
-  expect_error(pulse(), "argument \"start\" is missing, with no default")
-  expect_error(pulse(times), "argument \"start\" is missing, with no default")
-  expect_error(pulse(times, 5, 1, 0), "The width of the pulse cannot be equal to or less than 0")
-  expect_warning(pulse(times, -10), "Start of pulse before beginning of simulation time")
-  expect_warning(pulse(times, 11), "Start of pulse after end of simulation time")
-  expect_warning(
-    pulse(times, 5, 1, 10, 10),
-    "width \\(10\\) >= repeat_interval \\(10\\) creates a continuous pulse"
+  sfm1 <- custom_func(sfm, "rate", eqn = "0.05")
+  sfm2 <- update(sfm1, "Stock1", type = "stock")
+  sfm3 <- update(sfm2, "Flow1",
+    type = "flow",
+    eqn = "Stock1 * rate", from = "Stock1"
   )
 
-  # Set-up basic sfm
-  sfm0 <- xmile() |>
-    sim_specs(stop = 20, dt = .1) |>
-    build("a", "stock") |>
-    build("b", "flow", eqn = "input(t)", to = "a")
+  df <- as.data.frame(sfm3, type = "flow", properties = c("name", "eqn"))
+  expect_match(df[["eqn"]], "rate")
+})
 
-  expect_no_error(sfm0 |> build("input", "constant", eqn = "pulse(times, 5, 2)"))
-  sfm <- sfm0 |> build("input", "constant", eqn = "pulse(times, 5, 2)")
-  sim <- expect_no_error(simulate(sfm))
-  df <- as.data.frame(sim)
-  a <- df[df$variable == "a", "value"]
-  expect_equal(a[which(df$time < 5)[1]], 0)
-  expect_equal(a[which(dplyr::near(df$time, 5))[1]], 0)
-  expect_equal(a[which(df$time > 5)[1]], 0.1 * 2) # dt * height pulse
+test_that("custom_func() with empty model works", {
+  sfm <- stockflow()
 
-  # Forgetting times
-  sfm <- expect_error(sfm0 |> build("input", "constant",
-    eqn = "pulse(10)"
-  ), "Obligatory argument start is missing for function pulse")
+  # Should be able to add func to empty model
+  sfm1 <- custom_func(sfm, "f1", eqn = "10")
+  df <- as.data.frame(sfm1, type = "func")
+  expect_equal(nrow(df), 1)
+})
 
-  # Passing a NULL argument
-  sfm <- expect_no_error(sfm0 |> build("input", "constant",
-    eqn = "pulse(times, 10, height = 1, width = 1, repeat_interval = NULL)"
-  ))
-  sim <- expect_no_error(simulate(sfm))
-  df <- as.data.frame(sim)
-  a <- df[df$variable == "a", "value"]
-  expect_equal(a[which(df$time < 10)[1]], 0)
-  expect_equal(a[which(dplyr::near(df$time, 5))[1]], 0)
-  expect_equal(a[which(df$time > 10)[1]], 0.1 * 1) # dt * height pulse
+test_that("custom_func() returns the modified model", {
+  sfm <- stockflow()
 
-  # Test repeating pulses
-  sfm <- expect_no_error(sfm0 |> build("input", "constant",
-    eqn = "pulse(times, 10, height = 1, width = 1, repeat_interval = 5)"
-  ))
-  sim <- expect_no_error(simulate(sfm))
-  df <- as.data.frame(sim)
-  a <- df[df$variable == "a", "value"]
-  expect_equal(a[which(df$time < 10)[1]], 0)
-  expect_equal(a[which(dplyr::near(df$time, 5))[1]], 0)
-  expect_equal(a[which(df$time > 10)[1]], 0.1 * 1) # dt * height pulse
-  expect_equal(a[which(df$time > 15)[1]], 1 + 0.1 * 1) # dt * height pulse
+  result <- custom_func(sfm, "param1", eqn = "5")
+  expect_s3_class(result, "stockflow")
+  expect_true(is.list(result))
+})
 
-  # Ensure plotting works with add_constants as these are functions
-  sim <- expect_no_error(simulate(sfm))
-  expect_no_error(plot(sim, add_constants = TRUE))
+test_that("update() with type = 'func' works directly", {
+  sfm <- stockflow()
+
+  sfm1 <- update(sfm, "f", "func", eqn = "function(x) x * 2")
+  df <- as.data.frame(sfm1, type = "func", properties = c("name", "eqn"))
+  expect_equal(nrow(df), 1)
+  expect_equal(df[["name"]], "f")
+  expect_match(df[["eqn"]], "function")
 })
 
 
-test_that("pulse works (Julia)", {
-  testthat::skip_on_cran()
-  testthat::skip_if_not(julia_status()$status == "ready")
+## Non-standard evaluation (NSE)
 
-  # Set-up basic sfm
-  sfm0 <- xmile() |>
-    sim_specs(stop = 20, dt = .1) |>
-    build("a", "stock") |>
-    build("b", "flow", eqn = "input(t)", to = "a")
+test_that("custom_func() accepts unquoted function expressions", {
+  sfm <- stockflow()
 
-  sfm <- sfm0 |> build("input", "constant", eqn = "pulse(times, 5, 2)")
-  sim <- expect_no_error(simulate(sfm |> sim_specs(language = "Julia")))
-  df <- as.data.frame(sim)
-  a <- df[df$variable == "a", "value"]
-  expect_equal(a[which(df$time < 5)[1]], 0)
-  expect_equal(a[which(dplyr::near(df$time, 5))[1]], 0)
-  expect_equal(a[which(df$time > 5)[1]], 0.1 * 2) # dt * height pulse
+  sfm1 <- custom_func(sfm, hills, eqn = function(x, slope, midpoint = 0.5) {
+    x^slope / (midpoint^slope + x^slope)
+  })
 
-  # Passing a NULL argument
-  sfm <- expect_no_error(sfm0 |> build("input", "constant",
-    eqn = "pulse(times, 10, height = 1, width = 1, repeat_interval = NULL)"
-  ))
-  sim <- expect_no_error(simulate(sfm |> sim_specs(language = "Julia")))
-  df <- as.data.frame(sim)
-  a <- df[df$variable == "a", "value"]
-  expect_equal(a[which(df$time < 10)[1]], 0)
-  expect_equal(a[which(dplyr::near(df$time, 5))[1]], 0)
-  expect_equal(a[which(df$time > 10)[1]], 0.1 * 1) # dt * height pulse
-
-  # Test repeating pulses
-  sfm <- expect_no_error(sfm0 |> build("input", "constant",
-    eqn = "pulse(times, 10, height = 1, width = 1, repeat_interval = 5)"
-  ))
-  sim <- expect_no_error(simulate(sfm |> sim_specs(language = "Julia")))
-  df <- as.data.frame(sim)
-  a <- df[df$variable == "a", "value"]
-  expect_equal(a[which(df$time < 10)[1]], 0)
-  expect_equal(a[which(dplyr::near(df$time, 5))[1]], 0)
-  expect_equal(a[which(df$time > 10)[1]], 0.1 * 1) # dt * height pulse
-  expect_equal(a[which(df$time > 15)[1]], 1 + 0.1 * 1) # dt * height pulse
-
-  # Ensure plotting works with add_constants as these are functions
-  sim <- expect_no_error(simulate(sfm |> sim_specs(language = "Julia")))
-  expect_no_error(plot(sim, add_constants = TRUE))
+  df <- as.data.frame(sfm1, type = "func", properties = c("name", "eqn"))
+  expect_equal(nrow(df), 1)
+  expect_equal(df[["name"]], "hills")
+  # eqn should be stored as a single string containing the function text
+  expect_length(df[["eqn"]], 1)
+  expect_true(grepl("function\\s*\\(", df[["eqn"]]))
 })
 
-test_that("ramp works", {
-  times <- seq(0, 10, by = .1)
+test_that("update()/custom_func() handles bang-bang injection of simple values", {
+  sfm <- stockflow()
 
-  # If there are multiple missing arguments, it always gives the last one
-  expect_error(ramp(), "argument \"finish\" is missing, with no default")
-  expect_error(ramp(times), "argument \"finish\" is missing, with no default")
-  expect_error(ramp(times, 1), "argument \"finish\" is missing, with no default")
-  expect_error(ramp(times, 5, 2), "The finish time of the ramp cannot be before the start time\\. To specify a decreasing ramp, set the height to a negative value")
-
-  # Set-up basic sfm
-  sfm0 <- xmile() |>
-    sim_specs(stop = 10, dt = .1) |>
-    build("a", "stock") |>
-    build("b", "flow", eqn = "input(t)", to = "a")
-
-  expect_no_error(sfm0 |> build("input", "constant", eqn = "ramp(times, 2, 5)"))
-  sfm <- sfm0 |> build("input", "constant", eqn = "ramp(times, 2, 5)")
-  sim <- expect_no_error(simulate(sfm))
-  df <- as.data.frame(sim)
-  a <- df[df$variable == "a", "value"]
-  expect_equal(a[which(df$time < 2)[1]], 0)
-  expect_equal(a[which(dplyr::near(df$time, 2))[1]], 0)
-  expect_equal(a[which(df$time > 2)[1]], 0) # first value is still zero
-  expect_equal(a[which(df$time > 2)[2]] > 0, TRUE)
-
-  # Ensure plotting works with add_constants as these are functions
-  sim <- expect_no_error(simulate(sfm))
-  expect_no_error(plot(sim, add_constants = TRUE))
+  a <- 1
+  sfm1 <- custom_func(sfm, fval, eqn = !!a)
+  df <- as.data.frame(sfm1, type = "func", properties = c("name", "eqn"))
+  expect_equal(df[["eqn"]], "1")
 })
 
+test_that("update()/custom_func() handles bang-bang injection of function objects", {
+  sfm <- stockflow()
 
-test_that("ramp works (Julia)", {
-  testthat::skip_on_cran()
-  testthat::skip_if_not(julia_status()$status == "ready")
-
-  # Set-up basic sfm
-  sfm0 <- xmile() |>
-    sim_specs(stop = 10, dt = .1) |>
-    build("a", "stock") |>
-    build("b", "flow", eqn = "input(t)", to = "a")
-
-  sfm <- sfm0 |> build("input", "constant", eqn = "ramp(times, 2, 5)")
-  sim <- expect_no_error(simulate(sfm |> sim_specs(language = "Julia")))
-  df <- as.data.frame(sim)
-  a <- df[df$variable == "a", "value"]
-  expect_equal(a[which(df$time < 2)[1]], 0)
-  expect_equal(a[which(dplyr::near(df$time, 2))[1]], 0)
-  expect_equal(a[which(df$time > 2)[1]], 0) # first value is still zero
-  expect_equal(a[which(df$time > 2)[2]] > 0, TRUE)
-
-  # Ensure plotting works with add_constants as these are functions
-  sim <- expect_no_error(simulate(sfm |> sim_specs(language = "Julia")))
-  expect_no_error(plot(sim, add_constants = TRUE))
+  a <- function(x) x^2
+  sfm1 <- custom_func(sfm, fobj, eqn = !!a)
+  df <- as.data.frame(sfm1, type = "func", properties = c("name", "eqn"))
+  expect_length(df[["eqn"]], 1)
+  expect_true(grepl("function", df[["eqn"]]))
 })
 
+test_that("c() calls still return character vectors", {
+  sfm <- stockflow()
 
-test_that("seasonal works", {
-  times <- seq(0, 10, by = .1)
-
-  expect_error(seasonal(), "argument \"times\" is missing, with no default")
-  expect_error(seasonal(times, -10), "The period of the seasonal wave must be greater than 0")
-
-  # Set-up basic sfm
-  sfm0 <- xmile() |>
-    sim_specs(stop = 10, dt = .1) |>
-    build("a", "stock") |>
-    build("b", "flow", eqn = "input(t)", to = "a")
-
-  expect_no_error(sfm0 |> build("input", "constant", eqn = "seasonal(times)"))
-  sfm <- sfm0 |> build("input", "constant", eqn = "seasonal(times)")
-  sim <- expect_no_error(simulate(sfm))
-  df <- as.data.frame(sim)
-  a <- df[df$variable == "a", "value"]
-  expect_equal(a[1], 0)
-  expect_equal(a[2] > 0, TRUE)
-
-  # With shift
-  expect_no_error(sfm0 |> build("input", "constant", eqn = "seasonal(times, shift = 1)"))
-  sfm <- sfm0 |> build("input", "constant", eqn = "seasonal(times, shift = 1)")
-  sim <- expect_no_error(simulate(sfm))
-  df <- as.data.frame(sim)
-  a <- df[df$variable == "a", "value"]
-  expect_equal(a[1], 0)
-  expect_equal(a[2] > 0, TRUE)
-
-  # Ensure plotting works with add_constants as these are functions
-  sim <- expect_no_error(simulate(sfm))
-  expect_no_error(plot(sim, add_constants = TRUE))
-})
-
-test_that("seasonal works (Julia)", {
-  testthat::skip_on_cran()
-  testthat::skip_if_not(julia_status()$status == "ready")
-
-  # Set-up basic sfm
-  sfm0 <- xmile() |>
-    sim_specs(stop = 10, dt = .1) |>
-    build("a", "stock") |>
-    build("b", "flow", eqn = "input(t)", to = "a")
-
-  sfm <- sfm0 |> build("input", "constant", eqn = "seasonal(times)")
-  sim <- expect_no_error(simulate(sfm |> sim_specs(language = "Julia")))
-  df <- as.data.frame(sim)
-  a <- df[df$variable == "a", "value"]
-  expect_equal(a[1], 0)
-  expect_equal(a[2] > 0, TRUE)
-
-  # With shift
-  sfm <- sfm0 |> build("input", "constant", eqn = "seasonal(times, shift = 1)")
-  sim <- expect_no_error(simulate(sfm |> sim_specs(language = "Julia")))
-  df <- as.data.frame(sim)
-  a <- df[df$variable == "a", "value"]
-  expect_equal(a[1], 0)
-  expect_equal(a[2] > 0, TRUE)
-
-  # Ensure plotting works with add_constants as these are functions
-  sim <- expect_no_error(simulate(sfm |> sim_specs(language = "Julia")))
-  expect_no_error(plot(sim, add_constants = TRUE))
+  sfm1 <- custom_func(sfm, c(a, b), eqn = c("1", "2"))
+  df <- as.data.frame(sfm1, type = "func", properties = c("name", "eqn"))
+  expect_equal(nrow(df), 2)
+  expect_equal(df[["eqn"]], c("1", "2"))
 })

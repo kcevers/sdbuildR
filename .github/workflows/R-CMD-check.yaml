@@ -13,25 +13,34 @@ jobs:
   R-CMD-check:
     runs-on: ${{ matrix.config.os }}
 
-    name: ${{ matrix.config.os }} (${{ matrix.config.r }})
+    # Experimental configs (e.g. newest Julia) report without blocking
+    continue-on-error: ${{ matrix.config.experimental || false }}
+
+    name: ${{ matrix.config.os }} (R ${{ matrix.config.r }}, Julia ${{ matrix.config.julia }})
 
     strategy:
       fail-fast: false
       matrix:
         config:
-          - {os: macos-latest,   r: 'release'}
-          - {os: windows-latest, r: 'release'}
-          - {os: ubuntu-latest,   r: 'release'}
+          - {os: macos-latest,   r: 'release', julia: '1.12.6'}
+          - {os: windows-latest, r: 'release', julia: '1.12.6'}
+          - {os: ubuntu-latest,   r: 'devel', http-user-agent: 'release', julia: '1.12.6'}
+          - {os: ubuntu-latest,   r: 'release', julia: '1.12.6'}
+          - {os: ubuntu-latest,   r: 'oldrel-1', julia: '1.12.6'}
+          # Minimum supported Julia version (from inst/Project.toml: julia = "1.10")
+          - {os: ubuntu-latest,   r: 'release', julia: '1.10'}
+          # Newest Julia (latest 1.x); experimental — may surface upstream issues
+          - {os: ubuntu-latest,   r: 'release', julia: '1', experimental: true}
 
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
-      AUTO_JULIA_INSTALL: true
       R_KEEP_PKG_SOURCE: yes
       NOT_CRAN: "true"
-      AUTO_INSTALL_JULIA_ENV: "true"
+      SDBUILDR_INSTALL_JULIA_ENV: "true"
+      SDBUILDR_CREATE_TEST_FIGS: "true"
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: r-lib/actions/setup-pandoc@v2
 
@@ -46,11 +55,16 @@ jobs:
           extra-packages: any::rcmdcheck
           needs: check
 
-      # Necessary to prevent CHOLMOD error
+      # Julia version varies across the matrix (min, pinned, newest)
       - name: Set up Julia
-        uses: julia-actions/setup-julia@v2
+        uses: julia-actions/setup-julia@v3
         with:
-          version: '1.12.1'  # Pin specific version for stability
+          version: ${{ matrix.config.julia }}
+
+      # Cache the Julia depot (downloaded packages + precompiled cache) so the
+      # environment install during checks is fast on repeat runs. The cache key
+      # includes the matrix config, so each Julia version gets its own cache.
+      - uses: julia-actions/cache@v2
 
       # Print Julia environment variables
       - name: Print Julia environment

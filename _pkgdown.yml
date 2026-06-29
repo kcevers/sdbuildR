@@ -7,10 +7,11 @@ articles:
   navbar: ~
   contents:
   - articles/build
-  - articles/jdr
-  - articles/julia-setup
   - articles/ensemble
-  - articles/units
+  - articles/unit-tests
+  # - articles/jdr
+  - articles/julia-setup
+  - articles/import-export
 reference:
 - title: Building stock-and-flow models
 - contents:
@@ -18,24 +19,24 @@ reference:
 - title: Simulate stock-and-flow models
 - contents:
   - has_concept("simulate")
+- title: Ensemble simulations
+- contents:
+  - has_concept("ensemble")
+- title: Unit testing
+- contents:
+  - has_concept("unitTest")
 - title: Set-up and use Julia
 - contents:
   - has_concept("julia")
-- title: Insight Maker
+- title: Importing and exporting models
 - contents:
-  - has_concept("insightmaker")
+  - has_concept("importExport")
 - title: Input functions
 - contents:
   - has_concept("input")
-- title: Custom functions
+- title: Convenience functions
 - contents:
-  - has_concept("custom")
-- title: Delay functions
-- contents:
-  - has_concept("delay")
-- title: Units
-- contents:
-  - has_concept("units")
+  - has_concept("convenience")
 - title: Internal functions
 - contents:
   - has_concept("internal")

@@ -1,0 +1,109 @@
+<InsightMakerModel>
+  <root>
+    <mxCell id="0" />
+    <mxCell id="1" parent="0" />
+    <Setting Note="" Version="38" TimeLength="50" TimeStart="2000" TimeStep="0.5" TimeUnits="Years" Units="" SolutionAlgorithm="RK4" BackgroundColor="white" Throttle="1" Macros="" SensitivityPrimitives="" SensitivityRuns="50" SensitivityBounds="50, 80, 95, 100" SensitivityShowRuns="false" StyleSheet="{}" version="39" id="2">
+      <mxCell parent="1" vertex="1" visible="0">
+        <mxGeometry x="20" y="20" width="80" height="40" as="geometry" />
+      </mxCell>
+    </Setting>
+    <Stock name="Prey" Note="" InitialValue="400" StockMode="Store" Delay="10" Volume="100" NonNegative="true" Units="Prey" MaxConstraintUsed="false" MinConstraintUsed="false" MaxConstraint="100" MinConstraint="0" ShowSlider="true" SliderMax="1000" SliderMin="0" SliderStep="" Image="emoji:🐰" FlipHorizontal="false" FlipVertical="false" LabelPosition="Middle" oldId="92" id="92">
+      <mxCell style="stock;image=/editor/images/em/emoji_u1f430.svg;imageFlipV=0;imageFlipH=0;" vertex="1" parent="1">
+        <mxGeometry x="135" y="214" width="100" height="40" as="geometry" />
+      </mxCell>
+    </Stock>
+    <Variable name="Prey Birth Rate" Note="" Equation="0.25" Units="1 / Years" MaxConstraintUsed="false" MinConstraintUsed="false" MaxConstraint="100" MinConstraint="0" ShowSlider="false" SliderMax="100" SliderMin="0" SliderStep="" Image="None" FlipHorizontal="false" FlipVertical="false" LabelPosition="Middle" oldId="93" id="93">
+      <mxCell style="variable;image=None;" vertex="1" parent="1">
+        <mxGeometry x="30" y="30" width="120" height="50" as="geometry" />
+      </mxCell>
+    </Variable>
+    <Variable name="Prey Death Rate" Note="" Equation="{0.005 1/(Predators * Years)} * [Predators]" Units="1 / Years" MaxConstraintUsed="false" MinConstraintUsed="false" MaxConstraint="100" MinConstraint="0" ShowSlider="false" SliderMax="100" SliderMin="0" SliderStep="" Image="None" FlipHorizontal="false" FlipVertical="false" LabelPosition="Middle" oldId="94" id="94">
+      <mxCell style="variable;image=None;" vertex="1" parent="1">
+        <mxGeometry x="285" y="371" width="150" height="50" as="geometry" />
+      </mxCell>
+    </Variable>
+    <Variable name="Predator Birth Rate" Note="" Equation="{0.0002 1 / (Prey * Years)} * [Prey]" Units="1 / Years" MaxConstraintUsed="false" MinConstraintUsed="false" MaxConstraint="100" MinConstraint="0" ShowSlider="false" SliderMax="100" SliderMin="0" SliderStep="" Image="None" FlipHorizontal="false" FlipVertical="false" LabelPosition="Middle" oldId="95" id="95">
+      <mxCell style="variable;image=None;" vertex="1" parent="1">
+        <mxGeometry x="300" y="50" width="120" height="50" as="geometry" />
+      </mxCell>
+    </Variable>
+    <Variable name="Predator Death Rate" Note="" Equation="0.25" Units="1 / Years" MaxConstraintUsed="false" MinConstraintUsed="false" MaxConstraint="100" MinConstraint="0" ShowSlider="false" SliderMax="100" SliderMin="0" SliderStep="" Image="None" FlipHorizontal="false" FlipVertical="false" LabelPosition="Middle" oldId="96" id="96">
+      <mxCell style="variable;image=None;" vertex="1" parent="1">
+        <mxGeometry x="637" y="340" width="120" height="50" as="geometry" />
+      </mxCell>
+    </Variable>
+    <Stock name="Predators" Note="" InitialValue="20" StockMode="Store" Delay="10" Volume="100" NonNegative="true" Units="Predators" MaxConstraintUsed="false" MinConstraintUsed="false" MaxConstraint="100" MinConstraint="0" ShowSlider="true" SliderMax="100" SliderMin="0" SliderStep="" Image="emoji:🦊" FlipHorizontal="false" FlipVertical="false" LabelPosition="Middle" oldId="97" id="97">
+      <mxCell style="stock;image=/editor/images/em/emoji_u1f98a.svg;imageFlipV=0;imageFlipH=0;" vertex="1" parent="1">
+        <mxGeometry x="506" y="212" width="100" height="40" as="geometry" />
+      </mxCell>
+    </Stock>
+    <Flow name="Prey Births" Note="" FlowRate="[Prey]*[Prey Birth Rate]" OnlyPositive="true" TimeIndependent="false" Units="Prey / Years" MaxConstraintUsed="false" MinConstraintUsed="false" MaxConstraint="100" MinConstraint="0" ShowSlider="false" SliderMax="100" SliderMin="0" SliderStep="" oldId="99" id="99">
+      <mxCell style="flow" edge="1" parent="1" target="92">
+        <mxGeometry relative="1" as="geometry">
+          <mxPoint x="185" y="62" as="sourcePoint" />
+        </mxGeometry>
+      </mxCell>
+    </Flow>
+    <Flow name="Prey Deaths" Note="" FlowRate="[Prey]*[Prey Death Rate]" OnlyPositive="true" TimeIndependent="false" Units="Prey / Years" MaxConstraintUsed="false" MinConstraintUsed="false" MaxConstraint="100" MinConstraint="0" ShowSlider="false" SliderMax="100" SliderMin="0" SliderStep="" oldId="101" id="101">
+      <mxCell style="flow" edge="1" parent="1" source="92">
+        <mxGeometry relative="1" as="geometry">
+          <mxPoint x="185" y="422" as="targetPoint" />
+        </mxGeometry>
+      </mxCell>
+    </Flow>
+    <Flow name="Predator Births" Note="" FlowRate="[Predators]*[Predator Birth Rate]" OnlyPositive="true" TimeIndependent="false" Units="Predators / Years" MaxConstraintUsed="false" MinConstraintUsed="false" MaxConstraint="100" MinConstraint="0" ShowSlider="false" SliderMax="100" SliderMin="0" SliderStep="" oldId="103" id="103">
+      <mxCell style="flow" edge="1" parent="1" target="97">
+        <mxGeometry relative="1" as="geometry">
+          <mxPoint x="556" y="60" as="sourcePoint" />
+        </mxGeometry>
+      </mxCell>
+    </Flow>
+    <Flow name="Predator Deaths" Note="" FlowRate="[Predator Death Rate]*[Predators]" OnlyPositive="true" TimeIndependent="false" Units="Predators / Years" MaxConstraintUsed="false" MinConstraintUsed="false" MaxConstraint="100" MinConstraint="0" ShowSlider="false" SliderMax="100" SliderMin="0" SliderStep="" oldId="105" id="105">
+      <mxCell style="flow" edge="1" parent="1" source="97">
+        <mxGeometry relative="1" as="geometry">
+          <mxPoint x="556" y="420" as="targetPoint" />
+        </mxGeometry>
+      </mxCell>
+    </Flow>
+    <Link name="Link" Note="" BiDirectional="false" oldId="106" id="106">
+      <mxCell style="link" edge="1" parent="1" source="93" target="99">
+        <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+    </Link>
+    <Link name="Link" Note="" BiDirectional="false" oldId="107" id="107">
+      <mxCell style="link" edge="1" parent="1" source="94" target="101">
+        <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+    </Link>
+    <Link name="Link" Note="" BiDirectional="false" oldId="108" id="108">
+      <mxCell style="link" edge="1" parent="1" source="97" target="94">
+        <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+    </Link>
+    <Link name="Link" Note="" BiDirectional="false" oldId="109" id="109">
+      <mxCell style="link" edge="1" parent="1" source="96" target="105">
+        <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+    </Link>
+    <Link name="Link" Note="" BiDirectional="false" oldId="110" id="110">
+      <mxCell style="link" edge="1" parent="1" source="95" target="103">
+        <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+    </Link>
+    <Link name="Link" Note="" BiDirectional="false" oldId="111" id="111">
+      <mxCell style="link" edge="1" parent="1" source="92" target="95">
+        <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+    </Link>
+    <Display name="Prey and Predators" Note="" Type="Time Series" xAxis="Time (%u)" yAxis="" yAxis2="" showMarkers="false" showLines="true" showArea="false" Primitives="92,97" Primitives2="" AutoAddPrimitives="false" ScatterplotOrder="X Primitive, Y Primitive" Image="Display" FlipHorizontal="false" FlipVertical="false" LabelPosition="Bottom" oldId="112" id="112">
+      <mxCell style="display" vertex="1" parent="1" visible="0">
+        <mxGeometry x="10" y="10" width="64" height="64" as="geometry" />
+      </mxCell>
+    </Display>
+    <Display name="Details Table" Note="" Type="Tabular" xAxis="Time (%u)" yAxis="" yAxis2="" showMarkers="false" showLines="true" showArea="false" Primitives="97,92,105,103,99,101" Primitives2="" AutoAddPrimitives="false" ScatterplotOrder="X Primitive, Y Primitive" Image="Display" FlipHorizontal="false" FlipVertical="false" LabelPosition="Bottom" oldId="113" id="113">
+      <mxCell style="display" vertex="1" parent="1" visible="0">
+        <mxGeometry x="10" y="10" width="64" height="64" as="geometry" />
+      </mxCell>
+    </Display>
+  </root>
+</InsightMakerModel>

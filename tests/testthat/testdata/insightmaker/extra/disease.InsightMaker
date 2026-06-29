@@ -1,0 +1,61 @@
+<InsightMakerModel>
+  <root>
+    <mxCell id="0" />
+    <mxCell id="1" parent="0" />
+    <Setting Note="" Version="38" TimeLength="20" TimeStart="0" TimeStep="0.2" TimeUnits="Weeks" Units="kg&lt;&gt;1000&lt;&gt;grams&#xa;s&lt;&gt;1&lt;&gt;seconds&#xa;m&lt;&gt;1&lt;&gt;meters&#xa;rad&lt;&gt;1&lt;&gt;radians" SolutionAlgorithm="Euler" BackgroundColor="white" Throttle="1" Macros="# Acceleration due to gravity&#xa;g &lt;- {9.81 m/s^2}" SensitivityPrimitives="" SensitivityRuns="50" SensitivityBounds="50, 80, 95, 100" SensitivityShowRuns="false" StyleSheet="{}" version="39" id="2">
+      <mxCell parent="1" vertex="1" visible="0">
+        <mxGeometry x="20" y="20" width="80" height="40" as="geometry" />
+      </mxCell>
+    </Setting>
+    <Stock name="S" Note="Initial number of susceptible individuals." InitialValue="100" StockMode="Store" Delay="10" Volume="100" NonNegative="false" Units="Unitless" MaxConstraintUsed="false" MinConstraintUsed="false" MaxConstraint="100" MinConstraint="0" ShowSlider="true" SliderMax="100" SliderMin="0" SliderStep="" Image="None" FlipHorizontal="false" FlipVertical="false" LabelPosition="Middle" oldId="136" id="136">
+      <mxCell style="stock;image=None;" vertex="1" parent="1">
+        <mxGeometry x="140" y="60" width="100" height="40" as="geometry" />
+      </mxCell>
+    </Stock>
+    <Stock name="I" Note="Initial number of infected individuals." InitialValue="3" StockMode="Store" Delay="10" Volume="100" NonNegative="false" Units="Unitless" MaxConstraintUsed="false" MinConstraintUsed="false" MaxConstraint="100" MinConstraint="0" ShowSlider="true" SliderMax="100" SliderMin="0" SliderStep="" Image="None" FlipHorizontal="false" FlipVertical="false" LabelPosition="Middle" oldId="137" id="137">
+      <mxCell style="stock;image=None;" vertex="1" parent="1">
+        <mxGeometry x="140" y="190" width="100" height="40" as="geometry" />
+      </mxCell>
+    </Stock>
+    <Stock name="R" Note="Initial number of recovered individuals." InitialValue="0" StockMode="Store" Delay="10" Volume="100" NonNegative="false" Units="Unitless" MaxConstraintUsed="false" MinConstraintUsed="false" MaxConstraint="100" MinConstraint="0" ShowSlider="true" SliderMax="100" SliderMin="0" SliderStep="" Image="None" FlipHorizontal="false" FlipVertical="false" LabelPosition="Middle" oldId="138" id="138">
+      <mxCell style="stock;image=None;" vertex="1" parent="1">
+        <mxGeometry x="140" y="310" width="100" height="40" as="geometry" />
+      </mxCell>
+    </Stock>
+    <Variable name="γ" Note="" Equation="0.3" Units="Unitless" MaxConstraintUsed="false" MinConstraintUsed="false" MaxConstraint="100" MinConstraint="0" ShowSlider="true" SliderMax="1" SliderMin="0" SliderStep="" Image="None" FlipHorizontal="false" FlipVertical="false" LabelPosition="Middle" oldId="139" id="139">
+      <mxCell style="variable;image=None;" vertex="1" parent="1">
+        <mxGeometry x="50" y="185" width="50" height="50" as="geometry" />
+      </mxCell>
+    </Variable>
+    <Variable name="β" Note="" Equation="0.01" Units="Unitless" MaxConstraintUsed="false" MinConstraintUsed="false" MaxConstraint="100" MinConstraint="0" ShowSlider="true" SliderMax="0.05" SliderMin="0" SliderStep="" Image="None" FlipHorizontal="false" FlipVertical="false" LabelPosition="Middle" oldId="140" id="140">
+      <mxCell style="variable;image=None;" vertex="1" parent="1">
+        <mxGeometry x="50" y="40" width="50" height="50" as="geometry" />
+      </mxCell>
+    </Variable>
+    <Flow name="Infection" Note="" FlowRate="[β] * [S] * [I]" OnlyPositive="false" TimeIndependent="false" Units="Unitless" MaxConstraintUsed="false" MinConstraintUsed="false" MaxConstraint="100" MinConstraint="0" ShowSlider="false" SliderMax="100" SliderMin="0" SliderStep="" oldId="141" id="141">
+      <mxCell style="flow;startArrow=block;startFill=0;" edge="1" parent="1" source="136" target="137">
+        <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+    </Flow>
+    <Flow name="Recovery" Note="" FlowRate="[γ] * [I]" OnlyPositive="false" TimeIndependent="false" Units="Unitless" MaxConstraintUsed="false" MinConstraintUsed="false" MaxConstraint="100" MinConstraint="0" ShowSlider="false" SliderMax="100" SliderMin="0" SliderStep="" oldId="142" id="142">
+      <mxCell style="flow;startArrow=block;startFill=0;" edge="1" parent="1" source="137" target="138">
+        <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+    </Flow>
+    <Link name="Link" Note="" BiDirectional="false" oldId="143" id="143">
+      <mxCell style="link" edge="1" parent="1" source="140" target="141">
+        <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+    </Link>
+    <Link name="Link" Note="" BiDirectional="false" oldId="144" id="144">
+      <mxCell style="link" edge="1" parent="1" source="139" target="142">
+        <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+    </Link>
+    <Display name="Disease Spread" Note="" Type="Time Series" xAxis="Time (%u)" yAxis="" yAxis2="" showMarkers="false" showLines="true" showArea="false" Primitives="137,138,136" Primitives2="" AutoAddPrimitives="false" ScatterplotOrder="X Primitive, Y Primitive" Image="Display" FlipHorizontal="false" FlipVertical="false" LabelPosition="Bottom" oldId="145" id="145">
+      <mxCell style="display" vertex="1" parent="1" visible="0">
+        <mxGeometry x="10" y="10" width="64" height="64" as="geometry" />
+      </mxCell>
+    </Display>
+  </root>
+</InsightMakerModel>

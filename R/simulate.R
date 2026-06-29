@@ -1,166 +1,98 @@
 #' Simulate stock-and-flow model
 #'
-#' Simulate a stock-and-flow model with simulation specifications defined by [sim_specs()]. If `sim_specs(language = "julia")`, the Julia environment will first be set up with [use_julia()]. If any problems are detected by [debugger()], the model cannot be simulated.
+#' Simulate a stock-and-flow model with simulation specifications defined by [sim_settings()]. If `sim_settings(language = "julia")`, the Julia environment will first be set up with [use_julia()]. If any problems are detected by [summary()], the model cannot be simulated.
 #'
-#' @inheritParams insightmaker_to_sfm
-#' @inheritParams build
-#' @param keep_unit If TRUE, keeps units of variables. Defaults to TRUE.
-#' @param verbose If TRUE, print duration of simulation. Defaults to FALSE.
-#' @param only_stocks If TRUE, only return stocks in output, discarding flows and auxiliaries. If FALSE, flows and auxiliaries are saved, which slows down the simulation. Defaults to FALSE.
-#' @param ... Optional arguments
+#' @inheritParams import_insightmaker
+#' @inheritParams update.stockflow
+#' @inheritParams sim_settings
+#' @param nsim Number of simulations to run (unused; see [ensemble()] for running multiple simulations).
+#' @param ... Optional arguments passed to [sim_settings()]; these can be used to override the simulation specifications set in the model object.
 #'
-#' @returns Object of class [`sdbuildR_sim`][simulate], a list containing:
+#' @returns Object of class [`simulate_stockflow`][simulate.stockflow()], a list containing:
 #' \describe{
+#'   \item{object}{Stock-and-flow model object of class [`stockflow`][stockflow]}
 #'   \item{df}{Data frame: simulation results (time, variable, value)}
 #'   \item{init}{Named vector: initial stock values}
 #'   \item{constants}{Named vector: constant parameters}
 #'   \item{script}{Character: generated simulation code (R or Julia)}
 #'   \item{duration}{Numeric: simulation time in seconds}
 #'   \item{success}{Logical: TRUE if completed without errors}
-#'   \item{...}{Other parameters passed to simulate}
+#'   \item{error_message}{NULL if completed without errors}
 #' }
 #'
-#' Use [as.data.frame()] to extract results, [plot()] to visualize.
+#' Use [as.data.frame()][as.data.frame.simulate_stockflow()] to extract results, [plot()][plot.simulate_stockflow()] to visualize.
 #'
 #'
 #' @export
+#' @importFrom stats simulate
+#' @method simulate stockflow
 #' @concept simulate
-#' @seealso [build()], [xmile()], [debugger()], [sim_specs()], [use_julia()]
+#' @seealso [update()], [stockflow()], [summary()], [sim_settings()], [use_julia()]
 #'
 #' @examples
-#' sfm <- xmile("SIR")
+#' sfm <- stockflow("sir")
 #' sim <- simulate(sfm)
 #' plot(sim)
 #'
 #' # Obtain all model variables
-#' sim <- simulate(sfm, only_stocks = FALSE)
-#' plot(sim, add_constants = TRUE)
+#' sim <- simulate(sim_settings(sfm, only_stocks = FALSE))
+#' plot(sim, show_constants = TRUE)
 #'
-#' @examplesIf julia_status()$status == "ready"
-#' # Use Julia for models with units
-#' sfm <- sim_specs(xmile("coffee_cup"), language = "Julia")
-#' sim <- simulate(sfm)
-#' plot(sim)
-#'
-#' # Close Julia session
-#' use_julia(stop = TRUE)
-#'
-simulate <- function(sfm,
-                     keep_nonnegative_flow = TRUE,
-                     keep_nonnegative_stock = FALSE,
-                     keep_unit = TRUE,
-                     only_stocks = TRUE,
-                     verbose = FALSE,
-                     ...) {
-  check_xmile(sfm)
+simulate.stockflow <- function(
+  object,
+  nsim = 1, seed = NULL,
+  ...
+) {
+  check_stockflow(object)
 
-  # First assess whether the model is valid
-  problems <- debugger(sfm, quietly = TRUE)
-  if (nzchar(problems[["problems"]])) {
-    txt <- problems[["problems"]]
-    warning(paste(txt, collapse = "\n"))
-    return(new_sdbuildR_sim(
-      success = FALSE,
-      error_message = txt,
-      sfm = sfm
-    ))
+  # Override sim_settings with any arguments passed via ...
+  varargs <- list(...)
+  # Add seed if seed was passed
+  if (!missing(seed)) {
+    varargs <- c(list(seed = seed), varargs)
+  }
+  if (length(varargs) > 0) {
+    object <- do.call(sim_settings, c(list(object), varargs))
   }
 
-  # Check model for delayN() and smoothN() functions
-  delayN_smoothN <- get_delayN_smoothN(sfm)
+  check_summary_diagnostics(object)
 
-  # Check model for delay() and past() functions
-  delay_past <- get_delay_past(sfm)
+  only_stocks <- object[["sim_settings"]][["only_stocks"]]
+  vars <- object[["sim_settings"]][["vars"]]
 
-  if (length(delayN_smoothN) > 0) {
-    txt <- "The model contains either delayN() or smoothN(), which are not supported."
-    # stop(paste0(
-      # "The model contains either delayN() or smoothN(), which are not supported for simulations in R.\nSet sfm |> sim_specs(language = 'Julia') or modify the equations of these variables: ",
-      #           paste0(names(delayN_smoothN), collapse = ", ")
-    # ))
-    warning(paste(txt, collapse = "\n"))
-    return(new_sdbuildR_sim(
-      success = FALSE,
-      error_message = txt,
-      sfm = sfm
-    ))
-  }
+  output_args <- resolve_sim_output_args(object, only_stocks, vars)
+  only_stocks <- output_args[["only_stocks"]]
+  vars <- output_args[["vars"]]
 
-  if (length(delay_past) > 0) {
-    txt <- "The model contains either delay() or past(), which are not supported."
-    # stop(paste0(
-      # "The model contains either delay() or past(), which are not supported for simulations in R.\nSet sfm |> sim_specs(language = 'Julia') or modify the equations of these variables: ",
-      #           paste0(names(delay_past), collapse = ", ")
-    # ))
-    warning(paste(txt, collapse = "\n"))
-    return(new_sdbuildR_sim(
-      success = FALSE,
-      error_message = txt,
-      sfm = sfm
-    ))
-  }
-
-  if (tolower(sfm[["sim_specs"]][["language"]]) == "julia") {
-    return(simulate_julia(sfm,
-      keep_nonnegative_flow = keep_nonnegative_flow,
-      keep_nonnegative_stock = keep_nonnegative_stock,
-      keep_unit = keep_unit, only_stocks = only_stocks,
-      verbose = verbose
-    ))
-  } else if (tolower(sfm[["sim_specs"]][["language"]]) == "r") {
-
-    # Check model for unit strings
-    eqn_units <- find_unit_strings(sfm)
-
-    # Stop if equations contain unit strings
-    if (length(eqn_units) > 0) {
-      # stop(paste0("The model contains unit strings u(''), which are not supported for simulations in R.\nSet sim_specs(sfm, language = 'Julia') or modify the equations of these variables:\n\n",
-      #             paste0(names(eqn_units), collapse = ", ")))
-      txt <- paste0("The model contains unit strings u(''), which are not supported for simulations in R.\nSet sim_specs(sfm, language = 'Julia') or modify the equations of these variables:\n\n",
-                    paste0(names(eqn_units), collapse = ", "))
-      warning(paste(txt, collapse = "\n"))
-      return(new_sdbuildR_sim(
-        success = FALSE,
-        error_message = txt,
-        sfm = sfm
-      ))
-    }
-
-    return(simulate_R(sfm,
-      keep_nonnegative_flow = keep_nonnegative_flow,
-      keep_nonnegative_stock = keep_nonnegative_stock,
+  if (tolower(object[["sim_settings"]][["language"]]) == "julia") {
+    return(simulate_julia(object,
       only_stocks = only_stocks,
-      verbose = verbose
+      vars = vars
     ))
-  } else {
-    txt <- "Simulation language not supported.\nPlease run either sim_specs(sfm, language = 'Julia') (recommended) or sim_specs(sfm, language = 'R') (no unit or ensemble support)."
-    warning(txt)
-    return(new_sdbuildR_sim(
-      success = FALSE,
-      error_message = txt,
-      sfm = sfm
+  } else if (tolower(object[["sim_settings"]][["language"]]) == "r") {
+    return(simulate_r(object,
+      only_stocks = only_stocks,
+      vars = vars
     ))
   }
 }
 
-#' Create new object of class [`sdbuildR_sim`][simulate]
-#'
-#' @returns A simulation of a stock-and-flow model of class [`sdbuildR_sim`][simulate]
+
+#' Create new object of class [`simulate_stockflow`][simulate.stockflow()]
 #' @noRd
-#'
-new_sdbuildR_sim <- function(success = FALSE,
-                             error_message = NULL,
-                             sfm = NULL,
-                             df = NULL,
-                             init = NULL,
-                             constants = NULL,
-                             script = NULL,
-                             duration = NULL,
-                             ...) {
+new_simulate_stockflow <- function(success = FALSE,
+                                   error_message = NULL,
+                                   object = NULL,
+                                   df = NULL,
+                                   init = NULL,
+                                   constants = NULL,
+                                   script = NULL,
+                                   duration = NULL,
+                                   ...) {
   obj <- list(
     success = success,
     error_message = error_message,
-    sfm = sfm,
+    object = object,
     df = df,
     init = init,
     constants = constants,
@@ -169,478 +101,446 @@ new_sdbuildR_sim <- function(success = FALSE,
     ...
   )
 
-  structure(obj, class = "sdbuildR_sim")
+  structure(obj, class = "simulate_stockflow")
 }
 
 
-#' Validate class [`sdbuildR_sim`][simulate]
+#' Check class [`simulate_stockflow`][simulate.stockflow()]
 #'
-#' @param x A simulation of a stock-and-flow model of class [`sdbuildR_sim`][simulate]
+#' @param x A simulation of a stock-and-flow model of class [`simulate_stockflow`][simulate.stockflow()]
 #'
-#' @returns A simulation of a stock-and-flow model of class [`sdbuildR_sim`][simulate]
+#' @returns Invisible x if valid, otherwise an error is thrown
 #' @noRd
 #'
-validate_sdbuildR_sim <- function(x) {
-  if (!inherits(x, "sdbuildR_sim")) {
-    stop("Object must be of class 'sdbuildR_sim'")
+check_simulate_stockflow <- function(x) {
+  if (!inherits(x, "simulate_stockflow")) {
+    cli::cli_abort(c(
+      "Invalid object type.",
+      "x" = "Expected object of class {.cls simulate_stockflow}.",
+      "i" = "Use {.fn simulate} to create a valid simulation object."
+    ))
   }
 
   if (!is.logical(x$success) || length(x$success) != 1) {
-    stop("`success` must be a single logical value")
+    cli::cli_abort(c(
+      "Invalid {.arg success} field.",
+      "x" = "The {.arg success} field must be a single {.cls logical} value.",
+      "i" = "Expected {.val {TRUE}} or {.val {FALSE}}."
+    ))
   }
 
   if (x$success) {
     # Successful simulation must have these components
     if (is.null(x$df) || !is.data.frame(x$df)) {
-      stop("Successful simulation must have a data frame in `df`")
+      cli::cli_abort(c(
+        "Missing or invalid simulation data.",
+        "x" = "Successful simulation must have a {.cls data.frame} in {.arg df}.",
+        "i" = "This field is populated by {.fn simulate} with results."
+      ))
     }
     if (is.null(x$init)) {
-      stop("Successful simulation must have `init`")
+      cli::cli_abort(c(
+        "Missing initial stock values.",
+        "x" = "Successful simulation must preserve initial values in {.arg init}.",
+        "i" = "Initial values of all stocks should be recorded."
+      ))
     }
-    # if (is.null(x$constants) || !is.numeric(x$constants)) {
-    #   stop("Successful simulation must have numeric `constants`")
-    # }
+
     if (is.null(x$duration)) {
-      stop("Successful simulation must have `duration`")
+      cli::cli_abort(c(
+        "Missing simulation duration.",
+        "x" = "Successful simulation must have {.arg duration}."
+      ))
     }
   } else {
     # Failed simulation should have error message
     if (is.null(x$error_message)) {
-      warning("Failed simulation should have `error_message`")
+      cli::cli_warn(c(
+        "Failed simulation missing error information.",
+        "!" = "Field {.arg error_message} should be populated for failed simulations."
+      ))
     }
   }
 
-  x
-}
-
-#' Detect undefined variables in equations
-#'
-#' @inheritParams build
-#'
-#' @returns List with issue and message
-#' @noRd
-#'
-detect_undefined_var <- function(sfm) {
-  # Get names
-  var_names <- get_model_var(sfm)
-
-  # Macros and graphical functions can be functions
-  possible_func_in_model <- c(names(sfm[["macro"]]), names(sfm[["model"]][["variables"]][["gf"]]))
-
-  possible_func <- c(
-    possible_func_in_model,
-    get_syntax_julia()[["syntax_df"]][["R_first_iter"]],
-    unlist(.sdbuildR_env[["P"]]),
-    # Remove base R names
-    "pi", "letters", "LETTERS",
-    "month.abb", "month.name"
-  )
-
-  # Find references to variables which are not in names_df[["name"]]
-  missing_ref <- unlist(sfm[["model"]][["variables"]], recursive = FALSE, use.names = FALSE) |>
-    lapply(function(x) {
-      y <- x[names(x) %in% c("eqn", "to", "from", "source")]
-      y <- y[vapply(y, is_defined, logical(1))]
-
-      A <- lapply(y, function(z) {
-        dependencies <- find_dependencies_(sfm, z, only_var = TRUE, only_model_var = FALSE)
-
-        # Find all undefined variables and functions
-        setdiff(
-          unlist(dependencies),
-          # Cannot depend on itself
-          c(possible_func, setdiff(var_names, x[["name"]]))
-        )
-      })
-      A <- A[lengths(A) > 0]
-      if (length(A) == 0) {
-        return(NULL)
-      } else {
-        return(stats::setNames(list(A), x[["name"]]))
-      }
-    })
-
-  missing_ref <- unlist(missing_ref, recursive = FALSE)
-
-  if (length(missing_ref) > 0) {
-    missing_ref_format <- lapply(seq_along(missing_ref), function(i) {
-      x <- missing_ref[[i]]
-      name <- names(missing_ref)[i]
-      lapply(seq_along(x), function(j) {
-        y <- x[[j]]
-        prop <- names(x)[j]
-        # paste0("- ", name, "$", prop, ": ", paste0(unname(y), collapse = ", "))
-        paste0(
-          "- The variable", ifelse(length(y) > 1, "s ", " "),
-          paste0(paste0("'", unname(y), "'"), collapse = ", "),
-          ifelse(length(y) > 1, " are ", " is "), "referenced in ",
-          name, "$", prop, " but hasn't been defined.\n"
-        )
-      })
-    }) |>
-      unlist() |>
-      unname()
-
-    return(list(
-      issue = TRUE,
-      msg = paste0(c(
-        # "The properties below contain references to undefined variables.\nPlease define the missing variables or correct any spelling mistakes.",
-        "Please define these missing variables or correct any spelling mistakes:",
-        paste0(missing_ref_format, collapse = "\n")
-      ), collapse = "\n")
-    ))
-  } else {
-    return(list(issue = FALSE))
-  }
-
-  return(NULL)
+  invisible(x)
 }
 
 
-#' Topologically sort equations according to their dependencies
+#' Print simulation of a stock-and-flow model
 #'
-#' @param dependencies_dict Named list with dependencies for each equation; names are equation names and entries are dependencies
+#' Prints the first rows of the simulation results in wide format. For a
+#' statistical summary per variable use [summary()][summary.simulate_stockflow()].
 #'
-#' @returns Equation names ordered according to their dependencies
-#' @noRd
+#' @param x A simulation result of class [`simulate_stockflow`][simulate.stockflow()]
+#' @param ... Additional arguments (unused)
 #'
-topological_sort <- function(dependencies_dict) {
-  if (length(dependencies_dict) == 0) {
-    return(list(issue = FALSE, msg = "", order = c()))
-  }
-
-  # Get equation names and dependencies
-  eq_names <- names(dependencies_dict)
-  dependencies <- unname(dependencies_dict)
-
-  # Ensure all dependencies are in eq_names, otherwise these result in NAs
-  dependencies <- lapply(dependencies, function(x) {
-    new_dependencies <- intersect(x, eq_names)
-    if (length(new_dependencies) == 0) {
-      return("")
-    } else {
-      return(new_dependencies)
-    }
-  })
-
-  # Order parameters according to dependencies
-  edges <- lapply(seq_along(dependencies), function(i) {
-    # If no dependencies, repeat own name
-    if (all(dependencies[[i]] == "")) {
-      edge <- rep(eq_names[i], 2)
-    } else {
-      edge <- cbind(dependencies[[i]], rep(eq_names[i], length(dependencies[[i]])))
-    }
-    return(edge)
-  }) |>
-    do.call(rbind, args = _) |>
-    magrittr::set_rownames(NULL) |>
-    # Turn into vector by row
-    as.data.frame()
-  edges <- edges[!duplicated(edges), ] # Remove duplicates
-  edges <- as.matrix(edges) |>
-    t() |>
-    c()
-
-  edges
-
-  # Create a directed graph from the edges
-  g <- igraph::make_graph(edges, directed = TRUE)
-
-  # Get correct order using topological sort
-  out <- tryCatch(
-    {
-      list(order = igraph::topo_sort(g, mode = "out") |> names(), issue = FALSE, msg = "")
-    },
-    error = function(msg) {
-      # message("Something went wrong when attempting to order the equations in your ODE, which may be because of circular definition (e.g. x = y, y = x). The correct order is important as e.g. for x = 1/a, a needs to be defined before x. Please check the order manually.")
-      out <- circularity(g)
-
-      list(order = eq_names, issue = out[["issue"]], msg = out[["msg"]])
-    }
-  )
-
-  return(out)
-}
-
-
-#' Detect circular dependencies in equations
-#'
-#' @param g Graph object
-#'
-#' @returns List with issue and message
-#' @noRd
-#'
-circularity <- function(g) {
-  # Check for cycles by finding strongly connected components
-  scc <- igraph::components(g, mode = "strong")
-  if (any(scc[["csize"]] > 1)) {
-    # Identify vertices in cycles (strongly connected components with more than one node)
-    cycle_nodes <- names(scc[["membership"]])[scc[["membership"]] %in% which(scc[["csize"]] > 1)]
-    cycle_message <- paste(
-      "Circular dependencies detected involving variables:",
-      paste(cycle_nodes, collapse = ", ")
-    )
-
-    # Find the specific edges in the cycles
-    sub_g <- igraph::induced_subgraph(g, cycle_nodes)
-    cycle_edges <- igraph::as_edgelist(sub_g)
-    edge_message <- paste0(paste0("- ", cycle_edges[, 1], " depends on ", cycle_edges[, 2]), collapse = "\n")
-
-    msg <- paste0(c(cycle_message, edge_message), collapse = "\n")
-    return(list(issue = TRUE, msg = msg))
-  } else {
-    return(list(issue = FALSE, msg = ""))
-  }
-}
-
-
-#' Find newly defined variables in equation
-#'
-#' @param eqn Equation
-#'
-#' @returns Vector of newly defined variables
-#' @noRd
-find_newly_defined_var <- function(eqn) {
-  # For each =, find preceding \n and next =
-  newlines <- unique(c(1, stringr::str_locate_all(eqn, "\\n")[[1]][, "start"], nchar(eqn)))
-  assignment <- stringr::str_locate_all(eqn, "=")[[1]]
-
-  # Exclude <- & \n in comments and strings
-  seq_quot <- get_seq_exclude(eqn, var_names = NULL, type = "quot")
-
-  assignment <- assignment[!(assignment[, "start"] %in% seq_quot), , drop = FALSE]
-  newlines <- newlines[!(newlines %in% seq_quot)]
-
-  new_var <- c()
-  if (nrow(assignment) > 0 & length(newlines) > 0) {
-    # Find preceding newline before assignment
-    start_idxs <- vapply(assignment[, "start"], function(idx) {
-      idxs_newline <- which(newlines <= idx)
-      newlines[idxs_newline[length(idxs_newline)]] # select last newline before assignment
-    }, numeric(1))
-
-    # Isolate defined variables
-    new_var <- lapply(seq_len(nrow(assignment)), function(i) {
-      # Extract equation indices
-      trimws(stringr::str_sub(eqn, start_idxs[i], assignment[i, "start"] - 1))
-    })
-    new_var <- unlist(new_var)
-  }
-
-  return(new_var)
-}
-
-
-#' Find dependencies
-#'
-#' Find which other variables each variable is dependent on.
-#'
-#' @inheritParams build
-#' @param reverse If FALSE, list for each variable X which variables Y it depends on for its equation definition. If TRUE, don't show dependencies but dependents. This reverses the dependencies, such that for each variable X, it lists what other variables Y depend on X.
-#'
-#' @returns List, with for each model variable what other variables it depends on, or if \code{reverse = TRUE}, which variables depend on it
-#' @concept build
+#' @returns Invisibly returns `x`
 #' @export
+#' @concept build
+#' @method print simulate_stockflow
+#' @seealso [simulate.stockflow()], [summary.simulate_stockflow()],
+#'   [plot.simulate_stockflow()], [as.data.frame.simulate_stockflow()]
 #'
 #' @examples
-#' sfm <- xmile("SIR")
-#' find_dependencies(sfm)
+#' sfm <- stockflow("sir")
+#' sim <- simulate(sfm)
+#' print(sim)
 #'
-find_dependencies <- function(sfm, reverse = FALSE) {
-  dep <- find_dependencies_(sfm, eqns = NULL, only_var = TRUE, only_model_var = TRUE)
+print.simulate_stockflow <- function(x, ...) {
+  check_simulate_stockflow(x)
 
-  if (reverse) {
-    dep <- reverse_dep(dep)
+  model_name <- x[["object"]][["meta"]][["name"]]
+  default_name <- formals(meta)[["name"]]
+  has_name <- !is.null(model_name) && nzchar(model_name) && model_name != default_name
+
+  if (has_name) {
+    cli::cli_h1("Stock-and-Flow Simulation: {model_name}")
+  } else {
+    cli::cli_h1("Stock-and-Flow Simulation")
   }
 
-  return(dep)
+  if (!x[["success"]]) {
+    cli::cli_inform(c("x" = "Simulation failed"))
+    cli::cli_inform(c("i" = "Inspect the error message with: {.code x$error_message}"))
+    return(invisible(x))
+  }
+
+  df <- x[["df"]]
+  if (!is.null(df) && nrow(df) > 0) {
+    cli::cli_h2("Data (first rows)")
+    print(head(as.data.frame(x, direction = "wide"), 5))
+
+    # Print blank line
+    cli::cli_text("")
+  }
+
+  cli::cli_inform(c(
+    "i" = "Access with {.fn as.data.frame} \u2022 Visualise with {.fn plot}"
+  ))
+
+  invisible(x)
 }
 
 
-#' Reverse dependencies
-#'
-#' @param dep List of dependencies
-#'
-#' @returns List with reversed dependencies, showing dependents instead.
-#' @noRd
-reverse_dep <- function(dep) {
-  reverse_dep <- list()
+# Internal helper: compute model properties including nonlinearity score
+model_properties <- function(object) {
+  vars <- object[["variables"]]
 
-  # Initialize empty lists for all variables that appear as dependencies
-  all_dependencies <- unique(unlist(dep))
-  for (var in all_dependencies) {
-    reverse_dep[[var]] <- character(0)
-  }
+  by_type <- function(t) vars[vars[["type"]] == t, , drop = FALSE]
+  stocks <- by_type("stock")
+  flows <- by_type("flow")
+  auxs <- by_type("aux")
+  constants <- by_type("constant")
+  lookups <- by_type("lookup")
 
-  # Also initialize for variables that have dependencies (they might not be dependencies themselves)
-  for (var in names(dep)) {
-    if (!var %in% names(reverse_dep)) {
-      reverse_dep[[var]] <- character(0)
+  dynamic_names <- c(stocks[["name"]], flows[["name"]], auxs[["name"]])
+  lookup_names <- lookups[["name"]]
+
+  # Variables whose equations we scan (everything except lookups and funcs)
+  eqn_vars <- vars[!vars[["type"]] %in% c("lookup", "func"), , drop = FALSE]
+
+  nonlinear_fn_pattern <- paste0(
+    "\\b(exp|log|log10|log2|sqrt|sin|cos|tan|asin|acos|atan|abs|ceiling|floor)\\s*\\("
+  )
+
+  by_variable <- character(0)
+
+  tag_var <- function(vec, nm, tag) {
+    if (nm %in% names(vec)) {
+      vec[nm] <- paste0(vec[nm], ", ", tag)
+    } else {
+      vec[nm] <- tag
     }
+    vec
   }
 
-  # Build reverse mapping
-  for (target_var in names(dep)) {
-    source_vars <- dep[[target_var]]
-    if (length(source_vars) > 0) {
-      for (source_var in source_vars) {
-        reverse_dep[[source_var]] <- c(reverse_dep[[source_var]], target_var)
+  n_lookup_refs <- 0L
+  n_nonlinear_fns <- 0L
+  n_multiplicative_dynamic <- 0L
+
+  if (nrow(eqn_vars) > 0 && length(lookup_names) > 0) {
+    for (i in seq_len(nrow(eqn_vars))) {
+      eqn <- eqn_vars[i, "eqn"]
+      nm <- eqn_vars[i, "name"]
+      if (is.na(eqn) || eqn == "") next
+      if (any(sapply(lookup_names, function(lk) grepl(lk, eqn, fixed = TRUE)))) {
+        n_lookup_refs <- n_lookup_refs + 1L
+        by_variable <- tag_var(by_variable, nm, "lookup_ref")
       }
     }
   }
 
-  # Remove duplicates (shouldn't happen but just in case)
-  reverse_dep <- lapply(reverse_dep, unique)
+  if (nrow(eqn_vars) > 0) {
+    for (i in seq_len(nrow(eqn_vars))) {
+      eqn <- eqn_vars[i, "eqn"]
+      nm <- eqn_vars[i, "name"]
+      if (is.na(eqn) || eqn == "") next
 
-  return(reverse_dep)
+      if (grepl(nonlinear_fn_pattern, eqn, perl = TRUE)) {
+        n_nonlinear_fns <- n_nonlinear_fns + 1L
+        by_variable <- tag_var(by_variable, nm, "nonlinear_fn")
+      }
+
+      if (length(dynamic_names) >= 2 && grepl("*", eqn, fixed = TRUE)) {
+        refs <- sum(sapply(dynamic_names, function(v) grepl(v, eqn, fixed = TRUE)))
+        if (refs >= 2L) {
+          n_multiplicative_dynamic <- n_multiplicative_dynamic + 1L
+          by_variable <- tag_var(by_variable, nm, "multiplicative")
+        }
+      }
+    }
+  }
+
+  list(
+    n_stocks = nrow(stocks),
+    n_flows = nrow(flows),
+    n_aux = nrow(auxs),
+    n_constants = nrow(constants),
+    n_lookups = nrow(lookups),
+    nonlinearity = list(
+      score                    = n_lookup_refs + n_nonlinear_fns + n_multiplicative_dynamic,
+      n_lookup_refs            = n_lookup_refs,
+      n_nonlinear_fns          = n_nonlinear_fns,
+      n_multiplicative_dynamic = n_multiplicative_dynamic,
+      by_variable              = by_variable
+    )
+  )
 }
 
 
-#' Find dependencies in equation (only for internal use)
+#' Compare two stock-and-flow models
 #'
-#' @param eqns String with equation to find dependencies in; defaults to NULL to find dependencies of all variables.
-#' @inheritParams build
-#' @param only_var If TRUE, only look for variable names, not functions.
-#' @param only_model_var If TRUE, only look for dependencies on other model variables.
+#' Compares the structure, equations, and simulation settings of two
+#' `stockflow` models, and computes a nonlinearity score for each.
 #'
-#' @returns Vector of dependencies (variable names in equation)
-#' @noRd
+#' @param sfm1 A stock-and-flow model of class [`stockflow`][stockflow()].
+#' @param sfm2 A stock-and-flow model of class [`stockflow`][stockflow()].
 #'
-find_dependencies_ <- function(sfm, eqns = NULL, only_var = TRUE, only_model_var = TRUE) {
-  var_names <- unique(get_model_var(sfm))
+#' @returns An object of class `compare_stockflow` (a list) containing:
+#'   \describe{
+#'     \item{`labels`}{Names of the two model objects (captured expressions).}
+#'     \item{`added`}{Variables present in `sfm2` but not `sfm1`.}
+#'     \item{`removed`}{Variables present in `sfm1` but not `sfm2`.}
+#'     \item{`type_changed`}{Variables with different types.}
+#'     \item{`eqn_changed`}{Variables with different equations.}
+#'     \item{`sim_settings_diff`}{Simulation settings that differ.}
+#'     \item{`properties`}{Per-model counts and nonlinearity scores.}
+#'   }
+#' @seealso [`simulate()`][simulate.stockflow()], [`summary()`][summary.stockflow()]
+#' @concept build
+#' @export
+#' @examples
+#' sfm1 <- stockflow("sir")
+#' sfm2 <- stock(sfm1, "susceptible", eqn = 0.5)
+#' compare_models(sfm1, sfm2)
+#'
+compare_models <- function(sfm1, sfm2) {
+  label1 <- rlang::expr_deparse(rlang::enexpr(sfm1))
+  label2 <- rlang::expr_deparse(rlang::enexpr(sfm2))
 
-  # Macros and graphical functions can be functions
-  possible_func_in_model <- c(
-    names(sfm[["macro"]]),
-    names(sfm[["model"]][["variables"]][["gf"]]),
-    var_names
-  ) # Some aux are also functions, such as pulse/step/ramp/seasonal
+  check_stockflow(sfm1)
+  check_stockflow(sfm2)
 
-  # If no equations are provided, use all equations in the model
-  if (is.null(eqns)) {
-    eqns <- unlist(
-      unname(lapply(
-        sfm[["model"]][["variables"]],
-        function(x) {
-          lapply(x, `[[`, "eqn")
+  v1 <- sfm1[["variables"]]
+  v2 <- sfm2[["variables"]]
+
+  names1 <- v1[["name"]]
+  names2 <- v2[["name"]]
+
+  only_in_2 <- setdiff(names2, names1)
+  only_in_1 <- setdiff(names1, names2)
+  in_both <- intersect(names1, names2)
+
+  # Variables added / removed
+  make_var_df <- function(vars, nms) {
+    rows <- vars[vars[["name"]] %in% nms, c("name", "type", "eqn"), drop = FALSE]
+    rownames(rows) <- NULL
+    rows
+  }
+  added <- make_var_df(v2, only_in_2)
+  removed <- make_var_df(v1, only_in_1)
+
+  # Changes among shared variables
+  v1s <- v1[v1[["name"]] %in% in_both, , drop = FALSE]
+  v2s <- v2[v2[["name"]] %in% in_both, , drop = FALSE]
+  # Align row order
+  v1s <- v1s[order(match(v1s[["name"]], in_both)), , drop = FALSE]
+  v2s <- v2s[order(match(v2s[["name"]], in_both)), , drop = FALSE]
+
+  type_changed <- data.frame(
+    name = in_both[v1s[["type"]] != v2s[["type"]]],
+    type_1 = v1s[["type"]][v1s[["type"]] != v2s[["type"]]],
+    type_2 = v2s[["type"]][v1s[["type"]] != v2s[["type"]]],
+    stringsAsFactors = FALSE
+  )
+
+  eqn1 <- ifelse(is.na(v1s[["eqn"]]), "", v1s[["eqn"]])
+  eqn2 <- ifelse(is.na(v2s[["eqn"]]), "", v2s[["eqn"]])
+  eqn_diff_idx <- eqn1 != eqn2
+  eqn_changed <- data.frame(
+    name = in_both[eqn_diff_idx],
+    eqn_1 = eqn1[eqn_diff_idx],
+    eqn_2 = eqn2[eqn_diff_idx],
+    stringsAsFactors = FALSE
+  )
+
+
+  # Sim specs diff
+  spec_fields <- c(
+    "start", "stop", "dt", "save_at", "save_type", "save_n",
+    "time_units", "method", "seed", "language", "only_stocks"
+  )
+  s1 <- sfm1[["sim_settings"]]
+  s2 <- sfm2[["sim_settings"]]
+  sim_settings_diff <- Filter(
+    Negate(is.null),
+    stats::setNames(
+      lapply(spec_fields, function(f) {
+        val1 <- s1[[f]]
+        val2 <- s2[[f]]
+        # Treat NULL and NA as equal to themselves
+        both_null <- is.null(val1) && is.null(val2)
+        if (both_null) {
+          return(NULL)
         }
-      )),
-      recursive = FALSE
+        vals_equal <- isTRUE(all.equal(val1, val2))
+        if (vals_equal) {
+          return(NULL)
+        }
+        list(sfm1 = val1, sfm2 = val2)
+      }),
+      spec_fields
+    )
+  )
+
+  result <- list(
+    labels = c(label1, label2),
+    added = added,
+    removed = removed,
+    type_changed = type_changed,
+    eqn_changed = eqn_changed,
+    sim_settings_diff = sim_settings_diff,
+    properties = list(
+      sfm1 = model_properties(sfm1),
+      sfm2 = model_properties(sfm2)
+    )
+  )
+
+  class(result) <- "compare_stockflow"
+  result
+}
+
+
+#' Print comparison of two stock-and-flow models
+#'
+#' @param x An object of class [`compare_stockflow`][compare_models()]
+#' @param ... Additional arguments (unused)
+#'
+#' @returns Invisibly returns `x`.
+#' @export
+#' @concept build
+#' @method print compare_stockflow
+#'
+print.compare_stockflow <- function(x, ...) {
+  l1 <- x[["labels"]][1]
+  l2 <- x[["labels"]][2]
+
+  cli::cli_h1("Stock-and-Flow Comparison: {l1} vs {l2}")
+
+  # ── Structural Differences ──────────────────────────────────────
+  cli::cli_h2("Structural Differences")
+
+  n_added <- nrow(x[["added"]])
+  n_removed <- nrow(x[["removed"]])
+  n_type <- nrow(x[["type_changed"]])
+  n_eqn <- nrow(x[["eqn_changed"]])
+  total_struct <- n_added + n_removed + n_type + n_eqn
+
+  if (total_struct == 0L) {
+    cli::cli_alert_success("No structural differences")
+  } else {
+    if (n_added > 0) {
+      entries <- paste0(x[["added"]][["name"]], " [", x[["added"]][["type"]], "]")
+      cli::cli_alert_success("Added ({n_added}): {.code {entries}}")
+    }
+    if (n_removed > 0) {
+      entries <- paste0(x[["removed"]][["name"]], " [", x[["removed"]][["type"]], "]")
+      cli::cli_alert_danger(
+        "Removed ({n_removed}): {.code {entries}}"
+      )
+    }
+    if (n_type > 0) {
+      tc <- x[["type_changed"]]
+      entries <- paste0(tc[["name"]], ": ", tc[["type_1"]], " \u2192 ", tc[["type_2"]])
+      cli::cli_alert_warning("Type changed ({n_type}): {.code {entries}}")
+    }
+    if (n_eqn > 0) {
+      ec <- x[["eqn_changed"]]
+      for (i in seq_len(nrow(ec))) {
+        cli::cli_alert_warning(
+          "Equation changed: {.code {ec$name[i]}}: {.code {ec$eqn_1[i]}} \u2192 {.code {ec$eqn_2[i]}}"
+        )
+      }
+    }
+  }
+
+  # ── Simulation Settings ──────────────────────────────────────
+  cli::cli_h2("Simulation Settings")
+  if (length(x[["sim_settings_diff"]]) == 0L) {
+    cli::cli_alert_success("Identical")
+  } else {
+    for (f in names(x[["sim_settings_diff"]])) {
+      v1 <- x[["sim_settings_diff"]][[f]][["sfm1"]]
+      v2 <- x[["sim_settings_diff"]][[f]][["sfm2"]]
+      cli::cli_alert_warning("{f}: {.val {v1}} \u2192 {.val {v2}}")
+    }
+  }
+
+  # ── Model Properties ──────────────────────────────────────────
+  cli::cli_h2("Model Properties")
+
+  p1 <- x[["properties"]][["sfm1"]]
+  p2 <- x[["properties"]][["sfm2"]]
+
+  fmt <- function(n) formatC(n, width = 8)
+  row <- function(label, val1, val2) {
+    cli::cli_text(
+      paste0("  ", formatC(label, width = 24, flag = "-"), fmt(val1), fmt(val2))
     )
   }
 
-  # Find dependencies in each equation
-  dependencies <- lapply(eqns, function(eqn) {
-    # Parse the line as an expression
-    expr <- tryCatch(parse(text = eqn), error = function(e) NULL)
+  # cli::cli_text(
+    # paste0(
+    #   "  ", formatC("", width = 24, flag = "-"),
+    #   formatC(l1, width = 8), formatC(l2, width = 8)
+    # )
+  #   "{l1} vs {l2}"
+  # )
+  cli::cli_text(paste0("  ", strrep("-", 40)))
+  row("Stocks", p1[["n_stocks"]], p2[["n_stocks"]])
+  row("Flows", p1[["n_flows"]], p2[["n_flows"]])
+  row("Auxiliaries", p1[["n_aux"]], p2[["n_aux"]])
+  row("Constants", p1[["n_constants"]], p2[["n_constants"]])
+  row("Lookups", p1[["n_lookups"]], p2[["n_lookups"]])
+  cli::cli_text(paste0("  ", strrep("-", 40)))
+  row(
+    "Nonlinearity score", p1[["nonlinearity"]][["score"]],
+    p2[["nonlinearity"]][["score"]]
+  )
+  row(
+    "  Lookup refs", p1[["nonlinearity"]][["n_lookup_refs"]],
+    p2[["nonlinearity"]][["n_lookup_refs"]]
+  )
+  row(
+    "  Nonlinear fns", p1[["nonlinearity"]][["n_nonlinear_fns"]],
+    p2[["nonlinearity"]][["n_nonlinear_fns"]]
+  )
+  row(
+    "  Multiplicative", p1[["nonlinearity"]][["n_multiplicative_dynamic"]],
+    p2[["nonlinearity"]][["n_multiplicative_dynamic"]]
+  )
 
-    # If parsing was successful, extract variable names from equations
-    if (!is.null(expr)) {
-      # Omit variables that are defined in the expression itself
-      new_var <- find_newly_defined_var(eqn)
-
-      # Get all dependencies
-      all_d <- setdiff(all.names(expr, functions = TRUE, unique = TRUE), new_var)
-      d <- setdiff(all.names(expr, functions = FALSE, unique = TRUE), new_var)
-      d_func <- setdiff(all_d, d)
-
-      if (only_model_var) {
-        d <- c(d[d %in% var_names], d_func[d_func %in% possible_func_in_model])
-      } else if (!only_var) {
-        d <- all_d
-      }
-    } else {
-      d <- NA
-    }
-
-    return(d)
-  })
-
-  return(dependencies)
-}
-
-
-#' Order equations of static and dynamic part of stock-and-flow model
-#'
-#' @inheritParams build
-#' @param print_msg If TRUE, print message if the ordering fails; defaults to TRUE.
-#'
-#' @returns List with order of static and dynamic variables
-#' @noRd
-#'
-order_equations <- function(sfm, print_msg = TRUE) {
-  # Add .outflow to detect delayed variables
-  var_names <- unique(get_model_var(sfm))
-  idx_delay <- grepl(paste0(
-    .sdbuildR_env[["P"]][["delayN_suffix"]], "[0-9]+$|",
-    .sdbuildR_env[["P"]][["smoothN_suffix"]], "[0-9]+$"
-  ), var_names)
-  delay_var <- var_names[idx_delay]
-  delay_pattern <- paste0(var_names[idx_delay], stringr::str_escape(.sdbuildR_env[["P"]][["outflow_suffix"]]))
-
-  # Separate auxiliary variables into static parameters and dynamically updated auxiliaries
-  dependencies <- lapply(sfm[["model"]][["variables"]], function(y) {
-    lapply(y, function(x) {
-      if (is_defined(x[["eqn"]])) {
-        d <- unlist(find_dependencies_(sfm, x[["eqn"]],
-          only_var = TRUE, only_model_var = TRUE
-        ))
-
-        # For delay family variables, find .outflow in eqn_julia
-        if (length(delay_var) > 0) {
-          idx <- stringr::str_detect(x[["eqn_julia"]], delay_pattern)
-          d <- c(d, delay_var[idx])
-        }
-      } else {
-        d <- c()
-      }
-
-      return(d)
-    })
-  })
-
-  # Try to sort static and dynamic equations together
-  # in case a static variable depends on a dynamic variable
-  dependencies_dict <- unlist(unname(dependencies), recursive = FALSE)
-  static_and_dynamic <- topological_sort(dependencies_dict)
-
-  # Topological sort of static equations
-  static_dependencies_dict <- c(
-    dependencies[["gf"]],
-    dependencies[["constant"]],
-    dependencies[["stock"]]
-  ) |>
-    purrr::list_flatten()
-
-  if (static_and_dynamic[["issue"]]) {
-    if (any(unname(static_dependencies_dict) %in% c(names(dependencies[["aux"]]), names(dependencies[["flow"]])))) {
-      warning(paste0("Ordering equations failed. ", static_and_dynamic[["msg"]], collapse = ""))
-    }
-  }
-
-  static <- topological_sort(static_dependencies_dict)
-  if (print_msg & static[["issue"]]) {
-    warning(paste0("Ordering static equations failed. ", static[["msg"]], collapse = ""))
-  }
-
-
-  # Topological ordering
-  dependencies_dict <- c(
-    dependencies[["aux"]],
-    dependencies[["flow"]]
-  ) |>
-    purrr::list_flatten()
-  dynamic <- topological_sort(dependencies_dict)
-
-  if (print_msg & dynamic[["issue"]]) {
-    warning(paste0("Ordering dynamic equations failed. ", dynamic[["msg"]], collapse = ""))
-  }
-
-  return(list(
-    static = static, dynamic = dynamic,
-    static_and_dynamic = static_and_dynamic
-  ))
+  invisible(x)
 }
 
 
@@ -654,14 +554,14 @@ order_equations <- function(sfm, print_msg = TRUE) {
 #' @noRd
 #'
 compare_sim <- function(sim1, sim2, tolerance = .00001) {
-  if (sim1[["success"]] & !sim2[["success"]]) {
+  if (sim1[["success"]] && !sim2[["success"]]) {
     return(c(
       equal = FALSE,
       msg = "Simulation 1 was successful, but simulation 2 failed."
     ))
   }
 
-  if (!sim1[["success"]] & sim2[["success"]]) {
+  if (!sim1[["success"]] && sim2[["success"]]) {
     return(c(
       equal = FALSE,
       msg = "Simulation 2 was successful, but simulation 1 failed."
@@ -670,13 +570,13 @@ compare_sim <- function(sim1, sim2, tolerance = .00001) {
 
   get_prop <- function(sim) {
     list(
-      colnames = colnames(sim[[.sdbuildR_env[["P"]][["sim_df_name"]]]]),
-      var_names = unique(sim[[.sdbuildR_env[["P"]][["sim_df_name"]]]][["variable"]]),
-      nrow = nrow(sim[[.sdbuildR_env[["P"]][["sim_df_name"]]]]),
-      ncol = ncol(sim[[.sdbuildR_env[["P"]][["sim_df_name"]]]]),
-      n_pars = length(sim[[.sdbuildR_env[["P"]][["parameter_name"]]]]),
-      language = sim[["sfm"]][["sim_specs"]][["language"]],
-      method = sim[["sfm"]][["sim_specs"]][["method"]]
+      colnames = colnames(sim[[P[["sim_df_name"]]]]),
+      var_names = unique(sim[[P[["sim_df_name"]]]][["variable"]]),
+      nrow = nrow(sim[[P[["sim_df_name"]]]]),
+      ncol = ncol(sim[[P[["sim_df_name"]]]]),
+      n_pars = length(sim[[P[["parameter_name"]]]]),
+      language = sim[["object"]][["sim_settings"]][["language"]],
+      method = sim[["object"]][["sim_settings"]][["method"]]
     )
   }
 
@@ -684,7 +584,13 @@ compare_sim <- function(sim1, sim2, tolerance = .00001) {
   prop2 <- get_prop(sim2)
 
   overlapping_var_names <- intersect(prop1[["var_names"]], prop2[["var_names"]])
-  nonoverlapping_var_names <- setdiff(union(prop1[["var_names"]], prop2[["var_names"]]), overlapping_var_names)
+  nonoverlapping_var_names <- setdiff(
+    union(
+      prop1[["var_names"]],
+      prop2[["var_names"]]
+    ),
+    overlapping_var_names
+  )
 
   check_diff <- function(col1, col2) {
     col1 <- as.numeric(col1)
@@ -693,7 +599,10 @@ compare_sim <- function(sim1, sim2, tolerance = .00001) {
     if (length(col1) != length(col2)) {
       return(c(
         equal = FALSE,
-        msg = paste0("Column lengths are not equal: ", length(col1), " (sim1) vs ", length(col2), " (sim2)")
+        msg = paste0(
+          "Column lengths are not equal: ",
+          length(col1), " (sim1) vs ", length(col2), " (sim2)"
+        )
       ))
     }
 
@@ -707,650 +616,209 @@ compare_sim <- function(sim1, sim2, tolerance = .00001) {
     ))
   }
 
-  df <- lapply(
-    overlapping_var_names,
-    function(name) {
-      c(
-        name = name,
-        check_diff(
-          sim1[["df"]][sim1[["df"]][["variable"]] == name, "value"],
-          sim2[["df"]][sim2[["df"]][["variable"]] == name, "value"]
+  df <- bind_rows_(
+    lapply(
+      overlapping_var_names,
+      function(name) {
+        c(
+          name = name,
+          check_diff(
+            sim1[["df"]][sim1[["df"]][["variable"]] == name, "value"],
+            sim2[["df"]][sim2[["df"]][["variable"]] == name, "value"]
+          )
         )
-      )
-    }
-  ) |>
-    do.call(dplyr::bind_rows, args = _) |>
-    as.data.frame()
+      }
+    )
+  )
 
-  return(list(
+  list(
     equal = all(as.logical(as.numeric(df[["equal"]]))),
     overlapping_var_names = overlapping_var_names,
     nonoverlapping_var_names = nonoverlapping_var_names,
     msg = paste0(
       "The following columns are not equal:\n",
-      paste0(df[["name"]], ": ", df[["first_diff"]], " (", df[["nr_diff"]], " differences, max diff: ", df[["max_diff"]], ")\n", collapse = ""),
+      paste0(df[["name"]], ": ", df[["first_diff"]], " (",
+        df[["nr_diff"]], " differences, max diff: ", df[["max_diff"]],
+        ")\n",
+        collapse = ""
+      ),
       "\n"
     ),
     prop1 = prop1,
     prop2 = prop2,
     df = df
-  ))
+  )
 }
 
 
-#' Run ensemble simulations
+#' Create data frame of simulation results
 #'
-#' Run an ensemble simulation of a stock-and-flow model, varying initial conditions and/or parameters in the range specified in `range`. The ensemble can be run in parallel using multiple threads by first setting [use_threads()]. The results are returned as a data.frame with summary statistics and optionally individual simulations.
+#' Convert simulation results to a data.frame.
 #'
-#' To run large simulations, it is recommended to limit the output size by saving fewer values. To create a reproducible ensemble simulation, set a seed using [sim_specs()].
+#' @inheritParams plot.simulate_stockflow
+#' @param direction Format of data frame, either "long" (default) or "wide".
+#' @param vars Variable names to retain in the data frame. Defaults to `NULL` to include all variables.
+#' @param type Variable types to retain in the data frame. Must be one or more of 'stock', 'flow', 'constant', 'aux', 'gf', or 'func'. Defaults to `NULL` to include all types.
+#' @param row.names NULL or a character vector giving the row names for the data frame. Missing values are not allowed.
+#' @param optional Ignored parameter.
 #'
-#' If you do not see any variation within a condition of the ensemble (i.e. the confidence bands are virtually non-existent), there are likely no random elements in your model. Without these, there can be no variability in the model. Try specifying a random initial condition or adding randomness to other model elements.
-#'
-#' @inheritParams build
-#' @inheritParams simulate
-#' @param n Number of simulations to run in the ensemble. When range is specified, n defines the number of simulations to run per condition. If each condition only needs to be run once, set n = 1. Defaults to 10.
-#' @param return_sims If TRUE, return the individual simulations in the ensemble. Set to FALSE to save memory. Defaults to FALSE.
-#' @param range  A named list specifying parameter ranges for ensemble conditions. Names must correspond to existing stock or constant variable names in the model. Each list element should be a numeric vector of values to test.
-#'
-#' If cross = TRUE (default), all combinations of values are generated. For example, list(param1 = c(1, 2), param2 = c(10, 20)) creates 4 conditions: (1,10), (1,20), (2,10), (2,20).
-#'
-#' If cross = FALSE, values are paired element-wise, requiring all vectors to have equal length. For example, list(param1 = c(1, 2, 3), param2 = c(10, 20, 30)) creates 3 conditions: (1,10), (2,20), (3,30).
-#' Defaults to NULL (no parameter variation).
-#'
-#' @param cross If TRUE, cross the parameters in the range list to generate all possible combinations of parameters. Defaults to TRUE.
-#' @param quantiles Quantiles to calculate in the summary, e.g. c(0.025, 0.975).
-#' @param verbose If TRUE, print details and duration of simulation. Defaults to TRUE.
-#'
-#' @returns Object of class [`sdbuildR_ensemble`][ensemble], which is a list containing:
-#' \describe{
-#'  \item{success}{If TRUE, simulation was successful. If FALSE, simulation failed.}
-#'  \item{error_message}{If success is FALSE, contains the error message.}
-#'  \item{df}{data.frame with simulation results in long format, if return_sims is TRUE. The iteration number is indicated by column "i". If range was specified, the condition is indicated by column "j".}
-#'  \item{summary}{data.frame with summary statistics of the ensemble, including quantiles specified in quantiles. If range was specified, summary statistics are calculated for each condition (j) in the ensemble.}
-#'  \item{n}{Number of simulations run in the ensemble (per condition j if range is specified).}
-#'  \item{n_total}{Total number of simulations run in the ensemble (across all conditions if range is specified).}
-#'  \item{n_conditions}{Total number of conditions.}
-#'  \item{conditions}{data.frame with the conditions used in the ensemble, if range is specified.}
-#'  \item{init}{List with df (if return_sims = TRUE) and summary, containing data.frame with the initial values of the stocks used in the ensemble.}
-#'  \item{constants}{List with df (if return_sims = TRUE) and summary, containing data.frame with the constant parameters used in the ensemble.}
-#'  \item{script}{Julia script used for the ensemble simulation.}
-#'  \item{duration}{Duration of the simulation in seconds.}
-#'  \item{...}{Other parameters passed to ensemble}
-#'  }
+#' @returns A data.frame with simulation results. For \code{direction = "long"} (default),
+#'   the data frame has three columns: \code{time}, \code{variable}, and \code{value}.
+#'   For \code{direction = "wide"}, the data frame has columns \code{time} followed by
+#'   one column per variable.
 #' @export
-#' @concept simulate
-#' @seealso [use_threads()], [build()], [xmile()], [sim_specs()], [use_julia()]
+#' @seealso [`simulate()`][simulate.stockflow()], [stockflow()]
+#' @concept build
+#' @method as.data.frame simulate_stockflow
 #'
-#' @examplesIf julia_status()$status == "ready"
-#' # Load example and set simulation language to Julia
-#' sfm <- xmile("predator_prey") |> sim_specs(language = "Julia")
+#' @examples
+#' sfm <- stockflow("sir")
+#' sim <- simulate(sfm)
+#' df <- as.data.frame(sim)
+#' head(df)
 #'
-#' # Set random initial conditions
-#' sfm <- build(sfm, c("predator", "prey"), eqn = "runif(1, min = 20, max = 80)")
+#' # Get results in wide format
+#' df_wide <- as.data.frame(sim, direction = "wide")
+#' head(df_wide)
 #'
-#' # For ensemble simulations, it is highly recommended to reduce the
-#' # returned output. For example, to save only every 1 time units and discard
-#' # the first 100 time units, use:
-#' sfm <- sim_specs(sfm, save_at = 1, save_from = 100)
-#'
-#' # Run ensemble simulation with 100 simulations
-#' sims <- ensemble(sfm, n = 100)
-#' plot(sims)
-#'
-#' # Plot individual trajectories
-#' sims <- ensemble(sfm, n = 10, return_sims = TRUE)
-#' plot(sims, type = "sims")
-#'
-#' # Specify which trajectories to plot
-#' plot(sims, type = "sims", i = 1)
-#'
-#' # Plot the median with lighter individual trajectories
-#' plot(sims, central_tendency = "median", type = "sims", alpha = 0.1)
-#'
-#' # Ensembles can also be run with exact values for the initial conditions
-#' # and parameters. Below, we vary the initial values of the predator and the
-#' # birth rate of the predators (delta). We generate a hunderd samples per
-#' # condition. By default, the parameters are crossed, meaning that all
-#' # combinations of the parameters are run.
-#' sims <- ensemble(sfm,
-#'   n = 50,
-#'   range = list("predator" = c(10, 50), "delta" = c(.025, .05))
-#' )
-#'
-#' plot(sims)
-#'
-#' # By default, a maximum of nine conditions is plotted.
-#' # Plot specific conditions:
-#' plot(sims, j = c(1, 3), nrows = 1)
-#'
-#' # Generate a non-crossed design, where the length of each range needs to be
-#' # equal:
-#' sims <- ensemble(sfm,
-#'   n = 10, cross = FALSE,
-#'   range = list(
-#'     "predator" = c(10, 20, 30),
-#'     "delta" = c(.020, .025, .03)
-#'   )
-#' )
-#' plot(sims, nrows = 3)
-#'
-#' # Run simulation in parallel
-#' use_threads(4)
-#' sims <- ensemble(sfm, n = 10)
-#'
-#' # Stop using threads
-#' use_threads(stop = TRUE)
-#'
-#' # Close Julia
-#' use_julia(stop = TRUE)
-#'
-ensemble <- function(sfm,
-                     n = 10,
-                     return_sims = FALSE,
-                     range = NULL,
-                     cross = TRUE,
-                     quantiles = c(0.025, 0.975),
-                     only_stocks = TRUE,
-                     keep_nonnegative_flow = TRUE,
-                     keep_nonnegative_stock = FALSE,
-                     keep_unit = TRUE,
-                     verbose = TRUE) {
-  check_xmile(sfm)
+as.data.frame.simulate_stockflow <- function(x,
+                                             row.names = NULL, optional = FALSE,
+                                             direction = "long",
+                                             vars = NULL, type = NULL, ...) {
+  vars <- .expr_to_char(rlang::enexpr(vars))
+  check_simulate_stockflow(x)
 
-  # Collect arguments
-  argg <- c(as.list(environment()))
-  # Remove NULL arguments
-  argg <- argg[!lengths(argg) == 0]
-
-  if (tolower(sfm[["sim_specs"]][["language"]]) != "julia") {
-    stop("Ensemble simulations are only supported for Julia models. Please set sfm |> sim_specs(language = 'Julia').")
-  }
-
-  if (!is.numeric(n)) {
-    stop("n should be a numerical value!")
-  }
-
-  if (n <= 0) {
-    stop("The number of simulations must be greater than 0!")
-  }
-
-  if (!is.numeric(quantiles)) {
-    stop("quantiles should be a numerical vector with quantiles to calculate!")
-  }
-
-  if (length(unique(quantiles)) < 2) {
-    stop("quantiles should have a minimum length of two!")
-  }
-
-  if (any(quantiles < 0 | quantiles > 1)) {
-    stop("quantiles should be between 0 and 1!")
-  }
-
-  if (!is.logical(cross)) {
-    stop("cross should be TRUE or FALSE!")
-  }
-
-  if (!is.logical(return_sims)) {
-    stop("return_sims should be TRUE or FALSE!")
-  }
-
-  if (!is.logical(only_stocks)) {
-    stop("only_stocks should be TRUE or FALSE!")
-  }
-
-  if (!is.null(range)) {
-    if (!is.list(range)) {
-      stop("range must be a named list! Please provide a named list with ranges for the parameters to vary in the ensemble.")
-    }
-
-    if (length(range) == 0) {
-      stop("range must be a named list with at least one element! Please provide a named list with ranges for the parameters to vary in the ensemble.")
-    }
-
-    if (is.null(names(range))) {
-      stop("range must be a named list! Please provide a named list with ranges for the parameters to vary in the ensemble.")
-    }
-
-    # All must be numerical values
-    if (!all(vapply(range, is.numeric, logical(1)))) {
-      stop("All elements in range must be numeric vectors!")
-    }
-
-    # Test that names are unique
-    if (length(unique(names(range))) != length(range)) {
-      stop("All names in range must be unique! Please check the names of the elements in range.")
-    }
-
-    # All varied elements must exist in the model
-    names_df <- get_names(sfm)
-    names_range <- names(range)
-    idx <- names_range %in% names_df[["name"]]
-    if (any(!idx)) {
-      stop(paste0(
-        "The following names in range do not exist in the model: ",
-        paste0(names_range[!idx], collapse = ", ")
-      ))
-    }
-
-    # All varied elements must be a stock or constant
-    idx <- names_range %in% c(names_df[names_df[["type"]] %in% c("stock", "constant"), "name"])
-    if (any(!idx)) {
-      stop(paste0(
-        "Only constants or the initial value of stocks can be varied. Please exclude: ",
-        paste0(names_range[!idx], collapse = ", ")
-      ))
-    }
-
-    # All ranges must be of the same length if not a crossed design
-    range_lengths <- vapply(range, length, numeric(1))
-    if (!cross) {
-      if (length(unique(range_lengths)) != 1) {
-        stop("All ranges must be of the same length when cross = FALSE! Please check the lengths of the ranges in range.")
-      }
-
-      n_conditions <- unique(range_lengths)
-    } else {
-      # Compute the total number of conditions
-      n_conditions <- prod(range_lengths)
-    }
-
-    # Alphabetically sort the ensemble parameters
-    range <- range[sort(names(range))]
-  } else {
-    n_conditions <- 1
-  }
-
-  if (verbose) {
-    message(paste0(
-      "Running a total of ", n * n_conditions,
-      " simulation", ifelse((n * n_conditions) == 1, "", "s"),
-      ifelse(is.null(range), "", paste0(
-        " for ", n_conditions, " condition",
-        ifelse(n_conditions == 1, "", "s"),
-        " (",
-        n, " simulation",
-        ifelse(n == 1, "", "s"),
-        " per condition)"
-      )), "\n"
+  direction <- trimws(tolower(direction))
+  if (!direction %in% c("long", "wide")) {
+    cli::cli_abort(c(
+      "Invalid {.arg direction} argument.",
+      "x" = "Must be either {.code 'long'} or {.code 'wide'}."
     ))
   }
 
-  # Create ensemble parameters
-  ensemble_pars <- list(
-    n = n,
-    quantiles = quantiles,
-    return_sims = return_sims,
-    range = range, cross = cross
-  )
+  # Filter long-format data by variable and/or type
+  df <- .filter_long_by_vars_type(x[["df"]], x[["object"]], vars = vars, type = type)
 
-  old_threads <- .sdbuildR_env[["prev_JULIA_NUM_THREADS"]]
-
-  if (!is.null(.sdbuildR_env[["JULIA_NUM_THREADS"]]) & !is.null(old_threads)) {
-    ensemble_pars[["threaded"]] <- TRUE
-    Sys.setenv("JULIA_NUM_THREADS" = .sdbuildR_env[["JULIA_NUM_THREADS"]])
-
-    on.exit({
-      if (is.na(old_threads)) {
-        Sys.unsetenv("JULIA_NUM_THREADS")
-      } else {
-        Sys.setenv("JULIA_NUM_THREADS" = old_threads)
-      }
-    })
-  } else {
-    ensemble_pars[["threaded"]] <- FALSE
-  }
-
-
-  # Get output filepaths
-  ensemble_pars[["filepath_df"]] <- c(
-    "df" = get_tempfile(fileext = ".csv"),
-    "constants" = get_tempfile(fileext = ".csv"),
-    "init" = get_tempfile(fileext = ".csv")
-  )
-  ensemble_pars[["filepath_summary"]] <- c(
-    "df" = get_tempfile(fileext = ".csv"),
-    "constants" = get_tempfile(fileext = ".csv"),
-    "init" = get_tempfile(fileext = ".csv")
-  )
-  filepath <- get_tempfile(fileext = ".jl")
-
-  # Compile script
-  script <- compile_julia(sfm,
-    filepath_sim = "",
-    ensemble_pars = ensemble_pars,
-    keep_nonnegative_flow = keep_nonnegative_flow,
-    keep_nonnegative_stock = keep_nonnegative_stock,
-    only_stocks = only_stocks,
-    keep_unit = keep_unit
-  )
-  write_script(script, filepath)
-  script <- paste0(readLines(filepath), collapse = "\n")
-
-
-  # Evaluate script
-  sim <- tryCatch(
-    {
-      use_julia()
-
-      # Evaluate script
-      start_t <- Sys.time()
-
-      # Wrap in invisible and capture.output to not show message of units module being overwritten
-      invisible(utils::capture.output(
-        JuliaConnectoR::juliaEval(paste0('include("', filepath, '")'))
-      ))
-
-      end_t <- Sys.time()
-
-      if (verbose) {
-        message(paste0("Simulation took ", round(end_t - start_t, 4), " seconds\n"))
-      }
-
-      # Delete file
-      file.remove(filepath)
-
-      # Read the total number of simulations
-      n <- JuliaConnectoR::juliaEval(.sdbuildR_env[["P"]][["ensemble_n"]])
-      n_total <- JuliaConnectoR::juliaEval(.sdbuildR_env[["P"]][["ensemble_total_n"]])
-
-      # Read the ensemble conditions
-      if (!is.null(ensemble_pars[["range"]])) {
-        conditions <- JuliaConnectoR::juliaEval(paste0("Matrix(hcat(", .sdbuildR_env[["P"]][["ensemble_pars"]], "...)')"))
-        colnames(conditions) <- names(ensemble_pars[["range"]])
-        conditions <- cbind(j = seq_len(nrow(conditions)), conditions)
-      } else {
-        conditions <- NULL
-      }
-
-      constants <- list()
-      init <- list()
-
-      # Read the simulation results
-      if (return_sims) {
-        df <- as.data.frame(data.table::fread(ensemble_pars[["filepath_df"]][["df"]], na.strings = c("", "NA")))
-        constants[["df"]] <- as.data.frame(data.table::fread(ensemble_pars[["filepath_df"]][["constants"]], na.strings = c("", "NA")))
-        init[["df"]] <- as.data.frame(data.table::fread(ensemble_pars[["filepath_df"]][["init"]], na.strings = c("", "NA")))
-
-        # Delete files
-        file.remove(ensemble_pars[["filepath_df"]][["df"]])
-        file.remove(ensemble_pars[["filepath_df"]][["constants"]])
-        file.remove(ensemble_pars[["filepath_df"]][["init"]])
-      } else {
-        df <- NULL
-      }
-
-      # Read the summary file
-      summary <- as.data.frame(data.table::fread(ensemble_pars[["filepath_summary"]][["df"]], na.strings = c("", "NA")))
-      constants[["summary"]] <- as.data.frame(data.table::fread(ensemble_pars[["filepath_summary"]][["constants"]], na.strings = c("", "NA")))
-      init[["summary"]] <- as.data.frame(data.table::fread(ensemble_pars[["filepath_summary"]][["init"]], na.strings = c("", "NA")))
-
-      # Delete files
-      file.remove(ensemble_pars[["filepath_summary"]][["df"]])
-      file.remove(ensemble_pars[["filepath_summary"]][["constants"]])
-      file.remove(ensemble_pars[["filepath_summary"]][["init"]])
-
-      list(
-        success = TRUE,
-        # sfm = sfm,
-        df = df,
-        summary = summary,
-        n = n,
-        n_total = n_total,
-        n_conditions = n_conditions,
-        conditions = conditions,
-        init = init,
-        constants = constants,
-        script = script,
-        duration = end_t - start_t
-      ) |>
-        utils::modifyList(argg) |>
-        structure(class = "sdbuildR_ensemble")
-    },
-    error = function(e) {
-      warning("\nAn error occurred while running the Julia script.")
-      list(
-        success = FALSE,
-        error_message = e[["message"]],
-        df = NULL,
-        summary = NULL,
-        n = n,
-        n_total = n_total,
-        n_conditions = n_conditions,
-        conditions = NULL,
-        init = NULL,
-        constants = NULL,
-        script = script,
-        duration = end_t - start_t
-        # sfm = sfm
-      ) |>
-        utils::modifyList(argg) |>
-        structure(class = "sdbuildR_ensemble")
-    }
-  )
-
-  return(sim)
-}
-
-
-#' Set up threaded ensemble simulations
-#'
-#' Specify the number of threads for ensemble simulations in Julia. This will not overwrite your current global setting for JULIA_NUM_THREADS. Note that this does not affect regular simulations with [simulate()].
-#'
-#' @param n Number of Julia threads to use. Defaults to parallel::detectCores() - 1. If set to a value higher than the number of available cores minus 1, it will be set to the number of available cores minus 1.
-#' @param stop Stop using threaded ensemble simulations. Defaults to FALSE.
-#'
-#' @returns No return value, called for side effects
-#' @concept julia
-#' @seealso [ensemble()], [use_julia()]
-#' @export
-#'
-#' @examplesIf julia_status()$status == "ready"
-#' # Use Julia with 4 threads
-#' use_julia()
-#' use_threads(n = 4)
-#'
-#' # Stop using threads
-#' use_threads(stop = TRUE)
-#'
-#' # Stop using Julia
-#' use_julia(stop = TRUE)
-#'
-use_threads <- function(n = parallel::detectCores() - 1, stop = FALSE) {
-  if (!is.numeric(n)) {
-    stop("n must be a number!")
-  }
-
-  if (n < 1) {
-    stop("n must be larger than 1!")
-  }
-
-  if (!is.logical(stop)) {
-    stop("stop must be TRUE or FALSE!")
-  }
-
-  if (stop) {
-    .sdbuildR_env[["JULIA_NUM_THREADS"]] <- NULL
-  } else {
-    # Set number of Julia threads to use
-    if (n > (parallel::detectCores() - 1)) {
-      warning(
-        "n is set to ", n,
-        ", which is higher than the number of available cores minus 1. Setting it to ",
-        parallel::detectCores() - 1, "."
-      )
-      n <- parallel::detectCores() - 1
-    }
-
-    # Save user's old setting
-    .sdbuildR_env[["prev_JULIA_NUM_THREADS"]] <- Sys.getenv("JULIA_NUM_THREADS",
-      unset = NA
+  if (direction == "wide") {
+    df <- stats::reshape(df,
+      timevar = "variable",
+      idvar = "time",
+      direction = "wide"
     )
 
-    .sdbuildR_env[["JULIA_NUM_THREADS"]] <- n
+    # Remove value. prefix
+    names(df) <- sub("^value\\.", "", names(df))
+
+    # Remove row names
+    rownames(df) <- NULL
   }
 
-  return(invisible())
+  # Handle row.names if provided
+  if (!is.null(row.names)) {
+    if (length(row.names) != nrow(df)) {
+      cli::cli_abort(c(
+        "Length mismatch in {.arg row.names}.",
+        "x" = "Got {length(row.names)} name{?s} but {nrow(df)} row{?s}."
+      ))
+    }
+    rownames(df) <- row.names
+  }
+
+  df
 }
 
 
-#' Generate code to build stock-and-flow model
+#' Print first rows of a simulation
 #'
-#' Create R code to rebuild an existing stock-and-flow model. This may help to understand how a model is built, or to modify an existing one.
+#' Print the first rows of a simulation data frame of a stock-and-flow model. This is a wrapper around [head()] that first converts the simulation results to a data frame using [as.data.frame()][as.data.frame.simulate_stockflow()].
 #'
-#' @inheritParams build
+#' @inheritParams as.data.frame.simulate_stockflow
+#' @param n Number of rows to print. Defaults to 6.
+#' @param ... Other arguments passed to [as.data.frame.simulate_stockflow()].
 #'
-#' @returns String with code to build stock-and-flow model from scratch.
-#' @concept build
+#' @returns A data.frame with the first rows of the simulation results.
 #' @export
+#' @concept simulate
+#' @importFrom utils head
+#' @examples
+#' sfm <- stockflow("sir")
+#' sim <- simulate(sfm)
+#' head(sim)
+head.simulate_stockflow <- function(x, n = 6L, ...) {
+  check_simulate_stockflow(x)
+
+  df <- as.data.frame(x, ...)
+  head(df, n)
+}
+
+
+#' Print last rows of a simulation
+#'
+#' Print the last rows of a simulation data frame of a stock-and-flow model. This is a wrapper around [tail()] that first converts the simulation results to a data frame using [as.data.frame()][as.data.frame.simulate_stockflow()].
+#'
+#' @inheritParams as.data.frame.simulate_stockflow
+#' @param n Number of rows to print. Defaults to 6.
+#' @param ... Other arguments passed to [as.data.frame.simulate_stockflow()].
+#' @return A data.frame with the last rows of the simulation results.
+#' @export
+#' @concept simulate
+#' @importFrom utils tail
+#' @examples
+#' sfm <- stockflow("sir")
+#' sim <- simulate(sfm)
+#' tail(sim)
+tail.simulate_stockflow <- function(x, n = 6L, ...) {
+  check_simulate_stockflow(x)
+
+  df <- as.data.frame(x, ...)
+  tail(df, n)
+}
+
+
+#' Summarise simulation results
+#'
+#' Returns a data frame with per-variable summary statistics (min, mean, max,
+#' and final value) over the simulated time range.
+#'
+#' @param object A simulation result of class [`simulate_stockflow`][simulate.stockflow()]
+#' @param ... Additional arguments (unused)
+#'
+#' @returns A `data.frame` with columns `variable`, `min`, `mean`, `max`, `final`.
+#' @export
+#' @concept simulate
+#' @method summary simulate_stockflow
+#' @seealso [print.simulate_stockflow()], [simulate.stockflow()]
 #'
 #' @examples
-#' sfm <- xmile("SIR")
-#' get_build_code(sfm)
+#' sfm <- stockflow("sir")
+#' sim <- simulate(sfm)
+#' summary(sim)
 #'
-get_build_code <- function(sfm) {
-  check_xmile(sfm)
+summary.simulate_stockflow <- function(object, ...) {
+  check_simulate_stockflow(object)
 
-  # Simulation specifications - careful here. If a default is 100.0, this will be turned into 100. Need to have character defaults to preserve digits.
-  sim_specs_list <- sfm[["sim_specs"]]
-  sim_specs_list <- lapply(sim_specs_list, function(z) if (is.character(z)) paste0("\"", z, "\"") else z)
-  sim_specs_str <- paste0(names(sim_specs_list), " = ", unname(sim_specs_list), collapse = ", ")
-  sim_specs_str <- paste0(" |>\n\t\tsim_specs(", sim_specs_str, ")")
-
-  # Model units
-  if (length(sfm[["model_units"]]) > 0) {
-    model_units_str <- lapply(sfm[["model_units"]], function(x) {
-      x <- lapply(x, function(z) if (is.character(z)) paste0("\"", z, "\"") else z)
-
-
-      sprintf("model_units(%s)", paste0(names(x), " = ", unname(x), collapse = ", "))
-    }) |>
-      unlist() |>
-      paste0(collapse = "|>\n\t\t")
-    model_units_str <- paste0(" |>\n\t\t", model_units_str)
-  } else {
-    model_units_str <- ""
+  if (!object[["success"]]) {
+    cli::cli_abort(c(
+      "Cannot summarise a failed simulation.",
+      "i" = "Inspect the error message with: {.code x$error_message}"
+    ))
   }
 
-  # Macros
-  if (length(sfm[["macro"]]) > 0) {
-    macro_str <- lapply(sfm[["macro"]], function(x) {
-      # Remove properties containing "_julia"
-      x[grepl("_julia", names(x))] <- NULL
+  df <- object[["df"]]
+  vars <- unique(df[["variable"]])
 
-      x <- lapply(x, function(z) if (is.character(z)) paste0("\"", z, "\"") else z)
-      sprintf("macro(%s)", paste0(names(x), " = ", unname(x), collapse = ", "))
-    }) |>
-      unlist() |>
-      paste0(collapse = "|>\n\t\t")
-    macro_str <- paste0(" |>\n\t\t", macro_str)
-  } else {
-    macro_str <- ""
-  }
-
-  # Header string
-  h <- sfm[["header"]]
-  defaults_header <- formals(header)
-  defaults_header <- defaults_header[!names(defaults_header) %in%
-    c("sfm", "created", "...")]
-
-  # Find which elements in h are identical to those in defaults_header
-  h <- h[vapply(names(h), function(name) {
-    !name %in% names(defaults_header) || !identical(
-      h[[name]],
-      defaults_header[[name]]
+  result <- do.call(rbind, lapply(vars, function(v) {
+    vals <- df[df[["variable"]] == v, "value"]
+    data.frame(
+      variable = v,
+      min = min(vals),
+      mean = mean(vals),
+      max = max(vals),
+      final = vals[length(vals)],
+      stringsAsFactors = FALSE
     )
-  }, logical(1))]
+  }))
 
-  h <- lapply(h, function(z) {
-    if (is.character(z) |
-      inherits(z, "POSIXt")) {
-      paste0("\"", z, "\"")
-    } else {
-      z
-    }
-  })
-
-  header_str <- paste0(
-    " |>\n\t\theader(",
-    paste0(names(h), " = ", unname(h), collapse = ", "), ")"
-  )
-
-  # Variables
-  if (length(unlist(sfm[["model"]][["variables"]])) > 0) {
-    defaults <- formals(build)
-    defaults <- defaults[!names(defaults) %in% c("sfm", "name", "type", "label", "...")]
-
-    # Get properties per building block
-    keep_prop <- get_building_block_prop()
-
-
-    var_str <- lapply(sfm[["model"]][["variables"]], function(x) {
-      lapply(x, function(y) {
-        z <- y
-        z[["func"]] <- NULL
-
-        # Remove properties containing "_julia"
-        z[grepl("_julia", names(z))] <- NULL
-
-        # Find which elements in h are identical to those in defaults_header
-        z <- z[vapply(names(z), function(name) {
-          !name %in% names(defaults) || !identical(z[[name]], defaults[[name]])
-        }, logical(1))]
-
-        # Order z according to default
-        order_names <- intersect(keep_prop[[z[["type"]]]], names(z))
-        z <- z[order_names]
-
-        z <- lapply(z, function(a) {
-          ifelse(is.character(a), paste0("\"", a, "\""), a)
-        })
-
-        paste0(
-          "build(",
-          paste0(names(z), " = ", unname(z),
-            collapse = ", "
-          ), ")"
-        )
-      })
-    })
-    var_str <- var_str[lengths(var_str) > 0]
-    var_str <- paste0(" |>\n\t\t", paste0(unlist(var_str), collapse = " |>\n\t\t"))
-  } else {
-    var_str <- ""
-  }
-
-  script <- sprintf(
-    "sfm = xmile()%s%s%s%s%s", sim_specs_str,
-    header_str, var_str, macro_str, model_units_str
-  )
-
-  # Format code
-  if (requireNamespace("styler", quietly = TRUE)) {
-    # Temporarily set option
-    old_option <- getOption("styler.colored_print.vertical")
-    options(styler.colored_print.vertical = FALSE)
-
-    script <- tryCatch(
-      {
-        suppressWarnings(suppressMessages(
-          styler::style_text(script)
-        ))
-      },
-      error = function(e) {
-        return(script)
-      }
-    )
-
-    on.exit({
-      if (is.null(old_option)) {
-        options(styler.colored_print.vertical = NULL)
-      } else {
-        options(styler.colored_print.vertical = old_option)
-      }
-    })
-  } else {
-    message("The code will not be formatted as styler is not installed. Install styler or wrap the script in cat().")
-  }
-
-  return(script)
+  rownames(result) <- NULL
+  result
 }

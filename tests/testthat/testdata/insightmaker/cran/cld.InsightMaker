@@ -1,0 +1,66 @@
+<InsightMakerModel>
+  <root>
+    <mxCell id="0" />
+    <mxCell id="1" parent="0" />
+    <Setting Note="" Version="38" TimeLength="10" TimeStart="0" TimeStep="1" TimeUnits="Years" Units="" SolutionAlgorithm="RK4" BackgroundColor="white" Throttle="1" Macros="" SensitivityPrimitives="" SensitivityRuns="50" SensitivityBounds="50, 80, 95, 100" SensitivityShowRuns="false" StyleSheet="{}" version="39" id="2">
+      <mxCell parent="1" vertex="1" visible="0">
+        <mxGeometry x="20" y="20" width="80" height="40" as="geometry" />
+      </mxCell>
+    </Setting>
+    <Variable name="Population" Note="" Equation="" Units="Unitless" MaxConstraintUsed="false" MinConstraintUsed="false" MaxConstraint="100" MinConstraint="0" ShowSlider="false" SliderMax="100" SliderMin="0" SliderStep="" Image="None" FlipHorizontal="false" FlipVertical="false" LabelPosition="Middle" oldId="92" id="92">
+      <mxCell style="variable;image=None;" vertex="1" parent="1">
+        <mxGeometry x="140" y="100" width="120" height="50" as="geometry" />
+      </mxCell>
+    </Variable>
+    <Variable name="Births" Note="" Equation="" Units="Unitless" MaxConstraintUsed="false" MinConstraintUsed="false" MaxConstraint="100" MinConstraint="0" ShowSlider="false" SliderMax="100" SliderMin="0" SliderStep="" Image="None" FlipHorizontal="false" FlipVertical="false" LabelPosition="Middle" oldId="93" id="93">
+      <mxCell style="variable;image=None;" vertex="1" parent="1">
+        <mxGeometry x="90" y="280" width="120" height="50" as="geometry" />
+      </mxCell>
+    </Variable>
+    <Variable name="Carrying Capacity" Note="" Equation="" Units="Unitless" MaxConstraintUsed="false" MinConstraintUsed="false" MaxConstraint="100" MinConstraint="0" ShowSlider="false" SliderMax="100" SliderMin="0" SliderStep="" Image="None" FlipHorizontal="false" FlipVertical="false" LabelPosition="Middle" oldId="94" id="94">
+      <mxCell style="variable;image=None;" vertex="1" parent="1">
+        <mxGeometry x="480" y="60" width="130" height="50" as="geometry" />
+      </mxCell>
+    </Variable>
+    <Variable name="Deaths" Note="" Equation="" Units="Unitless" MaxConstraintUsed="false" MinConstraintUsed="false" MaxConstraint="100" MinConstraint="0" ShowSlider="false" SliderMax="100" SliderMin="0" SliderStep="" Image="None" FlipHorizontal="false" FlipVertical="false" LabelPosition="Middle" oldId="95" id="95">
+      <mxCell style="variable;image=None;" vertex="1" parent="1">
+        <mxGeometry x="430" y="180" width="120" height="50" as="geometry" />
+      </mxCell>
+    </Variable>
+    <Variable name="Net Growth" Note="" Equation="" Units="Unitless" MaxConstraintUsed="false" MinConstraintUsed="false" MaxConstraint="100" MinConstraint="0" ShowSlider="false" SliderMax="100" SliderMin="0" SliderStep="" Image="None" FlipHorizontal="false" FlipVertical="false" LabelPosition="Middle" oldId="96" id="96">
+      <mxCell style="variable;image=None;" vertex="1" parent="1">
+        <mxGeometry x="320" y="320" width="120" height="50" as="geometry" />
+      </mxCell>
+    </Variable>
+    <Link name="Link" Note="" BiDirectional="false" oldId="97" id="97">
+      <mxCell style="link;END_ANNOTATION=+;strokeColor=#0000FF;" edge="1" parent="1" source="92" target="95">
+        <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+    </Link>
+    <Link name="Link" Note="" BiDirectional="false" oldId="98" id="98">
+      <mxCell style="link;END_ANNOTATION=+;strokeColor=#0000FF;" edge="1" parent="1" source="92" target="93">
+        <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+    </Link>
+    <Link name="Link" Note="" BiDirectional="false" oldId="99" id="99">
+      <mxCell style="link;END_ANNOTATION=-;strokeColor=#FF0000;" edge="1" parent="1" source="95" target="96">
+        <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+    </Link>
+    <Link name="Link" Note="" BiDirectional="false" oldId="100" id="100">
+      <mxCell style="link;END_ANNOTATION=-;strokeColor=#FF0000;" edge="1" parent="1" source="94" target="95">
+        <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+    </Link>
+    <Link name="Link" Note="" BiDirectional="false" oldId="101" id="101">
+      <mxCell style="link;END_ANNOTATION=+;strokeColor=#0000FF;" edge="1" parent="1" source="93" target="96">
+        <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+    </Link>
+    <Link name="Link" Note="" BiDirectional="false" oldId="102" id="102">
+      <mxCell style="link;END_ANNOTATION=+;strokeColor=#0000FF;" edge="1" parent="1" source="96" target="92">
+        <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+    </Link>
+  </root>
+</InsightMakerModel>

@@ -17,15 +17,18 @@ jobs:
     runs-on: ubuntu-latest
     # Only restrict concurrency for non-PR jobs
     concurrency:
-      group: pkgdown-${{ github.event_name != 'pull_request' || github.run_id }}
+      group: pkgdown-${{ github.event_name == 'pull_request' && github.run_id || github.ref }}
+      cancel-in-progress: false
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       NOT_CRAN: "true"
-      AUTO_INSTALL_JULIA_ENV: "true"
+      SDBUILDR_INSTALL_JULIA_ENV: "true"
+      SDBUILDR_CREATE_TEST_FIGS: "true"
+
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: r-lib/actions/setup-pandoc@v2
 
@@ -40,9 +43,12 @@ jobs:
 
       # Necessary to prevent CHOLMOD error
       - name: Set up Julia
-        uses: julia-actions/setup-julia@v2
+        uses: julia-actions/setup-julia@v3
         with:
-          version: '1.12.1'
+          version: '1.12.6'
+
+      # Cache the Julia depot (packages + precompiled cache) for faster reruns
+      - uses: julia-actions/cache@v2
 
       # Print Julia environment variables
       - name: Print Julia environment

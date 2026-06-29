@@ -1,0 +1,417 @@
+{
+	"engine": "SIMULATION_PACKAGE",
+	"name": "Clone of C:N-bacteria-DOM",
+	"description": "Demonstration of excretion vs immobilization as function of feedstock C:N",
+	"simulation": {
+		"algorithm": "RK4",
+		"time_start": 0,
+		"time_length": 10,
+		"time_step": 0.2,
+		"time_units": "DAYS"
+	},
+	"elements": [
+		{
+			"type": "STOCK",
+			"name": "DOC",
+			"display": {
+				"coordinates": [
+					190,
+					250
+				],
+				"size": [
+					100,
+					80
+				]
+			},
+			"behavior": {
+				"initial_value": 25,
+				"non_negative": true
+			}
+		},
+		{
+			"type": "VARIABLE",
+			"name": "DO C:N",
+			"display": {
+				"interactive": true,
+				"interactive_min": 5,
+				"interactive_max": 25,
+				"coordinates": [
+					20,
+					400
+				],
+				"size": [
+					120,
+					40
+				]
+			},
+			"behavior": {
+				"value": 20
+			}
+		},
+		{
+			"type": "STOCK",
+			"name": "DON",
+			"display": {
+				"coordinates": [
+					190,
+					330
+				],
+				"size": [
+					100,
+					40
+				]
+			},
+			"behavior": {
+				"initial_value": "[DOC]/[DO C:N]"
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "DO C:N",
+			"to": "DON"
+		},
+		{
+			"type": "LINK",
+			"from": "DOC",
+			"to": "DON"
+		},
+		{
+			"type": "STOCK",
+			"name": "Bac C",
+			"display": {
+				"coordinates": [
+					450,
+					230
+				],
+				"size": [
+					160,
+					70
+				]
+			},
+			"behavior": {
+				"initial_value": 1
+			}
+		},
+		{
+			"type": "STOCK",
+			"name": "DIC",
+			"display": {
+				"coordinates": [
+					470,
+					80
+				],
+				"size": [
+					100,
+					40
+				]
+			},
+			"behavior": {
+				"initial_value": 1
+			}
+		},
+		{
+			"type": "FLOW",
+			"name": "Respiration",
+			"from": "Bac C",
+			"to": "DIC",
+			"behavior": {
+				"value": "[Bac C]*[kd]",
+				"non_negative": true
+			}
+		},
+		{
+			"type": "VARIABLE",
+			"name": "kd",
+			"display": {
+				"coordinates": [
+					650,
+					130
+				],
+				"size": [
+					120,
+					50
+				]
+			},
+			"behavior": {
+				"value": 1
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "kd",
+			"to": "Respiration"
+		},
+		{
+			"type": "VARIABLE",
+			"name": "BacCmax",
+			"display": {
+				"coordinates": [
+					240,
+					80
+				],
+				"size": [
+					120,
+					50
+				]
+			},
+			"behavior": {
+				"value": 50
+			}
+		},
+		{
+			"type": "VARIABLE",
+			"name": "kf - 1/d-gBacC",
+			"display": {
+				"coordinates": [
+					170,
+					150
+				],
+				"size": [
+					120,
+					50
+				]
+			},
+			"behavior": {
+				"value": 5
+			}
+		},
+		{
+			"type": "FLOW",
+			"name": "Feeding",
+			"from": "DOC",
+			"to": "Bac C",
+			"behavior": {
+				"value": "[kf - 1/d-gBacC]*[DOC]*[Bac C]/[BacCmax]",
+				"non_negative": true
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "BacCmax",
+			"to": "Feeding"
+		},
+		{
+			"type": "LINK",
+			"from": "kf - 1/d-gBacC",
+			"to": "Feeding"
+		},
+		{
+			"type": "STOCK",
+			"name": "Bac N",
+			"display": {
+				"coordinates": [
+					450,
+					310
+				],
+				"size": [
+					160,
+					40
+				]
+			},
+			"behavior": {
+				"initial_value": 0.3
+			}
+		},
+		{
+			"type": "FLOW",
+			"name": "N uptake",
+			"from": "DON",
+			"to": "Bac N",
+			"behavior": {
+				"value": "[Feeding]/[DO C:N]",
+				"non_negative": true
+			}
+		},
+		{
+			"type": "VARIABLE",
+			"name": "Bac C:N",
+			"display": {
+				"coordinates": [
+					730,
+					305
+				],
+				"size": [
+					120,
+					50
+				]
+			},
+			"behavior": {
+				"value": "[Bac C]/[Bac N]"
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "Bac C",
+			"to": "Bac C:N"
+		},
+		{
+			"type": "LINK",
+			"from": "Bac N",
+			"to": "Bac C:N"
+		},
+		{
+			"type": "STOCK",
+			"name": "DIN",
+			"display": {
+				"coordinates": [
+					480,
+					450
+				],
+				"size": [
+					100,
+					40
+				]
+			},
+			"behavior": {
+				"initial_value": 1
+			}
+		},
+		{
+			"type": "FLOW",
+			"name": "Excretion",
+			"from": "Bac N",
+			"to": "DIN",
+			"behavior": {
+				"value": "IfThenElse([Bac C:N]>[Bac C:N max], 0, [kd]*[Bac N])",
+				"non_negative": true
+			}
+		},
+		{
+			"type": "VARIABLE",
+			"name": "Bac C:N min",
+			"display": {
+				"coordinates": [
+					290,
+					390
+				],
+				"size": [
+					120,
+					50
+				]
+			},
+			"behavior": {
+				"value": 4
+			}
+		},
+		{
+			"type": "VARIABLE",
+			"name": "Bac C:N max",
+			"display": {
+				"coordinates": [
+					300,
+					470
+				],
+				"size": [
+					120,
+					50
+				]
+			},
+			"behavior": {
+				"value": 8
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "Feeding",
+			"to": "N uptake"
+		},
+		{
+			"type": "LINK",
+			"from": "DO C:N",
+			"to": "N uptake"
+		},
+		{
+			"type": "LINK",
+			"from": "Bac C:N max",
+			"to": "Excretion"
+		},
+		{
+			"type": "LINK",
+			"from": "Bac C:N",
+			"to": "Excretion"
+		},
+		{
+			"type": "LINK",
+			"from": "kd",
+			"to": "Excretion"
+		},
+		{
+			"type": "FLOW",
+			"name": "DIN uptake",
+			"from": "DIN",
+			"to": "Bac N",
+			"behavior": {
+				"value": "IfThenElse([Bac C:N]<[Bac C:N min], 0, [kd]*[DIN])",
+				"non_negative": true
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "Bac C:N min",
+			"to": "DIN uptake"
+		},
+		{
+			"type": "LINK",
+			"from": "kd",
+			"to": "DIN uptake"
+		},
+		{
+			"type": "LINK",
+			"from": "Bac C:N",
+			"to": "DIN uptake"
+		},
+		{
+			"type": "FLOW",
+			"name": "OM supply",
+			"from": null,
+			"to": "DOC",
+			"display": {
+				"from_coordinates": [
+					60,
+					290
+				]
+			},
+			"behavior": {
+				"value": 5,
+				"non_negative": true
+			}
+		},
+		{
+			"type": "FLOW",
+			"name": "ON supply",
+			"from": null,
+			"to": "DON",
+			"display": {
+				"from_coordinates": [
+					240,
+					500
+				]
+			},
+			"behavior": {
+				"value": "[OM supply]/[DO C:N]",
+				"non_negative": true
+			}
+		},
+		{
+			"type": "LINK",
+			"from": "OM supply",
+			"to": "ON supply"
+		},
+		{
+			"type": "LINK",
+			"from": "DO C:N",
+			"to": "ON supply"
+		}
+	],
+	"visualizations": [
+		{
+			"name": "Default Display",
+			"type": "TIME_SERIES",
+			"elements": [
+				"DOC",
+				"Bac C",
+				"Bac C:N"
+			]
+		}
+	]
+}
