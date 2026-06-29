@@ -201,7 +201,7 @@ Write directly to a `.json` file for upload:
 ```{r eval=FALSE}
 export_model(sfm,
   format = "psychomodels",
-  publication_doi = "10.0000/my-paper",
+  publication_doi = "10.0000/my-paper", 
   file = "sir_psychomodels.json"
 )
 ```
