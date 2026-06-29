@@ -194,7 +194,7 @@ specifications.
 ``` r
 
 export_model(sfm, format = "sdbuildR")
-#> [1] "sfm <-\tstockflow() |>\n\tsim_settings(method = \"lsoda\", start = \"0.0\", stop = \"100.0\", dt = \"0.1\", save_at = \"5.0\", save_type = \"save_at\") |>\n\tmeta(name = \"SIR epidemic\", created = \"2026-06-29 15:13:10.608896\") |>\n\tstock(I, eqn = 10) |>\n\tstock(R, eqn = 0) |>\n\tstock(S, eqn = 990) |>\n\tflow(net_I, eqn = SI - IR, to = I) |>\n\tflow(net_R, eqn = IR, to = R) |>\n\tflow(net_S, eqn = -SI, to = S) |>\n\tconstant(beta, eqn = 0.3) |>\n\tconstant(gamma, eqn = 0.1) |>\n\tconstant(N, eqn = 1000) |>\n\taux(IR, eqn = gamma * I) |>\n\taux(SI, eqn = beta * S * I/N)\n"
+#> [1] "sfm <-\tstockflow() |>\n\tsim_settings(method = \"lsoda\", start = \"0.0\", stop = \"100.0\", dt = \"0.1\", save_at = \"5.0\", save_type = \"save_at\") |>\n\tmeta(name = \"SIR epidemic\", created = \"2026-06-29 18:01:11.94021\") |>\n\tstock(I, eqn = 10) |>\n\tstock(R, eqn = 0) |>\n\tstock(S, eqn = 990) |>\n\tflow(net_I, eqn = SI - IR, to = I) |>\n\tflow(net_R, eqn = IR, to = R) |>\n\tflow(net_S, eqn = -SI, to = S) |>\n\tconstant(beta, eqn = 0.3) |>\n\tconstant(gamma, eqn = 0.1) |>\n\tconstant(N, eqn = 1000) |>\n\taux(IR, eqn = gamma * I) |>\n\taux(SI, eqn = beta * S * I/N)\n"
 ```
 
 ### deSolve script
@@ -233,7 +233,7 @@ Write directly to a `.json` file for upload:
 
 export_model(sfm,
   format = "psychomodels",
-  publication_doi = "10.0000/my-paper",
+  publication_doi = "10.0000/my-paper", 
   file = "sir_psychomodels.json"
 )
 ```

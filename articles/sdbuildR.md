@@ -151,7 +151,7 @@ sfm_ens <- sfm |>
 
 sims <- ensemble(sfm_ens, n = 100)
 #> Starting ensemble simulation in "R" with 100 simulations.
-#> ✔ Ensemble simulation completed in 6.5694 seconds.
+#> ✔ Ensemble simulation completed in 6.5508 seconds.
 plot(sims)
 ```
 
