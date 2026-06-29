@@ -1086,6 +1086,16 @@ print.stockflow <- function(x, ...) {
     "  Time: {ss$start} to {ss$stop} {time_unit} (dt = {ss$dt}{save_suffix}) \u2022 {ss$method} \u2022 {ss$language}{seed_suffix}"
   )
 
+  output_vars <- ss[["vars"]]
+  if (length(output_vars) > 0) {
+    output_text <- paste(output_vars, collapse = ", ")
+  } else if (isTRUE(ss[["only_stocks"]])) {
+    output_text <- "stocks only"
+  } else {
+    output_text <- "all variables"
+  }
+  cli::cli_text("  Simulation output: {output_text}")
+
   # Unit tests (only shown when at least one is defined)
   n_ut <- length(x[["unit_tests"]])
   if (n_ut > 0L) {

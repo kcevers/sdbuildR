@@ -333,12 +333,12 @@ template_registry <- function() {
         stockflow() |>
           sim_settings(start = "0.0", stop = "183.0", dt = "0.01", time_units = "days", only_stocks = FALSE) |>
           meta(name = "Burnout") |>
-          stock(energy, eqn = 0.3, label = "Energy") |>
-          constant(recovery_rate, eqn = 0.3, label = "Recovery Rate") |>
-          flow(recovery, eqn = recovery_rate, to = energy, label = "Recovery") |>
-          flow(depletion, eqn = depletion_rate * energy, from = energy, label = "Depletion") |>
-          constant(depletion_rate, eqn = 0.05, label = "Depletion Rate") |>
-          aux(net_flow, eqn = recovery - depletion, label = "Net flow to energy")
+          stock("energy", eqn = 0.3, label = "Energy") |>
+          constant("recovery_rate", eqn = 0.3, label = "Recovery Rate") |>
+          flow("recovery", eqn = "recovery_rate", to = "energy", label = "Recovery") |>
+          flow("depletion", eqn = "depletion_rate * energy", from = "energy", label = "Depletion") |>
+          constant("depletion_rate", eqn = 0.05, label = "Depletion Rate") |>
+          aux("net_flow", eqn = "recovery - depletion", label = "Net flow to energy")
       }
     ),
     list(name = "burnout",
@@ -348,13 +348,13 @@ template_registry <- function() {
       stockflow() |>
         sim_settings(start = "0.0", stop = "182.0", dt = "0.01", time_units = "days", only_stocks = FALSE) |>
         meta(name = "Burnout") |>
-        stock(energy, eqn = 0.3, label = "Energy") |>
-        stock(recovery_rate, eqn = 0.3, label = "Recovery Rate") |>
-        flow(erosion, eqn = recovery_rate * depletion, from = recovery_rate, label = "Recovery Erosion") |>
-        flow(recovery, eqn = recovery_rate, to = energy, label = "Recovery") |>
-        flow(depletion, eqn = depletion_rate * energy, from = energy, label = "Depletion") |>
-        constant(depletion_rate, eqn = 0.05, label = "Depletion Rate") |>
-        aux(net_flow, eqn = recovery - depletion, label = "Net flow to energy")
+        stock("energy", eqn = 0.3, label = "Energy") |>
+        stock("recovery_rate", eqn = 0.3, label = "Recovery Rate") |>
+        flow("erosion", eqn = "recovery_rate * depletion", from = "recovery_rate", label = "Recovery Erosion") |>
+        flow("recovery", eqn = "recovery_rate", to = "energy", label = "Recovery") |>
+        flow("depletion", eqn = "depletion_rate * energy", from = "energy", label = "Depletion") |>
+        constant("depletion_rate", eqn = 0.05, label = "Depletion Rate") |>
+        aux("net_flow", eqn = "recovery - depletion", label = "Net flow to energy")
     }
     ),
     list(

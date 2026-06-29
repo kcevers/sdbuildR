@@ -245,6 +245,24 @@ test_that("print.stockflow: mentions the simulation language", {
   expect_match(output, "R")
 })
 
+test_that("print.stockflow: describes stock-only simulation output", {
+  sfm <- sim_settings(make_basic_sfm(), only_stocks = TRUE)
+  output <- paste0(cli::cli_fmt(print(sfm)), collapse = "\n")
+  expect_match(output, "Simulation output: stocks only", fixed = TRUE)
+})
+
+test_that("print.stockflow: describes all-variable simulation output", {
+  sfm <- sim_settings(make_basic_sfm(), only_stocks = FALSE)
+  output <- paste0(cli::cli_fmt(print(sfm)), collapse = "\n")
+  expect_match(output, "Simulation output: all variables", fixed = TRUE)
+})
+
+test_that("print.stockflow: describes selected simulation output variables", {
+  sfm <- sim_settings(make_basic_sfm(), vars = c("S", "Flow1"))
+  output <- paste0(cli::cli_fmt(print(sfm)), collapse = "\n")
+  expect_match(output, "Simulation output: S, Flow1", fixed = TRUE)
+})
+
 test_that("print.stockflow: returns the model invisibly", {
   sfm <- make_basic_sfm()
   result <- withVisible(print(sfm))

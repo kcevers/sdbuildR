@@ -2293,7 +2293,7 @@ if (recreate_figs) {
 
 ### Parallelization
 
-Large-scale simulations are also called **ensemble** simulations, which can be computationally intensive. We therefore recommend to reduce the size of the simulation output, for instance by saving only a hundred time points, evenly spaced across the simulation interval:
+Large-scale simulations are also called **ensemble** simulations, which can be computationally intensive. We therefore recommend to reduce the size of the simulation output. Keep stock-only output for large ensembles unless full diagnostics are needed, select specific flows or auxiliaries with `vars`, and save fewer time points when possible. For instance, the following saves only a hundred time points, evenly spaced across the simulation interval:
 
 ```{r}
 sfm <- sfm0 <- sim_settings(sfm0, save_n = 100)

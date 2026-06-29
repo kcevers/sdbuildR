@@ -66,7 +66,8 @@ and auxiliaries. If \code{FALSE}, flows and auxiliaries are saved, which slows
 down the simulation. Defaults to \code{TRUE}.}
 
 \item{vars}{Character vector of variable names to save in simulation output.
-If specified, this overrides \code{only_stocks}.}
+Use this to keep selected flows or auxiliaries without saving every model
+variable. If specified, this overrides \code{only_stocks}.}
 
 \item{keep_nonnegative_stock}{If \code{TRUE}, keeps original non-negativity setting
 of stocks. Defaults to \code{FALSE}.}

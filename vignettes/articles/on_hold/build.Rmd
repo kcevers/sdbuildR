@@ -622,7 +622,7 @@ sfm <- stockflow()
 print(sfm)
 ```
 
-Though the model contains no elements, it includes default simulation settings, such as the duration of the simulation and a solver (`euler`) specifying the numerical technique used to generate output from the model. We change the simulation settings to model energy over the course of half a year (i.e., specified in days; note that the time unit merely changes the labels on the axes of the resulting plots, and does not affect the model's behaviour). In addition, we set `only_stocks = FALSE` to return all model variables in the simulation output, not just the stocks:
+Though the model contains no elements, it includes default simulation settings, such as the duration of the simulation and a solver (`euler`) specifying the numerical technique used to generate output from the model. We change the simulation settings to model energy over the course of half a year (i.e., specified in days; note that the time unit merely changes the labels on the axes of the resulting plots, and does not affect the model's behaviour).
 
 ```{r}
 sfm <- sim_settings(sfm, stop = round(365/2), time_units = "days",

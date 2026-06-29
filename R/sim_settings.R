@@ -33,7 +33,8 @@
 #'   and auxiliaries. If `FALSE`, flows and auxiliaries are saved, which slows
 #'   down the simulation. Defaults to `TRUE`.
 #' @param vars Character vector of variable names to save in simulation output.
-#'   If specified, this overrides `only_stocks`.
+#'   Use this to keep selected flows or auxiliaries without saving every model
+#'   variable. If specified, this overrides `only_stocks`.
 #' @param keep_nonnegative_stock If `TRUE`, keeps original non-negativity setting
 #'   of stocks. Defaults to `FALSE`.
 #' @param keep_nonnegative_flow If `TRUE`, keeps original non-negativity setting

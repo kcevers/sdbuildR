@@ -10,6 +10,7 @@
       -- Simulation Settings --
       
       Time: 0 to 100 seconds (dt = 0.01) • euler • R
+      Simulation output: stocks only
 
 # print.stockflow() snapshot: named model
 
@@ -23,6 +24,7 @@
       -- Simulation Settings --
       
       Time: 0 to 100 seconds (dt = 0.01) • euler • R
+      Simulation output: stocks only
 
 # print.stockflow() snapshot: SIR model
 
@@ -47,6 +49,7 @@
       -- Simulation Settings --
       
       Time: 0.0 to 20.0 weeks (dt = 0.01) • euler • R
+      Simulation output: stocks only
 
 # print.stockflow() snapshot: model with constants
 
@@ -68,6 +71,7 @@
       -- Simulation Settings --
       
       Time: 0 to 100 seconds (dt = 0.01) • euler • R
+      Simulation output: stocks only
 
 # print.stockflow() snapshot: default name not shown as title
 
@@ -81,4 +85,5 @@
       -- Simulation Settings --
       
       Time: 0 to 100 seconds (dt = 0.01) • euler • R
+      Simulation output: stocks only
 

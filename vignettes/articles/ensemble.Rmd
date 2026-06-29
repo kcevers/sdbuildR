@@ -120,7 +120,7 @@ This automatically only plots the first ten simulations, as plotting a large num
 plot(sims, which = "sims", sim = 15:30)
 ```
 
-By default, only the stocks are saved. To save all variables, set `only_stocks = FALSE`:
+By default, only the stocks are saved. If you need one or two flows or auxiliaries, prefer selecting them with `vars`; to save every model variable for exploratory diagnostics, set `only_stocks = FALSE`:
 
 ```{r}
 sims <- ensemble(sfm, n = 100, only_stocks = FALSE)
